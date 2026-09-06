@@ -4420,7 +4420,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.51';
+  const VERSAO_ATUAL = '2.9.53';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -4447,7 +4447,16 @@ async function scannerFechar() {
 
       if (dados.versao !== versaoLocal) {
         // Há versão nova no servidor!
-        mostrarBannerAtualizacao(dados);
+        const semVenda = (typeof carrinho === 'undefined') || carrinho.length === 0;
+        const semJanela = !document.querySelector('.modal-fundo.ativo') && !document.getElementById('menu-overlay')?.classList.contains('ativo');
+        if (semVenda && semJanela) {
+          // Está livre → atualiza sozinho
+          try { mostrarNotif('🔄 Nova versão. A atualizar automaticamente...'); } catch(e){}
+          setTimeout(() => atualizarAgora(dados.versao), 3500);
+        } else {
+          // A meio de uma venda → espera e mostra o aviso (atualiza quando ficar livre)
+          mostrarBannerAtualizacao(dados);
+        }
       }
     } catch(e) {
       // Sem ligação — silencioso

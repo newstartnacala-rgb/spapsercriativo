@@ -3313,13 +3313,19 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.51';
+const MONITOR_VERSAO = '2.9.53';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
     if (!res.ok) return;
     const d = await res.json();
     if (d.versao && d.versao !== MONITOR_VERSAO && !document.getElementById('banner-att-mon')) {
+      const livre = !document.querySelector('.sub-painel.ativo, .modal-fundo.ativo') && !document.getElementById('overlay-visao-geral');
+      if (livre) {
+        try { mostrarNotif('🔄 Nova versão. A atualizar automaticamente...'); } catch(e){}
+        setTimeout(atualizarAgoraMonitor, 3500);
+        return;
+      }
       const b = document.createElement('div');
       b.id = 'banner-att-mon';
       b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#1a56a0;color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);';
@@ -3732,9 +3738,12 @@ async function trocarEmail() {
   const novo = document.getElementById('perfil-in-email').value.trim();
   if (!novo || !novo.includes('@')) { mostrarNotif('❌ Escreve um e-mail válido.', true); return; }
   if (!confirm('Trocar o e-mail para ' + novo + '?\nVais receber um link de confirmação no e-mail NOVO. A conta só muda depois de confirmares lá.')) return;
-  const { error } = await supabaseClient.auth.updateUser({ email: novo });
+  const { error } = await supabaseClient.auth.updateUser(
+    { email: novo },
+    { emailRedirectTo: window.location.origin + '/monitor.html' }
+  );
   if (error) { mostrarNotif('❌ ' + error.message, true); return; }
-  mostrarNotif('✅ Verifica o teu e-mail NOVO (' + novo + ') e clica no link para confirmar a troca.');
+  mostrarNotif('✅ Verifica o e-mail (confirma nos DOIS: no novo e no antigo, se pedir). A troca só fica feita depois de confirmares.');
   document.getElementById('perfil-in-email').value = '';
 }
 
