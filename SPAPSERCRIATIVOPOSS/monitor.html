@@ -840,7 +840,7 @@ async function iniciar() {
     {
       const r = await supabaseClient
         .from('membros_loja')
-        .select('loja_id, papel, nome_exibicao, lojas(nome, estado, plano, categorias_personalizadas, vendedores, data_expiracao, codigo_relatorios, pin_monitor, tipo_loja)')
+        .select('loja_id, papel, nome_exibicao, lojas(nome, estado, plano, categorias_personalizadas, vendedores, data_expiracao, codigo_relatorios, pin_monitor, tipo_loja, pin_gerente)')
         .eq('user_id', sessao.user.id).limit(1);
       if (r.error) {
         const r2 = await supabaseClient
@@ -874,6 +874,11 @@ async function iniciar() {
 
     lojaId = membros[0].loja_id;
     modoGerente = (membros[0].papel === 'gerente');
+    if (modoGerente) {
+      const _pinG = (membros[0].lojas && membros[0].lojas.pin_gerente) || '0000';
+      const _tent = prompt('🔒 Código de acesso do monitor extra:');
+      if (_tent !== _pinG) { alert('Código errado.'); document.body.innerHTML = '<div style="padding:48px;text-align:center;font-family:sans-serif;color:#334155;">🔒 Acesso negado. Pede o código ao dono.</div>'; return; }
+    }
     nomeLoja = (membros[0].lojas && membros[0].lojas.nome) || 'Minha Loja';
     lojaPlano = (membros[0].lojas && membros[0].lojas.plano) || '';
     categoriasPersonalizadas = (membros[0].lojas && membros[0].lojas.categorias_personalizadas) || [];
@@ -3308,7 +3313,7 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.50';
+const MONITOR_VERSAO = '2.9.51';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -3677,7 +3682,7 @@ async function abrirMeuPerfil() {
     document.getElementById('perfil-email').textContent = email;
 
     const { data } = await supabaseClient.from('lojas')
-      .select('nome, nome_empresa, telefone, endereco, plano, pin_monitor, codigo_agente').eq('id', lojaId).maybeSingle();
+      .select('nome, nome_empresa, telefone, endereco, plano, pin_monitor, codigo_agente, pin_gerente').eq('id', lojaId).maybeSingle();
     if (data) {
       const estPin = document.getElementById('perfil-pin-estado');
       if (estPin) {
@@ -3691,6 +3696,7 @@ async function abrirMeuPerfil() {
       document.getElementById('perfil-in-telefone').value = data.telefone || '';
       document.getElementById('perfil-in-endereco').value = data.endereco || '';
       var _ca = document.getElementById('perfil-in-codigo'); if (_ca) _ca.value = data.codigo_agente || '';
+      var _pg = document.getElementById('perfil-in-pingerente'); if (_pg) _pg.value = data.pin_gerente || '0000';
 
       const planos = {
         'basico': { nome: 'Básico', desc: 'Apenas PDV (loja do vendedor)' },
@@ -3711,7 +3717,8 @@ async function guardarDadosPerfil() {
     nome_empresa: document.getElementById('perfil-in-empresa').value.trim(),
     telefone: document.getElementById('perfil-in-telefone').value.trim(),
     endereco: document.getElementById('perfil-in-endereco').value.trim(),
-    codigo_agente: document.getElementById('perfil-in-codigo').value.trim()
+    codigo_agente: document.getElementById('perfil-in-codigo').value.trim(),
+    pin_gerente: (document.getElementById('perfil-in-pingerente').value.trim() || '0000')
   };
   if (!dados.nome) { mostrarNotif('❌ O nome da loja não pode ficar vazio.', true); return; }
   const { error } = await supabaseClient.from('lojas').update(dados).eq('id', lojaId);
@@ -4334,6 +4341,10 @@ async function carregarContagensEquipa() {
       <label style="font-size:13px;color:#64748b;font-weight:600;">🔑 Código de acesso do balconista (loja)</label>
       <input type="text" id="perfil-in-codigo" placeholder="ex: 1234" style="width:100%;padding:11px;border:1.5px solid #fdba74;border-radius:9px;font-size:15px;margin:5px 0 4px;box-sizing:border-box;">
       <div style="font-size:11px;color:#64748b;margin:0 0 14px;">Muda este código quando trocares de balconista, para o anterior deixar de aceder.</div>
+
+      <label style="font-size:13px;color:#64748b;font-weight:600;">🔒 Código do Monitor Extra (gerente)</label>
+      <input type="text" id="perfil-in-pingerente" placeholder="0000" style="width:100%;padding:11px;border:1.5px solid #fdba74;border-radius:9px;font-size:15px;margin:5px 0 4px;box-sizing:border-box;">
+      <div style="font-size:11px;color:#64748b;margin:0 0 14px;">Pedido a quem abre o link do monitor extra. Só tu podes mudar aqui.</div>
 
       <button onclick="guardarDadosPerfil()" style="width:100%;padding:12px;background:#16a34a;border:none;border-radius:10px;color:white;font-weight:bold;cursor:pointer;">💾 Guardar dados</button>
     </div>
