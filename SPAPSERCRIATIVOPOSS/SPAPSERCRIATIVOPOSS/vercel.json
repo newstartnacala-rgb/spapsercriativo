@@ -1,0 +1,11 @@
+{
+  "rewrites": [
+    { "source": "/monitor", "destination": "/monitor.html" },
+    { "source": "/login", "destination": "/login.html" },
+    { "source": "/registo", "destination": "/registo.html" },
+    { "source": "/reset-senha", "destination": "/reset-senha.html" },
+    { "source": "/admin", "destination": "/admin.html" }
+  ],
+  "cleanUrls": false,
+  "trailingSlash": false
+}

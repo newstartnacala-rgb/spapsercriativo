@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Administração — Spap-Sercriativo</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:-apple-system,Arial,sans-serif; background:#f1f5f9; min-height:100vh; }
+.topbar { background:#1e1e1b; color:white; padding:12px 20px; display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+.topbar img { height:38px; }
+.topbar-titulo { font-size:15px; font-weight:bold; color:#d4af6a; }
+.btn-sair { background:rgba(255,255,255,0.12); border:none; color:white; padding:9px 16px; border-radius:8px; cursor:pointer; font-size:13px; }
+.btn-sair:hover { background:rgba(255,255,255,0.25); }
+
+.container { max-width:1000px; margin:0 auto; padding:20px 16px 60px; }
+
+/* Contadores */
+.contadores { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:18px; }
+.contador { background:white; border-radius:14px; padding:16px; text-align:center; box-shadow:0 1px 4px rgba(0,0,0,0.06); cursor:pointer; border:2.5px solid transparent; transition:transform 0.12s, border-color 0.12s; }
+.contador:hover { transform:translateY(-2px); }
+.contador.selecionado { border-color:#1a56a0; }
+.c-pendente.selecionado { border-color:#e05c00; }
+.c-activo.selecionado { border-color:#16a34a; }
+.c-suspenso.selecionado { border-color:#dc2626; }
+.contador .num { font-size:28px; font-weight:bold; }
+.contador .lbl { font-size:12px; color:#64748b; margin-top:2px; }
+.c-total .num { color:#1a56a0; }
+.c-pendente .num { color:#e05c00; }
+.c-activo .num { color:#16a34a; }
+.c-suspenso .num { color:#dc2626; }
+@media(max-width:640px){ .contadores { grid-template-columns:1fr 1fr; } }
+
+/* Filtros */
+.filtros { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; align-items:center; }
+.filtro-btn { padding:9px 16px; border:1.5px solid #e2e8f0; background:white; border-radius:20px; font-size:13px; cursor:pointer; font-weight:600; color:#64748b; }
+.filtro-btn.ativo { background:#1a56a0; border-color:#1a56a0; color:white; }
+.busca { flex:1; min-width:200px; padding:10px 14px; border:1.5px solid #e2e8f0; border-radius:20px; font-size:14px; outline:none; }
+.busca:focus { border-color:#1a56a0; }
+
+/* Cartões de loja */
+.loja-card { background:white; border-radius:14px; padding:16px 18px; margin-bottom:12px; box-shadow:0 1px 4px rgba(0,0,0,0.06); }
+.loja-topo { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; }
+.loja-nome { font-size:17px; font-weight:bold; color:#1a202c; }
+.loja-info { font-size:13px; color:#64748b; margin-top:6px; line-height:1.7; }
+.loja-info a { color:#1a56a0; text-decoration:none; font-weight:600; }
+.badge { display:inline-block; padding:5px 14px; border-radius:20px; font-size:12px; font-weight:bold; white-space:nowrap; }
+.badge.pendente, .badge.pendente_pagamento { background:#fff7ed; color:#e05c00; border:1px solid #fdba74; }
+.badge.activo { background:#f0fdf4; color:#16a34a; border:1px solid #86efac; }
+.badge.suspenso, .badge.bloqueado { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
+.badge.trial { background:#eff6ff; color:#1a56a0; border:1px solid #bfdbfe; }
+
+.loja-acoes { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; align-items:center; }
+.sel-plano { padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:13px; outline:none; background:white; }
+.btn { padding:10px 16px; border:none; border-radius:10px; font-size:13px; font-weight:bold; cursor:pointer; }
+.btn-activar { background:#16a34a; color:white; }
+.btn-activar:hover { background:#15803d; }
+.btn-suspender { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
+.btn-suspender:hover { background:#fee2e2; }
+.btn-pendente { background:#fff7ed; color:#e05c00; border:1px solid #fdba74; }
+.btn-pendente:hover { background:#ffedd5; }
+.btn:disabled { opacity:0.5; cursor:not-allowed; }
+
+.vazio { text-align:center; color:#94a3b8; padding:50px 20px; font-size:14px; background:white; border-radius:14px; }
+.carregando { text-align:center; padding:60px 20px; color:#64748b; }
+
+.notif { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#16a34a; color:white; padding:13px 24px; border-radius:12px; font-size:14px; font-weight:bold; box-shadow:0 6px 20px rgba(0,0,0,0.25); display:none; z-index:500; }
+.notif.erro { background:#dc2626; }
+
+.acesso-negado { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:80vh; text-align:center; padding:20px; }
+</style>
+</head>
+<body>
+
+<div id="tela-carregando" class="carregando">
+  <div style="font-size:40px;">⏳</div>
+  <p style="margin-top:10px;">A carregar o painel de administração...</p>
+</div>
+
+<div id="tela-negado" class="acesso-negado" style="display:none;">
+  <div style="font-size:56px;">🚫</div>
+  <h2 style="margin:14px 0 8px;color:#dc2626;">Acesso restrito</h2>
+  <p style="color:#64748b;font-size:14px;max-width:340px;">Esta página é exclusiva do administrador da plataforma Spap-Sercriativo.</p>
+  <button class="btn btn-activar" style="margin-top:20px;" onclick="window.location.href='login.html'">Ir para o Login</button>
+</div>
+
+<div id="app" style="display:none;">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <img src="logo.png" alt="Spap-Sercriativo">
+      <span class="topbar-titulo">Painel de Administração</span>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn-sair" onclick="window.location.href='monitor.html'">📊 Monitor</button>
+      <button class="btn-sair" onclick="carregarLojas()">🔄 Atualizar</button>
+      <button class="btn-sair" onclick="sair()">Sair</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="contadores">
+      <div class="contador c-total" id="cont-todas" onclick="filtrar('todas')" title="Ver todas as lojas"><div class="num" id="cnt-total">0</div><div class="lbl">Total de lojas</div></div>
+      <div class="contador c-pendente" id="cont-pendente" onclick="filtrar('pendente')" title="Ver lojas pendentes"><div class="num" id="cnt-pendente">0</div><div class="lbl">⏳ Pendentes</div></div>
+      <div class="contador c-activo" id="cont-activo" onclick="filtrar('activo')" title="Ver lojas activas"><div class="num" id="cnt-activo">0</div><div class="lbl">✅ Activas</div></div>
+      <div class="contador c-suspenso" id="cont-suspenso" onclick="filtrar('suspenso')" title="Ver lojas suspensas"><div class="num" id="cnt-suspenso">0</div><div class="lbl">🚫 Suspensas</div></div>
+    </div>
+
+    <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:16px;margin-bottom:16px;">
+      <div style="font-size:15px;font-weight:bold;color:#166534;margin-bottom:4px;">📱 Link de Suporte (WhatsApp)</div>
+      <div style="font-size:12.5px;color:#64748b;margin-bottom:10px;">Este link aparece na loja e no monitor de todos os clientes, na aba Suporte. Ex: https://wa.me/258866577722</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input type="text" id="input-link-suporte" placeholder="https://wa.me/258..." style="flex:1;min-width:220px;padding:12px;border:1.5px solid #86efac;border-radius:10px;font-size:14px;box-sizing:border-box;">
+        <button onclick="guardarLinkSuporte()" style="padding:12px 20px;background:#16a34a;border:none;border-radius:10px;color:white;font-weight:bold;cursor:pointer;font-size:14px;">💾 Guardar</button>
+      </div>
+      <div id="link-suporte-estado" style="font-size:12px;margin-top:8px;"></div>
+    </div>
+
+    <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:16px;margin-bottom:16px;">
+      <div style="font-size:15px;font-weight:bold;color:#1e40af;margin-bottom:4px;">⚙️ Planos e Pagamento da Subscrição</div>
+      <div style="font-size:12.5px;color:#64748b;margin-bottom:12px;">Controla os preços dos planos, os descontos anuais e como o cliente te paga. Isto aparece na página de planos quando alguém se regista.</div>
+
+      <div style="font-weight:bold;color:#1a202c;font-size:13px;margin-bottom:6px;">📦 Planos (nome · preço/mês · desconto anual)</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+        <div style="display:grid;grid-template-columns:1.3fr 1fr 0.9fr;gap:8px;align-items:center;">
+          <input type="text" id="cfg-basico-nome" placeholder="Básico" style="padding:10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;">
+          <input type="number" id="cfg-basico-preco" placeholder="1000" style="padding:10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;">
+          <input type="number" id="cfg-basico-desc" placeholder="0%" style="padding:10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div style="display:grid;grid-template-columns:1.3fr 1fr 0.9fr;gap:8px;align-items:center;">
+          <input type="text" id="cfg-pro-nome" placeholder="Médio" style="padding:10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;">
+          <input type="number" id="cfg-pro-preco" placeholder="1500" style="padding:10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;">
+          <input type="number" id="cfg-pro-desc" placeholder="3%" style="padding:10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div style="display:grid;grid-template-columns:1.3fr 1fr 0.9fr;gap:8px;align-items:center;">
+          <input type="text" id="cfg-anual-nome" placeholder="Avançado" style="padding:10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;">
+          <input type="number" id="cfg-anual-preco" placeholder="2000" style="padding:10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;">
+          <input type="number" id="cfg-anual-desc" placeholder="5%" style="padding:10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div style="font-size:11px;color:#94a3b8;">Colunas: Nome · Preço mensal (MT) · Desconto anual (%). O desconto aplica-se sobre 12 meses.</div>
+      </div>
+
+      <div style="font-weight:bold;color:#1a202c;font-size:13px;margin-bottom:6px;">💳 Como o cliente paga a subscrição</div>
+      <input type="text" id="cfg-mpesa" placeholder="Número M-Pesa (84 xxx xxxx)" style="width:100%;padding:10px;border:1.5px solid #86efac;border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;">
+      <input type="text" id="cfg-emola" placeholder="Número e-Mola (86 xxx xxxx)" style="width:100%;padding:10px;border:1.5px solid #fdba74;border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;">
+      <input type="text" id="cfg-banco-nome" placeholder="Nome do banco (ex: BCI, BIM)" style="width:100%;padding:10px;border:1.5px solid #bfdbfe;border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;">
+      <input type="text" id="cfg-banco-conta" placeholder="Número da conta / NIB" style="width:100%;padding:10px;border:1.5px solid #bfdbfe;border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;">
+      <input type="text" id="cfg-banco-titular" placeholder="Nome do titular" style="width:100%;padding:10px;border:1.5px solid #bfdbfe;border-radius:8px;font-size:13px;margin-bottom:12px;box-sizing:border-box;">
+      <input type="text" id="cfg-wa-pagamento" placeholder="Link WhatsApp de pagamento (https://wa.me/258...)" style="width:100%;padding:10px;border:1.5px solid #86efac;border-radius:8px;font-size:13px;margin-bottom:12px;box-sizing:border-box;">
+
+      <button onclick="guardarConfigSubscricao()" style="width:100%;padding:12px;background:#1e40af;border:none;border-radius:10px;color:white;font-weight:bold;cursor:pointer;font-size:14px;">💾 Guardar configuração</button>
+      <div id="cfg-estado" style="font-size:12px;margin-top:8px;"></div>
+    </div>
+
+    <div class="filtros">
+      <button class="filtro-btn ativo" id="f-todas" onclick="filtrar('todas')">Todas</button>
+      <button class="filtro-btn" id="f-pendente" onclick="filtrar('pendente')">⏳ Pendentes</button>
+      <button class="filtro-btn" id="f-activo" onclick="filtrar('activo')">✅ Activas</button>
+      <button class="filtro-btn" id="f-suspenso" onclick="filtrar('suspenso')">🚫 Suspensas</button>
+      <input type="text" class="busca" id="busca" placeholder="🔎 Pesquisar por loja, email ou telefone..." oninput="renderLojas()">
+    </div>
+
+    <div id="lista-lojas"></div>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<script src="supabase-config.js"></script>
+<script>
+const ADMIN_EMAIL = 'joaomassuvir@gmail.com';
+let lojas = [];
+let filtroAtivo = 'todas';
+
+function notif(msg, erro = false) {
+  const n = document.getElementById('notif');
+  n.textContent = msg;
+  n.className = 'notif' + (erro ? ' erro' : '');
+  n.style.display = 'block';
+  setTimeout(() => n.style.display = 'none', 2800);
+}
+
+async function iniciar() {
+  const { data: sd } = await supabaseClient.auth.getSession();
+  if (!sd.session) {
+    localStorage.setItem('pdv_login_destino', 'admin.html');
+    window.location.href = 'login.html';
+    return;
+  }
+  if ((sd.session.user.email || '').toLowerCase() !== ADMIN_EMAIL) {
+    document.getElementById('tela-carregando').style.display = 'none';
+    document.getElementById('tela-negado').style.display = 'flex';
+    return;
+  }
+  document.getElementById('tela-carregando').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  await carregarLojas();
+  filtrar('todas');
+}
+
+async function carregarLojas() {
+  const { data, error } = await supabaseClient
+    .from('lojas')
+    .select('id, nome, telefone, endereco, email_dono, plano, estado, numero_transferencia, criado_em, data_expiracao')
+    .order('criado_em', { ascending: false });
+
+  if (error) { notif('❌ Erro ao carregar: ' + error.message, true); return; }
+  lojas = data || [];
+  renderContadores();
+  renderLojas();
+  carregarLinkSuporte();
+  carregarConfigSubscricao();
+}
+
+async function carregarLinkSuporte() {
+  try {
+    const { data } = await supabaseClient.from('config_global')
+      .select('valor').eq('chave', 'link_suporte_whatsapp').maybeSingle();
+    if (data && data.valor) document.getElementById('input-link-suporte').value = data.valor;
+  } catch(e) {}
+}
+
+async function guardarLinkSuporte() {
+  const link = (document.getElementById('input-link-suporte').value || '').trim();
+  const estado = document.getElementById('link-suporte-estado');
+  if (!link) { estado.innerHTML = '<span style="color:#dc2626;">Escreve um link primeiro.</span>'; return; }
+  if (!link.startsWith('http')) { estado.innerHTML = '<span style="color:#dc2626;">O link deve começar por https://</span>'; return; }
+  estado.innerHTML = '<span style="color:#64748b;">A guardar...</span>';
+  const { error } = await supabaseClient.from('config_global')
+    .upsert({ chave: 'link_suporte_whatsapp', valor: link, atualizado_em: new Date().toISOString() }, { onConflict: 'chave' });
+  if (error) {
+    estado.innerHTML = '<span style="color:#dc2626;">❌ ' + error.message + ' (corre o SQL v2.6.8)</span>';
+  } else {
+    estado.innerHTML = '<span style="color:#16a34a;">✅ Link guardado! Já aparece na loja e no monitor.</span>';
+  }
+}
+
+// ===== CONFIGURAÇÃO CENTRAL DA SUBSCRIÇÃO (planos, descontos, pagamento) =====
+const PLANOS_DEFAULT = {
+  basico: { nome: 'Básico',   preco: 1000, desconto: 0 },
+  pro:    { nome: 'Médio',    preco: 1500, desconto: 3 },
+  anual:  { nome: 'Avançado', preco: 2000, desconto: 5 }
+};
+
+async function lerConfig(chave) {
+  try {
+    const { data } = await supabaseClient.from('config_global').select('valor').eq('chave', chave).maybeSingle();
+    if (data && data.valor) { try { return JSON.parse(data.valor); } catch(e) { return data.valor; } }
+  } catch(e) {}
+  return null;
+}
+
+async function carregarConfigSubscricao() {
+  const planos = (await lerConfig('planos_config')) || PLANOS_DEFAULT;
+  ['basico','pro','anual'].forEach(k => {
+    const p = planos[k] || PLANOS_DEFAULT[k];
+    const n = document.getElementById('cfg-'+k+'-nome');
+    const pr = document.getElementById('cfg-'+k+'-preco');
+    const d = document.getElementById('cfg-'+k+'-desc');
+    if (n) n.value = p.nome || '';
+    if (pr) pr.value = (p.preco != null ? p.preco : '');
+    if (d) d.value = (p.desconto != null ? p.desconto : 0);
+  });
+  const m = (await lerConfig('metodos_subscricao')) || {};
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+  set('cfg-mpesa', m.mpesa); set('cfg-emola', m.emola);
+  set('cfg-banco-nome', m.banco_nome); set('cfg-banco-conta', m.banco_conta); set('cfg-banco-titular', m.banco_titular);
+  const wa = await lerConfig('link_whatsapp_pagamento');
+  set('cfg-wa-pagamento', typeof wa === 'string' ? wa : '');
+}
+
+async function guardarConfigSubscricao() {
+  const estado = document.getElementById('cfg-estado');
+  const num = id => parseFloat(document.getElementById(id).value) || 0;
+  const txt = id => (document.getElementById(id).value || '').trim();
+  const planos = {
+    basico: { nome: txt('cfg-basico-nome') || 'Básico',   preco: num('cfg-basico-preco'), desconto: num('cfg-basico-desc') },
+    pro:    { nome: txt('cfg-pro-nome')    || 'Médio',    preco: num('cfg-pro-preco'),    desconto: num('cfg-pro-desc') },
+    anual:  { nome: txt('cfg-anual-nome')  || 'Avançado', preco: num('cfg-anual-preco'),  desconto: num('cfg-anual-desc') }
+  };
+  const metodos = {
+    mpesa: txt('cfg-mpesa'), emola: txt('cfg-emola'),
+    banco_nome: txt('cfg-banco-nome'), banco_conta: txt('cfg-banco-conta'), banco_titular: txt('cfg-banco-titular')
+  };
+  const waPag = txt('cfg-wa-pagamento');
+  estado.innerHTML = '<span style="color:#64748b;">A guardar...</span>';
+  try {
+    const rows = [
+      { chave: 'planos_config', valor: JSON.stringify(planos), atualizado_em: new Date().toISOString() },
+      { chave: 'metodos_subscricao', valor: JSON.stringify(metodos), atualizado_em: new Date().toISOString() },
+      { chave: 'link_whatsapp_pagamento', valor: JSON.stringify(waPag), atualizado_em: new Date().toISOString() }
+    ];
+    const { error } = await supabaseClient.from('config_global').upsert(rows, { onConflict: 'chave' });
+    if (error) throw error;
+    estado.innerHTML = '<span style="color:#16a34a;">✅ Guardado! A página de planos já mostra os novos valores.</span>';
+  } catch(e) {
+    estado.innerHTML = '<span style="color:#dc2626;">❌ ' + e.message + ' (corre o SQL v2.6.8 se a tabela não existir)</span>';
+  }
+}
+
+function estadoNorm(e) {
+  if (!e || e === 'pendente' || e === 'pendente_pagamento') return 'pendente';
+  if (e === 'suspenso' || e === 'bloqueado') return 'suspenso';
+  return e;
+}
+
+function renderContadores() {
+  const cont = { pendente: 0, activo: 0, suspenso: 0 };
+  lojas.forEach(l => { const e = estadoNorm(l.estado); if (cont[e] !== undefined) cont[e]++; });
+  document.getElementById('cnt-total').textContent = lojas.length;
+  document.getElementById('cnt-pendente').textContent = cont.pendente;
+  document.getElementById('cnt-activo').textContent = cont.activo;
+  document.getElementById('cnt-suspenso').textContent = cont.suspenso;
+}
+
+function filtrar(f) {
+  filtroAtivo = f;
+  ['todas','pendente','activo','suspenso'].forEach(x => {
+    document.getElementById('f-'+x).classList.toggle('ativo', x === f);
+    const c = document.getElementById('cont-'+x);
+    if (c) c.classList.toggle('selecionado', x === f);
+  });
+  renderLojas();
+}
+
+function textoEstado(e) {
+  const n = estadoNorm(e);
+  if (n === 'pendente') return '⏳ Pendente';
+  if (n === 'activo') return '✅ Activa';
+  if (n === 'suspenso') return '🚫 Suspensa';
+  return e || '—';
+}
+
+function textoPlano(p) {
+  if (p === 'basico') return '🥉 Básico';
+  if (p === 'pro' || p === 'bronze') return '🥈 Pro';
+  if (p === 'anual') return '🥇 Anual';
+  return '💠 ' + (p || 'trial');
+}
+
+function renderLojas() {
+  const div = document.getElementById('lista-lojas');
+  const termo = (document.getElementById('busca').value || '').trim().toLowerCase();
+
+  let lista = lojas;
+  if (filtroAtivo !== 'todas') lista = lista.filter(l => estadoNorm(l.estado) === filtroAtivo);
+  if (termo) {
+    lista = lista.filter(l =>
+      (l.nome || '').toLowerCase().includes(termo) ||
+      (l.email_dono || '').toLowerCase().includes(termo) ||
+      (l.telefone || '').toLowerCase().includes(termo));
+  }
+
+  if (lista.length === 0) {
+    div.innerHTML = '<div class="vazio">Nenhuma loja encontrada' + (filtroAtivo !== 'todas' ? ' neste filtro' : '') + '.</div>';
+    return;
+  }
+
+  div.innerHTML = lista.map(l => {
+    const en = estadoNorm(l.estado);
+    const data = l.criado_em ? new Date(l.criado_em).toLocaleDateString('pt-PT') : '—';
+    const telLimpo = (l.telefone || '').replace(/\D/g, '');
+    return `
+    <div class="loja-card">
+      <div class="loja-topo">
+        <div>
+          <div class="loja-nome">🏪 ${l.nome || '(sem nome)'}</div>
+          <div class="loja-info">
+            📧 ${l.email_dono || '<span style="color:#cbd5e1;">sem email registado</span>'}<br>
+            📱 ${l.telefone || '—'}${telLimpo ? ' · <a href="https://wa.me/' + (telLimpo.startsWith('258') ? telLimpo : '258' + telLimpo) + '" target="_blank">WhatsApp</a>' : ''}<br>
+            📅 Registada em ${data}${l.numero_transferencia ? ' · 💳 Transf: ' + l.numero_transferencia : ''}
+          </div>
+        </div>
+        <div style="text-align:right;display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+          <span class="badge ${en}">${textoEstado(l.estado)}</span>
+          <span class="badge trial">${textoPlano(l.plano)}</span>
+        </div>
+      </div>
+      <div class="loja-acoes">
+        <select class="sel-plano" id="plano-${l.id}">
+          <option value="basico" ${l.plano==='basico'?'selected':''}>🥉 Básico — MT 1.000/mês</option>
+          <option value="pro" ${l.plano==='pro'||l.plano==='bronze'?'selected':''}>🥈 Médio — MT 1.500/mês</option>
+          <option value="anual" ${l.plano==='anual'?'selected':''}>🥇 Avançado — MT 2.000/mês</option>
+        </select>
+        ${en !== 'activo' ? `<button class="btn btn-activar" onclick="mudarEstado('${l.id}', 'activo')">✅ Activar</button>` : ''}
+        ${en === 'activo' ? `<button class="btn btn-activar" onclick="mudarEstado('${l.id}', 'activo')">💾 Guardar plano</button>` : ''}
+        ${en !== 'suspenso' ? `<button class="btn btn-suspender" onclick="mudarEstado('${l.id}', 'suspenso')">🚫 Suspender</button>` : ''}
+        ${en !== 'pendente' ? `<button class="btn btn-pendente" onclick="mudarEstado('${l.id}', 'pendente')">⏳ Pendente</button>` : ''}
+        <button class="btn" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;" onclick="alertarExpiracao('${l.id}')">🔔 Alertar expiração (3 dias)</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function alertarExpiracao(id) {
+  const dias = prompt('Em quantos dias expira o pacote desta loja?\n(o dono verá a contagem: verde → laranja → vermelho)', '3');
+  if (dias === null) return;
+  const n = parseInt(dias);
+  if (isNaN(n) || n < 0) { notif('❌ Número de dias inválido.', true); return; }
+  const dataExpira = new Date();
+  dataExpira.setDate(dataExpira.getDate() + n);
+  const { data, error } = await supabaseClient
+    .from('lojas')
+    .update({ data_expiracao: dataExpira.toISOString() })
+    .eq('id', id).select();
+  if (error) { notif('❌ Erro: ' + error.message + ' (corre o SQL v2.4.3)', true); return; }
+  if (!data || !data.length) { notif('❌ Não gravou. Corre o SQL de permissões admin.', true); return; }
+  notif('🔔 Alerta enviado! O dono verá a contagem de ' + n + ' dia(s) no monitor.');
+}
+
+async function mudarEstado(id, novoEstado) {
+  const plano = document.getElementById('plano-' + id).value;
+  const updateObj = { estado: novoEstado, plano: plano };
+  // Ao ativar (loja paga), limpa a data de expiração para o monitor não mostrar "EXPIROU".
+  if (novoEstado === 'activo') updateObj.data_expiracao = null;
+  const { data, error } = await supabaseClient
+    .from('lojas')
+    .update(updateObj)
+    .eq('id', id)
+    .select();
+
+  if (error) { notif('❌ Erro: ' + error.message, true); return; }
+  if (!data || data.length === 0) {
+    notif('❌ A alteração não foi gravada! Corre o SQL de permissões do admin no Supabase (atualizacao-v1.6.0-admin.sql).', true);
+    return;
+  }
+
+  const loja = lojas.find(l => l.id === id);
+  if (loja) { loja.estado = novoEstado; loja.plano = plano; }
+  renderContadores();
+  renderLojas();
+
+  if (novoEstado === 'activo') notif('✅ "' + (loja?.nome || 'Loja') + '" activada com o plano ' + plano + '!');
+  else if (novoEstado === 'suspenso') notif('🚫 "' + (loja?.nome || 'Loja') + '" suspensa.');
+  else notif('⏳ "' + (loja?.nome || 'Loja') + '" marcada como pendente.');
+}
+
+async function sair() {
+  await supabaseClient.auth.signOut();
+  window.location.href = 'login.html';
+}
+
+iniciar();
+
+// ===== MÉTODOS DE PAGAMENTO POR LOJA =====
+let lojaMetodosAtual = null;
+
+async function abrirMetodosPagamento(lojaId, nome) {
+  lojaMetodosAtual = lojaId;
+  // Busca os métodos atuais da loja
+  let metodos = { mpesa: '', emola: '', banco_nome: '', banco_conta: '', banco_titular: '', ativo: 'mpesa' };
+  try {
+    const { data } = await supabaseClient.from('lojas').select('metodos_pagamento').eq('id', lojaId).maybeSingle();
+    if (data && data.metodos_pagamento) metodos = { ...metodos, ...data.metodos_pagamento };
+  } catch(e) {}
+
+  document.getElementById('mp-titulo').textContent = '💳 Métodos de Pagamento — ' + nome;
+  document.getElementById('mp-mpesa').value = metodos.mpesa || '';
+  document.getElementById('mp-emola').value = metodos.emola || '';
+  document.getElementById('mp-banco-nome').value = metodos.banco_nome || '';
+  document.getElementById('mp-banco-conta').value = metodos.banco_conta || '';
+  document.getElementById('mp-banco-titular').value = metodos.banco_titular || '';
+  document.getElementById('mp-ativo').value = metodos.ativo || 'mpesa';
+  document.getElementById('modal-metodos').style.display = 'flex';
+}
+
+function fecharMetodos() {
+  document.getElementById('modal-metodos').style.display = 'none';
+}
+
+async function guardarMetodos() {
+  const metodos = {
+    mpesa: document.getElementById('mp-mpesa').value.trim(),
+    emola: document.getElementById('mp-emola').value.trim(),
+    banco_nome: document.getElementById('mp-banco-nome').value.trim(),
+    banco_conta: document.getElementById('mp-banco-conta').value.trim(),
+    banco_titular: document.getElementById('mp-banco-titular').value.trim(),
+    ativo: document.getElementById('mp-ativo').value
+  };
+  const est = document.getElementById('mp-estado');
+  est.textContent = 'A guardar...';
+  const { error } = await supabaseClient.from('lojas').update({ metodos_pagamento: metodos }).eq('id', lojaMetodosAtual);
+  if (error) {
+    est.innerHTML = '<span style="color:#dc2626;">❌ ' + error.message + ' (corre o SQL v2.7.0)</span>';
+    return;
+  }
+  est.innerHTML = '<span style="color:#16a34a;">✅ Guardado! O dono vê ao entrar na loja.</span>';
+  setTimeout(fecharMetodos, 1200);
+}
+
+</script>
+
+<!-- Modal Métodos de Pagamento -->
+<div id="modal-metodos" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;justify-content:center;align-items:center;padding:16px;">
+  <div style="background:white;border-radius:16px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;padding:22px;">
+    <div id="mp-titulo" style="font-size:17px;font-weight:bold;color:#1a202c;margin-bottom:16px;">💳 Métodos de Pagamento</div>
+
+    <label style="font-size:13px;font-weight:bold;color:#166534;">📱 Número M-Pesa</label>
+    <input type="text" id="mp-mpesa" placeholder="84 xxx xxxx" style="width:100%;padding:11px;border:1.5px solid #86efac;border-radius:10px;font-size:14px;margin:6px 0 14px;box-sizing:border-box;">
+
+    <label style="font-size:13px;font-weight:bold;color:#9a3412;">📱 Número e-Mola</label>
+    <input type="text" id="mp-emola" placeholder="86 xxx xxxx" style="width:100%;padding:11px;border:1.5px solid #fdba74;border-radius:10px;font-size:14px;margin:6px 0 14px;box-sizing:border-box;">
+
+    <div style="border-top:1px solid #e2e8f0;margin:6px 0 14px;padding-top:14px;">
+      <div style="font-size:13px;font-weight:bold;color:#1a56a0;margin-bottom:8px;">🏦 Conta Bancária</div>
+      <input type="text" id="mp-banco-nome" placeholder="Nome do banco (ex: BCI, BIM, Standard)" style="width:100%;padding:11px;border:1.5px solid #bfdbfe;border-radius:10px;font-size:14px;margin-bottom:8px;box-sizing:border-box;">
+      <input type="text" id="mp-banco-conta" placeholder="Número da conta / NIB" style="width:100%;padding:11px;border:1.5px solid #bfdbfe;border-radius:10px;font-size:14px;margin-bottom:8px;box-sizing:border-box;">
+      <input type="text" id="mp-banco-titular" placeholder="Nome do titular" style="width:100%;padding:11px;border:1.5px solid #bfdbfe;border-radius:10px;font-size:14px;margin-bottom:8px;box-sizing:border-box;">
+    </div>
+
+    <label style="font-size:13px;font-weight:bold;color:#374151;">⭐ Método a mostrar em destaque na loja</label>
+    <select id="mp-ativo" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;margin:6px 0 16px;box-sizing:border-box;">
+      <option value="mpesa">M-Pesa</option>
+      <option value="emola">e-Mola</option>
+      <option value="banco">Conta Bancária</option>
+    </select>
+
+    <div id="mp-estado" style="font-size:13px;margin-bottom:12px;text-align:center;"></div>
+
+    <div style="display:flex;gap:10px;">
+      <button onclick="fecharMetodos()" style="flex:1;padding:13px;background:#f1f5f9;border:none;border-radius:10px;font-weight:bold;cursor:pointer;color:#475569;">Cancelar</button>
+      <button onclick="guardarMetodos()" style="flex:1;padding:13px;background:#16a34a;border:none;border-radius:10px;font-weight:bold;cursor:pointer;color:white;">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
