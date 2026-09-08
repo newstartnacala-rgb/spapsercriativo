@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planos — Spap-Sercriativo</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:-apple-system,Arial,sans-serif; background:linear-gradient(135deg,#1a56a0,#0f3460); min-height:100vh; padding:20px; }
+.container { max-width:640px; margin:0 auto; }
+.header { text-align:center; color:white; padding:30px 0 20px; }
+.header h1 { font-size:26px; margin-bottom:6px; }
+.header p { font-size:13px; color:#bfdbfe; }
+
+.planos-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:20px; }
+@media (max-width:560px) { .planos-grid { grid-template-columns:1fr; } }
+.plano-card { background:white; border-radius:16px; padding:20px 14px; text-align:center; cursor:pointer; border:3px solid transparent; transition:all 0.2s; position:relative; }
+.plano-card:hover { transform:translateY(-2px); }
+.plano-card.selecionado { border-color:#1a56a0; }
+.plano-card.popular { }
+.plano-card.popular.selecionado { border-color:#e05c00; }
+.badge { position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#e05c00; color:white; font-size:10px; font-weight:bold; padding:4px 12px; border-radius:20px; white-space:nowrap; }
+.plano-nome { font-size:15px; font-weight:bold; color:#1a202c; margin-bottom:8px; }
+.plano-preco { font-size:28px; font-weight:bold; color:#1a56a0; }
+.popular .plano-preco { color:#e05c00; }
+.plano-moeda { font-size:12px; color:#64748b; }
+.plano-economia { background:#dcfce7; color:#16a34a; font-size:11px; font-weight:bold; padding:3px 10px; border-radius:20px; display:inline-block; margin:6px 0; }
+.plano-features { font-size:12px; color:#64748b; margin-top:10px; border-top:1px solid #f1f5f9; padding-top:10px; text-align:left; }
+.plano-features div { padding:3px 0; }
+
+.secao { background:white; border-radius:16px; padding:20px; margin-bottom:16px; }
+.secao h3 { font-size:15px; font-weight:bold; color:#1a202c; margin-bottom:14px; }
+
+.metodos { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
+.metodo { border:2px solid #e2e8f0; border-radius:12px; padding:14px; text-align:center; cursor:pointer; transition:all 0.2s; }
+.metodo:hover { border-color:#1a56a0; }
+.metodo.selecionado { border-color:#1a56a0; background:#eff6ff; }
+.metodo-icon { font-size:26px; margin-bottom:4px; }
+.metodo-nome { font-size:13px; font-weight:bold; }
+.metodo-num { font-size:12px; color:#1a56a0; font-weight:bold; margin-top:2px; }
+
+.instrucoes { background:#fffbe6; border:1px solid #fcd34d; border-radius:10px; padding:14px; margin-bottom:14px; font-size:13px; color:#92400e; display:none; line-height:1.8; }
+
+.upload-area { border:2px dashed #e2e8f0; border-radius:12px; padding:20px; text-align:center; cursor:pointer; transition:all 0.2s; margin-bottom:14px; display:none; }
+.upload-area:hover { border-color:#1a56a0; }
+.upload-area.tem-foto { border-color:#16a34a; background:#f0fdf4; }
+.upload-preview { width:100%; max-height:200px; object-fit:cover; border-radius:8px; display:none; margin-top:10px; }
+
+.btn { width:100%; padding:14px; border:none; border-radius:12px; font-size:15px; font-weight:bold; cursor:pointer; margin-bottom:10px; }
+.btn-principal { background:linear-gradient(135deg,#1a56a0,#2563eb); color:white; }
+.btn-principal:disabled { opacity:0.5; cursor:not-allowed; }
+.btn-secundario { background:#f1f5f9; color:#374151; }
+
+.msg { font-size:13px; padding:12px; border-radius:10px; margin-bottom:12px; display:none; }
+.msg.erro { background:#fef2f2; color:#dc2626; display:block; }
+.msg.sucesso { background:#f0fdf4; color:#16a34a; display:block; }
+
+.sucesso-box { background:white; border-radius:16px; padding:32px 20px; text-align:center; display:none; }
+.sucesso-box h2 { color:#16a34a; font-size:22px; margin:12px 0 8px; }
+.sucesso-box p { color:#64748b; font-size:13px; margin-bottom:20px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div style="background:rgba(255,255,255,0.92);border-radius:14px;padding:10px 18px;display:inline-block;margin-bottom:6px;"><img src="logo.png" alt="Spap-Sercriativo" style="width:190px;max-width:100%;display:block;"></div>
+    <p>Escolhe o plano certo para o teu negócio</p>
+  </div>
+
+  <div id="secao-planos">
+    <!-- PLANOS -->
+    <div class="planos-grid">
+      <div class="plano-card" id="card-basico" onclick="selecionarPlano('basico')">
+        <div class="plano-nome" id="nome-basico">🥉 Básico</div>
+        <div class="plano-preco" id="preco-basico">1.000</div>
+        <div class="plano-moeda">MT / mês</div>
+        <div class="plano-features">
+          <div>✓ PDV completo</div>
+          <div>✓ Vendas e recibos</div>
+          <div>✓ Gestão de stock</div>
+          <div>✓ Suporte básico</div>
+          <div style="color:#cbd5e1;">✗ Monitor do Dono</div>
+        </div>
+      </div>
+      <div class="plano-card" id="card-pro" onclick="selecionarPlano('pro')">
+        <div class="plano-nome" id="nome-pro">🥈 Médio</div>
+        <div class="plano-preco" id="preco-pro">1.500</div>
+        <div class="plano-moeda">MT / mês</div>
+        <div class="plano-features">
+          <div>✓ Tudo do Básico</div>
+          <div>✓ <strong>Monitor do Dono</strong></div>
+          <div>✓ <strong>Inventário e lucro</strong></div>
+          <div>✓ Multi-utilizador</div>
+        </div>
+      </div>
+      <div class="plano-card popular" id="card-anual" onclick="selecionarPlano('anual')">
+        <div class="badge">⭐ MELHOR VALOR</div>
+        <div class="plano-nome" id="nome-anual">🥇 Avançado</div>
+        <div class="plano-preco" id="preco-anual">2.000</div>
+        <div class="plano-moeda">MT / mês</div>
+        <div class="plano-economia" id="anual-economia">Poupa 5% (anual)</div>
+        <div style="font-size:11px;color:#64748b;" id="anual-ano">MT 22.800 / ano</div>
+        <div class="plano-features">
+          <div>✓ Tudo do Médio</div>
+          <div>✓ Suporte prioritário</div>
+          <div>✓ Relatórios avançados</div>
+          <div>✓ Preço bloqueado 1 ano</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESUMO SELECCIONADO -->
+    <div id="resumo-box" style="display:none;background:white;border-radius:14px;padding:16px;margin-bottom:16px;">
+      <div style="font-weight:bold;color:#1a202c;margin-bottom:6px;">📋 Resumo:</div>
+      <div id="resumo-txt" style="font-size:14px;color:#374151;"></div>
+    </div>
+
+    <!-- MÉTODOS DE PAGAMENTO -->
+    <div class="secao" id="secao-metodos" style="display:none;">
+      <h3>💳 Método de Pagamento</h3>
+      <div class="metodos">
+        <div class="metodo" id="met-mpesa" onclick="selecionarMetodo('mpesa')">
+          <div class="metodo-icon">📱</div>
+          <div class="metodo-nome">M-Pesa</div>
+          <div class="metodo-num" id="met-mpesa-num">84 421 9918</div>
+        </div>
+        <div class="metodo" id="met-emola" onclick="selecionarMetodo('emola')">
+          <div class="metodo-icon">💚</div>
+          <div class="metodo-nome">e-Mola</div>
+          <div class="metodo-num" id="met-emola-num">86 166 7843</div>
+        </div>
+      </div>
+
+      <div class="instrucoes" id="instrucoes">
+        <strong id="inst-titulo"></strong><br>
+        <span id="inst-passos"></span>
+      </div>
+
+      <div class="upload-area" id="upload-area" onclick="document.getElementById('input-foto').click()">
+        <input type="file" id="input-foto" accept="image/*" style="display:none" onchange="previewFoto(event)">
+        <div style="font-size:36px;">📄</div>
+        <div style="font-size:13px;color:#64748b;margin-top:6px;">Clica para carregar o comprovativo</div>
+        <img id="preview-img" class="upload-preview">
+      </div>
+
+      <div class="msg" id="msg-pag"></div>
+      <button class="btn btn-principal" id="btn-pagar" onclick="enviarPagamento()" style="display:none;">✅ Confirmar Pagamento</button>
+    </div>
+
+    <button class="btn btn-secundario" onclick="window.location.href='login.html'">← Voltar ao Login</button>
+  </div>
+
+  <!-- SUCESSO -->
+  <div class="sucesso-box" id="sucesso-box">
+    <div style="font-size:56px;">🎉</div>
+    <h2>Pagamento Enviado!</h2>
+    <p>O teu comprovativo foi recebido.<br>A activação acontece em até <strong>24 horas</strong>.</p>
+    <div style="background:#fff7ed;border:1px solid #fdba74;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;color:#9a3412;text-align:left;">
+      <div style="font-weight:bold;margin-bottom:6px;">📞 Suporte — Não responderam em 5 minutos?</div>
+      <div style="margin-bottom:8px;">Liga ou manda mensagem para o nosso suporte:</div>
+      <a href="tel:+258866577722" style="display:block;color:#1a56a0;font-weight:bold;font-size:16px;margin-bottom:4px;">📱 +258 86 657 7722</a>
+      <a href="https://wa.me/258866577722" style="color:#16a34a;font-weight:bold;font-size:13px;">💬 WhatsApp do suporte</a>
+    </div>
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px;margin-bottom:16px;font-size:12px;color:#1e40af;text-align:left;">
+      🔒 O acesso à tua loja é libertado assim que o pagamento for confirmado (normalmente em até 24h).
+    </div>
+    <button class="btn btn-principal" onclick="window.location.href='login.html'">← Voltar ao Login</button>
+  </div>
+</div>
+
+<script src="supabase-config.js"></script>
+<script>
+  let plano = null, metodo = null, fotoBase64 = null;
+  let PRECOS = {
+    basico: { label:'Básico',   mensal:1000, total:1000,  periodo:'mês' },
+    pro:    { label:'Médio',    mensal:1500, total:1500,  periodo:'mês' },
+    anual:  { label:'Avançado', mensal:2000, total:22800, periodo:'ano' }
+  };
+  // Métodos de pagamento da subscrição (definidos pelo admin em config_global)
+  let metodosSub = { mpesa:'84 421 9918', emola:'86 166 7843', banco_nome:'', banco_conta:'', banco_titular:'' };
+  let waPagamento = '';
+
+  function fmtMT(n) { return (parseFloat(n)||0).toLocaleString('pt-PT'); }
+
+  // Lê a configuração central definida pelo admin e aplica-a à página.
+  async function carregarConfigPlanos() {
+    async function ler(chave) {
+      try {
+        const { data } = await supabaseClient.from('config_global').select('valor').eq('chave', chave).maybeSingle();
+        if (data && data.valor) { try { return JSON.parse(data.valor); } catch(e) { return data.valor; } }
+      } catch(e) {}
+      return null;
+    }
+    const planos = await ler('planos_config');
+    if (planos) {
+      ['basico','pro','anual'].forEach(k => {
+        const p = planos[k]; if (!p) return;
+        const mensal = parseFloat(p.preco) || 0;
+        const desc = parseFloat(p.desconto) || 0;
+        // Básico/Médio são mensais; Avançado mostra o total anual com desconto.
+        const total = (k === 'anual') ? Math.round(mensal * 12 * (1 - desc/100)) : mensal;
+        PRECOS[k] = { label: p.nome || PRECOS[k].label, mensal, total, periodo: (k==='anual'?'ano':'mês'), desconto: desc };
+        const elN = document.getElementById('nome-'+k);
+        const elP = document.getElementById('preco-'+k);
+        if (elN) { const emoji = (elN.textContent.match(/^\S+/)||[''])[0]; elN.textContent = emoji + ' ' + (p.nome || ''); }
+        if (elP) elP.textContent = fmtMT(mensal);
+      });
+    }
+    const m = await ler('metodos_subscricao');
+    if (m) {
+      metodosSub = { ...metodosSub, ...m };
+      const mp = document.getElementById('met-mpesa-num'); if (mp && m.mpesa) mp.textContent = m.mpesa;
+      const em = document.getElementById('met-emola-num'); if (em && m.emola) em.textContent = m.emola;
+    }
+    const wa = await ler('link_whatsapp_pagamento');
+    if (typeof wa === 'string') waPagamento = wa;
+
+    // Mostra SEMPRE os cartões a partir de PRECOS (valores acordados por defeito, ou os do admin se guardados)
+    ['basico','pro','anual'].forEach(k => {
+      const p = PRECOS[k];
+      const elN = document.getElementById('nome-'+k);
+      const elP = document.getElementById('preco-'+k);
+      if (elN) { const emoji = (elN.textContent.match(/^\S+/)||[''])[0]; elN.textContent = emoji + ' ' + p.label; }
+      if (elP) elP.textContent = fmtMT(p.mensal);
+    });
+    const av = PRECOS.anual;
+    const descA = (av.desconto != null) ? av.desconto : 5;
+    const elEco = document.getElementById('anual-economia');
+    const elAno = document.getElementById('anual-ano');
+    if (elEco) elEco.textContent = descA > 0 ? ('Poupa ' + descA + '% (anual)') : 'Plano avançado';
+    if (elAno) elAno.textContent = 'MT ' + fmtMT(av.total) + ' / ano';
+  }
+  carregarConfigPlanos();
+
+  function selecionarPlano(p) {
+    plano = p;
+    ['basico','pro','anual'].forEach(x =>
+      document.getElementById('card-'+x).classList.toggle('selecionado', p===x));
+    const pr = PRECOS[p];
+    const resumo = document.getElementById('resumo-box');
+    resumo.style.display = 'block';
+    document.getElementById('resumo-txt').innerHTML =
+      `Plano <strong>${pr.label}</strong> — MT ${pr.mensal.toLocaleString()}/mês` +
+      (p==='anual' ? ` <span style="color:#16a34a;font-size:12px;">(MT ${pr.total.toLocaleString()} total/ano)</span>` : '');
+    document.getElementById('secao-metodos').style.display = 'block';
+  }
+
+  function selecionarMetodo(m) {
+    metodo = m;
+    document.getElementById('met-mpesa').classList.toggle('selecionado', m==='mpesa');
+    document.getElementById('met-emola').classList.toggle('selecionado', m==='emola');
+    const pr = PRECOS[plano];
+    const inst = document.getElementById('instrucoes');
+    const titulo = document.getElementById('inst-titulo');
+    const passos = document.getElementById('inst-passos');
+    inst.style.display = 'block';
+
+    if (m === 'mpesa') {
+      titulo.textContent = '📱 Como pagar via M-Pesa:';
+      passos.innerHTML = `1️⃣ Abre o M-Pesa<br>2️⃣ Envia Dinheiro → <strong>${metodosSub.mpesa||''}</strong><br>3️⃣ Valor: <strong style="color:#e05c00;">MT ${pr.total.toLocaleString()}</strong><br>4️⃣ Referência: Spap-Sercriativo<br>5️⃣ Guarda o comprovativo`;
+    } else {
+      titulo.textContent = '💚 Como pagar via e-Mola:';
+      passos.innerHTML = `1️⃣ Abre o e-Mola<br>2️⃣ Transferir → <strong>${metodosSub.emola||''}</strong><br>3️⃣ Valor: <strong style="color:#16a34a;">MT ${pr.total.toLocaleString()}</strong><br>4️⃣ Referência: Spap-Sercriativo<br>5️⃣ Guarda o comprovativo`;
+    }
+
+    document.getElementById('upload-area').style.display = 'block';
+    document.getElementById('btn-pagar').style.display = 'block';
+  }
+
+  function previewFoto(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      fotoBase64 = e.target.result;
+      const img = document.getElementById('preview-img');
+      img.src = fotoBase64; img.style.display = 'block';
+      document.getElementById('upload-area').classList.add('tem-foto');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function enviarPagamento() {
+    if (!fotoBase64) {
+      document.getElementById('msg-pag').textContent = '❌ Carrega a foto do comprovativo.';
+      document.getElementById('msg-pag').className = 'msg erro';
+      return;
+    }
+
+    const btn = document.getElementById('btn-pagar');
+    btn.disabled = true; btn.textContent = 'A enviar...';
+
+    // Obtém sessão actual
+    const { data: sd } = await supabaseClient.auth.getSession();
+    const pr = PRECOS[plano];
+
+    // Abre WhatsApp com notificação
+    const nome = sd?.session?.user?.email || 'cliente';
+    const msg = encodeURIComponent(
+      `💳 *Pagamento Recebido — Spap-Sercriativo*\n\n` +
+      `📧 *Email:* ${nome}\n` +
+      `💎 *Plano:* ${pr.label}\n` +
+      `💰 *Valor:* MT ${pr.total.toLocaleString()}\n` +
+      `💳 *Método:* ${metodo === 'mpesa' ? 'M-Pesa' : 'e-Mola'}\n\n` +
+      `✅ Comprovativo enviado no sistema. Por favor verificar e activar.`
+    );
+    window.open(`https://wa.me/258861667843?text=${msg}`, '_blank');
+
+    // Actualiza estado da loja para pendente_pagamento
+    if (sd?.session) {
+      const { data: membros } = await supabaseClient
+        .from('membros_loja').select('loja_id').eq('user_id', sd.session.user.id).limit(1);
+      if (membros && membros[0]) {
+        await supabaseClient.from('lojas')
+          .update({ plano, estado: 'pendente_pagamento' })
+          .eq('id', membros[0].loja_id);
+      }
+    }
+
+    document.getElementById('secao-planos').style.display = 'none';
+    document.getElementById('sucesso-box').style.display = 'block';
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Criar Loja — Spap-Sercriativo</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:-apple-system,Arial,sans-serif; background:linear-gradient(135deg,#1a56a0 0%,#0f3460 100%); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+.card { background:white; border-radius:20px; width:100%; max-width:460px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.3); }
+.header { background:linear-gradient(135deg,#f5f1e8,#e9e2d2); padding:28px 32px 20px; text-align:center; color:white; }
+.header-icon { font-size:44px; margin-bottom:6px; }
+.header-titulo { font-size:22px; font-weight:bold; }
+.header-sub { font-size:12px; color:#7a6a45; margin-top:4px; font-weight:600; }
+.passos { display:flex; background:#f8fafc; border-bottom:1px solid #e2e8f0; }
+.passo { flex:1; padding:10px 4px; text-align:center; font-size:10px; font-weight:600; color:#94a3b8; }
+.passo.ativo { color:#1a56a0; }
+.passo.concluido { color:#16a34a; }
+.passo-num { width:22px; height:22px; border-radius:50%; border:2px solid #e2e8f0; display:flex; align-items:center; justify-content:center; margin:0 auto 3px; font-size:10px; font-weight:bold; background:white; }
+.passo.ativo .passo-num { border-color:#1a56a0; color:#1a56a0; }
+.passo.concluido .passo-num { border-color:#16a34a; background:#16a34a; color:white; }
+.corpo { padding:24px 28px; }
+.secao-titulo { font-size:17px; font-weight:bold; color:#1a202c; margin-bottom:4px; }
+.secao-sub { font-size:12px; color:#64748b; margin-bottom:18px; }
+.campo-grupo { margin-bottom:14px; }
+.campo-grupo label { display:block; font-size:12px; font-weight:600; color:#374151; margin-bottom:5px; }
+.campo-wrap { display:flex; align-items:center; border:1.5px solid #e2e8f0; border-radius:10px; padding:11px 13px; gap:9px; transition:border-color 0.2s; }
+.campo-wrap:focus-within { border-color:#1a56a0; box-shadow:0 0 0 3px rgba(26,86,160,0.08); }
+.campo-wrap span { font-size:17px; flex-shrink:0; }
+.campo-wrap input, .campo-wrap select { border:none; outline:none; width:100%; font-size:14px; color:#1a202c; background:transparent; }
+.campo-wrap input::placeholder { color:#94a3b8; }
+.campo-linha { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.forca-wrap { height:4px; border-radius:2px; margin-top:6px; background:#e2e8f0; }
+.forca-barra { height:100%; border-radius:2px; transition:all 0.3s; width:0; }
+.campo-dica { font-size:11px; color:#94a3b8; margin-top:3px; }
+.btn-principal { width:100%; padding:13px; background:linear-gradient(135deg,#1a56a0,#2563eb); color:white; border:none; border-radius:10px; font-size:15px; font-weight:bold; cursor:pointer; margin-top:8px; transition:opacity 0.2s; }
+.btn-principal:hover { opacity:0.9; }
+.btn-principal:disabled { opacity:0.5; cursor:not-allowed; }
+.btn-secundario { width:100%; padding:11px; background:#f1f5f9; color:#374151; border:none; border-radius:10px; font-size:14px; cursor:pointer; margin-top:8px; }
+.btn-secundario:hover { background:#e2e8f0; }
+.msg { font-size:13px; margin-top:10px; padding:11px 13px; border-radius:10px; display:none; }
+.msg.erro { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; display:block; }
+.msg.sucesso { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; display:block; }
+.termos { display:flex; align-items:flex-start; gap:10px; margin:14px 0; }
+.termos input { margin-top:2px; flex-shrink:0; accent-color:#1a56a0; }
+.termos label { font-size:12px; color:#64748b; }
+.termos a { color:#1a56a0; }
+.rodape { text-align:center; margin-top:16px; font-size:13px; color:#64748b; }
+.rodape a { color:#1a56a0; text-decoration:none; font-weight:bold; }
+.otp-digito { width:46px; height:54px; border:2px solid #e2e8f0; border-radius:10px; text-align:center; font-size:24px; font-weight:bold; color:#1a202c; outline:none; transition:border-color 0.2s; }
+.otp-digito:focus { border-color:#1a56a0; box-shadow:0 0 0 3px rgba(26,86,160,0.1); }
+.otp-digito.cheio { border-color:#16a34a; background:#f0fdf4; }
+@media(max-width:400px){ .otp-digito { width:40px; height:48px; font-size:20px; } }
+.sucesso-icone { font-size:56px; text-align:center; margin-bottom:12px; }
+.sucesso-titulo { font-size:20px; font-weight:bold; color:#16a34a; text-align:center; margin-bottom:8px; }
+.sucesso-sub { font-size:13px; color:#64748b; text-align:center; margin-bottom:20px; }
+@media(max-width:480px) {
+  .card { border-radius:0; }
+  .corpo { padding:18px; }
+  .campo-linha { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <img src="logo.png" alt="Spap-Sercriativo" style="width:200px;max-width:80%;margin-bottom:4px;">
+    <div class="header-sub">Cria a tua loja em menos de 2 minutos</div>
+  </div>
+
+  <div class="passos">
+    <div class="passo ativo" id="p1"><div class="passo-num" id="p1n">1</div>Loja</div>
+    <div class="passo" id="p2"><div class="passo-num" id="p2n">2</div>Conta</div>
+    <div class="passo" id="p3"><div class="passo-num" id="p3n">3</div>Código</div>
+    <div class="passo" id="p4"><div class="passo-num" id="p4n">4</div>Activação</div>
+  </div>
+
+  <!-- ETAPA 1: DADOS DA LOJA -->
+  <div class="corpo" id="etapa-1">
+    <div class="secao-titulo">🏬 Dados da Loja</div>
+    <div class="secao-sub">Começa por nos contar sobre o teu negócio</div>
+
+    <div class="campo-grupo">
+      <label>🏪 Nome da Loja *</label>
+      <div class="campo-wrap"><span>🏪</span><input type="text" id="nome-loja" placeholder="Ex: Loja Central do João" autocomplete="organization"></div>
+    </div>
+    <div class="campo-grupo">
+      <label>📱 Telefone *</label>
+      <div class="campo-wrap"><span>📞</span><input type="tel" id="telefone" placeholder="+258 84 000 0000"></div>
+    </div>
+    <div class="campo-grupo">
+      <label>📍 Endereço / Localização</label>
+      <div class="campo-wrap"><span>📍</span><input type="text" id="endereco" placeholder="Ex: Av. Eduardo Mondlane, Nampula"></div>
+    </div>
+    <div class="campo-grupo">
+      <label>🏢 Nome da Empresa <span style="font-size:10px;color:#94a3b8;">(aparece nos recibos)</span></label>
+      <div class="campo-wrap"><span>🏢</span><input type="text" id="nome-empresa" placeholder="Ex: Comercial Massuvir, Lda"></div>
+    </div>
+    <div class="campo-grupo">
+      <label>👤 Códigos dos Vendedores * <span style="font-size:10px;color:#94a3b8;">(separados por vírgula)</span></label>
+      <div class="campo-wrap"><span>👤</span><input type="text" id="cod-vendedores" placeholder="Ex: 1001, 1002" inputmode="numeric"></div>
+      <div class="campo-dica">Cada vendedor entra no PDV com o seu código. Podes gerir depois no Monitor.</div>
+    </div>
+    <div class="campo-grupo">
+      <label>📱 Número para Transferências <span style="font-size:10px;color:#94a3b8;">(opcional — M-Pesa, e-Mola ou banco)</span></label>
+      <div class="campo-wrap"><span>📱</span><input type="tel" id="num-transferencia" placeholder="Ex: 84 421 9918"></div>
+    </div>
+    <div class="campo-grupo">
+      <label>🏦 Código de Agente Móvel <span style="font-size:10px;color:#94a3b8;">(opcional)</span></label>
+      <div class="campo-wrap"><span>🔢</span><input type="text" id="cod-agente" placeholder="Ex: AG12345"></div>
+    </div>
+
+    <div class="campo-linha">
+      <div class="campo-grupo">
+        <label>🏢 Tipo de Negócio</label>
+        <div class="campo-wrap" style="padding:9px 13px;">
+          <span>🏷️</span>
+          <select id="tipo-negocio" style="border:none;outline:none;width:100%;font-size:13px;color:#1a202c;background:transparent;">
+            <option value="comercial">Loja Comercial / Geral</option>
+            <option value="farmacia">Farmácia</option>
+            <option value="boutique">Boutique</option>
+            <option value="mercearia">Mercearia</option>
+            <option value="restaurante">Restaurante / Bar</option>
+            <option value="bottlestore">Bottle Store</option>
+          </select>
+        </div>
+      </div>
+      <div class="campo-grupo">
+        <label>💰 Moeda</label>
+        <div class="campo-wrap" style="padding:9px 13px;">
+          <span>💱</span>
+          <select id="moeda" style="border:none;outline:none;width:100%;font-size:13px;color:#1a202c;background:transparent;">
+            <option value="MT">MT (Metical)</option>
+            <option value="USD">USD (Dólar)</option>
+            <option value="EUR">EUR (Euro)</option>
+            <option value="KZ">KZ (Kwanza)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-principal" onclick="irEtapa2()">Continuar →</button>
+    <div class="msg" id="msg-1"></div>
+    <div class="rodape">Já tens loja? <a href="login.html">Entrar</a></div>
+  </div>
+
+  <!-- ETAPA 2: DADOS DA CONTA -->
+  <div class="corpo" id="etapa-2" style="display:none;">
+    <div class="secao-titulo">👤 Criar a tua Conta</div>
+    <div class="secao-sub">Dados de acesso ao sistema</div>
+
+    <div class="campo-grupo">
+      <label>👤 O teu Nome *</label>
+      <div class="campo-wrap"><span>👤</span><input type="text" id="nome-dono" placeholder="Ex: João Massuvir"></div>
+    </div>
+    <div class="campo-grupo">
+      <label>📧 Email *</label>
+      <div class="campo-wrap"><span>✉️</span><input type="email" id="email" placeholder="teu@email.com" autocomplete="email"></div>
+    </div>
+    <div class="campo-grupo">
+      <label>🔒 Senha * <span style="font-size:10px;color:#94a3b8;">(mín. 8 caracteres)</span></label>
+      <div class="campo-wrap"><span>🔒</span><input type="password" id="senha" placeholder="Cria uma senha forte" oninput="verificarForca(this.value)"></div>
+      <div class="forca-wrap"><div class="forca-barra" id="forca-barra"></div></div>
+      <div class="campo-dica" id="forca-txt">Mínimo 8 caracteres</div>
+    </div>
+    <div class="campo-grupo">
+      <label>🔑 Confirmar Senha *</label>
+      <div class="campo-wrap"><span>🔑</span><input type="password" id="senha-confirm" placeholder="Repete a senha"></div>
+    </div>
+    <div class="campo-grupo">
+      <label>🛡️ Código da Plataforma * <span style="font-size:10px;color:#94a3b8;">(4 a 6 dígitos — usado dentro do PDV)</span></label>
+      <div class="campo-wrap"><span>🛡️</span><input type="password" id="codigo-plataforma" placeholder="Ex: 4589" inputmode="numeric" maxlength="6"></div>
+      <div class="campo-dica">Este código protege o menu e as eliminações dentro da tua loja. Guarda-o bem!</div>
+    </div>
+
+    <div class="termos">
+      <input type="checkbox" id="aceito">
+      <label for="aceito">Li e aceito os <a href="#">Termos de Serviço</a> e a <a href="#">Política de Privacidade</a> do Spap-Sercriativo.</label>
+    </div>
+
+    <button class="btn-principal" id="btn-criar" onclick="criarConta()">✅ Criar Loja Grátis</button>
+    <button class="btn-secundario" onclick="irEtapa1()">← Voltar</button>
+    <div class="msg" id="msg-2"></div>
+  </div>
+
+  <!-- ETAPA 3: VERIFICAR EMAIL COM CÓDIGO OTP -->
+  <div class="corpo" id="etapa-3" style="display:none;">
+    <div style="text-align:center;font-size:48px;margin-bottom:8px;">📬</div>
+    <div class="secao-titulo" style="text-align:center;">Verifica o teu Email</div>
+    <div class="secao-sub" style="text-align:center;">
+      Enviámos um código de <strong>6 dígitos</strong> para<br>
+      <strong id="otp-email-mostrado" style="color:#1a56a0;"></strong>
+    </div>
+
+    <div style="display:flex;justify-content:center;gap:8px;margin:18px 0;" id="otp-caixas">
+      <input type="tel" maxlength="1" class="otp-digito" inputmode="numeric" autocomplete="one-time-code">
+      <input type="tel" maxlength="1" class="otp-digito" inputmode="numeric">
+      <input type="tel" maxlength="1" class="otp-digito" inputmode="numeric">
+      <input type="tel" maxlength="1" class="otp-digito" inputmode="numeric">
+      <input type="tel" maxlength="1" class="otp-digito" inputmode="numeric">
+      <input type="tel" maxlength="1" class="otp-digito" inputmode="numeric">
+    </div>
+
+    <button class="btn-principal" id="btn-verificar-otp" onclick="verificarOTP()">✅ Verificar Código</button>
+    <button class="btn-secundario" id="btn-reenviar-otp" onclick="reenviarOTP()">📩 Reenviar código</button>
+    <div class="msg" id="msg-3"></div>
+    <div style="text-align:center;margin-top:12px;font-size:11px;color:#94a3b8;">
+      Não recebeste? Verifica a pasta de <strong>spam</strong> ou clica em reenviar.
+    </div>
+  </div>
+
+  <!-- ETAPA 4: REGISTO PENDENTE — activação só após confirmação do pagamento -->
+  <div class="corpo" id="etapa-4" style="display:none;">
+    <div class="sucesso-icone">⏳</div>
+    <div class="sucesso-titulo" style="color:#e05c00;">Registo Pendente</div>
+    <div class="sucesso-sub" id="msg-sucesso-nome"></div>
+
+    <div style="background:#fffbe6;border:1px solid #fcd34d;border-radius:12px;padding:14px 16px;margin-bottom:16px;font-size:13px;color:#92400e;text-align:left;">
+      <div style="font-weight:bold;margin-bottom:8px;">🔒 A tua loja está bloqueada até o pagamento ser confirmado.</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span style="background:#f97316;color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:11px;flex-shrink:0;">1</span>
+          <span>Escolhe o plano e faz o pagamento na página seguinte</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span style="background:#f97316;color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:11px;flex-shrink:0;">2</span>
+          <span>Carrega o comprovativo lá dentro e envia</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span style="background:#f97316;color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:11px;flex-shrink:0;">3</span>
+          <span>O proprietário confirma o pagamento e <strong>só então</strong> a tua loja é activada</span>
+        </div>
+      </div>
+    </div>
+
+    <a href="planos.html" style="text-decoration:none;">
+      <button class="btn-principal" style="margin-bottom:12px;">💎 Escolher Plano e Fazer Pagamento</button>
+    </a>
+
+    <div style="background:#fff7ed;border:1px solid #fdba74;border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:12.5px;color:#9a3412;text-align:left;">
+      <div style="font-weight:bold;margin-bottom:4px;">📞 Não responderam em 5 minutos?</div>
+      <div>Liga para o suporte:</div>
+      <a href="tel:+258866577722" style="display:block;color:#1a56a0;font-weight:bold;font-size:16px;margin-top:4px;">📱 +258 86 657 7722</a>
+      <a href="https://wa.me/258866577722" style="color:#16a34a;font-weight:bold;font-size:12px;">💬 WhatsApp do suporte</a>
+    </div>
+
+    <a href="login.html" style="text-decoration:none;"><button class="btn-secundario">Ir para o Login</button></a>
+  </div>
+</div>
+
+<script src="supabase-config.js"></script>
+<script>
+  let dadosLoja = {};
+
+  function mudarPasso(num) {
+    for (let i = 1; i <= 4; i++) {
+      const p = document.getElementById('p'+i);
+      const pn = document.getElementById('p'+i+'n');
+      if (i < num) { p.className='passo concluido'; pn.textContent='✓'; }
+      else if (i === num) { p.className='passo ativo'; pn.textContent=i; }
+      else { p.className='passo'; pn.textContent=i; }
+      document.getElementById('etapa-'+i).style.display = i===num?'block':'none';
+    }
+    window.scrollTo(0,0);
+  }
+
+  function mostrarMsg(id, txt, tipo) {
+    const el = document.getElementById(id);
+    el.textContent = (tipo==='erro'?'❌ ':'✅ ') + txt;
+    el.className = 'msg ' + tipo;
+  }
+
+  function irEtapa1() { mudarPasso(1); }
+
+  function irEtapa2() {
+    const nome = document.getElementById('nome-loja').value.trim();
+    const tel = document.getElementById('telefone').value.trim();
+    if (!nome || nome.length < 2) { mostrarMsg('msg-1','Indica o nome da loja.','erro'); return; }
+    if (!tel) { mostrarMsg('msg-1','Indica o número de telefone.','erro'); return; }
+    dadosLoja = {
+      nome, telefone: tel,
+      endereco: document.getElementById('endereco').value.trim(),
+      tipo: document.getElementById('tipo-negocio').value,
+      moeda: document.getElementById('moeda').value,
+      numero_transferencia: document.getElementById('num-transferencia').value.trim() || null,
+      codigo_agente: document.getElementById('cod-agente').value.trim() || null,
+      nome_empresa: document.getElementById('nome-empresa').value.trim() || null,
+      vendedores: (document.getElementById('cod-vendedores').value || '')
+        .split(',').map(c => c.trim()).filter(c => c.length > 0)
+    };
+    if (dadosLoja.vendedores.length === 0) { mostrarMsg('msg-1','Indica pelo menos um código de vendedor (ex: 1001).','erro'); return; }
+    mudarPasso(2);
+    document.getElementById('nome-dono').focus();
+  }
+
+  function verificarForca(val) {
+    const barra = document.getElementById('forca-barra');
+    const txt = document.getElementById('forca-txt');
+    let f = 0;
+    if (val.length >= 8) f++;
+    if (/[A-Z]/.test(val)) f++;
+    if (/[0-9]/.test(val)) f++;
+    if (/[^A-Za-z0-9]/.test(val)) f++;
+    const cores = ['#ef4444','#f97316','#eab308','#22c55e'];
+    const textos = ['Muito fraca','Fraca','Média','Forte 💪'];
+    barra.style.width = (f/4*100)+'%';
+    barra.style.background = f>0 ? cores[f-1] : '#e2e8f0';
+    txt.textContent = f>0 ? textos[f-1] : 'Mínimo 8 caracteres';
+    txt.style.color = f>0 ? cores[f-1] : '#94a3b8';
+  }
+
+  let dadosConta = {};
+
+  async function criarConta() {
+    const nome = document.getElementById('nome-dono').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const senha = document.getElementById('senha').value;
+    const confirm = document.getElementById('senha-confirm').value;
+    const aceito = document.getElementById('aceito').checked;
+
+    if (!nome) { mostrarMsg('msg-2','Indica o teu nome.','erro'); return; }
+    if (!email || !email.includes('@')) { mostrarMsg('msg-2','Email inválido.','erro'); return; }
+    if (senha.length < 8) { mostrarMsg('msg-2','Senha mínimo 8 caracteres.','erro'); return; }
+    if (senha !== confirm) { mostrarMsg('msg-2','As senhas não coincidem.','erro'); return; }
+    const codigoPlataforma = document.getElementById('codigo-plataforma').value.trim();
+    if (!/^\d{4,6}$/.test(codigoPlataforma)) { mostrarMsg('msg-2','O Código da Plataforma deve ter 4 a 6 dígitos.','erro'); return; }
+    if (!aceito) { mostrarMsg('msg-2','Aceita os Termos para continuar.','erro'); return; }
+
+    const btn = document.getElementById('btn-criar');
+    btn.disabled = true; btn.textContent = 'A criar a conta...';
+
+    // Verifica loja duplicada
+    const { data: lojaExist } = await supabaseClient.from('lojas').select('id').ilike('nome', dadosLoja.nome).limit(1);
+    if (lojaExist && lojaExist.length > 0) {
+      mostrarMsg('msg-2','Já existe uma loja com o nome "'+dadosLoja.nome+'". Escolhe outro nome.','erro');
+      btn.disabled = false; btn.textContent = '✅ Criar Loja Grátis';
+      return;
+    }
+
+    dadosConta = { nome, email, senha, codigoPlataforma };
+
+    // Cria o utilizador — o Supabase envia o código OTP de 6 dígitos por email
+    const { data: authData, error: authError } = await supabaseClient.auth.signUp({
+      email, password: senha
+    });
+
+    if (authError) {
+      const msg = authError.message.includes('already') ? 'Este email já está registado. Tenta entrar.' :
+                  authError.message.includes('rate') ? 'Demasiadas tentativas. Aguarda alguns minutos.' :
+                  authError.message;
+      mostrarMsg('msg-2', msg, 'erro');
+      btn.disabled = false; btn.textContent = '✅ Criar Loja Grátis';
+      return;
+    }
+
+    // Email já registado mas não confirmado: o Supabase devolve user com identities vazio
+    if (authData?.user && Array.isArray(authData.user.identities) && authData.user.identities.length === 0) {
+      mostrarMsg('msg-2','Este email já está registado. Tenta entrar ou recuperar a senha.','erro');
+      btn.disabled = false; btn.textContent = '✅ Criar Loja Grátis';
+      return;
+    }
+
+    btn.disabled = false; btn.textContent = '✅ Criar Loja Grátis';
+
+    // Se a confirmação de email estiver DESLIGADA no Supabase, já há sessão — cria a loja direto
+    if (authData?.session) {
+      const ok = await criarLojaEMembro(authData.user.id, 'msg-2');
+      if (ok) irParaSucesso();
+      return;
+    }
+
+    // Confirmação ligada: vai para a etapa do código OTP
+    document.getElementById('otp-email-mostrado').textContent = email;
+    mudarPasso(3);
+    limparCaixasOTP();
+  }
+
+  /* ----- Caixas do código OTP ----- */
+  const caixasOTP = document.querySelectorAll('.otp-digito');
+  caixasOTP.forEach((caixa, i) => {
+    caixa.addEventListener('input', () => {
+      caixa.value = caixa.value.replace(/\D/g,'').slice(0,1);
+      caixa.classList.toggle('cheio', !!caixa.value);
+      if (caixa.value && i < caixasOTP.length - 1) caixasOTP[i+1].focus();
+      // Se todas preenchidas, verifica automaticamente
+      if ([...caixasOTP].every(c => c.value)) verificarOTP();
+    });
+    caixa.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !caixa.value && i > 0) caixasOTP[i-1].focus();
+      if (e.key === 'Enter') { e.preventDefault(); verificarOTP(); }
+    });
+    caixa.addEventListener('paste', e => {
+      e.preventDefault();
+      const texto = (e.clipboardData.getData('text') || '').replace(/\D/g,'').slice(0,6);
+      texto.split('').forEach((d, j) => {
+        if (caixasOTP[j]) { caixasOTP[j].value = d; caixasOTP[j].classList.add('cheio'); }
+      });
+      if (texto.length === 6) verificarOTP();
+      else if (caixasOTP[texto.length]) caixasOTP[texto.length].focus();
+    });
+  });
+
+  function limparCaixasOTP() {
+    caixasOTP.forEach(c => { c.value=''; c.classList.remove('cheio'); });
+    document.getElementById('msg-3').className = 'msg';
+    caixasOTP[0].focus();
+  }
+
+  let aVerificarOTP = false;
+  async function verificarOTP() {
+    if (aVerificarOTP) return;
+    const codigo = [...caixasOTP].map(c => c.value).join('');
+    if (codigo.length < 6) { mostrarMsg('msg-3','Preenche os 6 dígitos do código.','erro'); return; }
+
+    aVerificarOTP = true;
+    const btn = document.getElementById('btn-verificar-otp');
+    btn.disabled = true; btn.textContent = 'A verificar...';
+
+    const { data, error } = await supabaseClient.auth.verifyOtp({
+      email: dadosConta.email,
+      token: codigo,
+      type: 'signup'
+    });
+
+    if (error) {
+      const msg = (error.message.includes('expired') || error.message.includes('invalid') || error.message.includes('Invalid')) ?
+        'Código incorreto ou expirado. Verifica o email ou clica em reenviar.' : error.message;
+      mostrarMsg('msg-3', msg, 'erro');
+      btn.disabled = false; btn.textContent = '✅ Verificar Código';
+      aVerificarOTP = false;
+      caixasOTP.forEach(c => { c.value=''; c.classList.remove('cheio'); });
+      caixasOTP[0].focus();
+      return;
+    }
+
+    // Sessão criada! Agora sim podemos criar a loja (o RLS já aceita)
+    btn.textContent = 'A criar a loja...';
+    const ok = await criarLojaEMembro(data.user.id, 'msg-3');
+    btn.disabled = false; btn.textContent = '✅ Verificar Código';
+    aVerificarOTP = false;
+    if (ok) irParaSucesso();
+  }
+
+  let cooldownReenvio = 0;
+  async function reenviarOTP() {
+    if (cooldownReenvio > 0) return;
+    const btn = document.getElementById('btn-reenviar-otp');
+    btn.disabled = true;
+
+    const { error } = await supabaseClient.auth.resend({ type: 'signup', email: dadosConta.email });
+    if (error) {
+      mostrarMsg('msg-3', error.message.includes('rate') ? 'Aguarda um pouco antes de reenviar.' : error.message, 'erro');
+      btn.disabled = false;
+      return;
+    }
+    mostrarMsg('msg-3','Novo código enviado! Verifica o teu email (e a pasta spam).','sucesso');
+
+    // Cooldown de 60 segundos
+    cooldownReenvio = 60;
+    const intervalo = setInterval(() => {
+      cooldownReenvio--;
+      btn.textContent = cooldownReenvio > 0 ? '📩 Reenviar (' + cooldownReenvio + 's)' : '📩 Reenviar código';
+      if (cooldownReenvio <= 0) { clearInterval(intervalo); btn.disabled = false; }
+    }, 1000);
+  }
+
+  /* ----- Criação da loja + membro (só corre com sessão válida) ----- */
+  async function criarLojaEMembro(userId, msgId) {
+    const { data: lojaData, error: lojaError } = await supabaseClient
+      .from('lojas')
+      .insert({
+        nome: dadosLoja.nome,
+        dono_user_id: userId,
+        telefone: dadosLoja.telefone,
+        endereco: dadosLoja.endereco,
+        numero_transferencia: dadosLoja.numero_transferencia,
+        codigo_agente: dadosLoja.codigo_agente,
+        codigo_admin: dadosConta.codigoPlataforma,
+        email_dono: dadosConta.email,
+        nome_empresa: dadosLoja.nome_empresa,
+        vendedores: dadosLoja.vendedores,
+        tipo_loja: dadosLoja.tipo || 'comercial',
+        plano: 'trial',
+        estado: 'pendente'
+      })
+      .select().single();
+
+    if (lojaError) {
+      let msg = lojaError.message;
+      if (msg.includes('nome_empresa') || msg.includes('vendedores') || msg.includes('codigo_admin') || msg.includes('categorias_personalizadas')) {
+        msg = '⚠️ Falta correr o SQL de atualização no Supabase (coluna "' +
+          (msg.match(/'(\w+)' column/)?.[1] || 'nova') + '" em falta). Corre o ficheiro atualizacao-v2.0.0.sql e tenta de novo.';
+      }
+      mostrarMsg(msgId,'Erro ao criar loja: '+msg,'erro');
+      return false;
+    }
+
+    const { error: membroError } = await supabaseClient.from('membros_loja').insert({
+      loja_id: lojaData.id,
+      user_id: userId,
+      papel: 'admin',
+      nome_exibicao: dadosConta.nome
+    });
+
+    if (membroError) {
+      mostrarMsg(msgId,'Erro ao associar conta à loja: '+membroError.message,'erro');
+      return false;
+    }
+    return true;
+  }
+
+  function irParaSucesso() {
+    document.getElementById('msg-sucesso-nome').textContent =
+      '🏪 "' + dadosLoja.nome + '" registada — aguarda activação.';
+    mudarPasso(4);
+  }
+
+  document.getElementById('nome-loja').focus();
+</script>
+</body>
+</html>
