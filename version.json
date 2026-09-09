@@ -1,1 +1,1 @@
-{ "versao": "2.9.54", "data": "2026-09-07", "novidades": "Versao de teste: apenas para praticar o upload no GitHub e ver a atualizacao automatica ao vivo. Sem mudancas de funcionalidade." }
+{ "versao": "2.9.57", "data": "2026-09-09", "novidades": "Despacho na loja agora tem botao CANCELAR (mercadoria errada nao entra no stock). Perdas: o dono marca no monitor e vai como PENDENTE; o balconista Confirma ou Cancela na loja e o stock so baixa ao confirmar. A loja recebe notificacao de novas perdas e despachos. Requer o SQL atualizacao-perdas-estado.sql." }

@@ -2798,6 +2798,36 @@ async function scannerFechar() {
     }
   }
   setInterval(verificarNovidadesDono, 20000);
+
+  // ===== Notificação de novas PERDAS pendentes do dono =====
+  let ultimaPerdaCount = null;
+  function marcarPerdaVermelho(vermelho) {
+    const item = document.querySelector('[data-acao="verPerdas"]');
+    if (item) {
+      if (vermelho) item.classList.add('menu-item-alerta');
+      else item.classList.remove('menu-item-alerta');
+    }
+  }
+  async function verificarPerdasNovas() {
+    if (!navigator.onLine || !sessaoAtual) return;
+    try {
+      const { data } = await supabaseClient
+        .from('perdas').select('id').eq('loja_id', sessaoAtual.lojaId).eq('estado','pendente');
+      if (data) {
+        if (ultimaPerdaCount !== null && data.length > ultimaPerdaCount) {
+          tocarBip();
+          mostrarNotif('📉 Nova PERDA do dono para confirmar! Abre o menu → Perda.');
+          marcarPerdaVermelho(true);
+        } else if (data.length > 0) {
+          marcarPerdaVermelho(true);
+        } else {
+          marcarPerdaVermelho(false);
+        }
+        ultimaPerdaCount = data.length;
+      }
+    } catch(e) {}
+  }
+  setInterval(verificarPerdasNovas, 20000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) sincronizarFila(); });
 
   // Preferência de imprimir recibo (guardada no aparelho)
@@ -3045,7 +3075,7 @@ async function scannerFechar() {
     if (acao === 'abrirSuporte') { fecharMenu(); abrirSuporteLoja(); return; }
     if (acao === 'fazerEtiqueta') { fecharMenu(); abrirModalFazerEtiqueta(); return; }
     if (acao === 'avisoDespacho') { fecharMenu(); haDespachoNovo = false; marcarDespachoVermelho(false); const nd=document.getElementById('notif-despacho'); if(nd) nd.style.display='none'; abrirAvisoDespacho(); return; }
-    if (acao === 'verPerdas') { fecharMenu(); abrirVerPerdas(); return; }
+    if (acao === 'verPerdas') { fecharMenu(); marcarPerdaVermelho(false); abrirVerPerdas(); return; }
     mostrarNotif('🔧 Esta função ainda não está disponível.', false);
   }
 
@@ -3636,14 +3666,62 @@ async function scannerFechar() {
     if (!data || data.length === 0) { div.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:30px;"><div style="font-size:40px;">✅</div>Nenhuma perda registada.</div>'; return; }
     div.innerHTML = data.map(p => {
       const dt = new Date(p.criado_em).toLocaleString('pt-PT', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-      return `<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:12px;margin-bottom:8px;">
+      const est = p.estado || 'confirmado';
+      if (est === 'pendente') {
+        return `<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:12px;margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-weight:bold;font-size:14px;color:#92400e;">📉 ${p.produto_nome}</div>
+            <span style="background:#f59e0b;color:white;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:bold;">−${p.quantidade} un.</span>
+          </div>
+          <div style="font-size:12px;color:#78350f;margin-top:4px;">${p.motivo ? '💬 ' + p.motivo + ' · ' : ''}📅 ${dt}</div>
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <button onclick="confirmarPerda('${p.id}', ${p.quantidade}, '${p.produto_id||''}')" style="flex:1;padding:11px;background:#16a34a;border:none;border-radius:8px;color:white;font-weight:bold;cursor:pointer;font-size:13px;">✅ Confirmar</button>
+            <button onclick="cancelarPerda('${p.id}')" style="flex:1;padding:11px;background:#dc2626;border:none;border-radius:8px;color:white;font-weight:bold;cursor:pointer;font-size:13px;">✖️ Cancelar</button>
+          </div>
+        </div>`;
+      }
+      const cancel = est === 'cancelado';
+      const selo = cancel
+        ? '<span style="background:#94a3b8;color:white;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:bold;">✖️ Cancelada</span>'
+        : '<span style="background:#dc2626;color:white;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:bold;">−' + p.quantidade + ' un.</span>';
+      return `<div style="background:${cancel?'#f8fafc':'#fef2f2'};border:1px solid ${cancel?'#e2e8f0':'#fca5a5'};border-radius:10px;padding:12px;margin-bottom:8px;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <div style="font-weight:bold;font-size:14px;color:#b91c1c;">📉 ${p.produto_nome}</div>
-          <span style="background:#dc2626;color:white;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:bold;">−${p.quantidade} un.</span>
+          <div style="font-weight:bold;font-size:14px;color:${cancel?'#64748b':'#b91c1c'};">📉 ${p.produto_nome}</div>${selo}
         </div>
         <div style="font-size:12px;color:#7f1d1d;margin-top:4px;">${p.motivo ? '💬 ' + p.motivo + ' · ' : ''}📅 ${dt}</div>
       </div>`;
     }).join('');
+  }
+
+  async function confirmarPerda(id, qtd, produtoId) {
+    if (!confirm('Confirmar esta perda?\n\nO stock vai baixar ' + qtd + ' unidade(s).')) return;
+    try {
+      if (produtoId) {
+        const { data: prod } = await supabaseClient.from('produtos').select('stock').eq('id', produtoId).maybeSingle();
+        if (prod) {
+          const novo = Math.max(0, (parseInt(prod.stock)||0) - (parseInt(qtd)||0));
+          await supabaseClient.from('produtos').update({ stock: novo }).eq('id', produtoId);
+        }
+      }
+      const { error } = await supabaseClient.from('perdas')
+        .update({ estado: 'confirmado', confirmado_por: (sessaoAtual && sessaoAtual.vendedorCodigo) || 'balconista', confirmado_em: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+      mostrarNotif('✅ Perda confirmada. Stock atualizado.');
+      abrirVerPerdas();
+    } catch(e) { mostrarNotif('❌ ' + (e.message||e), true); }
+  }
+
+  async function cancelarPerda(id) {
+    if (!confirm('Cancelar esta perda?\n\nO stock NÃO será alterado.')) return;
+    try {
+      const { error } = await supabaseClient.from('perdas')
+        .update({ estado: 'cancelado', confirmado_por: (sessaoAtual && sessaoAtual.vendedorCodigo) || 'balconista', confirmado_em: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+      mostrarNotif('✖️ Perda cancelada. Stock mantido.');
+      abrirVerPerdas();
+    } catch(e) { mostrarNotif('❌ ' + (e.message||e), true); }
   }
 
   /* ===== AVISO DE DESPACHO (vendedor vê a lista e imprime a guia) ===== */
@@ -3717,7 +3795,10 @@ async function scannerFechar() {
       </div>
       ${despachoAtual && despachoAtual.estado === 'enviado'
         ? '<button onclick="confirmarRecebimentoDespacho()" style="width:100%;padding:14px;background:#16a34a;border:none;border-radius:10px;color:white;font-size:15px;font-weight:bold;cursor:pointer;margin-top:14px;">✅ Confirmar que recebi a mercadoria</button>'
-        : '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:12px;margin-top:14px;text-align:center;color:#166534;font-weight:bold;">✅ Mercadoria recebida (stock somado)</div>'}
+          + '<button onclick="cancelarRecebimentoDespacho()" style="width:100%;padding:14px;background:#dc2626;border:none;border-radius:10px;color:white;font-size:15px;font-weight:bold;cursor:pointer;margin-top:8px;">✖️ Cancelar (mercadoria errada — não entra no stock)</button>'
+        : (despachoAtual && despachoAtual.estado === 'cancelado')
+          ? '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:12px;margin-top:14px;text-align:center;color:#b91c1c;font-weight:bold;">✖️ Despacho cancelado (não entrou no stock)</div>'
+          : '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:12px;margin-top:14px;text-align:center;color:#166534;font-weight:bold;">✅ Mercadoria recebida (stock somado)</div>'}
       <button onclick="imprimirGuiaDespacho()" style="width:100%;padding:14px;background:#1a56a0;border:none;border-radius:10px;color:white;font-size:15px;font-weight:bold;cursor:pointer;margin-top:8px;">
         🖨️ Imprimir / Baixar PDF (A4)
       </button>
@@ -3752,6 +3833,22 @@ async function scannerFechar() {
       if (error) throw error;
       despachoAtual.estado = 'confirmado';
       mostrarNotif('✅ Recebido e somado ao stock! Já podes vender.');
+      verDespacho(despachoAtual);
+    } catch(e) {
+      mostrarNotif('❌ ' + (e.message||e), true);
+    }
+  }
+
+  async function cancelarRecebimentoDespacho() {
+    if (!despachoAtual || despachoAtual.estado !== 'enviado') return;
+    if (!confirm('Cancelar este despacho?\n\nA mercadoria NÃO entra no stock. Usa isto se recebeste mercadoria errada.')) return;
+    try {
+      const { error } = await supabaseClient.from('despachos')
+        .update({ estado: 'cancelado', confirmado_por: (sessaoAtual && sessaoAtual.vendedorCodigo) || 'balconista', confirmado_em: new Date().toISOString() })
+        .eq('id', despachoAtual.id);
+      if (error) throw error;
+      despachoAtual.estado = 'cancelado';
+      mostrarNotif('✖️ Despacho cancelado. Não entrou no stock.');
       verDespacho(despachoAtual);
     } catch(e) {
       mostrarNotif('❌ ' + (e.message||e), true);
@@ -4420,7 +4517,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.54';
+  const VERSAO_ATUAL = '2.9.57';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
