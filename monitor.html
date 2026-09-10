@@ -813,10 +813,19 @@ async function iniciar() {
   if (_gTok) {
     try {
       let { data: sd0 } = await supabaseClient.auth.getSession();
-      if (!sd0.session) { await supabaseClient.auth.signInAnonymously(); }
-      await supabaseClient.rpc('resgatar_convite_gerente', { p_token: _gTok });
+      // Se já há sessão de DONO (não anónima), sai para entrar como gerente
+      if (sd0.session && sd0.session.user && sd0.session.user.is_anonymous !== true) {
+        await supabaseClient.auth.signOut();
+        sd0 = { session: null };
+      }
+      if (!sd0.session) {
+        const { error: eAnon } = await supabaseClient.auth.signInAnonymously();
+        if (eAnon) { alert('⚠️ Falta ativar "Anonymous sign-ins" no Supabase (Authentication → Providers → ON).'); }
+      }
+      const { error: eRes } = await supabaseClient.rpc('resgatar_convite_gerente', { p_token: _gTok });
+      if (eRes) { alert('⚠️ Link de gerente inválido ou o SQL do gerente não foi corrido. Pede um novo ao dono.'); }
       history.replaceState({}, '', location.pathname);
-    } catch (e) { alert('Link de gerente invalido. Pede um novo ao dono.'); }
+    } catch (e) { alert('Erro no link de gerente: ' + (e.message || e)); }
   }
   const { data: sd } = await supabaseClient.auth.getSession();
   if (!sd.session) { localStorage.setItem('pdv_login_destino','monitor.html'); window.location.href = 'login.html'; return; }
@@ -3399,7 +3408,7 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.57';
+const MONITOR_VERSAO = '2.9.58';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
