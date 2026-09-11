@@ -583,20 +583,20 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:12px;margin-bottom:16px;font-size:13px;color:#b91c1c;">
       📌 Retira do stock produtos perdidos (estrago, roubo, validade). A perda aparece no PDV para o vendedor confirmar.
     </div>
-    <div style="position:relative;margin-bottom:10px;">
-      <input type="text" id="perda-busca" placeholder="🔎 Pesquisar produto..." autocomplete="off" oninput="perdaSugestoes()"
-        style="width:100%;padding:12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;outline:none;">
+    <div style="display:flex;gap:8px;margin-bottom:12px;position:relative;">
+      <input type="text" id="perda-busca" placeholder="🔎 Pesquisar produto para adicionar..." autocomplete="off" oninput="perdaSugestoes()"
+        style="flex:1;padding:12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;outline:none;">
       <div id="perda-sugestoes" style="display:none;position:absolute;top:100%;left:0;right:0;margin-top:4px;background:white;border:1px solid #ddd;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:50;max-height:220px;overflow-y:auto;"></div>
     </div>
-    <div id="perda-selecionado" style="display:none;background:white;border:2px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:12px;">
-      <div style="font-weight:bold;font-size:14px;margin-bottom:8px;" id="perda-nome"></div>
-      <div style="display:flex;gap:8px;">
-        <input type="number" id="perda-qtd" value="1" min="1" placeholder="Qtd" style="width:90px;padding:10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;text-align:center;">
-        <input type="text" id="perda-motivo" placeholder="Motivo (ex: estragou)" style="flex:1;padding:10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;">
-      </div>
-      <button onclick="registarPerda()" style="width:100%;margin-top:10px;padding:12px;background:#dc2626;border:none;border-radius:10px;color:white;font-weight:bold;cursor:pointer;">📉 Retirar do Stock</button>
-    </div>
-    <div style="font-weight:bold;color:#64748b;font-size:13px;margin:16px 0 8px;">Últimas perdas:</div>
+
+    <div id="perda-lista"></div>
+
+    <button id="btn-registar-perda" onclick="registarPerda()" style="display:none;width:100%;padding:14px;background:#dc2626;border:none;border-radius:10px;color:white;font-size:15px;font-weight:bold;cursor:pointer;margin-top:16px;">
+      📉 Retirar do Stock
+    </button>
+
+    <div style="border-top:1px solid #e2e8f0;margin:24px 0 16px;"></div>
+    <div style="font-weight:bold;color:#64748b;font-size:13px;margin:0 0 8px;">Últimas perdas:</div>
     <div id="lista-perdas-monitor"></div>
   </div>
 </div>
@@ -758,6 +758,11 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   <div id="lista-funcionarios-painel">
     <div class="estado-vazio"><div class="estado-vazio-icon">👥</div>A carregar...</div>
   </div>
+  <div style="padding:8px 16px 20px;">
+    <div style="border-top:1px solid #e2e8f0;margin-bottom:12px;"></div>
+    <div style="font-weight:bold;color:#64748b;font-size:13px;margin-bottom:8px;">🔑 Quem entrou pelo link do gerente</div>
+    <div id="lista-acessos-gerente"><div style="color:#cbd5e1;font-size:13px;">A carregar...</div></div>
+  </div>
 </div>
 
 <!-- RELATÓRIOS -->
@@ -808,10 +813,19 @@ async function iniciar() {
   if (_gTok) {
     try {
       let { data: sd0 } = await supabaseClient.auth.getSession();
-      if (!sd0.session) { await supabaseClient.auth.signInAnonymously(); }
-      await supabaseClient.rpc('resgatar_convite_gerente', { p_token: _gTok });
+      // Se já há sessão de DONO (não anónima), sai para entrar como gerente
+      if (sd0.session && sd0.session.user && sd0.session.user.is_anonymous !== true) {
+        await supabaseClient.auth.signOut();
+        sd0 = { session: null };
+      }
+      if (!sd0.session) {
+        const { error: eAnon } = await supabaseClient.auth.signInAnonymously();
+        if (eAnon) { alert('⚠️ Falta ativar "Anonymous sign-ins" no Supabase (Authentication → Providers → ON).'); }
+      }
+      const { error: eRes } = await supabaseClient.rpc('resgatar_convite_gerente', { p_token: _gTok });
+      if (eRes) { alert('⚠️ Link de gerente inválido ou o SQL do gerente não foi corrido. Pede um novo ao dono.'); }
       history.replaceState({}, '', location.pathname);
-    } catch (e) { alert('Link de gerente invalido. Pede um novo ao dono.'); }
+    } catch (e) { alert('Erro no link de gerente: ' + (e.message || e)); }
   }
   const { data: sd } = await supabaseClient.auth.getSession();
   if (!sd.session) { localStorage.setItem('pdv_login_destino','monitor.html'); window.location.href = 'login.html'; return; }
@@ -878,6 +892,11 @@ async function iniciar() {
       const _pinG = (membros[0].lojas && membros[0].lojas.pin_gerente) || '0000';
       const _tent = prompt('🔒 Código de acesso do monitor extra:');
       if (_tent !== _pinG) { alert('Código errado.'); document.body.innerHTML = '<div style="padding:48px;text-align:center;font-family:sans-serif;color:#334155;">🔒 Acesso negado. Pede o código ao dono.</div>'; return; }
+      // Nome de quem entrou: o dono ve em Funcionarios e o inventario em equipa usa-o automaticamente
+      let _nomeG = (prompt('👋 Escreve o teu nome (o dono precisa de saber quem entrou):', (localStorage.getItem('inv_contador_nome')||'')) || '').trim() || 'Gerente';
+      localStorage.setItem('inv_contador_nome', _nomeG);
+      window._gerenteNome = _nomeG;
+      try { await supabaseClient.from('gerente_acessos').insert({ loja_id: lojaId, nome: _nomeG }); } catch(e) {}
     }
     nomeLoja = (membros[0].lojas && membros[0].lojas.nome) || 'Minha Loja';
     lojaPlano = (membros[0].lojas && membros[0].lojas.plano) || '';
@@ -1845,6 +1864,29 @@ function renderFuncionariosSubPainel() {
       <span class="badge-papel ${papelCls}">${papelTxt}</span>
     </div>`;
   }).join('');
+  carregarAcessosGerente();
+}
+
+async function carregarAcessosGerente() {
+  const div = document.getElementById('lista-acessos-gerente');
+  if (!div) return;
+  const esc = s => (s==null?'':s.toString()).replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  try {
+    const { data, error } = await supabaseClient.from('gerente_acessos')
+      .select('*').eq('loja_id', lojaId).order('criado_em', { ascending: false }).limit(50);
+    if (error) { div.innerHTML = '<div style="color:#94a3b8;font-size:12px;">Corre o SQL <b>atualizacao-gerente-acessos.sql</b> para ativar.</div>'; return; }
+    if (!data || !data.length) { div.innerHTML = '<div style="color:#cbd5e1;font-size:13px;">Ainda ninguém entrou pelo link.</div>'; return; }
+    div.innerHTML = `<div style="font-size:12px;color:#16a34a;font-weight:bold;margin-bottom:8px;">${data.length} acesso(s) ao link</div>` +
+      data.map(a => {
+        const dt = new Date(a.criado_em).toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+        const ini = esc((a.nome||'?').charAt(0).toUpperCase());
+        return `<div style="display:flex;align-items:center;gap:10px;background:white;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:6px;">
+          <div style="width:32px;height:32px;border-radius:50%;background:#dbeafe;color:#1e40af;font-weight:bold;display:flex;align-items:center;justify-content:center;">${ini}</div>
+          <div style="flex:1;"><div style="font-size:14px;font-weight:600;">${esc(a.nome||'Sem nome')}</div>
+          <div style="font-size:11px;color:#94a3b8;">${dt}</div></div>
+        </div>`;
+      }).join('');
+  } catch(e) { div.innerHTML = '<div style="color:#94a3b8;font-size:12px;">Erro: ' + esc(e.message||e) + '</div>'; }
 }
 
 function renderRelatoriosSubPainel() {
@@ -2274,15 +2316,16 @@ async function guardarSobraCaixa(valor, dia, vendedor) {
   mostrarNotif('✅ Sobra de MT ' + valor + ' guardada. Vai aparecer no próximo inventário.');
 }
 
-// ===== REGISTAR PERDA (dono retira do stock) =====
-let perdaProduto = null;
+// ===== REGISTAR PERDA (dono retira do stock) — vários produtos de uma vez =====
+let perdaItens = []; // [{produto_id, nome, qtd, motivo}]
 
 function abrirPerda() {
   if (modoGeral) { alert('Escolhe uma loja específica no seletor do topo.'); return; }
-  perdaProduto = null;
+  perdaItens = [];
   document.getElementById('perda-busca').value = '';
-  document.getElementById('perda-selecionado').style.display = 'none';
+  document.getElementById('perda-sugestoes').style.display = 'none';
   document.getElementById('painel-perda').classList.add('aberto'); try{history.pushState({subpainel:'painel-perda'},'');}catch(e){}
+  perdaRenderLista();
   carregarPerdasMonitor();
 }
 
@@ -2290,46 +2333,94 @@ function perdaSugestoes() {
   const t = (document.getElementById('perda-busca').value||'').trim().toLowerCase();
   const box = document.getElementById('perda-sugestoes');
   if (!t) { box.style.display='none'; return; }
-  const res = todosProdutos.filter(p => (p.nome||'').toLowerCase().includes(t) || (p.codigo||'').toLowerCase().includes(t)).slice(0,8);
+  const res = todosProdutos.filter(p => (p.nome||'').toLowerCase().includes(t) || (p.codigo||'').toLowerCase().includes(t) || (p.codbarras||'').toLowerCase().includes(t)).slice(0,8);
   if (!res.length) { box.style.display='none'; return; }
-  box.innerHTML = res.map(p => `<div onmousedown="event.preventDefault();perdaEscolher('${p.id}')" style="padding:11px 13px;cursor:pointer;border-bottom:1px solid #f5f5f5;font-size:13px;display:flex;justify-content:space-between;"><span><strong>${p.nome}</strong></span><span style="color:#64748b;">stock: ${p.stock||0}</span></div>`).join('');
+  box.innerHTML = res.map(p => `<div onmousedown="event.preventDefault();perdaAdicionar('${p.id}')" style="padding:11px 13px;cursor:pointer;border-bottom:1px solid #f5f5f5;font-size:13px;display:flex;justify-content:space-between;"><span><strong>${p.nome}</strong></span><span style="color:#64748b;">stock: ${p.stock||0}</span></div>`).join('');
   box.style.display = 'block';
 }
 
-function perdaEscolher(id) {
-  perdaProduto = todosProdutos.find(x => x.id === id);
-  if (!perdaProduto) return;
+function perdaAdicionar(id) {
+  const p = todosProdutos.find(x => x.id === id);
+  if (!p) return;
+  if (!perdaItens.some(i => i.produto_id === p.id)) {
+    perdaItens.unshift({ produto_id: p.id, nome: p.nome, qtd: 1, motivo: '' });
+  }
   document.getElementById('perda-busca').value = '';
   document.getElementById('perda-sugestoes').style.display = 'none';
-  document.getElementById('perda-nome').textContent = perdaProduto.nome + ' (stock atual: ' + (perdaProduto.stock||0) + ')';
-  document.getElementById('perda-qtd').value = 1;
-  document.getElementById('perda-motivo').value = '';
-  document.getElementById('perda-selecionado').style.display = 'block';
+  perdaRenderLista();
+}
+
+function perdaRemover(idx) { perdaItens.splice(idx, 1); perdaRenderLista(); }
+function perdaAtualizarQtd(idx, valor) { perdaItens[idx].qtd = Math.max(1, parseInt(valor)||1); perdaRenderLista(); }
+function perdaAtualizarMotivo(idx, valor) { if (perdaItens[idx]) perdaItens[idx].motivo = valor; }
+
+function perdaRenderLista() {
+  const div = document.getElementById('perda-lista');
+  const btn = document.getElementById('btn-registar-perda');
+  if (!div) return;
+  if (perdaItens.length === 0) {
+    div.innerHTML = '<div style="text-align:center;color:#cbd5e1;padding:24px;font-size:13px;">Pesquisa e adiciona os produtos perdidos.</div>';
+    if (btn) btn.style.display = 'none';
+    return;
+  }
+  if (btn) btn.style.display = 'block';
+  let totalUnid = 0;
+  const linhas = perdaItens.map((it, idx) => {
+    const p = todosProdutos.find(x => x.id === it.produto_id);
+    const stock = p ? (parseInt(p.stock)||0) : 0;
+    totalUnid += (parseInt(it.qtd)||0);
+    const motivoSafe = (it.motivo||'').replace(/"/g, '&quot;');
+    return `
+      <div style="padding:10px 4px;border-bottom:1px solid #f1f5f9;">
+        <div style="display:grid;grid-template-columns:1fr 60px 28px;align-items:center;gap:6px;">
+          <div><div style="font-size:13px;font-weight:600;line-height:1.2;">${it.nome}</div>
+            <div style="font-size:11px;color:#94a3b8;">stock: ${stock}</div></div>
+          <input type="number" value="${it.qtd}" min="1" onchange="perdaAtualizarQtd(${idx}, this.value)"
+            style="width:100%;padding:8px 2px;border:2px solid #e2e8f0;border-radius:8px;font-size:14px;text-align:center;font-weight:bold;">
+          <button onclick="perdaRemover(${idx})" style="background:#fef2f2;color:#dc2626;border:none;border-radius:8px;padding:8px 2px;cursor:pointer;">✕</button>
+        </div>
+        <input type="text" value="${motivoSafe}" placeholder="Motivo (ex: estragou)" onchange="perdaAtualizarMotivo(${idx}, this.value)"
+          style="width:100%;margin-top:6px;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;">
+      </div>`;
+  }).join('');
+  div.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 60px 28px;font-size:11px;font-weight:bold;color:#64748b;padding:6px 4px;gap:6px;">
+      <span>Produto</span><span style="text-align:center;">Qtd</span><span></span>
+    </div>` + linhas + `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 4px 2px;margin-top:4px;border-top:2px solid #e2e8f0;">
+      <span style="font-size:14px;font-weight:bold;color:#1a202c;">Total a retirar</span>
+      <span style="font-size:16px;font-weight:bold;color:#dc2626;">${totalUnid} un</span>
+    </div>`;
 }
 
 async function registarPerda() {
-  if (!perdaProduto) return;
-  const qtd = parseInt(document.getElementById('perda-qtd').value) || 0;
-  const motivo = document.getElementById('perda-motivo').value.trim();
-  if (qtd <= 0) { mostrarNotif('❌ Quantidade inválida.', true); return; }
+  if (perdaItens.length === 0) return;
+  const btn = document.getElementById('btn-registar-perda');
+  btn.disabled = true; btn.textContent = 'A registar...';
 
-  const novoStock = Math.max(0, (parseInt(perdaProduto.stock)||0) - qtd);
-  const e1 = await supabaseClient.from('produtos').update({ stock: novoStock }).eq('id', perdaProduto.id);
-  if (e1.error) { mostrarNotif('❌ ' + e1.error.message, true); return; }
-  perdaProduto.stock = novoStock;
-
-  const e2 = await supabaseClient.from('perdas').insert({
-    loja_id: lojaId, produto_id: perdaProduto.id, produto_nome: perdaProduto.nome,
-    quantidade: qtd, motivo: motivo || null, feito_por: nomeLoja
-  });
-  if (e2.error) {
-    mostrarNotif('⚠️ Stock foi reduzido, mas a perda NÃO foi registada: ' + e2.error.message + ' — Corre o SQL v2.3.0 (tabela perdas).', true);
-    return;
+  let okCount = 0; const erros = [];
+  for (const it of perdaItens) {
+    const p = todosProdutos.find(x => x.id === it.produto_id);
+    if (!p) continue;
+    const qtd = Math.max(1, parseInt(it.qtd)||1);
+    // NÃO baixa o stock aqui — só quando o balconista confirmar na loja
+    const e2 = await supabaseClient.from('perdas').insert({
+      loja_id: lojaId, produto_id: it.produto_id, produto_nome: it.nome,
+      quantidade: qtd, motivo: (it.motivo||'').trim() || null, feito_por: nomeLoja, estado: 'pendente'
+    });
+    if (e2.error) { erros.push(it.nome + ': ' + e2.error.message); continue; }
+    okCount++;
   }
 
-  document.getElementById('perda-selecionado').style.display = 'none';
-  mostrarNotif('📉 Retirado ' + qtd + ' de "' + perdaProduto.nome + '". Aparece no PDV na aba Perda.');
-  perdaProduto = null;
+  btn.disabled = false; btn.textContent = '📉 Retirar do Stock';
+
+  if (erros.length) {
+    mostrarNotif('⚠️ ' + okCount + ' enviada(s). Problema(s): ' + erros.join(' | ') + ' — Corre o SQL atualizacao-perdas-estado.sql.', true);
+  } else {
+    mostrarNotif('📉 ' + okCount + ' perda(s) enviada(s) para a loja. O stock só baixa quando o balconista confirmar.');
+  }
+  perdaItens = [];
+  perdaRenderLista();
   carregarPerdasMonitor();
 }
 
@@ -2340,7 +2431,11 @@ async function carregarPerdasMonitor() {
   if (!data || !data.length) { div.innerHTML = '<div style="color:#cbd5e1;font-size:13px;text-align:center;padding:12px;">Nenhuma perda ainda.</div>'; return; }
   div.innerHTML = data.map(p => {
     const dt = new Date(p.criado_em).toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-    return `<div style="background:white;border:1px solid #fecaca;border-radius:8px;padding:10px;margin-bottom:6px;font-size:13px;"><strong>${p.produto_nome}</strong> — <span style="color:#dc2626;">−${p.quantidade}</span> ${p.motivo?'· '+p.motivo:''}<div style="font-size:11px;color:#94a3b8;">${dt}</div></div>`;
+    const est = p.estado || 'confirmado';
+    const badge = est === 'pendente' ? '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold;white-space:nowrap;">⏳ Aguarda loja</span>'
+      : est === 'cancelado' ? '<span style="background:#e2e8f0;color:#475569;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold;white-space:nowrap;">✖️ Cancelada</span>'
+      : '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold;white-space:nowrap;">✅ Confirmada</span>';
+    return `<div style="background:white;border:1px solid #fecaca;border-radius:8px;padding:10px;margin-bottom:6px;font-size:13px;"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><span><strong>${p.produto_nome}</strong> — <span style="color:#dc2626;">−${p.quantidade}</span></span>${badge}</div>${p.motivo?'<div style="font-size:12px;color:#7f1d1d;margin-top:2px;">💬 '+p.motivo+'</div>':''}<div style="font-size:11px;color:#94a3b8;">${dt}</div></div>`;
   }).join('');
 }
 
@@ -3313,7 +3408,7 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.53';
+const MONITOR_VERSAO = '2.9.58';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -3853,6 +3948,7 @@ function calcularVisaoGeral(inicio, fim) {
   });
   let perdas = 0;
   (window._todasPerdas || []).forEach(pd => {
+    if ((pd.estado || 'confirmado') !== 'confirmado') return;
     const dt = new Date(pd.criado_em);
     if (dt >= inicio && dt <= fim) {
       const prod = todosProdutos.find(x => x.id === pd.produto_id);
@@ -3903,7 +3999,7 @@ async function abrirVisaoGeral() {
       .vg-fbtn.ativo { background:#1a56a0; color:#fff; border-color:#1a56a0; }
     </style>`;
   document.body.appendChild(ov);
-  try { const r = await supabaseClient.from('perdas').select('produto_id,quantidade,criado_em').eq('loja_id', lojaId); window._todasPerdas = r.data || []; } catch(e) { window._todasPerdas = []; }
+  try { const r = await supabaseClient.from('perdas').select('produto_id,quantidade,criado_em,estado').eq('loja_id', lojaId); window._todasPerdas = r.data || []; } catch(e) { window._todasPerdas = []; }
   vgFiltro('hoje');
 }
 
@@ -3966,13 +4062,20 @@ async function adicionarGerente() {
 // ===== MODO GERENTE (monitor extra restrito) =====
 function aplicarModoGerente() {
   if (!modoGerente) return;
-  // So estes cartoes ficam visiveis para o gerente
-  const permitidos = ['painel-produtos','painel-add-produto','abrirDespacho','abrirVisaoGeral','atualizarMonitor'];
+  // So estes cartoes ficam visiveis para o gerente (Visao Geral fica escondida)
+  const permitidos = ['painel-produtos','painel-add-produto','abrirDespacho','atualizarMonitor'];
   document.querySelectorAll('.card-gestao').forEach(c => {
     const oc = c.getAttribute('onclick') || '';
     const ok = permitidos.some(p => oc.includes(p)) || c.id === 'card-instalar-app';
     if (!ok) c.style.display = 'none';
   });
+  // Gerente pode CADASTRAR produtos, mas NAO define quantidades/stock
+  const npStock = document.getElementById('np-stock');
+  if (npStock) {
+    npStock.value = 0; npStock.readOnly = true;
+    npStock.title = 'Só o dono define as quantidades. O stock entra por Despacho/Inventário.';
+    npStock.style.background = '#f1f5f9';
+  }
   const badge = document.getElementById('topbar-loja');
   if (badge && !document.getElementById('badge-gerente')) {
     const b = document.createElement('span'); b.id = 'badge-gerente';
