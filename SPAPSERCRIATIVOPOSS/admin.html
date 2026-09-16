@@ -142,7 +142,9 @@ body { font-family:-apple-system,Arial,sans-serif; background:#f1f5f9; min-heigh
 
       <div style="font-weight:bold;color:#1a202c;font-size:13px;margin-bottom:6px;">💳 Como o cliente paga a subscrição</div>
       <input type="text" id="cfg-mpesa" placeholder="Número M-Pesa (84 xxx xxxx)" style="width:100%;padding:10px;border:1.5px solid #86efac;border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;">
+      <input type="text" id="cfg-mpesa-nome" placeholder="Nome da conta M-Pesa (ex: João Mateus)" style="width:100%;padding:10px;border:1.5px solid #86efac;border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;">
       <input type="text" id="cfg-emola" placeholder="Número e-Mola (86 xxx xxxx)" style="width:100%;padding:10px;border:1.5px solid #fdba74;border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;">
+      <input type="text" id="cfg-emola-nome" placeholder="Nome da conta e-Mola (ex: João Mateus)" style="width:100%;padding:10px;border:1.5px solid #fdba74;border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;">
       <input type="text" id="cfg-banco-nome" placeholder="Nome do banco (ex: BCI, BIM)" style="width:100%;padding:10px;border:1.5px solid #bfdbfe;border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;">
       <input type="text" id="cfg-banco-conta" placeholder="Número da conta / NIB" style="width:100%;padding:10px;border:1.5px solid #bfdbfe;border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;">
       <input type="text" id="cfg-banco-titular" placeholder="Nome do titular" style="width:100%;padding:10px;border:1.5px solid #bfdbfe;border-radius:8px;font-size:13px;margin-bottom:12px;box-sizing:border-box;">
@@ -264,6 +266,7 @@ async function carregarConfigSubscricao() {
   const m = (await lerConfig('metodos_subscricao')) || {};
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
   set('cfg-mpesa', m.mpesa); set('cfg-emola', m.emola);
+  set('cfg-mpesa-nome', m.mpesa_nome); set('cfg-emola-nome', m.emola_nome);
   set('cfg-banco-nome', m.banco_nome); set('cfg-banco-conta', m.banco_conta); set('cfg-banco-titular', m.banco_titular);
   const wa = await lerConfig('link_whatsapp_pagamento');
   set('cfg-wa-pagamento', typeof wa === 'string' ? wa : '');
@@ -280,6 +283,7 @@ async function guardarConfigSubscricao() {
   };
   const metodos = {
     mpesa: txt('cfg-mpesa'), emola: txt('cfg-emola'),
+    mpesa_nome: txt('cfg-mpesa-nome'), emola_nome: txt('cfg-emola-nome'),
     banco_nome: txt('cfg-banco-nome'), banco_conta: txt('cfg-banco-conta'), banco_titular: txt('cfg-banco-titular')
   };
   const waPag = txt('cfg-wa-pagamento');

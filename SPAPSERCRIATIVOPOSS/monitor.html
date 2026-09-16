@@ -348,16 +348,12 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
     <div class="grade-gestao">
       <div class="card-gestao" onclick="abrirSubPainel('painel-relatorios')">
-        <div class="card-gestao-icon" style="background:#eff6ff">📊</div>
-        <div class="card-gestao-nome">Transaction Report</div>
+        <div class="card-gestao-icon" style="background:#f0fdf4">📈</div>
+        <div class="card-gestao-nome">Relatório</div>
       </div>
       <div class="card-gestao" onclick="abrirSubPainel('painel-stock')">
         <div class="card-gestao-icon" style="background:#fef3c7">⚠️</div>
         <div class="card-gestao-nome">Stock Crítico</div>
-      </div>
-      <div class="card-gestao" onclick="abrirSubPainel('painel-relatorios')">
-        <div class="card-gestao-icon" style="background:#f0fdf4">💰</div>
-        <div class="card-gestao-nome">Receitas do Dia</div>
       </div>
       <div class="card-gestao" onclick="pedirNotif()">
         <div class="card-gestao-icon" style="background:#fdf4ff">🔔</div>
@@ -414,14 +410,6 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
       <div class="card-gestao" onclick="abrirSubPainel('painel-funcionarios')">
         <div class="card-gestao-icon" style="background:#f5f3ff">👥</div>
         <div class="card-gestao-nome">Employees</div>
-      </div>
-      <div class="card-gestao" onclick="abrirSubPainel('painel-relatorios')">
-        <div class="card-gestao-icon" style="background:#fff7ed">📋</div>
-        <div class="card-gestao-nome">Audit Log</div>
-      </div>
-      <div class="card-gestao" onclick="abrirSubPainel('painel-relatorios')">
-        <div class="card-gestao-icon" style="background:#f0fdf4">📈</div>
-        <div class="card-gestao-nome">Relatórios</div>
       </div>
       <div class="card-gestao" onclick="atualizarMonitor(this)">
         <div class="card-gestao-icon" style="background:#eff6ff">↻</div>
@@ -3463,6 +3451,8 @@ let ultimaVendaId = null;
 function verificarNovasVendas(vendasHoje) {
   if (vendasHoje.length === 0) return;
   const mais = vendasHoje[0];
+  // Só notifica vendas da LOJA ATUAL — nunca de outra loja
+  if (mais.loja_id && lojaId && mais.loja_id !== lojaId) { ultimaVendaId = mais.id; return; }
   if (ultimaVendaId && mais.id !== ultimaVendaId) {
     const val = parseFloat(mais.total);
     if (val >= 500 && Notification.permission === 'granted') {
@@ -3543,7 +3533,7 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.61';
+const MONITOR_VERSAO = '2.9.62';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -3964,17 +3954,31 @@ async function guardarDadosPerfil() {
   mostrarNotif('✅ Dados guardados!');
 }
 
+let _emailNovoPendente = '';
 async function trocarEmail() {
   const novo = document.getElementById('perfil-in-email').value.trim();
   if (!novo || !novo.includes('@')) { mostrarNotif('❌ Escreve um e-mail válido.', true); return; }
-  if (!confirm('Trocar o e-mail para ' + novo + '?\nVais receber um link de confirmação no e-mail NOVO. A conta só muda depois de confirmares lá.')) return;
-  const { error } = await supabaseClient.auth.updateUser(
-    { email: novo },
-    { emailRedirectTo: window.location.origin + '/monitor.html' }
-  );
+  if (!confirm('Enviar um código para ' + novo + '?')) return;
+  const { error } = await supabaseClient.auth.updateUser({ email: novo });
   if (error) { mostrarNotif('❌ ' + error.message, true); return; }
-  mostrarNotif('✅ Verifica o e-mail (confirma nos DOIS: no novo e no antigo, se pedir). A troca só fica feita depois de confirmares.');
+  _emailNovoPendente = novo;
+  document.getElementById('bloco-codigo-email').style.display = 'block';
+  const bt = document.getElementById('btn-trocar-email'); if (bt) bt.textContent = '🔄 Reenviar código';
+  mostrarNotif('✅ Código enviado para o e-mail NOVO. Escreve-o aqui em baixo.');
+}
+
+async function confirmarCodigoEmail() {
+  const codigo = (document.getElementById('perfil-in-codigo').value || '').trim();
+  const alvo = _emailNovoPendente || document.getElementById('perfil-in-email').value.trim();
+  if (!codigo) { mostrarNotif('❌ Escreve o código que recebeste.', true); return; }
+  if (!alvo) { mostrarNotif('❌ Escreve primeiro o e-mail novo e pede o código.', true); return; }
+  const { error } = await supabaseClient.auth.verifyOtp({ email: alvo, token: codigo, type: 'email_change' });
+  if (error) { mostrarNotif('❌ Código errado ou expirado. ' + error.message, true); return; }
+  mostrarNotif('✅ E-mail trocado com sucesso! Já podes entrar com ' + alvo);
   document.getElementById('perfil-in-email').value = '';
+  document.getElementById('perfil-in-codigo').value = '';
+  document.getElementById('bloco-codigo-email').style.display = 'none';
+  _emailNovoPendente = '';
 }
 
 async function trocarSenha() {
@@ -4235,31 +4239,26 @@ function aplicarModoGerente() {
     const ok = permitidos.some(p => oc.includes(p)) || c.id === 'card-instalar-app';
     if (!ok) c.style.display = 'none';
   });
-  // Gerente pode CADASTRAR produtos, mas NAO define quantidades/stock
+  // Esconder abas HOME e VENDAS — o gerente só usa a aba LOJA
+  document.querySelectorAll('.nav-tab').forEach(t => {
+    const oc = t.getAttribute('onclick') || '';
+    if (oc.includes("'home'") || oc.includes("'vendas'")) t.style.display = 'none';
+  });
+  // Levar o gerente logo para a aba LOJA
+  const abaLoja = Array.from(document.querySelectorAll('.nav-tab')).find(t => (t.getAttribute('onclick')||'').includes("'gestao'"));
+  if (abaLoja) { try { abaLoja.click(); } catch(e) {} }
+  // Gerente pode CADASTRAR produtos, mas NAO define quantidades (stock entra por Inventário/Despacho)
   const npStock = document.getElementById('np-stock');
   if (npStock) {
     npStock.value = 0; npStock.readOnly = true;
-    npStock.title = 'Só o dono define as quantidades. O stock entra por Despacho/Inventário.';
+    npStock.title = 'As quantidades entram por Inventário ou Despacho.';
     npStock.style.background = '#f1f5f9';
   }
-  // Gerente NÃO altera preços (nem de venda nem de compra)
-  ['np-preco','np-preco-compra'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.readOnly = true; el.value = ''; el.placeholder = 'Definido pelo dono';
-      el.title = 'Só o dono define os preços.'; el.style.background = '#f1f5f9';
-    }
-  });
-  // Gerente NÃO vê dinheiro: esconde PDF, Excel e Inventário (mostram valores)
-  ['exportarPDF()','exportarInventarioExcel()','abrirInventario()'].forEach(fn => {
-    document.querySelectorAll('button').forEach(b => {
-      if ((b.getAttribute('onclick')||'').includes(fn)) b.style.display = 'none';
-    });
-  });
+  // NOTA: preço e inventário AGORA são acessíveis ao gerente (o dono permitiu).
   const badge = document.getElementById('topbar-loja');
   if (badge && !document.getElementById('badge-gerente')) {
     const b = document.createElement('span'); b.id = 'badge-gerente';
-    b.textContent = '👤 Gerente (acesso limitado)';
+    b.textContent = '👤 Gerente';
     b.style.cssText = 'font-size:10px;color:#f59e0b;font-weight:bold;display:block;margin-top:2px;';
     badge.parentElement.appendChild(b);
   }
@@ -4656,7 +4655,12 @@ async function carregarContagensEquipa() {
 
       <label style="font-size:13px;color:#64748b;font-weight:600;">Trocar e-mail de acesso</label>
       <input type="email" id="perfil-in-email" placeholder="novo@email.com" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:15px;margin:5px 0 8px;box-sizing:border-box;">
-      <button onclick="trocarEmail()" style="width:100%;padding:11px;background:#eff6ff;color:#1a56a0;border:1px solid #bfdbfe;border-radius:9px;font-weight:bold;cursor:pointer;margin-bottom:16px;">✉️ Trocar e-mail</button>
+      <button id="btn-trocar-email" onclick="trocarEmail()" style="width:100%;padding:11px;background:#eff6ff;color:#1a56a0;border:1px solid #bfdbfe;border-radius:9px;font-weight:bold;cursor:pointer;margin-bottom:8px;">✉️ Enviar código</button>
+      <div id="bloco-codigo-email" style="display:none;margin-bottom:16px;">
+        <label style="font-size:13px;color:#64748b;font-weight:600;">Código recebido no e-mail novo</label>
+        <input type="text" inputmode="numeric" id="perfil-in-codigo" placeholder="Ex: 123456" style="width:100%;padding:11px;border:1.5px solid #86efac;border-radius:9px;font-size:15px;margin:5px 0 8px;box-sizing:border-box;letter-spacing:3px;text-align:center;">
+        <button onclick="confirmarCodigoEmail()" style="width:100%;padding:11px;background:#16a34a;color:white;border:none;border-radius:9px;font-weight:bold;cursor:pointer;">✅ Confirmar código e trocar</button>
+      </div>
 
       <label style="font-size:13px;color:#64748b;font-weight:600;">Trocar senha</label>
       <input type="password" id="perfil-in-senha" placeholder="Nova senha (mín. 6 caracteres)" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:15px;margin:5px 0 8px;box-sizing:border-box;">

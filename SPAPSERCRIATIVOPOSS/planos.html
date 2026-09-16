@@ -124,11 +124,13 @@ body { font-family:-apple-system,Arial,sans-serif; background:linear-gradient(13
           <div class="metodo-icon">📱</div>
           <div class="metodo-nome">M-Pesa</div>
           <div class="metodo-num" id="met-mpesa-num">84 421 9918</div>
+          <div id="met-mpesa-nome-conta" style="font-size:11px;color:#16a34a;font-weight:600;margin-top:2px;"></div>
         </div>
         <div class="metodo" id="met-emola" onclick="selecionarMetodo('emola')">
           <div class="metodo-icon">💚</div>
           <div class="metodo-nome">e-Mola</div>
           <div class="metodo-num" id="met-emola-num">86 166 7843</div>
+          <div id="met-emola-nome-conta" style="font-size:11px;color:#16a34a;font-weight:600;margin-top:2px;"></div>
         </div>
       </div>
 
@@ -212,6 +214,8 @@ body { font-family:-apple-system,Arial,sans-serif; background:linear-gradient(13
       metodosSub = { ...metodosSub, ...m };
       const mp = document.getElementById('met-mpesa-num'); if (mp && m.mpesa) mp.textContent = m.mpesa;
       const em = document.getElementById('met-emola-num'); if (em && m.emola) em.textContent = m.emola;
+      const mpn = document.getElementById('met-mpesa-nome-conta'); if (mpn && m.mpesa_nome) mpn.textContent = '👤 ' + m.mpesa_nome;
+      const emn = document.getElementById('met-emola-nome-conta'); if (emn && m.emola_nome) emn.textContent = '👤 ' + m.emola_nome;
     }
     const wa = await ler('link_whatsapp_pagamento');
     if (typeof wa === 'string') waPagamento = wa;
@@ -258,10 +262,10 @@ body { font-family:-apple-system,Arial,sans-serif; background:linear-gradient(13
 
     if (m === 'mpesa') {
       titulo.textContent = '📱 Como pagar via M-Pesa:';
-      passos.innerHTML = `1️⃣ Abre o M-Pesa<br>2️⃣ Envia Dinheiro → <strong>${metodosSub.mpesa||''}</strong><br>3️⃣ Valor: <strong style="color:#e05c00;">MT ${pr.total.toLocaleString()}</strong><br>4️⃣ Referência: Spap-Sercriativo<br>5️⃣ Guarda o comprovativo`;
+      passos.innerHTML = `1️⃣ Abre o M-Pesa<br>2️⃣ Envia Dinheiro → <strong>${metodosSub.mpesa||''}</strong>${metodosSub.mpesa_nome?'<br>👤 Nome: <strong>'+metodosSub.mpesa_nome+'</strong>':''}<br>3️⃣ Valor: <strong style="color:#e05c00;">MT ${pr.total.toLocaleString()}</strong><br>4️⃣ Referência: Spap-Sercriativo<br>5️⃣ Guarda o comprovativo`;
     } else {
       titulo.textContent = '💚 Como pagar via e-Mola:';
-      passos.innerHTML = `1️⃣ Abre o e-Mola<br>2️⃣ Transferir → <strong>${metodosSub.emola||''}</strong><br>3️⃣ Valor: <strong style="color:#16a34a;">MT ${pr.total.toLocaleString()}</strong><br>4️⃣ Referência: Spap-Sercriativo<br>5️⃣ Guarda o comprovativo`;
+      passos.innerHTML = `1️⃣ Abre o e-Mola<br>2️⃣ Transferir → <strong>${metodosSub.emola||''}</strong>${metodosSub.emola_nome?'<br>👤 Nome: <strong>'+metodosSub.emola_nome+'</strong>':''}<br>3️⃣ Valor: <strong style="color:#16a34a;">MT ${pr.total.toLocaleString()}</strong><br>4️⃣ Referência: Spap-Sercriativo<br>5️⃣ Guarda o comprovativo`;
     }
 
     document.getElementById('upload-area').style.display = 'block';
