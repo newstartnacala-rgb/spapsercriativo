@@ -36,6 +36,11 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   body { font-family: -apple-system, Arial, sans-serif; background:#f4f6f9; color:#1a202c; min-height:100vh; max-width:480px; margin:0 auto; position:relative; }
 
+  /* ===== MODO ESCURO (o dono escolhe) — cobre toda a interface ===== */
+  html.escuro { filter: invert(1) hue-rotate(180deg); background:#0f172a; }
+  html.escuro img, html.escuro video, html.escuro canvas,
+  html.escuro [data-keep-color], html.escuro .qr-shell, html.escuro #reader { filter: invert(1) hue-rotate(180deg); }
+
   /* ===== TELA CARREGANDO ===== */
   #tela-carregando { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; gap:14px; background:white; }
   .spinner { width:36px; height:36px; border:3px solid #e2e8f0; border-top-color:#1a56a0; border-radius:50%; animation:spin 0.8s linear infinite; }
@@ -211,6 +216,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(()=>{}); });
   }
+  try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
 </head>
 <body>
@@ -238,6 +244,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
         <button class="btn-icon" id="btn-admin" onclick="window.location.href='admin.html'" title="Painel de Administração" style="display:none;background:#d4af6a;color:#1e1e1b;font-size:14px;">🛡️</button>
         <div class="indicador-live"><div class="dot-live"></div>Live</div>
         <button class="btn-icon" onclick="abrirModalLinguaMonitor()" title="Língua">🌐</button>
+        <button class="btn-icon" id="btn-escuro" onclick="toggleModoEscuro()" title="Modo escuro">🌙</button>
         <button class="btn-icon" onclick="trocarTema()" title="Trocar cor (dourado/azul)" style="margin-right:6px;">🎨</button>
         <button class="btn-icon" onclick="atualizarMonitor(this)" title="Atualizar">↻</button>
         <button class="btn-icon" onclick="sair()" title="Sair">⏻</button>
@@ -478,6 +485,11 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     </button>
     <button onclick="abrirInventario()" style="padding:12px;background:#7c3aed;border:none;border-radius:10px;color:white;font-size:13px;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
       📋 Inventário
+    </button>
+  </div>
+  <div style="padding:8px 16px 0;">
+    <button onclick="exportarInventarioExcel()" style="width:100%;padding:12px;background:#16a34a;border:none;border-radius:10px;color:white;font-size:13px;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+      📊 Baixar Excel (folha de cálculo)
     </button>
   </div>
   <div style="padding:0 16px 12px;">
@@ -737,6 +749,9 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     <button id="btn-verificar-inventario" onclick="verificarInventario()" style="width:100%;padding:14px;background:#0891b2;border:none;border-radius:10px;color:white;font-size:15px;font-weight:bold;cursor:pointer;margin-top:16px;">
       🔍 Verificar diferenças
     </button>
+    <button id="btn-excel-verificacao" onclick="exportarVerificacaoExcel()" style="width:100%;padding:12px;background:#16a34a;border:none;border-radius:10px;color:white;font-size:14px;font-weight:bold;cursor:pointer;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:6px;">
+      📊 Baixar folha de cálculo (verificação)
+    </button>
     <div id="inv-verificacao-resultado" style="display:none;margin-top:14px;"></div>
     <button id="btn-guardar-inventario" onclick="guardarInventario()" style="display:none;width:100%;padding:14px;background:#7c3aed;border:none;border-radius:10px;color:white;font-size:15px;font-weight:bold;cursor:pointer;margin-top:12px;">
       ✅ Confirmar e Guardar Inventário
@@ -822,8 +837,21 @@ async function iniciar() {
         const { error: eAnon } = await supabaseClient.auth.signInAnonymously();
         if (eAnon) { alert('⚠️ Falta ativar "Anonymous sign-ins" no Supabase (Authentication → Providers → ON).'); }
       }
-      const { error: eRes } = await supabaseClient.rpc('resgatar_convite_gerente', { p_token: _gTok });
-      if (eRes) { alert('⚠️ Link de gerente inválido ou o SQL do gerente não foi corrido. Pede um novo ao dono.'); }
+      const { data: _rLoja, error: eRes } = await supabaseClient.rpc('resgatar_convite_gerente', { p_token: _gTok });
+      if (eRes) { alert('⚠️ Link de gerente inválido. Pede um novo ao dono.'); }
+      else {
+        const _uid = (await supabaseClient.auth.getSession()).data.session.user.id;
+        // Já sou membro aprovado? Se não, criar/garantir PEDIDO PENDENTE com o meu nome
+        const { data: _mem } = await supabaseClient.from('membros_loja').select('papel').eq('user_id', _uid).limit(1);
+        if (!_mem || _mem.length === 0) {
+          const { data: _ped } = await supabaseClient.from('gerente_acessos').select('id').eq('user_id', _uid).eq('loja_id', _rLoja).limit(1);
+          if (!_ped || _ped.length === 0) {
+            let _nome = (prompt('👋 Escreve o teu nome para pedir acesso ao dono:') || '').trim() || 'Gerente';
+            localStorage.setItem('inv_contador_nome', _nome);
+            try { await supabaseClient.from('gerente_acessos').insert({ user_id: _uid, loja_id: _rLoja, nome: _nome, estado: 'pendente' }); } catch(e) {}
+          }
+        }
+      }
       history.replaceState({}, '', location.pathname);
     } catch (e) { alert('Erro no link de gerente: ' + (e.message || e)); }
   }
@@ -875,6 +903,15 @@ async function iniciar() {
     }
 
     if (!membros || membros.length === 0 || (membros[0].papel !== 'admin' && membros[0].papel !== 'gerente')) {
+      // Gerente à espera da decisão do dono?
+      let _ped = null;
+      try { const r = await supabaseClient.from('gerente_acessos').select('estado').eq('user_id', sessao.user.id).order('criado_em',{ascending:false}).limit(1); _ped = r.data; } catch(e) {}
+      if (_ped && _ped.length > 0 && _ped[0].estado === 'pendente') { mostrarEcraAguardandoGerente(); return; }
+      if (_ped && _ped.length > 0 && _ped[0].estado === 'cancelado') {
+        const _tc = document.getElementById('tela-carregando'); if (_tc) _tc.style.display = 'none';
+        document.body.innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif;color:#334155;padding:32px;text-align:center;">🚫 O teu acesso foi cancelado pelo dono.<br>Pede um novo link se precisares.</div>';
+        return;
+      }
       alert('Acesso negado. Só administradores podem usar este monitor.');
       localStorage.setItem('pdv_login_destino','monitor.html'); window.location.href = 'login.html'; return;
     }
@@ -889,14 +926,8 @@ async function iniciar() {
     lojaId = membros[0].loja_id;
     modoGerente = (membros[0].papel === 'gerente');
     if (modoGerente) {
-      const _pinG = (membros[0].lojas && membros[0].lojas.pin_gerente) || '0000';
-      const _tent = prompt('🔒 Código de acesso do monitor extra:');
-      if (_tent !== _pinG) { alert('Código errado.'); document.body.innerHTML = '<div style="padding:48px;text-align:center;font-family:sans-serif;color:#334155;">🔒 Acesso negado. Pede o código ao dono.</div>'; return; }
-      // Nome de quem entrou: o dono ve em Funcionarios e o inventario em equipa usa-o automaticamente
-      let _nomeG = (prompt('👋 Escreve o teu nome (o dono precisa de saber quem entrou):', (localStorage.getItem('inv_contador_nome')||'')) || '').trim() || 'Gerente';
-      localStorage.setItem('inv_contador_nome', _nomeG);
-      window._gerenteNome = _nomeG;
-      try { await supabaseClient.from('gerente_acessos').insert({ loja_id: lojaId, nome: _nomeG }); } catch(e) {}
+      // Já foi APROVADO pelo dono (tem membros_loja). Sem código: o controlo é a aprovação.
+      window._gerenteNome = (localStorage.getItem('inv_contador_nome') || 'Gerente');
     }
     nomeLoja = (membros[0].lojas && membros[0].lojas.nome) || 'Minha Loja';
     lojaPlano = (membros[0].lojas && membros[0].lojas.plano) || '';
@@ -1874,19 +1905,51 @@ async function carregarAcessosGerente() {
   try {
     const { data, error } = await supabaseClient.from('gerente_acessos')
       .select('*').eq('loja_id', lojaId).order('criado_em', { ascending: false }).limit(50);
-    if (error) { div.innerHTML = '<div style="color:#94a3b8;font-size:12px;">Corre o SQL <b>atualizacao-gerente-acessos.sql</b> para ativar.</div>'; return; }
-    if (!data || !data.length) { div.innerHTML = '<div style="color:#cbd5e1;font-size:13px;">Ainda ninguém entrou pelo link.</div>'; return; }
-    div.innerHTML = `<div style="font-size:12px;color:#16a34a;font-weight:bold;margin-bottom:8px;">${data.length} acesso(s) ao link</div>` +
+    if (error) { div.innerHTML = '<div style="color:#94a3b8;font-size:12px;">Corre o SQL <b>atualizacao-gerente-aprovacao.sql</b> para ativar.</div>'; return; }
+    if (!data || !data.length) { div.innerHTML = '<div style="color:#cbd5e1;font-size:13px;">Ainda ninguém pediu acesso pelo link.</div>'; return; }
+    const pend = data.filter(a => (a.estado||'pendente')==='pendente').length;
+    div.innerHTML = (pend>0
+        ? `<div style="font-size:12px;color:#f59e0b;font-weight:bold;margin-bottom:8px;">⏳ ${pend} pedido(s) a aguardar a tua decisão</div>`
+        : `<div style="font-size:12px;color:#16a34a;font-weight:bold;margin-bottom:8px;">${data.length} pessoa(s) no link</div>`) +
       data.map(a => {
+        const est = a.estado || 'pendente';
         const dt = new Date(a.criado_em).toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
         const ini = esc((a.nome||'?').charAt(0).toUpperCase());
+        const badge = est==='activo' ? '<span style="color:#16a34a;font-weight:bold;">✅ Activo</span>'
+          : est==='cancelado' ? '<span style="color:#dc2626;font-weight:bold;">🚫 Cancelado</span>'
+          : '<span style="color:#f59e0b;font-weight:bold;">⏳ Pendente</span>';
+        let botoes = '';
+        if (est !== 'activo') botoes += `<button onclick="aprovarGerente('${a.user_id}')" style="padding:8px 12px;background:#16a34a;border:none;border-radius:8px;color:white;font-size:12px;font-weight:bold;cursor:pointer;">Activar</button>`;
+        if (est !== 'cancelado') botoes += `<button onclick="cancelarGerenteAcesso('${a.user_id}')" style="padding:8px 12px;background:#dc2626;border:none;border-radius:8px;color:white;font-size:12px;font-weight:bold;cursor:pointer;">Cancelar</button>`;
         return `<div style="display:flex;align-items:center;gap:10px;background:white;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:6px;">
-          <div style="width:32px;height:32px;border-radius:50%;background:#dbeafe;color:#1e40af;font-weight:bold;display:flex;align-items:center;justify-content:center;">${ini}</div>
-          <div style="flex:1;"><div style="font-size:14px;font-weight:600;">${esc(a.nome||'Sem nome')}</div>
-          <div style="font-size:11px;color:#94a3b8;">${dt}</div></div>
+          <div style="width:32px;height:32px;border-radius:50%;background:#dbeafe;color:#1e40af;font-weight:bold;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${ini}</div>
+          <div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:600;">${esc(a.nome||'Sem nome')}</div>
+          <div style="font-size:11px;color:#94a3b8;">${dt} · ${badge}</div></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">${botoes}</div>
         </div>`;
       }).join('');
   } catch(e) { div.innerHTML = '<div style="color:#94a3b8;font-size:12px;">Erro: ' + esc(e.message||e) + '</div>'; }
+}
+
+async function aprovarGerente(uid) {
+  if (!uid || uid==='null') { alert('Pedido antigo (sem utilizador). Pede à pessoa para abrir o link outra vez.'); return; }
+  try {
+    const { error } = await supabaseClient.rpc('aprovar_gerente', { p_user: uid, p_loja: lojaId });
+    if (error) { alert('Erro ao activar: ' + error.message); return; }
+    try { mostrarNotif('✅ Gerente activado'); } catch(e) {}
+    carregarAcessosGerente();
+  } catch(e) { alert('Erro: ' + (e.message||e)); }
+}
+
+async function cancelarGerenteAcesso(uid) {
+  if (!uid || uid==='null') { alert('Pedido antigo sem utilizador.'); return; }
+  if (!confirm('Cancelar o acesso deste gerente? Ele deixa de conseguir entrar.')) return;
+  try {
+    const { error } = await supabaseClient.rpc('cancelar_gerente', { p_user: uid, p_loja: lojaId });
+    if (error) { alert('Erro ao cancelar: ' + error.message); return; }
+    try { mostrarNotif('🚫 Acesso cancelado'); } catch(e) {}
+    carregarAcessosGerente();
+  } catch(e) { alert('Erro: ' + (e.message||e)); }
 }
 
 function renderRelatoriosSubPainel() {
@@ -2175,6 +2238,78 @@ function exportarPDF() {
   if (!janela) { alert('Permite pop-ups para baixar o PDF.'); return; }
   janela.document.write(html);
   janela.document.close();
+}
+
+// ===== EXPORTAR EXCEL (folha de cálculo) =====
+function _carregarSheetJS() {
+  return new Promise((resolve, reject) => {
+    if (window.XLSX) return resolve(window.XLSX);
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = () => resolve(window.XLSX);
+    s.onerror = () => reject(new Error('Sem internet para carregar o Excel. Tenta com net.'));
+    document.head.appendChild(s);
+  });
+}
+function _nomeFicheiro(prefixo) {
+  return prefixo + '_' + (nomeLoja||'loja').replace(/[^\w]/g,'_') + '_' + new Date().toISOString().slice(0,10) + '.xlsx';
+}
+
+// Lista completa do inventário (como o PDF, mas em Excel)
+async function exportarInventarioExcel() {
+  try {
+    const XLSX = await _carregarSheetJS();
+    const linhas = [['Produto','Código','Categoria','Preço venda','Stock','Valor total']];
+    let totalStock = 0, totalValor = 0;
+    (todosProdutos||[]).forEach(p => {
+      const preco = parseFloat(p.preco)||0;
+      const stock = parseInt(p.stock)||0;
+      const valor = preco*stock;
+      totalStock += stock; totalValor += valor;
+      linhas.push([p.nome||'', p.codigo||'', p.categoria||'', preco, stock, valor]);
+    });
+    linhas.push(['TOTAIS','','','', totalStock, totalValor]);
+    const ws = XLSX.utils.aoa_to_sheet(linhas);
+    ws['!cols'] = [{wch:34},{wch:14},{wch:16},{wch:12},{wch:8},{wch:14}];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Inventário');
+    XLSX.writeFile(wb, _nomeFicheiro('Inventario'));
+  } catch(e) { alert('Não deu para gerar o Excel: ' + (e.message||e)); }
+}
+
+// Dados da verificação: só produtos contados, com diferença em valor
+function _dadosVerificacao() {
+  const rows = [];
+  (todosProdutos||[]).forEach(p => {
+    const st = parseInt(p.stock)||0;
+    const pv = parseFloat(p.preco)||0;
+    let contado = null;
+    if (modoEquipaAtivo && window._totaisEquipa && (p.id in window._totaisEquipa)) contado = window._totaisEquipa[p.id];
+    else { const input = document.getElementById('inv-'+p.id); if (input && input.value!=='') contado = parseInt(input.value)||0; }
+    if (contado === null) return;
+    rows.push({ nome:p.nome||'', pv, st, contado, difValor:(contado-st)*pv });
+  });
+  return rows;
+}
+
+// Folha de cálculo da verificação (Produto · Preço · Stock sistema · Contagem · Diferença)
+async function exportarVerificacaoExcel() {
+  try {
+    const rows = _dadosVerificacao();
+    if (!rows.length) { alert('Ainda não contaste nenhum produto. Escreve as quantidades na coluna "Contei" primeiro.'); return; }
+    const XLSX = await _carregarSheetJS();
+    const head = ['Produto','Preço venda','Stock sistema','Contagem física','Diferença (MT)'];
+    const toAoa = arr => [head, ...arr.map(r => [r.nome, r.pv, r.st, r.contado, r.difValor])];
+    const cols = [{wch:34},{wch:12},{wch:13},{wch:15},{wch:14}];
+    const wb = XLSX.utils.book_new();
+    const wsAll = XLSX.utils.aoa_to_sheet(toAoa(rows.slice().sort((a,b)=>a.difValor-b.difValor)));
+    wsAll['!cols']=cols; XLSX.utils.book_append_sheet(wb, wsAll, 'Verificação');
+    const neg = rows.filter(r=>r.difValor<0).sort((a,b)=>a.difValor-b.difValor);
+    if (neg.length){ const w=XLSX.utils.aoa_to_sheet(toAoa(neg)); w['!cols']=cols; XLSX.utils.book_append_sheet(wb,w,'Faltas'); }
+    const pos = rows.filter(r=>r.difValor>0).sort((a,b)=>b.difValor-a.difValor);
+    if (pos.length){ const w=XLSX.utils.aoa_to_sheet(toAoa(pos)); w['!cols']=cols; XLSX.utils.book_append_sheet(wb,w,'Sobras'); }
+    XLSX.writeFile(wb, _nomeFicheiro('Verificacao'));
+  } catch(e) { alert('Não deu para gerar o Excel: ' + (e.message||e)); }
 }
 
 // ===== AUDITORIA DE CAIXA =====
@@ -3408,7 +3543,7 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.58';
+const MONITOR_VERSAO = '2.9.61';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -4060,6 +4195,37 @@ async function adicionarGerente() {
 }
 
 // ===== MODO GERENTE (monitor extra restrito) =====
+function toggleModoEscuro() {
+  const on = !document.documentElement.classList.contains('escuro');
+  document.documentElement.classList.toggle('escuro', on);
+  try { localStorage.setItem('monitor_escuro', on ? '1' : '0'); } catch(e) {}
+  const b = document.getElementById('btn-escuro');
+  if (b) b.textContent = on ? '☀️' : '🌙';
+}
+// Acerta o ícone no arranque
+try { const _e = localStorage.getItem('monitor_escuro')==='1'; const _b = document.getElementById('btn-escuro'); if (_b) _b.textContent = _e ? '☀️' : '🌙'; } catch(e) {}
+
+function mostrarEcraAguardandoGerente() {
+  const tc = document.getElementById('tela-carregando'); if (tc) tc.style.display = 'none';
+  document.body.innerHTML = `
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif;background:#f1f5f9;padding:24px;">
+      <div style="max-width:380px;text-align:center;background:#fff;border-radius:16px;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,.08);">
+        <div style="font-size:48px;margin-bottom:12px;">⏳</div>
+        <h2 style="margin:0 0 8px;color:#0f172a;font-size:20px;">Pedido enviado ao dono</h2>
+        <p style="color:#475569;line-height:1.5;font-size:14px;">O dono precisa de <b>activar</b> o teu acesso. Deixa esta janela aberta — assim que ele activar, entras automaticamente.</p>
+        <div style="margin-top:16px;color:#94a3b8;font-size:13px;">A verificar a cada poucos segundos…</div>
+      </div>
+    </div>`;
+  const _timer = setInterval(async () => {
+    try {
+      const s = (await supabaseClient.auth.getSession()).data.session;
+      if (!s) return;
+      const { data: m } = await supabaseClient.from('membros_loja').select('papel').eq('user_id', s.user.id).limit(1);
+      if (m && m.length > 0) { clearInterval(_timer); location.reload(); }
+    } catch(e) {}
+  }, 7000);
+}
+
 function aplicarModoGerente() {
   if (!modoGerente) return;
   // So estes cartoes ficam visiveis para o gerente (Visao Geral fica escondida)
@@ -4076,6 +4242,20 @@ function aplicarModoGerente() {
     npStock.title = 'Só o dono define as quantidades. O stock entra por Despacho/Inventário.';
     npStock.style.background = '#f1f5f9';
   }
+  // Gerente NÃO altera preços (nem de venda nem de compra)
+  ['np-preco','np-preco-compra'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.readOnly = true; el.value = ''; el.placeholder = 'Definido pelo dono';
+      el.title = 'Só o dono define os preços.'; el.style.background = '#f1f5f9';
+    }
+  });
+  // Gerente NÃO vê dinheiro: esconde PDF, Excel e Inventário (mostram valores)
+  ['exportarPDF()','exportarInventarioExcel()','abrirInventario()'].forEach(fn => {
+    document.querySelectorAll('button').forEach(b => {
+      if ((b.getAttribute('onclick')||'').includes(fn)) b.style.display = 'none';
+    });
+  });
   const badge = document.getElementById('topbar-loja');
   if (badge && !document.getElementById('badge-gerente')) {
     const b = document.createElement('span'); b.id = 'badge-gerente';
