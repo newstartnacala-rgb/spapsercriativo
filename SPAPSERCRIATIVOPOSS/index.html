@@ -3693,9 +3693,18 @@ async function scannerFechar() {
     }).join('');
   }
 
+  let _perdasEmProcesso = {};
   async function confirmarPerda(id, qtd, produtoId) {
+    if (_perdasEmProcesso[id]) return;
     if (!confirm('Confirmar esta perda?\n\nO stock vai baixar ' + qtd + ' unidade(s).')) return;
+    _perdasEmProcesso[id] = true;
     try {
+      // Marca confirmado SÓ SE ainda estiver pendente (atómico). Só baixa stock se este clique "ganhar".
+      const { data: rows, error } = await supabaseClient.from('perdas')
+        .update({ estado: 'confirmado', confirmado_por: (sessaoAtual && sessaoAtual.vendedorCodigo) || 'balconista', confirmado_em: new Date().toISOString() })
+        .eq('id', id).eq('estado', 'pendente').select('id');
+      if (error) throw error;
+      if (!rows || rows.length === 0) { mostrarNotif('✅ Esta perda já tinha sido tratada.'); abrirVerPerdas(); return; }
       if (produtoId) {
         const { data: prod } = await supabaseClient.from('produtos').select('stock').eq('id', produtoId).maybeSingle();
         if (prod) {
@@ -3703,25 +3712,25 @@ async function scannerFechar() {
           await supabaseClient.from('produtos').update({ stock: novo }).eq('id', produtoId);
         }
       }
-      const { error } = await supabaseClient.from('perdas')
-        .update({ estado: 'confirmado', confirmado_por: (sessaoAtual && sessaoAtual.vendedorCodigo) || 'balconista', confirmado_em: new Date().toISOString() })
-        .eq('id', id);
-      if (error) throw error;
       mostrarNotif('✅ Perda confirmada. Stock atualizado.');
       abrirVerPerdas();
     } catch(e) { mostrarNotif('❌ ' + (e.message||e), true); }
+    finally { delete _perdasEmProcesso[id]; }
   }
 
   async function cancelarPerda(id) {
+    if (_perdasEmProcesso[id]) return;
     if (!confirm('Cancelar esta perda?\n\nO stock NÃO será alterado.')) return;
+    _perdasEmProcesso[id] = true;
     try {
       const { error } = await supabaseClient.from('perdas')
         .update({ estado: 'cancelado', confirmado_por: (sessaoAtual && sessaoAtual.vendedorCodigo) || 'balconista', confirmado_em: new Date().toISOString() })
-        .eq('id', id);
+        .eq('id', id).eq('estado', 'pendente');
       if (error) throw error;
       mostrarNotif('✖️ Perda cancelada. Stock mantido.');
       abrirVerPerdas();
     } catch(e) { mostrarNotif('❌ ' + (e.message||e), true); }
+    finally { delete _perdasEmProcesso[id]; }
   }
 
   /* ===== AVISO DE DESPACHO (vendedor vê a lista e imprime a guia) ===== */
@@ -3794,8 +3803,8 @@ async function scannerFechar() {
         <span>Total (${totalUn} un.):</span><span style="color:#1a56a0;">MT ${total.toFixed(2)}</span>
       </div>
       ${despachoAtual && despachoAtual.estado === 'enviado'
-        ? '<button onclick="confirmarRecebimentoDespacho()" style="width:100%;padding:14px;background:#16a34a;border:none;border-radius:10px;color:white;font-size:15px;font-weight:bold;cursor:pointer;margin-top:14px;">✅ Confirmar que recebi a mercadoria</button>'
-          + '<button onclick="cancelarRecebimentoDespacho()" style="width:100%;padding:14px;background:#dc2626;border:none;border-radius:10px;color:white;font-size:15px;font-weight:bold;cursor:pointer;margin-top:8px;">✖️ Cancelar (mercadoria errada — não entra no stock)</button>'
+        ? '<button onclick="confirmarRecebimentoDespacho(this)" style="width:100%;padding:14px;background:#16a34a;border:none;border-radius:10px;color:white;font-size:15px;font-weight:bold;cursor:pointer;margin-top:14px;">✅ Confirmar que recebi a mercadoria</button>'
+          + '<button onclick="cancelarRecebimentoDespacho(this)" style="width:100%;padding:14px;background:#dc2626;border:none;border-radius:10px;color:white;font-size:15px;font-weight:bold;cursor:pointer;margin-top:8px;">✖️ Cancelar (mercadoria errada — não entra no stock)</button>'
         : (despachoAtual && despachoAtual.estado === 'cancelado')
           ? '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:12px;margin-top:14px;text-align:center;color:#b91c1c;font-weight:bold;">✖️ Despacho cancelado (não entrou no stock)</div>'
           : '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:12px;margin-top:14px;text-align:center;color:#166534;font-weight:bold;">✅ Mercadoria recebida (stock somado)</div>'}
@@ -3812,46 +3821,66 @@ async function scannerFechar() {
     abrirAvisoDespacho();
   }
 
-  async function confirmarRecebimentoDespacho() {
+  let _confirmandoDespacho = false;
+  async function confirmarRecebimentoDespacho(btn) {
     if (!despachoAtual) return;
     if (despachoAtual.estado === 'confirmado') return;
+    if (_confirmandoDespacho) return;            // já está a processar — ignora cliques extra
+    _confirmandoDespacho = true;
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; btn.dataset.txt = btn.textContent; btn.textContent = '⏳ A confirmar...'; }
     try {
-      // Soma ao stock AGORA (só nos despachos novos, que ainda nao foram somados)
-      if (despachoAtual.estado === 'enviado') {
-        for (const it of (despachoAtual.itens || [])) {
-          if (!it.produto_id) continue;
-          const { data: prod } = await supabaseClient.from('produtos').select('stock').eq('id', it.produto_id).maybeSingle();
-          if (prod) {
-            const novo = (parseInt(prod.stock)||0) + (parseInt(it.enviado)||0);
-            await supabaseClient.from('produtos').update({ stock: novo }).eq('id', it.produto_id);
-          }
+      // 1) Marca como confirmado SÓ SE ainda estiver 'enviado' (atómico). Se outro clique já o fez, não repete.
+      const { data: rows, error: e1 } = await supabaseClient.from('despachos')
+        .update({ estado: 'confirmado', confirmado_por: (sessaoAtual && sessaoAtual.vendedorCodigo) || 'balconista', confirmado_em: new Date().toISOString() })
+        .eq('id', despachoAtual.id).eq('estado', 'enviado').select('id');
+      if (e1) throw e1;
+      if (!rows || rows.length === 0) {
+        // Já tinha sido confirmado — NÃO soma stock outra vez
+        despachoAtual.estado = 'confirmado';
+        mostrarNotif('✅ Este despacho já estava confirmado.');
+        verDespacho(despachoAtual);
+        return;
+      }
+      // 2) Só agora soma ao stock (garantido uma única vez)
+      for (const it of (despachoAtual.itens || [])) {
+        if (!it.produto_id) continue;
+        const { data: prod } = await supabaseClient.from('produtos').select('stock').eq('id', it.produto_id).maybeSingle();
+        if (prod) {
+          const novo = (parseInt(prod.stock)||0) + (parseInt(it.enviado)||0);
+          await supabaseClient.from('produtos').update({ stock: novo }).eq('id', it.produto_id);
         }
       }
-      const { error } = await supabaseClient.from('despachos')
-        .update({ estado: 'confirmado', confirmado_por: (sessaoAtual && sessaoAtual.vendedorCodigo) || 'balconista', confirmado_em: new Date().toISOString() })
-        .eq('id', despachoAtual.id);
-      if (error) throw error;
       despachoAtual.estado = 'confirmado';
       mostrarNotif('✅ Recebido e somado ao stock! Já podes vender.');
       verDespacho(despachoAtual);
     } catch(e) {
       mostrarNotif('❌ ' + (e.message||e), true);
+    } finally {
+      _confirmandoDespacho = false;
+      if (btn) { btn.disabled = false; btn.style.opacity = '1'; if (btn.dataset.txt) btn.textContent = btn.dataset.txt; }
     }
   }
 
-  async function cancelarRecebimentoDespacho() {
+  let _cancelandoDespacho = false;
+  async function cancelarRecebimentoDespacho(btn) {
     if (!despachoAtual || despachoAtual.estado !== 'enviado') return;
+    if (_cancelandoDespacho) return;
     if (!confirm('Cancelar este despacho?\n\nA mercadoria NÃO entra no stock. Usa isto se recebeste mercadoria errada.')) return;
+    _cancelandoDespacho = true;
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
     try {
       const { error } = await supabaseClient.from('despachos')
         .update({ estado: 'cancelado', confirmado_por: (sessaoAtual && sessaoAtual.vendedorCodigo) || 'balconista', confirmado_em: new Date().toISOString() })
-        .eq('id', despachoAtual.id);
+        .eq('id', despachoAtual.id).eq('estado', 'enviado');
       if (error) throw error;
       despachoAtual.estado = 'cancelado';
       mostrarNotif('✖️ Despacho cancelado. Não entrou no stock.');
       verDespacho(despachoAtual);
     } catch(e) {
       mostrarNotif('❌ ' + (e.message||e), true);
+    } finally {
+      _cancelandoDespacho = false;
+      if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
     }
   }
 
@@ -4517,7 +4546,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.63';
+  const VERSAO_ATUAL = '2.9.64';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -4664,23 +4693,37 @@ dotNet.title = 'Estado da internet';
 dotNet.style.cssText = 'position:fixed;top:10px;right:150px;width:26px;height:26px;border-radius:50%;background:#16a34a;border:2.5px solid rgba(255,255,255,0.85);z-index:9998;box-shadow:0 1px 5px rgba(0,0,0,0.35);transition:background 0.3s;display:flex;align-items:center;justify-content:center;font-size:12px;';
 dotNet.textContent = '📶';
 document.body.appendChild(dotNet);
-function estadoNet(online) {
-  dotNet.style.background = online ? '#16a34a' : '#dc2626';
-  dotNet.textContent = online ? '📶' : '📵';
-  dotNet.title = online ? 'Com internet' : 'Sem internet — vendas serão sincronizadas ao voltar';
+let _netOscilar = null;
+function estadoNet(estado) {
+  // aceita boolean antigo (true/false) ou 'bom'/'fraco'/'sem'
+  if (estado === true) estado = 'bom';
+  if (estado === false) estado = 'sem';
+  if (_netOscilar) { clearInterval(_netOscilar); _netOscilar = null; }
+  if (estado === 'sem') {
+    dotNet.style.background = '#dc2626'; dotNet.textContent = '📵';
+    dotNet.title = 'Sem internet — vendas serão sincronizadas ao voltar';
+  } else if (estado === 'fraco') {
+    dotNet.textContent = '📶'; dotNet.title = 'Internet fraca (lenta)';
+    let on = true; dotNet.style.background = '#f59e0b';
+    _netOscilar = setInterval(() => { on = !on; dotNet.style.background = on ? '#f59e0b' : '#fef08a'; }, 450);
+  } else {
+    dotNet.style.background = '#16a34a'; dotNet.textContent = '📶';
+    dotNet.title = 'Com internet';
+  }
 }
-// Verde só quando há INTERNET REAL (consegue chegar ao servidor), não só a ligação "ligada"
+// Verde/amarelo/vermelho conforme consegue chegar ao servidor E a velocidade
 async function verificarNetReal() {
-  if (!navigator.onLine) { estadoNet(false); return; }
+  if (!navigator.onLine) { estadoNet('sem'); return; }
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 6000);
+    const t0 = (performance && performance.now) ? performance.now() : Date.now();
     const r = await fetch(SUPABASE_URL + '/rest/v1/', { method: 'GET', cache: 'no-store', headers: { apikey: SUPABASE_ANON_KEY }, signal: ctrl.signal });
     clearTimeout(t);
-    const ct = r.headers.get('content-type') || '';
-    // Sem megabytes o portal da operadora responde HTML (não JSON) -> tratamos como offline
-    estadoNet(r.ok && ct.includes('json'));
-  } catch(e) { estadoNet(false); }
+    const dt = ((performance && performance.now) ? performance.now() : Date.now()) - t0;
+    if (!r.ok) { estadoNet('sem'); return; }   // chegou ao servidor? então há internet real
+    estadoNet(dt > 2200 ? 'fraco' : 'bom');    // lento => fraco (oscila); rápido => bom
+  } catch(e) { estadoNet('sem'); }
 }
 verificarNetReal();
 setInterval(verificarNetReal, 15000);
