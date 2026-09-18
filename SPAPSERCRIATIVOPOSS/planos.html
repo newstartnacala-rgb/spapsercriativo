@@ -162,7 +162,7 @@ body { font-family:-apple-system,Arial,sans-serif; background:linear-gradient(13
       <div style="font-weight:bold;margin-bottom:6px;">📞 Suporte — Não responderam em 5 minutos?</div>
       <div style="margin-bottom:8px;">Liga ou manda mensagem para o nosso suporte:</div>
       <a href="tel:+258866577722" style="display:block;color:#1a56a0;font-weight:bold;font-size:16px;margin-bottom:4px;">📱 +258 86 657 7722</a>
-      <a href="https://wa.me/258866577722" style="color:#16a34a;font-weight:bold;font-size:13px;">💬 WhatsApp do suporte</a>
+      <a href="https://wa.me/258866577722" id="link-suporte-planos" style="color:#16a34a;font-weight:bold;font-size:13px;">💬 Suporte / Grupo de dúvidas</a>
     </div>
     <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px;margin-bottom:16px;font-size:12px;color:#1e40af;text-align:left;">
       🔒 O acesso à tua loja é libertado assim que o pagamento for confirmado (normalmente em até 24h).
@@ -182,6 +182,7 @@ body { font-family:-apple-system,Arial,sans-serif; background:linear-gradient(13
   // Métodos de pagamento da subscrição (definidos pelo admin em config_global)
   let metodosSub = { mpesa:'84 421 9918', emola:'86 166 7843', banco_nome:'', banco_conta:'', banco_titular:'' };
   let waPagamento = '';
+  let waSuporte = '';
 
   function fmtMT(n) { return (parseFloat(n)||0).toLocaleString('pt-PT'); }
 
@@ -219,6 +220,12 @@ body { font-family:-apple-system,Arial,sans-serif; background:linear-gradient(13
     }
     const wa = await ler('link_whatsapp_pagamento');
     if (typeof wa === 'string') waPagamento = wa;
+    const ws = await ler('link_suporte_whatsapp');
+    if (typeof ws === 'string' && ws.trim()) {
+      waSuporte = ws.trim();
+      const ls = document.getElementById('link-suporte-planos');
+      if (ls) ls.href = waSuporte;
+    }
 
     // Mostra SEMPRE os cartões a partir de PRECOS (valores acordados por defeito, ou os do admin se guardados)
     ['basico','pro','anual'].forEach(k => {
@@ -309,7 +316,9 @@ body { font-family:-apple-system,Arial,sans-serif; background:linear-gradient(13
       `💳 *Método:* ${metodo === 'mpesa' ? 'M-Pesa' : 'e-Mola'}\n\n` +
       `✅ Comprovativo enviado no sistema. Por favor verificar e activar.`
     );
-    window.open(`https://wa.me/258861667843?text=${msg}`, '_blank');
+    const _basePag = (typeof waPagamento === 'string' && waPagamento.trim()) ? waPagamento.trim() : 'https://wa.me/258861667843';
+    const _sep = _basePag.includes('?') ? '&' : '?';
+    window.open(`${_basePag}${_sep}text=${msg}`, '_blank');
 
     // Actualiza estado da loja para pendente_pagamento
     if (sd?.session) {
