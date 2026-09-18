@@ -383,6 +383,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   <div class="corpo-pdv">
     <div class="area-produtos">
       <div class="produtos-titulo" id="titulo-categoria">👆 Seleciona uma categoria acima</div>
+      <div id="subcategorias-lista" style="display:none;gap:6px;flex-wrap:wrap;padding:4px 0 8px;"></div>
       <div class="produtos-grelha" id="produtos-grelha"></div>
     </div>
 
@@ -913,6 +914,35 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   </div>
 </div>
 
+<!-- Modal: Transferir entre lojas -->
+<div class="modal-fundo" id="modal-transferencias">
+  <div class="modal" style="max-width:560px;">
+    <h2 style="text-align:center;margin-bottom:4px;">🔄 Transferir entre lojas</h2>
+    <p style="text-align:center;font-size:13px;color:#888;margin-bottom:12px;">Envia produtos para outra loja tua. A outra loja confirma para receber.</p>
+    <div style="display:flex;gap:6px;margin-bottom:12px;">
+      <button id="tab-tr-enviar" onclick="mostrarAbaTransf('enviar')" style="flex:1;padding:10px;border:none;border-radius:8px;background:#1a56a0;color:white;font-weight:bold;cursor:pointer;">📤 Enviar</button>
+      <button id="tab-tr-receber" onclick="mostrarAbaTransf('receber')" style="flex:1;padding:10px;border:none;border-radius:8px;background:#f1f5f9;color:#475569;font-weight:bold;cursor:pointer;">📥 Receber <span id="tr-badge" style="display:none;background:#dc2626;color:white;border-radius:10px;padding:1px 7px;font-size:11px;">0</span></button>
+    </div>
+
+    <div id="aba-tr-enviar">
+      <label style="font-size:13px;font-weight:600;color:#475569;">Loja de destino</label>
+      <select id="tr-destino" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:14px;margin:5px 0 12px;box-sizing:border-box;"></select>
+      <input type="text" id="tr-busca" oninput="trSugestoes()" placeholder="Procurar produto para adicionar..." style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:14px;box-sizing:border-box;">
+      <div id="tr-sugestoes" style="margin-top:4px;"></div>
+      <div id="tr-lista" style="margin-top:10px;"></div>
+      <button onclick="enviarTransferencia(this)" style="width:100%;padding:13px;background:#16a34a;border:none;border-radius:10px;color:white;font-size:15px;font-weight:bold;cursor:pointer;margin-top:12px;">📤 Enviar transferência</button>
+    </div>
+
+    <div id="aba-tr-receber" style="display:none;">
+      <div id="tr-recebidas"></div>
+    </div>
+
+    <div class="modal-botoes" style="margin-top:14px;">
+      <button class="btn-modal-cancelar" onclick="document.getElementById('modal-transferencias').classList.remove('ativo')">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal genérico: pedir o Código da Plataforma -->
 <div class="modal-fundo" id="modal-codigo-admin">
   <div class="modal">
@@ -1165,7 +1195,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   let produtos = [];
   let vendas = [];
 
-  let carrinho = [], categoriaAtiva = 'Mais Vendidos', acaoAposSenha = null, metodoAtual = 'Numerário';
+  let carrinho = [], categoriaAtiva = 'Mais Vendidos', subcategoriaAtiva = null, acaoAposSenha = null, metodoAtual = 'Numerário';
   let imagemTemp = null;
   let buscaSelecionado = -1;
   let buscaListaAtual = [];
@@ -1351,7 +1381,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     // Carga LEVE: sem a coluna 'imagem' (base64 pesado) para não estourar o tempo limite
     const { data: produtosData, error: produtosError } = await supabaseClient
       .from('produtos')
-      .select('id,loja_id,nome,codigo,codbarras,categoria,preco,preco_compra,stock,criado_em')
+      .select('id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em')
       .eq('loja_id', sessaoAtual.lojaId)
       .order('criado_em', { ascending: true });
 
@@ -1577,12 +1607,42 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
       btn.tabIndex = 0;
       btn.onclick = () => {
         categoriaAtiva = cat;
+        subcategoriaAtiva = null;
         document.getElementById('titulo-categoria').textContent = categoriasInfo[cat] + ' ' + cat;
         renderCategorias();
+        renderSubcategorias();
         renderProdutos();
       };
       div.appendChild(btn);
     });
+  }
+
+  // Mostra as subcategorias da categoria ativa (derivadas dos produtos) como chips
+  function renderSubcategorias() {
+    const div = document.getElementById('subcategorias-lista');
+    if (!div) return;
+    if (!categoriaAtiva || categoriaAtiva === 'Mais Vendidos') { div.style.display = 'none'; div.innerHTML = ''; return; }
+    const subs = [];
+    const vistos = new Set();
+    produtos.forEach(p => {
+      const pc = (p.categoria && String(p.categoria).trim()) ? p.categoria : 'Outros';
+      if (pc !== categoriaAtiva) return;
+      const s = (p.subcategoria && String(p.subcategoria).trim()) ? p.subcategoria.trim() : null;
+      if (s && !vistos.has(s.toLowerCase())) { vistos.add(s.toLowerCase()); subs.push(s); }
+    });
+    if (subs.length === 0) { div.style.display = 'none'; div.innerHTML = ''; return; }
+    div.style.display = 'flex';
+    const chip = (txt, val) => {
+      const ativo = (subcategoriaAtiva === val);
+      return `<button onclick="filtrarSubcategoria(${val===null?'null':`'${String(val).replace(/'/g,"\\'")}'`})" style="padding:6px 12px;border-radius:20px;border:1.5px solid ${ativo?'#e05c00':'#e2e8f0'};background:${ativo?'#fff7ed':'white'};color:${ativo?'#e05c00':'#475569'};font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">${txt}</button>`;
+    };
+    div.innerHTML = chip('Todos', null) + subs.map(s => chip(s, s)).join('');
+  }
+
+  function filtrarSubcategoria(val) {
+    subcategoriaAtiva = val;
+    renderSubcategorias();
+    renderProdutos();
   }
 
   // ===== Top 5 produtos mais vendidos do dia (faixa sempre visível ao lado das categorias) =====
@@ -1668,7 +1728,15 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
       return;
     }
 
-    const lista = produtos.filter(p => ((p.categoria && String(p.categoria).trim()) ? p.categoria : 'Outros') === categoriaAtiva);
+    const lista = produtos.filter(p => {
+      const pc = ((p.categoria && String(p.categoria).trim()) ? p.categoria : 'Outros');
+      if (pc !== categoriaAtiva) return false;
+      if (subcategoriaAtiva) {
+        const ps = (p.subcategoria && String(p.subcategoria).trim()) ? p.subcategoria.trim() : null;
+        if (ps !== subcategoriaAtiva) return false;
+      }
+      return true;
+    });
 
     if (lista.length === 0) {
       grelha.innerHTML += '<div style="color:#bbb;font-size:14px;padding:20px;">Nenhum produto nesta categoria.</div>';
@@ -3035,6 +3103,7 @@ async function scannerFechar() {
     { id: 'fazer-etiqueta',     secao: 'produto', emoji: '🏷️', cor: 'cor-verde',    label: 'Fazer Etiqueta',           acao: 'fazerEtiqueta' },
     // ---- Secção Stock ----
     { id: 'aviso-despacho',     secao: 'stock',   emoji: '🚚', cor: 'cor-laranja',  label: 'Aviso de despacho',        acao: 'avisoDespacho' },
+    { id: 'transferir-loja',    secao: 'stock',   emoji: '🔄', cor: 'cor-azul',     label: 'Transferir p/ outra loja', acao: 'transferirLoja' },
     // ---- Secção Outro ----
     { id: 'etiquetas',          secao: 'outro',   emoji: '🏷️', cor: 'cor-amarelo',  label: 'Criar Código de Barras',  acao: 'abrirEtiquetadora' },
     { id: 'impressora',         secao: 'outro',   emoji: '🖨️', cor: 'cor-laranja',  label: 'Impressora & Scanner',    acao: 'abrirImpressora' },
@@ -3076,6 +3145,7 @@ async function scannerFechar() {
     if (acao === 'fazerEtiqueta') { fecharMenu(); abrirModalFazerEtiqueta(); return; }
     if (acao === 'avisoDespacho') { fecharMenu(); haDespachoNovo = false; marcarDespachoVermelho(false); const nd=document.getElementById('notif-despacho'); if(nd) nd.style.display='none'; abrirAvisoDespacho(); return; }
     if (acao === 'verPerdas') { fecharMenu(); marcarPerdaVermelho(false); abrirVerPerdas(); return; }
+    if (acao === 'transferirLoja') { fecharMenu(); abrirTransferencias(); return; }
     mostrarNotif('🔧 Esta função ainda não está disponível.', false);
   }
 
@@ -3693,9 +3763,18 @@ async function scannerFechar() {
     }).join('');
   }
 
+  let _perdasEmProcesso = {};
   async function confirmarPerda(id, qtd, produtoId) {
+    if (_perdasEmProcesso[id]) return;
     if (!confirm('Confirmar esta perda?\n\nO stock vai baixar ' + qtd + ' unidade(s).')) return;
+    _perdasEmProcesso[id] = true;
     try {
+      // Marca confirmado SÓ SE ainda estiver pendente (atómico). Só baixa stock se este clique "ganhar".
+      const { data: rows, error } = await supabaseClient.from('perdas')
+        .update({ estado: 'confirmado', confirmado_por: (sessaoAtual && sessaoAtual.vendedorCodigo) || 'balconista', confirmado_em: new Date().toISOString() })
+        .eq('id', id).eq('estado', 'pendente').select('id');
+      if (error) throw error;
+      if (!rows || rows.length === 0) { mostrarNotif('✅ Esta perda já tinha sido tratada.'); abrirVerPerdas(); return; }
       if (produtoId) {
         const { data: prod } = await supabaseClient.from('produtos').select('stock').eq('id', produtoId).maybeSingle();
         if (prod) {
@@ -3703,25 +3782,25 @@ async function scannerFechar() {
           await supabaseClient.from('produtos').update({ stock: novo }).eq('id', produtoId);
         }
       }
-      const { error } = await supabaseClient.from('perdas')
-        .update({ estado: 'confirmado', confirmado_por: (sessaoAtual && sessaoAtual.vendedorCodigo) || 'balconista', confirmado_em: new Date().toISOString() })
-        .eq('id', id);
-      if (error) throw error;
       mostrarNotif('✅ Perda confirmada. Stock atualizado.');
       abrirVerPerdas();
     } catch(e) { mostrarNotif('❌ ' + (e.message||e), true); }
+    finally { delete _perdasEmProcesso[id]; }
   }
 
   async function cancelarPerda(id) {
+    if (_perdasEmProcesso[id]) return;
     if (!confirm('Cancelar esta perda?\n\nO stock NÃO será alterado.')) return;
+    _perdasEmProcesso[id] = true;
     try {
       const { error } = await supabaseClient.from('perdas')
         .update({ estado: 'cancelado', confirmado_por: (sessaoAtual && sessaoAtual.vendedorCodigo) || 'balconista', confirmado_em: new Date().toISOString() })
-        .eq('id', id);
+        .eq('id', id).eq('estado', 'pendente');
       if (error) throw error;
       mostrarNotif('✖️ Perda cancelada. Stock mantido.');
       abrirVerPerdas();
     } catch(e) { mostrarNotif('❌ ' + (e.message||e), true); }
+    finally { delete _perdasEmProcesso[id]; }
   }
 
   /* ===== AVISO DE DESPACHO (vendedor vê a lista e imprime a guia) ===== */
@@ -3794,8 +3873,8 @@ async function scannerFechar() {
         <span>Total (${totalUn} un.):</span><span style="color:#1a56a0;">MT ${total.toFixed(2)}</span>
       </div>
       ${despachoAtual && despachoAtual.estado === 'enviado'
-        ? '<button onclick="confirmarRecebimentoDespacho()" style="width:100%;padding:14px;background:#16a34a;border:none;border-radius:10px;color:white;font-size:15px;font-weight:bold;cursor:pointer;margin-top:14px;">✅ Confirmar que recebi a mercadoria</button>'
-          + '<button onclick="cancelarRecebimentoDespacho()" style="width:100%;padding:14px;background:#dc2626;border:none;border-radius:10px;color:white;font-size:15px;font-weight:bold;cursor:pointer;margin-top:8px;">✖️ Cancelar (mercadoria errada — não entra no stock)</button>'
+        ? '<button onclick="confirmarRecebimentoDespacho(this)" style="width:100%;padding:14px;background:#16a34a;border:none;border-radius:10px;color:white;font-size:15px;font-weight:bold;cursor:pointer;margin-top:14px;">✅ Confirmar que recebi a mercadoria</button>'
+          + '<button onclick="cancelarRecebimentoDespacho(this)" style="width:100%;padding:14px;background:#dc2626;border:none;border-radius:10px;color:white;font-size:15px;font-weight:bold;cursor:pointer;margin-top:8px;">✖️ Cancelar (mercadoria errada — não entra no stock)</button>'
         : (despachoAtual && despachoAtual.estado === 'cancelado')
           ? '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:12px;margin-top:14px;text-align:center;color:#b91c1c;font-weight:bold;">✖️ Despacho cancelado (não entrou no stock)</div>'
           : '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:12px;margin-top:14px;text-align:center;color:#166534;font-weight:bold;">✅ Mercadoria recebida (stock somado)</div>'}
@@ -3812,47 +3891,265 @@ async function scannerFechar() {
     abrirAvisoDespacho();
   }
 
-  async function confirmarRecebimentoDespacho() {
+  let _confirmandoDespacho = false;
+  async function confirmarRecebimentoDespacho(btn) {
     if (!despachoAtual) return;
     if (despachoAtual.estado === 'confirmado') return;
+    if (_confirmandoDespacho) return;            // já está a processar — ignora cliques extra
+    _confirmandoDespacho = true;
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; btn.dataset.txt = btn.textContent; btn.textContent = '⏳ A confirmar...'; }
     try {
-      // Soma ao stock AGORA (só nos despachos novos, que ainda nao foram somados)
-      if (despachoAtual.estado === 'enviado') {
-        for (const it of (despachoAtual.itens || [])) {
-          if (!it.produto_id) continue;
-          const { data: prod } = await supabaseClient.from('produtos').select('stock').eq('id', it.produto_id).maybeSingle();
-          if (prod) {
-            const novo = (parseInt(prod.stock)||0) + (parseInt(it.enviado)||0);
-            await supabaseClient.from('produtos').update({ stock: novo }).eq('id', it.produto_id);
-          }
+      // 1) Marca como confirmado SÓ SE ainda estiver 'enviado' (atómico). Se outro clique já o fez, não repete.
+      const { data: rows, error: e1 } = await supabaseClient.from('despachos')
+        .update({ estado: 'confirmado', confirmado_por: (sessaoAtual && sessaoAtual.vendedorCodigo) || 'balconista', confirmado_em: new Date().toISOString() })
+        .eq('id', despachoAtual.id).eq('estado', 'enviado').select('id');
+      if (e1) throw e1;
+      if (!rows || rows.length === 0) {
+        // Já tinha sido confirmado — NÃO soma stock outra vez
+        despachoAtual.estado = 'confirmado';
+        mostrarNotif('✅ Este despacho já estava confirmado.');
+        verDespacho(despachoAtual);
+        return;
+      }
+      // 2) Só agora soma ao stock (garantido uma única vez)
+      for (const it of (despachoAtual.itens || [])) {
+        if (!it.produto_id) continue;
+        const { data: prod } = await supabaseClient.from('produtos').select('stock').eq('id', it.produto_id).maybeSingle();
+        if (prod) {
+          const novo = (parseInt(prod.stock)||0) + (parseInt(it.enviado)||0);
+          await supabaseClient.from('produtos').update({ stock: novo }).eq('id', it.produto_id);
         }
       }
-      const { error } = await supabaseClient.from('despachos')
-        .update({ estado: 'confirmado', confirmado_por: (sessaoAtual && sessaoAtual.vendedorCodigo) || 'balconista', confirmado_em: new Date().toISOString() })
-        .eq('id', despachoAtual.id);
-      if (error) throw error;
       despachoAtual.estado = 'confirmado';
       mostrarNotif('✅ Recebido e somado ao stock! Já podes vender.');
       verDespacho(despachoAtual);
     } catch(e) {
       mostrarNotif('❌ ' + (e.message||e), true);
+    } finally {
+      _confirmandoDespacho = false;
+      if (btn) { btn.disabled = false; btn.style.opacity = '1'; if (btn.dataset.txt) btn.textContent = btn.dataset.txt; }
     }
   }
 
-  async function cancelarRecebimentoDespacho() {
+  let _cancelandoDespacho = false;
+  async function cancelarRecebimentoDespacho(btn) {
     if (!despachoAtual || despachoAtual.estado !== 'enviado') return;
+    if (_cancelandoDespacho) return;
     if (!confirm('Cancelar este despacho?\n\nA mercadoria NÃO entra no stock. Usa isto se recebeste mercadoria errada.')) return;
+    _cancelandoDespacho = true;
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
     try {
       const { error } = await supabaseClient.from('despachos')
         .update({ estado: 'cancelado', confirmado_por: (sessaoAtual && sessaoAtual.vendedorCodigo) || 'balconista', confirmado_em: new Date().toISOString() })
-        .eq('id', despachoAtual.id);
+        .eq('id', despachoAtual.id).eq('estado', 'enviado');
       if (error) throw error;
       despachoAtual.estado = 'cancelado';
       mostrarNotif('✖️ Despacho cancelado. Não entrou no stock.');
       verDespacho(despachoAtual);
     } catch(e) {
       mostrarNotif('❌ ' + (e.message||e), true);
+    } finally {
+      _cancelandoDespacho = false;
+      if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
     }
+  }
+
+  // ===== TRANSFERÊNCIAS ENTRE LOJAS =====
+  let trItens = [];
+  let _ownerId = null;
+
+  async function _getOwnerId() {
+    if (_ownerId) return _ownerId;
+    try { const s = (await supabaseClient.auth.getSession()).data.session; _ownerId = s && s.user ? s.user.id : null; } catch(e) {}
+    return _ownerId;
+  }
+
+  async function abrirTransferencias() {
+    trItens = [];
+    document.getElementById('tr-busca').value = '';
+    document.getElementById('tr-sugestoes').innerHTML = '';
+    trRenderLista();
+    mostrarAbaTransf('enviar');
+    document.getElementById('modal-transferencias').classList.add('ativo');
+    await carregarLojasDestino();
+    carregarTransferenciasRecebidas();
+  }
+
+  async function carregarLojasDestino() {
+    const sel = document.getElementById('tr-destino');
+    sel.innerHTML = '<option value="">A carregar...</option>';
+    try {
+      const uid = await _getOwnerId();
+      const { data, error } = await supabaseClient.from('membros_loja')
+        .select('loja_id, lojas(nome)').eq('user_id', uid);
+      if (error) throw error;
+      const outras = (data || []).filter(m => m.loja_id !== sessaoAtual.lojaId);
+      if (!outras.length) { sel.innerHTML = '<option value="">Não tens outra loja</option>'; return; }
+      sel.innerHTML = outras.map(m => `<option value="${m.loja_id}">${(m.lojas && m.lojas.nome) || 'Loja'}</option>`).join('');
+    } catch(e) { sel.innerHTML = '<option value="">Erro (corre o SQL v2.9.65)</option>'; }
+  }
+
+  function mostrarAbaTransf(aba) {
+    const enviar = aba === 'enviar';
+    document.getElementById('aba-tr-enviar').style.display = enviar ? 'block' : 'none';
+    document.getElementById('aba-tr-receber').style.display = enviar ? 'none' : 'block';
+    document.getElementById('tab-tr-enviar').style.background = enviar ? '#1a56a0' : '#f1f5f9';
+    document.getElementById('tab-tr-enviar').style.color = enviar ? 'white' : '#475569';
+    document.getElementById('tab-tr-receber').style.background = enviar ? '#f1f5f9' : '#1a56a0';
+    document.getElementById('tab-tr-receber').style.color = enviar ? '#475569' : 'white';
+    if (!enviar) carregarTransferenciasRecebidas();
+  }
+
+  function trSugestoes() {
+    const q = (document.getElementById('tr-busca').value || '').toLowerCase().trim();
+    const div = document.getElementById('tr-sugestoes');
+    if (!q) { div.innerHTML = ''; return; }
+    const achados = produtos.filter(p =>
+      (p.nome && p.nome.toLowerCase().includes(q)) || (p.codigo && String(p.codigo).toLowerCase().includes(q))
+    ).slice(0, 6);
+    div.innerHTML = achados.map(p => `
+      <div onclick="trAdicionar('${p.id}')" style="padding:9px 11px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:4px;cursor:pointer;display:flex;justify-content:space-between;">
+        <span style="font-size:13px;">${p.nome}</span>
+        <span style="font-size:12px;color:#94a3b8;">stock: ${p.stock||0}</span>
+      </div>`).join('');
+  }
+
+  function trAdicionar(id) {
+    const p = produtos.find(x => x.id === id);
+    if (!p) return;
+    if (trItens.some(i => i.produto_id === id)) { mostrarNotif('Já está na lista.', true); return; }
+    trItens.push({ produto_id: id, nome: p.nome, codigo: p.codigo || '', categoria: p.categoria || '', subcategoria: p.subcategoria || null, preco: p.preco || 0, stockAtual: parseInt(p.stock)||0, qtd: 1 });
+    document.getElementById('tr-busca').value = '';
+    document.getElementById('tr-sugestoes').innerHTML = '';
+    trRenderLista();
+  }
+
+  function trRemover(idx) { trItens.splice(idx, 1); trRenderLista(); }
+  function trAtualizarQtd(idx, v) { trItens[idx].qtd = Math.max(1, parseInt(v)||1); }
+
+  function trRenderLista() {
+    const div = document.getElementById('tr-lista');
+    if (!trItens.length) { div.innerHTML = '<div style="text-align:center;color:#cbd5e1;padding:16px;font-size:13px;">Procura produtos acima para adicionar.</div>'; return; }
+    div.innerHTML = trItens.map((it, idx) => `
+      <div style="display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:9px;margin-bottom:6px;">
+        <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;">${it.nome}</div><div style="font-size:11px;color:#94a3b8;">tens ${it.stockAtual}</div></div>
+        <input type="number" min="1" max="${it.stockAtual}" value="${it.qtd}" onchange="trAtualizarQtd(${idx}, this.value)" style="width:64px;padding:7px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;text-align:center;">
+        <button onclick="trRemover(${idx})" style="background:#fef2f2;color:#dc2626;border:none;border-radius:8px;padding:7px 10px;cursor:pointer;font-weight:bold;">✕</button>
+      </div>`).join('');
+  }
+
+  let _enviandoTransf = false;
+  async function enviarTransferencia(btn) {
+    if (_enviandoTransf) return;
+    const destino = document.getElementById('tr-destino').value;
+    if (!destino) { mostrarNotif('❌ Escolhe a loja de destino.', true); return; }
+    if (!trItens.length) { mostrarNotif('❌ Adiciona pelo menos um produto.', true); return; }
+    for (const it of trItens) { if (it.qtd > it.stockAtual) { mostrarNotif('❌ '+it.nome+': não tens '+it.qtd+' (só '+it.stockAtual+').', true); return; } }
+    if (!confirm('Enviar '+trItens.length+' produto(s) para a outra loja?\nO stock sai daqui agora; a outra loja confirma para receber.')) return;
+    _enviandoTransf = true;
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; btn.textContent = '⏳ A enviar...'; }
+    try {
+      // 1) baixa o stock aqui (a mercadoria "vai a caminho")
+      for (const it of trItens) {
+        const novo = Math.max(0, it.stockAtual - it.qtd);
+        await supabaseClient.from('produtos').update({ stock: novo }).eq('id', it.produto_id);
+      }
+      // 2) cria a transferência pendente
+      const itens = trItens.map(it => ({ nome: it.nome, codigo: it.codigo, categoria: it.categoria, subcategoria: it.subcategoria, preco: it.preco, qtd: it.qtd }));
+      const { error } = await supabaseClient.from('transferencias').insert({
+        de_loja: sessaoAtual.lojaId, para_loja: destino, itens,
+        criado_por: (sessaoAtual && sessaoAtual.vendedorCodigo) || 'balconista', estado: 'pendente'
+      });
+      if (error) throw error;
+      mostrarNotif('📤 Transferência enviada! A outra loja vai confirmar.');
+      trItens = []; trRenderLista();
+      if (typeof carregarTudo === 'function') carregarTudo();
+    } catch(e) { mostrarNotif('❌ ' + (e.message||e), true); }
+    finally { _enviandoTransf = false; if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.textContent = '📤 Enviar transferência'; } }
+  }
+
+  async function carregarTransferenciasRecebidas() {
+    const div = document.getElementById('tr-recebidas');
+    if (!div) return;
+    div.innerHTML = '<div style="text-align:center;color:#cbd5e1;padding:16px;font-size:13px;">A verificar...</div>';
+    try {
+      const { data, error } = await supabaseClient.from('transferencias')
+        .select('*, de:de_loja(nome)').eq('para_loja', sessaoAtual.lojaId).eq('estado', 'pendente').order('criado_em', { ascending: false });
+      if (error) throw error;
+      const badge = document.getElementById('tr-badge');
+      if (badge) { if (data && data.length) { badge.style.display='inline-block'; badge.textContent = data.length; } else badge.style.display='none'; }
+      if (!data || !data.length) { div.innerHTML = '<div style="text-align:center;color:#cbd5e1;padding:16px;font-size:13px;">Nenhuma transferência a aguardar.</div>'; return; }
+      div.innerHTML = data.map(t => {
+        const total = (t.itens||[]).reduce((s,i)=>s+(parseInt(i.qtd)||0),0);
+        const nomeDe = (t.de && t.de.nome) || 'Outra loja';
+        const linhas = (t.itens||[]).map(i => `<div style="font-size:12px;color:#475569;">• ${i.nome} × ${i.qtd}</div>`).join('');
+        return `<div style="border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:8px;">
+          <div style="font-weight:bold;font-size:14px;margin-bottom:4px;">De: ${nomeDe} · ${total} unidade(s)</div>
+          ${linhas}
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <button onclick="confirmarTransferencia('${t.id}', this)" style="flex:1;padding:11px;background:#16a34a;border:none;border-radius:9px;color:white;font-weight:bold;cursor:pointer;">✅ Receber (somar ao stock)</button>
+            <button onclick="rejeitarTransferencia('${t.id}', this)" style="flex:1;padding:11px;background:#dc2626;border:none;border-radius:9px;color:white;font-weight:bold;cursor:pointer;">✖️ Rejeitar</button>
+          </div>
+        </div>`;
+      }).join('');
+    } catch(e) { div.innerHTML = '<div style="color:#94a3b8;font-size:12px;padding:10px;">Corre o SQL v2.9.65. ('+(e.message||e)+')</div>'; }
+  }
+
+  let _transfEmProcesso = {};
+  async function confirmarTransferencia(id, btn) {
+    if (_transfEmProcesso[id]) return;
+    _transfEmProcesso[id] = true;
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; btn.textContent = '⏳...'; }
+    try {
+      // Marca confirmado SÓ SE ainda pendente (atómico) — evita somar 2x
+      const { data: rows, error } = await supabaseClient.from('transferencias')
+        .update({ estado: 'confirmado', confirmado_em: new Date().toISOString() })
+        .eq('id', id).eq('estado', 'pendente').select('itens');
+      if (error) throw error;
+      if (!rows || !rows.length) { mostrarNotif('✅ Já tinha sido tratada.'); carregarTransferenciasRecebidas(); return; }
+      const itens = rows[0].itens || [];
+      for (const it of itens) {
+        // procura o produto nesta loja pelo código (ou nome)
+        let alvo = null;
+        if (it.codigo) { const r = await supabaseClient.from('produtos').select('id,stock').eq('loja_id', sessaoAtual.lojaId).eq('codigo', it.codigo).maybeSingle(); alvo = r.data; }
+        if (!alvo && it.nome) { const r = await supabaseClient.from('produtos').select('id,stock').eq('loja_id', sessaoAtual.lojaId).eq('nome', it.nome).maybeSingle(); alvo = r.data; }
+        if (alvo) {
+          await supabaseClient.from('produtos').update({ stock: (parseInt(alvo.stock)||0) + (parseInt(it.qtd)||0) }).eq('id', alvo.id);
+        } else {
+          // não existe nesta loja — cria (é o mesmo dono)
+          await supabaseClient.from('produtos').insert({ loja_id: sessaoAtual.lojaId, nome: it.nome, codigo: it.codigo || '', categoria: it.categoria || 'Diversos', subcategoria: it.subcategoria || null, preco: it.preco || 0, stock: parseInt(it.qtd)||0 });
+        }
+      }
+      mostrarNotif('✅ Recebido e somado ao stock!');
+      carregarTransferenciasRecebidas();
+      if (typeof carregarTudo === 'function') carregarTudo();
+    } catch(e) { mostrarNotif('❌ ' + (e.message||e), true); }
+    finally { delete _transfEmProcesso[id]; }
+  }
+
+  async function rejeitarTransferencia(id, btn) {
+    if (_transfEmProcesso[id]) return;
+    if (!confirm('Rejeitar esta transferência? A mercadoria volta ao stock da loja que enviou.')) return;
+    _transfEmProcesso[id] = true;
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+    try {
+      const { data: rows, error } = await supabaseClient.from('transferencias')
+        .update({ estado: 'cancelado', confirmado_em: new Date().toISOString() })
+        .eq('id', id).eq('estado', 'pendente').select('de_loja, itens');
+      if (error) throw error;
+      if (!rows || !rows.length) { mostrarNotif('Já tinha sido tratada.'); carregarTransferenciasRecebidas(); return; }
+      // devolve o stock à loja de origem
+      const t = rows[0];
+      for (const it of (t.itens||[])) {
+        let alvo = null;
+        if (it.codigo) { const r = await supabaseClient.from('produtos').select('id,stock').eq('loja_id', t.de_loja).eq('codigo', it.codigo).maybeSingle(); alvo = r.data; }
+        if (!alvo && it.nome) { const r = await supabaseClient.from('produtos').select('id,stock').eq('loja_id', t.de_loja).eq('nome', it.nome).maybeSingle(); alvo = r.data; }
+        if (alvo) await supabaseClient.from('produtos').update({ stock: (parseInt(alvo.stock)||0) + (parseInt(it.qtd)||0) }).eq('id', alvo.id);
+      }
+      mostrarNotif('✖️ Transferência rejeitada. Stock devolvido.');
+      carregarTransferenciasRecebidas();
+    } catch(e) { mostrarNotif('❌ ' + (e.message||e), true); }
+    finally { delete _transfEmProcesso[id]; }
   }
 
   function imprimirGuiaDespacho() {
@@ -4517,7 +4814,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.61';
+  const VERSAO_ATUAL = '2.9.65';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -4664,23 +4961,39 @@ dotNet.title = 'Estado da internet';
 dotNet.style.cssText = 'position:fixed;top:10px;right:150px;width:26px;height:26px;border-radius:50%;background:#16a34a;border:2.5px solid rgba(255,255,255,0.85);z-index:9998;box-shadow:0 1px 5px rgba(0,0,0,0.35);transition:background 0.3s;display:flex;align-items:center;justify-content:center;font-size:12px;';
 dotNet.textContent = '📶';
 document.body.appendChild(dotNet);
-function estadoNet(online) {
-  dotNet.style.background = online ? '#16a34a' : '#dc2626';
-  dotNet.textContent = online ? '📶' : '📵';
-  dotNet.title = online ? 'Com internet' : 'Sem internet — vendas serão sincronizadas ao voltar';
+let _netOscilar = null;
+function estadoNet(estado) {
+  // aceita boolean antigo (true/false) ou 'bom'/'fraco'/'sem'
+  if (estado === true) estado = 'bom';
+  if (estado === false) estado = 'sem';
+  if (_netOscilar) { clearInterval(_netOscilar); _netOscilar = null; }
+  if (estado === 'sem') {
+    dotNet.style.background = '#dc2626'; dotNet.textContent = '📵';
+    dotNet.title = 'Sem internet — vendas serão sincronizadas ao voltar';
+  } else if (estado === 'fraco') {
+    dotNet.textContent = '📶'; dotNet.title = 'Internet fraca (lenta)';
+    let on = true; dotNet.style.background = '#f59e0b';
+    _netOscilar = setInterval(() => { on = !on; dotNet.style.background = on ? '#f59e0b' : '#fef08a'; }, 450);
+  } else {
+    dotNet.style.background = '#16a34a'; dotNet.textContent = '📶';
+    dotNet.title = 'Com internet';
+  }
 }
-// Verde só quando há INTERNET REAL (consegue chegar ao servidor), não só a ligação "ligada"
+// Verde/amarelo/vermelho conforme consegue chegar ao servidor E a velocidade
 async function verificarNetReal() {
-  if (!navigator.onLine) { estadoNet(false); return; }
+  if (!navigator.onLine) { estadoNet('sem'); return; }
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 6000);
-    const r = await fetch(SUPABASE_URL + '/rest/v1/', { method: 'GET', cache: 'no-store', headers: { apikey: SUPABASE_ANON_KEY }, signal: ctrl.signal });
+    const t0 = (performance && performance.now) ? performance.now() : Date.now();
+    // /auth/v1/health é público e responde sempre. QUALQUER resposta = há internet real.
+    const r = await fetch(SUPABASE_URL + '/auth/v1/health', { method: 'GET', cache: 'no-store', headers: { apikey: SUPABASE_ANON_KEY }, signal: ctrl.signal });
     clearTimeout(t);
-    const ct = r.headers.get('content-type') || '';
-    // Sem megabytes o portal da operadora responde HTML (não JSON) -> tratamos como offline
-    estadoNet(r.ok && ct.includes('json'));
-  } catch(e) { estadoNet(false); }
+    const dt = ((performance && performance.now) ? performance.now() : Date.now()) - t0;
+    // Chegou uma resposta do servidor (mesmo 401/404) => internet a funcionar
+    void r;
+    estadoNet(dt > 2200 ? 'fraco' : 'bom');   // lento => fraco (oscila); rápido => bom
+  } catch(e) { estadoNet('sem'); }             // só erro de rede / timeout => sem internet
 }
 verificarNetReal();
 setInterval(verificarNetReal, 15000);

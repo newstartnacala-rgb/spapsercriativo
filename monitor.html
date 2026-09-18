@@ -348,16 +348,12 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
     <div class="grade-gestao">
       <div class="card-gestao" onclick="abrirSubPainel('painel-relatorios')">
-        <div class="card-gestao-icon" style="background:#eff6ff">📊</div>
-        <div class="card-gestao-nome">Transaction Report</div>
+        <div class="card-gestao-icon" style="background:#f0fdf4">📈</div>
+        <div class="card-gestao-nome">Relatório</div>
       </div>
       <div class="card-gestao" onclick="abrirSubPainel('painel-stock')">
         <div class="card-gestao-icon" style="background:#fef3c7">⚠️</div>
         <div class="card-gestao-nome">Stock Crítico</div>
-      </div>
-      <div class="card-gestao" onclick="abrirSubPainel('painel-relatorios')">
-        <div class="card-gestao-icon" style="background:#f0fdf4">💰</div>
-        <div class="card-gestao-nome">Receitas do Dia</div>
       </div>
       <div class="card-gestao" onclick="pedirNotif()">
         <div class="card-gestao-icon" style="background:#fdf4ff">🔔</div>
@@ -414,14 +410,6 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
       <div class="card-gestao" onclick="abrirSubPainel('painel-funcionarios')">
         <div class="card-gestao-icon" style="background:#f5f3ff">👥</div>
         <div class="card-gestao-nome">Employees</div>
-      </div>
-      <div class="card-gestao" onclick="abrirSubPainel('painel-relatorios')">
-        <div class="card-gestao-icon" style="background:#fff7ed">📋</div>
-        <div class="card-gestao-nome">Audit Log</div>
-      </div>
-      <div class="card-gestao" onclick="abrirSubPainel('painel-relatorios')">
-        <div class="card-gestao-icon" style="background:#f0fdf4">📈</div>
-        <div class="card-gestao-nome">Relatórios</div>
       </div>
       <div class="card-gestao" onclick="atualizarMonitor(this)">
         <div class="card-gestao-icon" style="background:#eff6ff">↻</div>
@@ -538,7 +526,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     </div>
     <div class="form-campo">
       <label>Categoria</label>
-      <select id="np-categoria">
+      <select id="np-categoria" onchange="atualizarSubcatSelect('np-categoria','np-subcategoria')">
         <option value="Refrigerantes">🥤 Refrigerantes</option>
         <option value="Alimentos">🍚 Alimentos</option>
         <option value="Chinelos">👡 Chinelos</option>
@@ -548,6 +536,10 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
         <option value="Roupas de Desporto">👕 Roupas de Desporto</option>
         <option value="Diversos">📦 Diversos</option>
       </select>
+    </div>
+    <div class="form-campo" id="np-subcategoria-campo" style="display:none;">
+      <label>Subcategoria</label>
+      <select id="np-subcategoria"><option value="">— (nenhuma) —</option></select>
     </div>
     <div class="form-campo">
       <label>📸 Imagem do Produto</label>
@@ -1182,7 +1174,7 @@ async function carregarTudo() {
     // Modo geral: busca vendas e produtos de TODAS as lojas
     const [r1, r2, r3] = await Promise.all([
       supabaseClient.from('vendas').select('*, venda_itens(*)').order('criado_em', {ascending:false}),
-      supabaseClient.from('produtos').select('id,loja_id,nome,codigo,codbarras,categoria,preco,preco_compra,stock,criado_em').order('nome'),
+      supabaseClient.from('produtos').select('id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em').order('nome'),
       supabaseClient.from('membros_loja').select('*, lojas(nome)')
     ]);
     todasVendas = r1.data || [];
@@ -1192,7 +1184,7 @@ async function carregarTudo() {
     // Modo loja específica
     const [r1, r2, r3] = await Promise.all([
       supabaseClient.from('vendas').select('*, venda_itens(*)').eq('loja_id', lojaId).order('criado_em', {ascending:false}),
-      supabaseClient.from('produtos').select('id,loja_id,nome,codigo,codbarras,categoria,preco,preco_compra,stock,criado_em').eq('loja_id', lojaId).order('nome'),
+      supabaseClient.from('produtos').select('id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em').eq('loja_id', lojaId).order('nome'),
       supabaseClient.from('membros_loja').select('*, lojas(nome)').eq('loja_id', lojaId)
     ]);
     todasVendas = r1.data || [];
@@ -1670,7 +1662,7 @@ function renderProdutosSubPainel() {
     const stxt = s < 0 ? 'Negativo' : s === 0 ? 'Esgotado' : s <= 5 ? 'Baixo: '+s : s;
     return `<div class="prod-item">
       ${p.imagem ? `<img class="prod-img" src="${p.imagem}" onclick="abrirImagemGrande('${p.imagem}')" style="cursor:zoom-in" onerror="this.style.display='none'">` : '<div class="prod-img" style="display:flex;align-items:center;justify-content:center;font-size:20px">📦</div>'}
-      <div class="prod-info"><div class="prod-nome">${p.nome}</div><div class="prod-cat">${p.categoria} · ${p.codigo||'—'}</div></div>
+      <div class="prod-info"><div class="prod-nome">${p.nome}</div><div class="prod-cat">${p.categoria}${p.subcategoria?' › '+p.subcategoria:''} · ${p.codigo||'—'}</div></div>
       <div style="text-align:right">
         <div class="prod-preco">MT ${parseFloat(p.preco).toFixed(2)}</div>
         <span class="prod-stock-badge ${cls}">${stxt}</span>
@@ -1738,9 +1730,17 @@ async function editarProdutoCompleto(id) {
       <input id="ed-codbarras" value="${(p.codbarras||'').replace(/"/g,'&quot;')}" placeholder="Escaneia ou escreve" style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:8px;margin:4px 0 12px;font-size:14px;">
 
       <label style="font-size:12px;font-weight:bold;color:#374151;">🏷️ Categoria</label>
-      <select id="ed-categoria" style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:8px;margin:4px 0 12px;font-size:14px;">
+      <select id="ed-categoria" onchange="atualizarSubcatSelect('ed-categoria','ed-subcategoria')" style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:8px;margin:4px 0 12px;font-size:14px;">
         ${cats.map(c => `<option value="${c}" ${c===p.categoria?'selected':''}>${c}</option>`).join('')}
       </select>
+
+      <div id="ed-subcategoria-campo" style="${subcategoriasDe(p.categoria).length?'':'display:none;'}">
+        <label style="font-size:12px;font-weight:bold;color:#374151;">📂 Subcategoria</label>
+        <select id="ed-subcategoria" style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:8px;margin:4px 0 12px;font-size:14px;">
+          <option value="">— (nenhuma) —</option>
+          ${subcategoriasDe(p.categoria).map(s => `<option value="${s}" ${s===p.subcategoria?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
 
       <label style="font-size:12px;font-weight:bold;color:#374151;">📷 Imagem</label>
       <div style="display:flex;gap:10px;align-items:center;margin:6px 0 12px;">
@@ -1786,7 +1786,8 @@ async function salvarEdicaoProduto(id, tinhaImg) {
     stock: parseInt(document.getElementById('ed-stock').value) || 0,
     codigo: document.getElementById('ed-codigo').value.trim(),
     codbarras: document.getElementById('ed-codbarras').value.trim(),
-    categoria: document.getElementById('ed-categoria').value
+    categoria: document.getElementById('ed-categoria').value,
+    subcategoria: (document.getElementById('ed-subcategoria') && document.getElementById('ed-subcategoria').value) || null
   };
   if (editImagemBase64) dados.imagem = editImagemBase64;
   if (!dados.nome) { mostrarNotif('❌ O nome é obrigatório.', true); return; }
@@ -2049,13 +2050,15 @@ async function salvarNovoProduto() {
   const stock = parseInt(document.getElementById('np-stock').value) || 0;
   const codigo = document.getElementById('np-codigo').value.trim();
   const categoria = document.getElementById('np-categoria').value;
+  const _subEl = document.getElementById('np-subcategoria');
+  const subcategoria = (_subEl && _subEl.value) ? _subEl.value : null;
   const imagem = imagemBase64 || document.getElementById('np-imagem').value.trim() || null;
   const msg = document.getElementById('np-msg');
   const btn = document.getElementById('btn-salvar-np');
 
   if (!nome || isNaN(preco)) { msg.textContent = '❌ Preenche nome e preço de venda.'; msg.style.color='#dc2626'; return; }
 
-  const dados = { loja_id: lojaId, nome, preco, preco_compra: precoCompra || null, stock, codigo, categoria, imagem };
+  const dados = { loja_id: lojaId, nome, preco, preco_compra: precoCompra || null, stock, codigo, categoria, subcategoria, imagem };
   btn.disabled = true; btn.textContent = 'A guardar...';
   msg.textContent = '⏳ A guardar "'+nome+'"...'; msg.style.color='#d97706';
 
@@ -2857,6 +2860,33 @@ function abrirCategorias() {
   renderCategorias();
 }
 
+async function gerirSubcategorias(idx) {
+  const cat = categoriasPersonalizadas[idx];
+  const atual = (cat.subs && cat.subs.length) ? cat.subs.join(', ') : '';
+  const txt = prompt('Subcategorias de "' + cat.nome + '" (separa por vírgulas):\nEx: Homem, Mulher, Criança', atual);
+  if (txt === null) return;
+  const subs = txt.split(',').map(s => s.trim()).filter(Boolean);
+  // remove repetidas
+  const vistos = new Set(); const limpas = [];
+  subs.forEach(s => { const k = s.toLowerCase(); if (!vistos.has(k)) { vistos.add(k); limpas.push(s); } });
+  const antigo = cat.subs;
+  categoriasPersonalizadas[idx] = { ...cat, subs: limpas };
+  if (await salvarCategoriasNaLoja()) {
+    renderCategorias();
+    mostrarNotif('✅ Subcategorias guardadas para "' + cat.nome + '".');
+  } else {
+    categoriasPersonalizadas[idx] = { ...cat, subs: antigo };
+  }
+}
+
+// Devolve as subcategorias de uma categoria (pelo nome)
+function subcategoriasDe(nomeCategoria) {
+  const c = (categoriasPersonalizadas || []).find(x => x.nome === nomeCategoria);
+  return (c && c.subs) ? c.subs : [];
+}
+
+async function gerirSubcategorias2(idx) { return gerirSubcategorias(idx); }
+
 function renderCategorias() {
   const div = document.getElementById('lista-categorias');
   let html = '<div style="font-size:11px;font-weight:bold;color:#94a3b8;margin-bottom:8px;">CATEGORIAS PADRÃO</div>';
@@ -2876,11 +2906,15 @@ function renderCategorias() {
     html += '<div style="text-align:center;color:#cbd5e1;padding:20px;font-size:13px;">Ainda não criaste categorias.<br>Usa o campo acima para adicionar.</div>';
   } else {
     html += categoriasPersonalizadas.map((c, idx) => `
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:white;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:6px;">
-        <span style="font-size:18px;">${c.emoji || '🏷️'}</span>
-        <span style="flex:1;font-size:13px;font-weight:600;">${c.nome}</span>
-        <button onclick="editarCategoria(${idx})" style="background:#eff6ff;color:#1a56a0;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px;font-weight:bold;">✏️</button>
-        <button onclick="eliminarCategoria(${idx})" style="background:#fef2f2;color:#dc2626;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px;font-weight:bold;">🗑</button>
+      <div style="background:white;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:6px;padding:10px 12px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:18px;">${c.emoji || '🏷️'}</span>
+          <span style="flex:1;font-size:13px;font-weight:600;">${c.nome}</span>
+          <button onclick="gerirSubcategorias(${idx})" style="background:#f0fdf4;color:#16a34a;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px;font-weight:bold;">📂 Subcat</button>
+          <button onclick="editarCategoria(${idx})" style="background:#eff6ff;color:#1a56a0;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px;font-weight:bold;">✏️</button>
+          <button onclick="eliminarCategoria(${idx})" style="background:#fef2f2;color:#dc2626;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px;font-weight:bold;">🗑</button>
+        </div>
+        ${(c.subs && c.subs.length) ? `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px;">${c.subs.map(s=>`<span style="font-size:11px;background:#eef2ff;color:#3730a3;border-radius:20px;padding:3px 9px;">${s}</span>`).join('')}</div>` : `<div style="margin-top:6px;font-size:11px;color:#cbd5e1;">Sem subcategorias — clica 📂 Subcat</div>`}
       </div>`).join('');
   }
   div.innerHTML = html;
@@ -3014,6 +3048,24 @@ function atualizarSelectCategorias() {
     .map(c => `<option value="${c.nome}">${c.emoji ? c.emoji + ' ' : ''}${c.nome}</option>`)
     .join('');
   if (atual) sel.value = atual;
+  atualizarSubcatSelect('np-categoria','np-subcategoria');
+}
+
+// Preenche o select de subcategorias conforme a categoria escolhida
+function atualizarSubcatSelect(catSelId, subSelId, valorAtual) {
+  const catSel = document.getElementById(catSelId);
+  const subSel = document.getElementById(subSelId);
+  if (!catSel || !subSel) return;
+  const subs = subcategoriasDe(catSel.value);
+  const campo = document.getElementById(subSelId + '-campo');
+  if (!subs.length) {
+    subSel.innerHTML = '<option value="">— (nenhuma) —</option>';
+    if (campo) campo.style.display = 'none';
+    return;
+  }
+  if (campo) campo.style.display = '';
+  subSel.innerHTML = '<option value="">— (nenhuma) —</option>' + subs.map(s => `<option value="${s}">${s}</option>`).join('');
+  if (valorAtual) subSel.value = valorAtual;
 }
 
 // ===== INVENTÁRIO / BALANÇO (só plano Anual) =====
@@ -3463,6 +3515,8 @@ let ultimaVendaId = null;
 function verificarNovasVendas(vendasHoje) {
   if (vendasHoje.length === 0) return;
   const mais = vendasHoje[0];
+  // Só notifica vendas da LOJA ATUAL — nunca de outra loja
+  if (mais.loja_id && lojaId && mais.loja_id !== lojaId) { ultimaVendaId = mais.id; return; }
   if (ultimaVendaId && mais.id !== ultimaVendaId) {
     const val = parseFloat(mais.total);
     if (val >= 500 && Notification.permission === 'granted') {
@@ -3543,7 +3597,7 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.61';
+const MONITOR_VERSAO = '2.9.65';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -3964,17 +4018,31 @@ async function guardarDadosPerfil() {
   mostrarNotif('✅ Dados guardados!');
 }
 
+let _emailNovoPendente = '';
 async function trocarEmail() {
   const novo = document.getElementById('perfil-in-email').value.trim();
   if (!novo || !novo.includes('@')) { mostrarNotif('❌ Escreve um e-mail válido.', true); return; }
-  if (!confirm('Trocar o e-mail para ' + novo + '?\nVais receber um link de confirmação no e-mail NOVO. A conta só muda depois de confirmares lá.')) return;
-  const { error } = await supabaseClient.auth.updateUser(
-    { email: novo },
-    { emailRedirectTo: window.location.origin + '/monitor.html' }
-  );
+  if (!confirm('Enviar um código para ' + novo + '?')) return;
+  const { error } = await supabaseClient.auth.updateUser({ email: novo });
   if (error) { mostrarNotif('❌ ' + error.message, true); return; }
-  mostrarNotif('✅ Verifica o e-mail (confirma nos DOIS: no novo e no antigo, se pedir). A troca só fica feita depois de confirmares.');
+  _emailNovoPendente = novo;
+  document.getElementById('bloco-codigo-email').style.display = 'block';
+  const bt = document.getElementById('btn-trocar-email'); if (bt) bt.textContent = '🔄 Reenviar código';
+  mostrarNotif('✅ Código enviado para o e-mail NOVO. Escreve-o aqui em baixo.');
+}
+
+async function confirmarCodigoEmail() {
+  const codigo = (document.getElementById('perfil-in-codigo').value || '').trim();
+  const alvo = _emailNovoPendente || document.getElementById('perfil-in-email').value.trim();
+  if (!codigo) { mostrarNotif('❌ Escreve o código que recebeste.', true); return; }
+  if (!alvo) { mostrarNotif('❌ Escreve primeiro o e-mail novo e pede o código.', true); return; }
+  const { error } = await supabaseClient.auth.verifyOtp({ email: alvo, token: codigo, type: 'email_change' });
+  if (error) { mostrarNotif('❌ Código errado ou expirado. ' + error.message, true); return; }
+  mostrarNotif('✅ E-mail trocado com sucesso! Já podes entrar com ' + alvo);
   document.getElementById('perfil-in-email').value = '';
+  document.getElementById('perfil-in-codigo').value = '';
+  document.getElementById('bloco-codigo-email').style.display = 'none';
+  _emailNovoPendente = '';
 }
 
 async function trocarSenha() {
@@ -4235,31 +4303,26 @@ function aplicarModoGerente() {
     const ok = permitidos.some(p => oc.includes(p)) || c.id === 'card-instalar-app';
     if (!ok) c.style.display = 'none';
   });
-  // Gerente pode CADASTRAR produtos, mas NAO define quantidades/stock
+  // Esconder abas HOME e VENDAS — o gerente só usa a aba LOJA
+  document.querySelectorAll('.nav-tab').forEach(t => {
+    const oc = t.getAttribute('onclick') || '';
+    if (oc.includes("'home'") || oc.includes("'vendas'")) t.style.display = 'none';
+  });
+  // Levar o gerente logo para a aba LOJA
+  const abaLoja = Array.from(document.querySelectorAll('.nav-tab')).find(t => (t.getAttribute('onclick')||'').includes("'gestao'"));
+  if (abaLoja) { try { abaLoja.click(); } catch(e) {} }
+  // Gerente pode CADASTRAR produtos, mas NAO define quantidades (stock entra por Inventário/Despacho)
   const npStock = document.getElementById('np-stock');
   if (npStock) {
     npStock.value = 0; npStock.readOnly = true;
-    npStock.title = 'Só o dono define as quantidades. O stock entra por Despacho/Inventário.';
+    npStock.title = 'As quantidades entram por Inventário ou Despacho.';
     npStock.style.background = '#f1f5f9';
   }
-  // Gerente NÃO altera preços (nem de venda nem de compra)
-  ['np-preco','np-preco-compra'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.readOnly = true; el.value = ''; el.placeholder = 'Definido pelo dono';
-      el.title = 'Só o dono define os preços.'; el.style.background = '#f1f5f9';
-    }
-  });
-  // Gerente NÃO vê dinheiro: esconde PDF, Excel e Inventário (mostram valores)
-  ['exportarPDF()','exportarInventarioExcel()','abrirInventario()'].forEach(fn => {
-    document.querySelectorAll('button').forEach(b => {
-      if ((b.getAttribute('onclick')||'').includes(fn)) b.style.display = 'none';
-    });
-  });
+  // NOTA: preço e inventário AGORA são acessíveis ao gerente (o dono permitiu).
   const badge = document.getElementById('topbar-loja');
   if (badge && !document.getElementById('badge-gerente')) {
     const b = document.createElement('span'); b.id = 'badge-gerente';
-    b.textContent = '👤 Gerente (acesso limitado)';
+    b.textContent = '👤 Gerente';
     b.style.cssText = 'font-size:10px;color:#f59e0b;font-weight:bold;display:block;margin-top:2px;';
     badge.parentElement.appendChild(b);
   }
@@ -4656,7 +4719,12 @@ async function carregarContagensEquipa() {
 
       <label style="font-size:13px;color:#64748b;font-weight:600;">Trocar e-mail de acesso</label>
       <input type="email" id="perfil-in-email" placeholder="novo@email.com" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:15px;margin:5px 0 8px;box-sizing:border-box;">
-      <button onclick="trocarEmail()" style="width:100%;padding:11px;background:#eff6ff;color:#1a56a0;border:1px solid #bfdbfe;border-radius:9px;font-weight:bold;cursor:pointer;margin-bottom:16px;">✉️ Trocar e-mail</button>
+      <button id="btn-trocar-email" onclick="trocarEmail()" style="width:100%;padding:11px;background:#eff6ff;color:#1a56a0;border:1px solid #bfdbfe;border-radius:9px;font-weight:bold;cursor:pointer;margin-bottom:8px;">✉️ Enviar código</button>
+      <div id="bloco-codigo-email" style="display:none;margin-bottom:16px;">
+        <label style="font-size:13px;color:#64748b;font-weight:600;">Código recebido no e-mail novo</label>
+        <input type="text" inputmode="numeric" id="perfil-in-codigo" placeholder="Ex: 123456" style="width:100%;padding:11px;border:1.5px solid #86efac;border-radius:9px;font-size:15px;margin:5px 0 8px;box-sizing:border-box;letter-spacing:3px;text-align:center;">
+        <button onclick="confirmarCodigoEmail()" style="width:100%;padding:11px;background:#16a34a;color:white;border:none;border-radius:9px;font-weight:bold;cursor:pointer;">✅ Confirmar código e trocar</button>
+      </div>
 
       <label style="font-size:13px;color:#64748b;font-weight:600;">Trocar senha</label>
       <input type="password" id="perfil-in-senha" placeholder="Nova senha (mín. 6 caracteres)" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:15px;margin:5px 0 8px;box-sizing:border-box;">

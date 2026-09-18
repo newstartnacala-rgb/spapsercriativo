@@ -107,8 +107,8 @@ body { font-family:-apple-system,Arial,sans-serif; background:#f1f5f9; min-heigh
     </div>
 
     <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:16px;margin-bottom:16px;">
-      <div style="font-size:15px;font-weight:bold;color:#166534;margin-bottom:4px;">📱 Link de Suporte (WhatsApp)</div>
-      <div style="font-size:12.5px;color:#64748b;margin-bottom:10px;">Este link aparece na loja e no monitor de todos os clientes, na aba Suporte. Ex: https://wa.me/258866577722</div>
+      <div style="font-size:15px;font-weight:bold;color:#166534;margin-bottom:4px;">📱 Link de Suporte / Grupo de dúvidas</div>
+      <div style="font-size:12.5px;color:#64748b;margin-bottom:10px;">Pode ser um link de GRUPO de WhatsApp onde os clientes põem dúvidas para todos verem. Aparece na loja e no monitor, na aba Suporte. Ex: https://chat.whatsapp.com/XXXX</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <input type="text" id="input-link-suporte" placeholder="https://wa.me/258..." style="flex:1;min-width:220px;padding:12px;border:1.5px solid #86efac;border-radius:10px;font-size:14px;box-sizing:border-box;">
         <button onclick="guardarLinkSuporte()" style="padding:12px 20px;background:#16a34a;border:none;border-radius:10px;color:white;font-weight:bold;cursor:pointer;font-size:14px;">💾 Guardar</button>
@@ -142,11 +142,14 @@ body { font-family:-apple-system,Arial,sans-serif; background:#f1f5f9; min-heigh
 
       <div style="font-weight:bold;color:#1a202c;font-size:13px;margin-bottom:6px;">💳 Como o cliente paga a subscrição</div>
       <input type="text" id="cfg-mpesa" placeholder="Número M-Pesa (84 xxx xxxx)" style="width:100%;padding:10px;border:1.5px solid #86efac;border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;">
+      <input type="text" id="cfg-mpesa-nome" placeholder="Nome da conta M-Pesa (ex: João Mateus)" style="width:100%;padding:10px;border:1.5px solid #86efac;border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;">
       <input type="text" id="cfg-emola" placeholder="Número e-Mola (86 xxx xxxx)" style="width:100%;padding:10px;border:1.5px solid #fdba74;border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;">
+      <input type="text" id="cfg-emola-nome" placeholder="Nome da conta e-Mola (ex: João Mateus)" style="width:100%;padding:10px;border:1.5px solid #fdba74;border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;">
       <input type="text" id="cfg-banco-nome" placeholder="Nome do banco (ex: BCI, BIM)" style="width:100%;padding:10px;border:1.5px solid #bfdbfe;border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;">
       <input type="text" id="cfg-banco-conta" placeholder="Número da conta / NIB" style="width:100%;padding:10px;border:1.5px solid #bfdbfe;border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;">
       <input type="text" id="cfg-banco-titular" placeholder="Nome do titular" style="width:100%;padding:10px;border:1.5px solid #bfdbfe;border-radius:8px;font-size:13px;margin-bottom:12px;box-sizing:border-box;">
-      <input type="text" id="cfg-wa-pagamento" placeholder="Link WhatsApp de pagamento (https://wa.me/258...)" style="width:100%;padding:10px;border:1.5px solid #86efac;border-radius:8px;font-size:13px;margin-bottom:12px;box-sizing:border-box;">
+      <div style="font-size:12px;color:#166534;font-weight:600;margin-bottom:4px;">💳 Link de pagamento — conversa DIRETA contigo (o cliente envia o comprovativo aqui para ativares)</div>
+      <input type="text" id="cfg-wa-pagamento" placeholder="Ex: https://wa.me/258861667843" style="width:100%;padding:10px;border:1.5px solid #86efac;border-radius:8px;font-size:13px;margin-bottom:12px;box-sizing:border-box;">
 
       <button onclick="guardarConfigSubscricao()" style="width:100%;padding:12px;background:#1e40af;border:none;border-radius:10px;color:white;font-weight:bold;cursor:pointer;font-size:14px;">💾 Guardar configuração</button>
       <div id="cfg-estado" style="font-size:12px;margin-top:8px;"></div>
@@ -264,6 +267,7 @@ async function carregarConfigSubscricao() {
   const m = (await lerConfig('metodos_subscricao')) || {};
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
   set('cfg-mpesa', m.mpesa); set('cfg-emola', m.emola);
+  set('cfg-mpesa-nome', m.mpesa_nome); set('cfg-emola-nome', m.emola_nome);
   set('cfg-banco-nome', m.banco_nome); set('cfg-banco-conta', m.banco_conta); set('cfg-banco-titular', m.banco_titular);
   const wa = await lerConfig('link_whatsapp_pagamento');
   set('cfg-wa-pagamento', typeof wa === 'string' ? wa : '');
@@ -280,6 +284,7 @@ async function guardarConfigSubscricao() {
   };
   const metodos = {
     mpesa: txt('cfg-mpesa'), emola: txt('cfg-emola'),
+    mpesa_nome: txt('cfg-mpesa-nome'), emola_nome: txt('cfg-emola-nome'),
     banco_nome: txt('cfg-banco-nome'), banco_conta: txt('cfg-banco-conta'), banco_titular: txt('cfg-banco-titular')
   };
   const waPag = txt('cfg-wa-pagamento');

@@ -124,11 +124,13 @@ body { font-family:-apple-system,Arial,sans-serif; background:linear-gradient(13
           <div class="metodo-icon">📱</div>
           <div class="metodo-nome">M-Pesa</div>
           <div class="metodo-num" id="met-mpesa-num">84 421 9918</div>
+          <div id="met-mpesa-nome-conta" style="font-size:11px;color:#16a34a;font-weight:600;margin-top:2px;"></div>
         </div>
         <div class="metodo" id="met-emola" onclick="selecionarMetodo('emola')">
           <div class="metodo-icon">💚</div>
           <div class="metodo-nome">e-Mola</div>
           <div class="metodo-num" id="met-emola-num">86 166 7843</div>
+          <div id="met-emola-nome-conta" style="font-size:11px;color:#16a34a;font-weight:600;margin-top:2px;"></div>
         </div>
       </div>
 
@@ -160,7 +162,7 @@ body { font-family:-apple-system,Arial,sans-serif; background:linear-gradient(13
       <div style="font-weight:bold;margin-bottom:6px;">📞 Suporte — Não responderam em 5 minutos?</div>
       <div style="margin-bottom:8px;">Liga ou manda mensagem para o nosso suporte:</div>
       <a href="tel:+258866577722" style="display:block;color:#1a56a0;font-weight:bold;font-size:16px;margin-bottom:4px;">📱 +258 86 657 7722</a>
-      <a href="https://wa.me/258866577722" style="color:#16a34a;font-weight:bold;font-size:13px;">💬 WhatsApp do suporte</a>
+      <a href="https://wa.me/258866577722" id="link-suporte-planos" style="color:#16a34a;font-weight:bold;font-size:13px;">💬 Suporte / Grupo de dúvidas</a>
     </div>
     <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px;margin-bottom:16px;font-size:12px;color:#1e40af;text-align:left;">
       🔒 O acesso à tua loja é libertado assim que o pagamento for confirmado (normalmente em até 24h).
@@ -180,6 +182,7 @@ body { font-family:-apple-system,Arial,sans-serif; background:linear-gradient(13
   // Métodos de pagamento da subscrição (definidos pelo admin em config_global)
   let metodosSub = { mpesa:'84 421 9918', emola:'86 166 7843', banco_nome:'', banco_conta:'', banco_titular:'' };
   let waPagamento = '';
+  let waSuporte = '';
 
   function fmtMT(n) { return (parseFloat(n)||0).toLocaleString('pt-PT'); }
 
@@ -212,9 +215,17 @@ body { font-family:-apple-system,Arial,sans-serif; background:linear-gradient(13
       metodosSub = { ...metodosSub, ...m };
       const mp = document.getElementById('met-mpesa-num'); if (mp && m.mpesa) mp.textContent = m.mpesa;
       const em = document.getElementById('met-emola-num'); if (em && m.emola) em.textContent = m.emola;
+      const mpn = document.getElementById('met-mpesa-nome-conta'); if (mpn && m.mpesa_nome) mpn.textContent = '👤 ' + m.mpesa_nome;
+      const emn = document.getElementById('met-emola-nome-conta'); if (emn && m.emola_nome) emn.textContent = '👤 ' + m.emola_nome;
     }
     const wa = await ler('link_whatsapp_pagamento');
     if (typeof wa === 'string') waPagamento = wa;
+    const ws = await ler('link_suporte_whatsapp');
+    if (typeof ws === 'string' && ws.trim()) {
+      waSuporte = ws.trim();
+      const ls = document.getElementById('link-suporte-planos');
+      if (ls) ls.href = waSuporte;
+    }
 
     // Mostra SEMPRE os cartões a partir de PRECOS (valores acordados por defeito, ou os do admin se guardados)
     ['basico','pro','anual'].forEach(k => {
@@ -258,10 +269,10 @@ body { font-family:-apple-system,Arial,sans-serif; background:linear-gradient(13
 
     if (m === 'mpesa') {
       titulo.textContent = '📱 Como pagar via M-Pesa:';
-      passos.innerHTML = `1️⃣ Abre o M-Pesa<br>2️⃣ Envia Dinheiro → <strong>${metodosSub.mpesa||''}</strong><br>3️⃣ Valor: <strong style="color:#e05c00;">MT ${pr.total.toLocaleString()}</strong><br>4️⃣ Referência: Spap-Sercriativo<br>5️⃣ Guarda o comprovativo`;
+      passos.innerHTML = `1️⃣ Abre o M-Pesa<br>2️⃣ Envia Dinheiro → <strong>${metodosSub.mpesa||''}</strong>${metodosSub.mpesa_nome?'<br>👤 Nome: <strong>'+metodosSub.mpesa_nome+'</strong>':''}<br>3️⃣ Valor: <strong style="color:#e05c00;">MT ${pr.total.toLocaleString()}</strong><br>4️⃣ Referência: Spap-Sercriativo<br>5️⃣ Guarda o comprovativo`;
     } else {
       titulo.textContent = '💚 Como pagar via e-Mola:';
-      passos.innerHTML = `1️⃣ Abre o e-Mola<br>2️⃣ Transferir → <strong>${metodosSub.emola||''}</strong><br>3️⃣ Valor: <strong style="color:#16a34a;">MT ${pr.total.toLocaleString()}</strong><br>4️⃣ Referência: Spap-Sercriativo<br>5️⃣ Guarda o comprovativo`;
+      passos.innerHTML = `1️⃣ Abre o e-Mola<br>2️⃣ Transferir → <strong>${metodosSub.emola||''}</strong>${metodosSub.emola_nome?'<br>👤 Nome: <strong>'+metodosSub.emola_nome+'</strong>':''}<br>3️⃣ Valor: <strong style="color:#16a34a;">MT ${pr.total.toLocaleString()}</strong><br>4️⃣ Referência: Spap-Sercriativo<br>5️⃣ Guarda o comprovativo`;
     }
 
     document.getElementById('upload-area').style.display = 'block';
@@ -305,7 +316,9 @@ body { font-family:-apple-system,Arial,sans-serif; background:linear-gradient(13
       `💳 *Método:* ${metodo === 'mpesa' ? 'M-Pesa' : 'e-Mola'}\n\n` +
       `✅ Comprovativo enviado no sistema. Por favor verificar e activar.`
     );
-    window.open(`https://wa.me/258861667843?text=${msg}`, '_blank');
+    const _basePag = (typeof waPagamento === 'string' && waPagamento.trim()) ? waPagamento.trim() : 'https://wa.me/258861667843';
+    const _sep = _basePag.includes('?') ? '&' : '?';
+    window.open(`${_basePag}${_sep}text=${msg}`, '_blank');
 
     // Actualiza estado da loja para pendente_pagamento
     if (sd?.session) {
