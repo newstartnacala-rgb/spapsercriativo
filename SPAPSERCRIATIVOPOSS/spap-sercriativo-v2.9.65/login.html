@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entrar — Spap-Sercriativo</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; background: #f0f0f0; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
+  /* Tablets — tudo ainda maior */
+  @media (min-width: 768px) {
+    .box { max-width: 560px; padding: 56px 60px; }
+    .campo { padding: 20px 20px; }
+    .campo input { font-size: 19px; }
+    .btn-principal { padding: 22px; font-size: 21px; }
+  }
+  .box { background: white; border-radius: 20px; padding: 48px 44px; width: 100%; max-width: 480px; box-shadow: 0 6px 28px rgba(0,0,0,0.15); text-align: center; }
+  .logo { font-size: 28px; font-weight: bold; color: #1a56a0; margin-bottom: 8px; }
+  .logo span { color: #e05c00; }
+  .subtitulo { font-size: 13px; color: #999; margin-bottom: 30px; }
+  .campo { display: flex; align-items: center; border: 1.5px solid #ddd; border-radius: 12px; margin-bottom: 16px; padding: 17px 18px; gap: 12px; text-align: left; }
+  .campo:focus-within { border-color: #1a56a0; }
+  .campo span { font-size: 22px; flex-shrink: 0; }
+  .campo input { border: none; outline: none; width: 100%; font-size: 17px; color: #333; }
+  .btn-principal { width: 100%; padding: 19px; background: #1a56a0; color: white; border: none; border-radius: 12px; font-size: 19px; font-weight: bold; cursor: pointer; letter-spacing: 1.5px; }
+  .btn-principal:hover { background: #154a8a; }
+  .btn-principal:disabled { background: #aac0db; cursor: not-allowed; }
+  .erro-msg { color: #e74c3c; font-size: 14px; margin-top: 12px; display: none; text-align: left; background: #fdecea; padding: 10px 12px; border-radius: 8px; }
+  .sucesso-msg { color: #239b6b; font-size: 14px; margin-top: 12px; display: none; text-align: left; background: #eef9f0; padding: 10px 12px; border-radius: 8px; }
+  .rodape { margin-top: 24px; font-size: 15px; color: #888; }
+  .rodape a { color: #1a56a0; text-decoration: none; font-weight: bold; }
+  .rodape a:hover { text-decoration: underline; }
+  .link-esqueci { display: block; margin-top: 10px; font-size: 14px; color: #999; text-align: right; cursor: pointer; }
+  .link-esqueci:hover { color: #1a56a0; }
+</style>
+</head>
+<body>
+<div class="box">
+  <div style="text-align:center;margin-bottom:20px;">
+    <img src="logo.png" alt="Spap-Sercriativo — Tecnologia Varejista de Ponta" style="width:280px;max-width:90%;">
+    <div style="font-size:11px;color:#94a3b8;margin-top:6px;">Sistema de Ponto de Venda</div>
+  </div>
+
+  <div class="campo"><span>👤</span><input type="email" id="email" placeholder="Email" autocomplete="email" /></div>
+  <div class="campo"><span>🔒</span><input type="password" id="senha" placeholder="Senha" autocomplete="current-password" /></div>
+  <span class="link-esqueci" onclick="esqueceuSenha()">Esqueci a senha</span>
+
+  <button class="btn-principal" id="btn-entrar" onclick="fazerLogin()" style="margin-top:14px;">ENTRAR</button>
+  <div class="erro-msg" id="erro-msg"></div>
+  <div class="sucesso-msg" id="sucesso-msg"></div>
+
+  <div class="rodape">Ainda não tens loja? <a href="registo.html">Criar loja grátis</a></div>
+</div>
+
+<script src="supabase-config.js"></script>
+<script>
+  const btn = document.getElementById('btn-entrar');
+  const erroDiv = document.getElementById('erro-msg');
+  const sucessoDiv = document.getElementById('sucesso-msg');
+
+  function mostrarErro(msg) {
+    erroDiv.textContent = '❌ ' + msg;
+    erroDiv.style.display = 'block';
+    sucessoDiv.style.display = 'none';
+  }
+  function mostrarSucesso(msg) {
+    sucessoDiv.textContent = '✅ ' + msg;
+    sucessoDiv.style.display = 'block';
+    erroDiv.style.display = 'none';
+  }
+
+  function traduzirErro(msg) {
+    if (!msg) return 'Erro desconhecido.';
+    if (msg.includes('Invalid login') || msg.includes('invalid_credentials')) return 'Email ou senha incorretos.';
+    if (msg.includes('Email not confirmed')) return 'Email ainda não confirmado. Verifica a tua caixa de entrada.';
+    if (msg.includes('Too many requests') || msg.includes('rate limit')) return 'Demasiadas tentativas. Aguarda alguns minutos.';
+    if (msg.includes('User not found')) return 'Nenhuma conta encontrada com este email.';
+    return msg;
+  }
+
+  // Destino após login — lê do localStorage (gravado pelo monitor antes de redirecionar)
+  function destinoAposLogin() {
+    const destino = localStorage.getItem('pdv_login_destino') || 'index.html';
+    localStorage.removeItem('pdv_login_destino');
+    return destino;
+  }
+
+  // Mensagem quando o PDV redireciona por loja não activa
+  (function() {
+    const params = new URLSearchParams(window.location.search);
+    const est = params.get('estado');
+    if (!est) return;
+    if (est === 'suspenso' || est === 'bloqueado') {
+      mostrarErro('🚫 A tua loja foi suspensa. Contacta o suporte: +258 86 657 7722');
+    } else {
+      mostrarErro('⏳ A tua loja está a aguardar confirmação de pagamento. Envia o comprovativo via WhatsApp e aguarda a activação. Se não responderem em 5 minutos, liga para o suporte: +258 86 657 7722');
+    }
+  })();
+
+  // Se já há sessão válida, salta direto (funciona OFFLINE — o Supabase guarda a sessão no aparelho)
+  (async () => {
+    try {
+      const { data } = await supabaseClient.auth.getSession();
+      if (data && data.session) { window.location.href = destinoAposLogin(); return; }
+    } catch(e) {}
+    // Sem sessão do SDK mas offline com PDV já usado antes: mostra botão de entrada offline
+    if (!navigator.onLine && localStorage.getItem('pdv_cache_sessao')) {
+      mostrarBotaoOffline();
+    }
+  })();
+
+  function mostrarBotaoOffline() {
+    if (document.getElementById('btn-entrar-offline')) return;
+    const b = document.createElement('button');
+    b.id = 'btn-entrar-offline';
+    b.innerHTML = '📵 Entrar sem internet (modo offline)';
+    b.style.cssText = 'width:100%;margin-top:12px;padding:14px;background:#f97316;border:none;border-radius:12px;color:white;font-size:15px;font-weight:bold;cursor:pointer;';
+    b.onclick = () => { window.location.href = 'index.html'; };
+    const box = document.querySelector('.box') || document.body;
+    box.appendChild(b);
+  }
+  // Se a ligação cair enquanto está no login, oferece a entrada offline
+  window.addEventListener('offline', () => { if (localStorage.getItem('pdv_cache_sessao')) mostrarBotaoOffline(); });
+
+  async function fazerLogin() {
+    const email = document.getElementById('email').value.trim();
+    const senha = document.getElementById('senha').value;
+    if (!email || !senha) { mostrarErro('Preenche email e senha.'); return; }
+
+    btn.disabled = true; btn.textContent = 'A entrar...';
+
+    let data, error;
+    try {
+      const r = await supabaseClient.auth.signInWithPassword({ email, password: senha });
+      data = r.data; error = r.error;
+    } catch (netErr) { error = { message: 'Failed to fetch' }; }
+
+    if (error) {
+      // Se é falha de REDE e já usámos o PDV antes nesta conta, entra offline
+      const m = (error.message || '').toLowerCase();
+      if ((!navigator.onLine || m.includes('fetch') || m.includes('network')) && localStorage.getItem('pdv_cache_sessao')) {
+        btn.textContent = 'A entrar offline...';
+        window.location.href = 'index.html';
+        return;
+      }
+      mostrarErro(traduzirErro(error.message));
+      btn.disabled = false; btn.textContent = 'ENTRAR';
+      return;
+    }
+
+    // Verifica se a loja está activa (pagamento confirmado)
+    btn.textContent = 'A verificar conta...';
+    const { data: membros } = await supabaseClient
+      .from('membros_loja')
+      .select('loja_id, lojas(estado, nome)')
+      .eq('user_id', data.user.id)
+      .limit(1);
+
+    if (membros && membros.length > 0) {
+      const estadoLoja = membros[0].lojas && membros[0].lojas.estado;
+      const nomeLoja = (membros[0].lojas && membros[0].lojas.nome) || 'a tua loja';
+
+      if (estadoLoja === 'pendente' || estadoLoja === 'pendente_pagamento') {
+        // Loja pendente de confirmação
+        await supabaseClient.auth.signOut();
+        mostrarErro('⏳ A tua loja "' + nomeLoja + '" está a aguardar confirmação de pagamento. Envia o comprovativo via WhatsApp e aguarda a aprovação. Se não responderem em 5 minutos, liga para o suporte: +258 86 657 7722');
+        btn.disabled = false; btn.textContent = 'ENTRAR';
+        return;
+      }
+
+      if (estadoLoja === 'suspenso' || estadoLoja === 'bloqueado') {
+        await supabaseClient.auth.signOut();
+        mostrarErro('🚫 A tua loja foi suspensa. Contacta o suporte: +258 86 657 7722');
+        btn.disabled = false; btn.textContent = 'ENTRAR';
+        return;
+      }
+    }
+
+    window.location.href = destinoAposLogin();
+  }
+
+  async function esqueceuSenha() {
+    const email = document.getElementById('email').value.trim();
+    if (!email) { mostrarErro('Escreve primeiro o teu email no campo acima.'); return; }
+
+    btn.disabled = true;
+    // URL de redirecionamento após o utilizador clicar no link do email
+    const redirectUrl = window.location.origin + window.location.pathname.replace('login.html', 'reset-senha.html');
+
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: redirectUrl });
+    btn.disabled = false;
+
+    if (error) { mostrarErro(traduzirErro(error.message)); return; }
+    mostrarSucesso('Email de recuperação enviado! Verifica a tua caixa de entrada e clica no link.');
+  }
+
+  document.querySelectorAll('.campo input').forEach(i => {
+    i.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); fazerLogin(); } });
+  });
+  document.getElementById('email').focus();
+</script>
+<script>
+let eventoInstalar = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  eventoInstalar = e;
+  if (!window.matchMedia('(display-mode: standalone)').matches) {
+    const b = document.createElement('button');
+    b.id = 'btn-instalar-app';
+    b.innerHTML = '📲 Instalar App no tablet';
+    b.style.cssText = 'position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:9000;background:#16a34a;color:white;border:none;border-radius:24px;padding:13px 22px;font-size:14px;font-weight:bold;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.3);';
+    b.onclick = async () => {
+      if (!eventoInstalar) return;
+      eventoInstalar.prompt();
+      const r = await eventoInstalar.userChoice;
+      if (r.outcome === 'accepted') b.remove();
+      eventoInstalar = null;
+    };
+    document.body.appendChild(b);
+  }
+});
+window.addEventListener('appinstalled', () => { const b = document.getElementById('btn-instalar-app'); if (b) b.remove(); });
+</script>
+</body>
+</html>

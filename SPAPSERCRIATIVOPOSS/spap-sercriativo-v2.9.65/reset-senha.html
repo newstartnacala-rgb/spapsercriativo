@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nova Senha — Spap-Sercriativo</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; background: #f0f0f0; min-height: 100vh; display: flex; justify-content: center; align-items: center; }
+  .box { background: white; border-radius: 16px; padding: 40px; width: 380px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); text-align: center; }
+  .logo { font-size: 28px; font-weight: bold; color: #1a56a0; margin-bottom: 8px; }
+  .logo span { color: #e05c00; }
+  .subtitulo { font-size: 13px; color: #999; margin-bottom: 30px; }
+  .campo { display: flex; align-items: center; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 14px; padding: 12px 14px; gap: 10px; }
+  .campo:focus-within { border-color: #1a56a0; }
+  .campo span { font-size: 18px; flex-shrink: 0; }
+  .campo input { border: none; outline: none; width: 100%; font-size: 14px; color: #333; }
+  .btn-principal { width: 100%; padding: 14px; background: #1a56a0; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
+  .btn-principal:hover { background: #154a8a; }
+  .btn-principal:disabled { background: #aac0db; cursor: not-allowed; }
+  .erro-msg { color: #e74c3c; font-size: 13px; margin-top: 12px; display: none; background: #fdecea; padding: 10px 12px; border-radius: 8px; text-align: left; }
+  .sucesso-msg { color: #239b6b; font-size: 13px; margin-top: 12px; display: none; background: #eef9f0; padding: 10px 12px; border-radius: 8px; text-align: left; }
+  .dica { font-size: 11px; color: #aaa; text-align: left; margin: -8px 0 14px 4px; }
+  .estado-invalido { text-align: center; padding: 20px; color: #e74c3c; }
+</style>
+</head>
+<body>
+<div class="box" id="caixa-reset">
+  <img src="logo.png" alt="Spap-Sercriativo" style="width:200px;max-width:100%;margin-bottom:4px;">
+  <div class="subtitulo">Define a tua nova senha</div>
+
+  <div class="campo"><span>🔒</span><input type="password" id="nova-senha" placeholder="Nova senha" autocomplete="new-password" /></div>
+  <div class="dica">Mínimo 6 caracteres</div>
+  <div class="campo"><span>🔒</span><input type="password" id="confirmar-senha" placeholder="Confirmar nova senha" /></div>
+
+  <button class="btn-principal" id="btn-salvar" onclick="salvarSenha()">SALVAR NOVA SENHA</button>
+  <div class="erro-msg" id="erro-msg"></div>
+  <div class="sucesso-msg" id="sucesso-msg"></div>
+</div>
+
+<script src="supabase-config.js"></script>
+<script>
+  const btn = document.getElementById('btn-salvar');
+  const erroDiv = document.getElementById('erro-msg');
+  const sucessoDiv = document.getElementById('sucesso-msg');
+
+  function mostrarErro(msg) {
+    erroDiv.textContent = '❌ ' + msg;
+    erroDiv.style.display = 'block';
+    sucessoDiv.style.display = 'none';
+  }
+  function mostrarSucesso(msg) {
+    sucessoDiv.textContent = '✅ ' + msg;
+    sucessoDiv.style.display = 'block';
+    erroDiv.style.display = 'none';
+  }
+
+  // O Supabase redireciona para esta página com a sessão já estabelecida no hash da URL.
+  // Precisamos de escutar o evento de sessão antes de qualquer outra coisa.
+  let sessaoPronta = false;
+  supabaseClient.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'PASSWORD_RECOVERY') {
+      sessaoPronta = true;
+    }
+    if (event === 'SIGNED_IN' && !sessaoAtual) {
+      // Link de reset visitado — sessão automática estabelecida
+      sessaoAtual = session;
+      sessaoAtual = true;
+    }
+  });
+
+  // Verifica se há uma sessão válida ao carregar a página
+  (async () => {
+    const { data } = await supabaseClient.auth.getSession();
+    if (data.session) sessaoAtual = true;
+    else {
+      // Sem sessão: link inválido ou expirado
+      document.getElementById('caixa-reset').innerHTML = `
+        <div class="estado-invalido">
+          <div style="font-size:40px;margin-bottom:12px;">❌</div>
+          <p style="font-size:15px;margin-bottom:16px;">Link inválido ou expirado.</p>
+          <p style="font-size:13px;color:#888;">Volta ao login e clica novamente em "Esqueci a senha".</p>
+          <a href="login.html" style="display:inline-block;margin-top:20px;padding:12px 24px;background:#1a56a0;color:white;border-radius:8px;text-decoration:none;font-weight:bold;">Ir para o login</a>
+        </div>`;
+    }
+  })();
+
+  let sessaoAtual = null;
+
+  async function salvarSenha() {
+    const novaSenha = document.getElementById('nova-senha').value;
+    const confirmar = document.getElementById('confirmar-senha').value;
+
+    if (novaSenha.length < 6) { mostrarErro('A senha precisa de pelo menos 6 caracteres.'); return; }
+    if (novaSenha !== confirmar) { mostrarErro('As senhas não coincidem.'); return; }
+
+    btn.disabled = true; btn.textContent = 'A guardar...';
+
+    const { error } = await supabaseClient.auth.updateUser({ password: novaSenha });
+
+    if (error) {
+      mostrarErro(error.message.includes('session') ? 'Sessão expirada. Volta ao login e pede um novo link.' : error.message);
+      btn.disabled = false; btn.textContent = 'SALVAR NOVA SENHA';
+      return;
+    }
+
+    mostrarSucesso('Senha alterada com sucesso! A entrar...');
+    setTimeout(() => { window.location.href = 'index.html'; }, 2000);
+  }
+
+  document.querySelectorAll('.campo input').forEach(i => {
+    i.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); salvarSenha(); } });
+  });
+</script>
+</body>
+</html>

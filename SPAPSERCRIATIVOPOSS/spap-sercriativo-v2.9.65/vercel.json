@@ -1,0 +1,17 @@
+{
+  "rewrites": [
+    { "source": "/monitor", "destination": "/monitor.html" },
+    { "source": "/login", "destination": "/login.html" },
+    { "source": "/registo", "destination": "/registo.html" },
+    { "source": "/reset-senha", "destination": "/reset-senha.html" },
+    { "source": "/admin", "destination": "/admin.html" }
+  ],
+  "cleanUrls": false,
+  "trailingSlash": false,
+  "headers": [
+    { "source": "/sw.js", "headers": [ { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate, max-age=0" } ] },
+    { "source": "/version.json", "headers": [ { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate, max-age=0" } ] },
+    { "source": "/(.*\\.html)", "headers": [ { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate, max-age=0" } ] },
+    { "source": "/", "headers": [ { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate, max-age=0" } ] }
+  ]
+}
