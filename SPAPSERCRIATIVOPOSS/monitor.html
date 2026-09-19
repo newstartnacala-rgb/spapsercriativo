@@ -545,9 +545,10 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
         <option value="Diversos">📦 Diversos</option>
       </select>
     </div>
-    <div class="form-campo" id="np-subcategoria-campo" style="display:none;">
-      <label>Subcategoria</label>
-      <select id="np-subcategoria"><option value="">— (nenhuma) —</option></select>
+    <div class="form-campo" id="np-subcategoria-campo">
+      <label>Subcategoria (opcional)</label>
+      <input type="text" id="np-subcategoria" list="np-sub-sugestoes" placeholder="Ex: Homem, Mulher, Criança" style="width:100%;">
+      <datalist id="np-sub-sugestoes"></datalist>
     </div>
     <div class="form-campo">
       <label>📸 Imagem do Produto</label>
@@ -1742,12 +1743,10 @@ async function editarProdutoCompleto(id) {
         ${cats.map(c => `<option value="${c}" ${c===p.categoria?'selected':''}>${c}</option>`).join('')}
       </select>
 
-      <div id="ed-subcategoria-campo" style="${subcategoriasDe(p.categoria).length?'':'display:none;'}">
-        <label style="font-size:12px;font-weight:bold;color:#374151;">📂 Subcategoria</label>
-        <select id="ed-subcategoria" style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:8px;margin:4px 0 12px;font-size:14px;">
-          <option value="">— (nenhuma) —</option>
-          ${subcategoriasDe(p.categoria).map(s => `<option value="${s}" ${s===p.subcategoria?'selected':''}>${s}</option>`).join('')}
-        </select>
+      <div id="ed-subcategoria-campo">
+        <label style="font-size:12px;font-weight:bold;color:#374151;">📂 Subcategoria (opcional)</label>
+        <input type="text" id="ed-subcategoria" list="ed-sub-sugestoes" value="${(p.subcategoria||'').replace(/"/g,'&quot;')}" placeholder="Ex: Homem, Mulher, Criança" style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:8px;margin:4px 0 12px;font-size:14px;">
+        <datalist id="ed-sub-sugestoes">${subcategoriasDeTudo(p.categoria).map(s=>`<option value="${s}">`).join('')}</datalist>
       </div>
 
       <label style="font-size:12px;font-weight:bold;color:#374151;">📷 Imagem</label>
@@ -3178,21 +3177,30 @@ function atualizarSelectCategorias() {
   atualizarSubcatSelect('np-categoria','np-subcategoria');
 }
 
-// Preenche o select de subcategorias conforme a categoria escolhida
-function atualizarSubcatSelect(catSelId, subSelId, valorAtual) {
+// Junta subcategorias: as definidas na categoria + as que já existem em produtos dessa categoria
+function subcategoriasDeTudo(nomeCategoria) {
+  const set = new Map();
+  subcategoriasDe(nomeCategoria).forEach(s => { if (s) set.set(s.toLowerCase(), s); });
+  (todosProdutos || []).forEach(p => {
+    if (p.categoria === nomeCategoria && p.subcategoria && String(p.subcategoria).trim()) {
+      const s = p.subcategoria.trim(); if (!set.has(s.toLowerCase())) set.set(s.toLowerCase(), s);
+    }
+  });
+  return Array.from(set.values());
+}
+
+// Preenche as SUGESTÕES de subcategoria conforme a categoria escolhida (campo é texto livre)
+function atualizarSubcatSelect(catSelId, subInputId, valorAtual) {
   const catSel = document.getElementById(catSelId);
-  const subSel = document.getElementById(subSelId);
-  if (!catSel || !subSel) return;
-  const subs = subcategoriasDe(catSel.value);
-  const campo = document.getElementById(subSelId + '-campo');
-  if (!subs.length) {
-    subSel.innerHTML = '<option value="">— (nenhuma) —</option>';
-    if (campo) campo.style.display = 'none';
-    return;
-  }
-  if (campo) campo.style.display = '';
-  subSel.innerHTML = '<option value="">— (nenhuma) —</option>' + subs.map(s => `<option value="${s}">${s}</option>`).join('');
-  if (valorAtual) subSel.value = valorAtual;
+  const subInput = document.getElementById(subInputId);
+  if (!catSel || !subInput) return;
+  const subs = subcategoriasDeTudo(catSel.value);
+  const dlId = (subInputId === 'np-subcategoria') ? 'np-sub-sugestoes' : 'ed-sub-sugestoes';
+  const dl = document.getElementById(dlId);
+  if (dl) dl.innerHTML = subs.map(s => `<option value="${s}">`).join('');
+  const campo = document.getElementById(subInputId + '-campo');
+  if (campo) campo.style.display = '';   // sempre visível
+  if (valorAtual !== undefined) subInput.value = valorAtual || '';
 }
 
 // ===== INVENTÁRIO / BALANÇO (só plano Anual) =====
@@ -3724,7 +3732,7 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.68';
+const MONITOR_VERSAO = '2.9.69';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
