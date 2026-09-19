@@ -211,7 +211,11 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   .btn-salvar { width:100%; background:#1a56a0; color:white; border:none; padding:13px; border-radius:10px; font-size:15px; font-weight:bold; cursor:pointer; margin-top:8px; }
   .form-wrap { padding:16px; }
 </style>
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="manifest-monitor.json">
+<link rel="apple-touch-icon" href="icon-monitor-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Spap Monitor">
+<meta name="theme-color" content="#12315e">
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(()=>{}); });
@@ -350,6 +354,10 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
       <div class="card-gestao" onclick="abrirSubPainel('painel-relatorios')">
         <div class="card-gestao-icon" style="background:#f0fdf4">📈</div>
         <div class="card-gestao-nome">Relatório</div>
+      </div>
+      <div class="card-gestao" onclick="abrirRastreio()">
+        <div class="card-gestao-icon" style="background:#eef2ff">🔎</div>
+        <div class="card-gestao-nome">Rastreio de Produto</div>
       </div>
       <div class="card-gestao" onclick="abrirSubPainel('painel-stock')">
         <div class="card-gestao-icon" style="background:#fef3c7">⚠️</div>
@@ -844,7 +852,7 @@ async function iniciar() {
           }
         }
       }
-      history.replaceState({}, '', location.pathname);
+      history.replaceState({}, '', location.pathname + '?modo=gerente');
     } catch (e) { alert('Erro no link de gerente: ' + (e.message || e)); }
   }
   const { data: sd } = await supabaseClient.auth.getSession();
@@ -1792,9 +1800,14 @@ async function salvarEdicaoProduto(id, tinhaImg) {
   if (editImagemBase64) dados.imagem = editImagemBase64;
   if (!dados.nome) { mostrarNotif('❌ O nome é obrigatório.', true); return; }
 
+  const precoAntigo = parseFloat(p.preco) || 0;
   const { error } = await supabaseClient.from('produtos').update(dados).eq('id', id);
   { var _oe = document.getElementById('overlay-editar-prod'); if (_oe) _oe.remove(); }
   if (error) { mostrarNotif('❌ Erro: ' + error.message, true); return; }
+  // Regista mudança de preço (para a aba de Rastreio)
+  if (Math.abs((parseFloat(dados.preco)||0) - precoAntigo) > 0.001) {
+    try { await supabaseClient.from('produto_precos').insert({ produto_id: id, loja_id: lojaId, preco_antigo: precoAntigo, preco_novo: parseFloat(dados.preco)||0 }); } catch(e) {}
+  }
   Object.assign(p, dados);
   renderProdutosSubPainel();
   mostrarNotif('✅ "' + dados.nome + '" atualizado! O PDV vê ao sincronizar (⟳).');
@@ -2313,6 +2326,120 @@ async function exportarVerificacaoExcel() {
     if (pos.length){ const w=XLSX.utils.aoa_to_sheet(toAoa(pos)); w['!cols']=cols; XLSX.utils.book_append_sheet(wb,w,'Sobras'); }
     XLSX.writeFile(wb, _nomeFicheiro('Verificacao'));
   } catch(e) { alert('Não deu para gerar o Excel: ' + (e.message||e)); }
+}
+
+// ===== RASTREIO DE PRODUTO (aba especial) =====
+function abrirRastreio() {
+  let ov = document.getElementById('overlay-rastreio'); if (ov) ov.remove();
+  ov = document.createElement('div');
+  ov.id = 'overlay-rastreio';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow:auto;';
+  ov.innerHTML = `
+    <div style="background:white;border-radius:16px;max-width:560px;width:100%;padding:20px;margin-top:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <h2 style="margin:0;font-size:19px;">🔎 Rastreio de Produto</h2>
+        <button onclick="document.getElementById('overlay-rastreio').remove()" style="background:#f1f5f9;border:none;border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:16px;">✕</button>
+      </div>
+      <p style="font-size:13px;color:#64748b;margin:0 0 10px;">Procura por nome, código ou código de barras. Vês tudo o que aconteceu ao produto.</p>
+      <input type="text" id="rastreio-busca" oninput="rastreioSugestoes()" placeholder="Ex: Chinelo, 12345, 789..." style="width:100%;padding:12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:15px;box-sizing:border-box;">
+      <div id="rastreio-sugestoes" style="margin-top:6px;"></div>
+      <div id="rastreio-resultado" style="margin-top:12px;"></div>
+    </div>`;
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  document.body.appendChild(ov);
+  setTimeout(() => { const i = document.getElementById('rastreio-busca'); if (i) i.focus(); }, 100);
+}
+
+function rastreioSugestoes() {
+  const q = (document.getElementById('rastreio-busca').value || '').toLowerCase().trim();
+  const div = document.getElementById('rastreio-sugestoes');
+  if (!q) { div.innerHTML = ''; return; }
+  const achados = (todosProdutos||[]).filter(p =>
+    (p.nome && p.nome.toLowerCase().includes(q)) ||
+    (p.codigo && String(p.codigo).toLowerCase().includes(q)) ||
+    (p.codbarras && String(p.codbarras).toLowerCase().includes(q))
+  ).slice(0, 8);
+  div.innerHTML = achados.map(p => `
+    <div onclick="montarRastreio('${p.id}')" style="padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:4px;cursor:pointer;display:flex;justify-content:space-between;gap:8px;">
+      <span style="font-size:14px;font-weight:600;">${p.nome}</span>
+      <span style="font-size:12px;color:#94a3b8;white-space:nowrap;">${p.categoria||''} · stock ${p.stock||0}</span>
+    </div>`).join('') || '<div style="color:#cbd5e1;font-size:13px;padding:8px;">Nada encontrado.</div>';
+}
+
+async function montarRastreio(id) {
+  const p = (todosProdutos||[]).find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('rastreio-sugestoes').innerHTML = '';
+  document.getElementById('rastreio-busca').value = p.nome;
+  const res = document.getElementById('rastreio-resultado');
+  res.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px;">A juntar o histórico...</div>';
+  const eventos = []; const hoje = new Date();
+  if (p.criado_em) eventos.push({ data:p.criado_em, emoji:'➕', cor:'#16a34a', titulo:'Produto cadastrado', detalhe:'Entrou no sistema' });
+  let ultimaVenda = null, totalVendido = 0;
+  try {
+    const { data: vendas } = await supabaseClient.from('vendas').select('criado_em, venda_itens(*)').eq('loja_id', lojaId).order('criado_em',{ascending:false}).limit(500);
+    (vendas||[]).forEach(v => (v.venda_itens||[]).forEach(it => {
+      if ((it.produto_id && it.produto_id===id) || (it.nome && it.nome===p.nome)) {
+        const q = parseInt(it.qtd)||0; totalVendido += q; if (!ultimaVenda) ultimaVenda = v.criado_em;
+        eventos.push({ data:v.criado_em, emoji:'💰', cor:'#0891b2', titulo:'Vendido × '+q, detalhe:'MT '+((parseFloat(it.preco)||0)*q).toFixed(2), delta:-q });
+      }
+    }));
+  } catch(e){}
+  try {
+    const { data: desp } = await supabaseClient.from('despachos').select('criado_em, itens, estado').eq('loja_id', lojaId).order('criado_em',{ascending:false}).limit(200);
+    (desp||[]).forEach(d => (d.itens||[]).forEach(it => {
+      if ((it.produto_id && it.produto_id===id) || (it.nome && it.nome===p.nome)) {
+        const q = parseInt(it.enviado)||0;
+        eventos.push({ data:d.criado_em, emoji:'📦', cor:'#7c3aed', titulo:'Reposição (despacho) +'+q, detalhe:d.estado||'', delta:+q });
+      }
+    }));
+  } catch(e){}
+  try {
+    const { data: perdas } = await supabaseClient.from('perdas').select('criado_em, quantidade, produto_id, estado').eq('loja_id', lojaId).eq('produto_id', id);
+    (perdas||[]).forEach(pd => { const q = parseInt(pd.quantidade)||0; eventos.push({ data:pd.criado_em, emoji:'📉', cor:'#dc2626', titulo:'Perda −'+q, detalhe:pd.estado||'', delta:-q }); });
+  } catch(e){}
+  try {
+    const { data: tr } = await supabaseClient.from('transferencias').select('criado_em, itens, de_loja, para_loja, estado').or('de_loja.eq.'+lojaId+',para_loja.eq.'+lojaId).order('criado_em',{ascending:false}).limit(200);
+    (tr||[]).forEach(t => (t.itens||[]).forEach(it => {
+      if ((it.codigo && p.codigo && it.codigo===p.codigo) || (it.nome && it.nome===p.nome)) {
+        const q = parseInt(it.qtd)||0; const saida = t.de_loja === lojaId;
+        eventos.push({ data:t.criado_em, emoji:'🔄', cor:'#d97706', titulo:(saida?'Enviado p/ outra loja −':'Recebido de outra loja +')+q, detalhe:t.estado||'', delta:saida?-q:+q });
+      }
+    }));
+  } catch(e){}
+  try {
+    const { data: precos } = await supabaseClient.from('produto_precos').select('*').eq('produto_id', id).order('criado_em',{ascending:false});
+    (precos||[]).forEach(pr => eventos.push({ data:pr.criado_em, emoji:'🏷️', cor:'#be185d', titulo:'Preço alterado', detalhe:'MT '+(pr.preco_antigo||0)+' → MT '+(pr.preco_novo||0) }));
+  } catch(e){}
+
+  eventos.sort((a,b) => new Date(b.data) - new Date(a.data));
+
+  const alertas = [];
+  if (!ultimaVenda) alertas.push('🕑 Nunca foi vendido.');
+  else { const dias = Math.floor((hoje - new Date(ultimaVenda))/86400000); if (dias >= 30) alertas.push('🕑 Sem vender há '+dias+' dias.'); }
+  const stockAtual = parseInt(p.stock)||0;
+  const maiorSaida = eventos.filter(e=>e.delta<0).reduce((m,e)=>Math.min(m,e.delta),0);
+  if (maiorSaida <= -10 || (stockAtual>0 && maiorSaida <= -stockAtual)) alertas.push('⚠️ Queda brusca: saíram '+Math.abs(maiorSaida)+' de uma vez.');
+  if (eventos.some(e => e.titulo === 'Preço alterado')) alertas.push('🏷️ O preço já foi alterado (vê no histórico).');
+
+  const dtf = d => new Date(d).toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+  res.innerHTML = `
+    <div style="background:#f8fafc;border-radius:12px;padding:14px;margin-bottom:12px;">
+      <div style="font-size:16px;font-weight:bold;">${p.nome}</div>
+      <div style="font-size:12px;color:#64748b;margin-top:2px;">${p.categoria||''}${p.subcategoria?' › '+p.subcategoria:''} · Código ${p.codigo||'—'}</div>
+      <div style="display:flex;gap:16px;margin-top:10px;flex-wrap:wrap;">
+        <div><div style="font-size:11px;color:#94a3b8;">Stock agora</div><div style="font-size:18px;font-weight:bold;">${stockAtual}</div></div>
+        <div><div style="font-size:11px;color:#94a3b8;">Preço</div><div style="font-size:18px;font-weight:bold;">MT ${(parseFloat(p.preco)||0).toFixed(2)}</div></div>
+        <div><div style="font-size:11px;color:#94a3b8;">Total vendido</div><div style="font-size:18px;font-weight:bold;">${totalVendido}</div></div>
+      </div>
+    </div>
+    ${alertas.length ? `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px;margin-bottom:12px;"><div style="font-weight:bold;color:#b45309;font-size:13px;margin-bottom:6px;">⚠️ Alertas</div>${alertas.map(a=>`<div style="font-size:13px;color:#92400e;margin-bottom:2px;">${a}</div>`).join('')}</div>` : '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px;margin-bottom:12px;font-size:13px;color:#166534;">✅ Sem alertas para este produto.</div>'}
+    <div style="font-weight:bold;font-size:14px;margin-bottom:8px;">📜 Linha do tempo (${eventos.length})</div>
+    ${eventos.length ? eventos.map(e => `
+      <div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9;">
+        <div style="font-size:18px;">${e.emoji}</div>
+        <div style="flex:1;"><div style="font-size:13px;font-weight:600;color:${e.cor};">${e.titulo}</div><div style="font-size:11px;color:#94a3b8;">${dtf(e.data)}${e.detalhe?' · '+e.detalhe:''}</div></div>
+      </div>`).join('') : '<div style="color:#cbd5e1;font-size:13px;">Sem histórico ainda.</div>'}`;
 }
 
 // ===== AUDITORIA DE CAIXA =====
@@ -3597,7 +3724,7 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.65';
+const MONITOR_VERSAO = '2.9.67';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
