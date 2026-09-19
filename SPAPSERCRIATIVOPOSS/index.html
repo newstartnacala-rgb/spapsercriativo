@@ -2517,11 +2517,17 @@ async function scannerFechar() {
       pendente: true
     };
 
-    // 1. Desconta o stock LOCALMENTE (imediato, sem rede)
+    // 1. Desconta o stock LOCALMENTE (imediato, sem rede) e guarda as QUANTIDADES a descontar
     const produtosAfetados = [];
+    const baixas = [];
     for (const item of ultimaVendaCarrinho) {
       const p = produtos.find(x => x.id === item.id) || produtos.find(x => x.nome === item.nome);
-      if (p) { p.stock = (parseInt(p.stock)||0) - item.qtd; if (!produtosAfetados.includes(p.id)) produtosAfetados.push(p.id); }
+      if (p) {
+        p.stock = (parseInt(p.stock)||0) - item.qtd;
+        if (!produtosAfetados.includes(p.id)) produtosAfetados.push(p.id);
+        const b = baixas.find(x => x.produto_id === p.id);
+        if (b) b.qtd += item.qtd; else baixas.push({ produto_id: p.id, qtd: item.qtd });
+      }
     }
 
     // 2. Entra na fila de sincronização (localStorage — sobrevive a fechar a app)
@@ -2538,6 +2544,7 @@ async function scannerFechar() {
       criado_em: novaVenda.dataISO,
       itens: novaVenda.itens.map(i => ({ produto_nome: i.nome, qtd: i.qtd, preco_unitario: i.preco })),
       produtos_afetados: produtosAfetados,
+      baixas: baixas,
       sincVenda: false, sincItens: false, sincStock: false
     });
     guardarFila();
@@ -2646,15 +2653,22 @@ async function scannerFechar() {
           if (error) throw error;
           v.sincVenda = true; guardarFila();
         }
-        // 2. STOCK PRIMEIRO — é o mais importante. O aparelho é a fonte da verdade.
-        //    Fica antes dos itens para que, mesmo que os itens falhem, o stock chegue ao servidor.
+        // 2. STOCK — desconto ATÓMICO no servidor (stock = stock - qtd), imune a corridas.
         if (!v.sincStock) {
-          for (const pid of (v.produtos_afetados || [])) {
-            const p = produtos.find(x => x.id === pid);
-            if (p) {
-              const { error } = await supabaseClient.from('produtos')
-                .update({ stock: parseInt(p.stock)||0 }).eq('id', pid);
+          if (v.baixas && v.baixas.length) {
+            for (const b of v.baixas) {
+              const { error } = await supabaseClient.rpc('baixar_stock', { p_id: b.produto_id, p_qtd: parseInt(b.qtd)||0 });
               if (error) throw error;
+            }
+          } else {
+            // fila antiga (sem baixas) — mecanismo anterior por segurança
+            for (const pid of (v.produtos_afetados || [])) {
+              const p = produtos.find(x => x.id === pid);
+              if (p) {
+                const { error } = await supabaseClient.from('produtos')
+                  .update({ stock: parseInt(p.stock)||0 }).eq('id', pid);
+                if (error) throw error;
+              }
             }
           }
           v.sincStock = true; guardarFila();
@@ -4814,7 +4828,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.67';
+  const VERSAO_ATUAL = '2.9.68';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.

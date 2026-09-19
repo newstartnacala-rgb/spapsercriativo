@@ -1,1 +1,1 @@
-{ "versao": "2.9.67", "data": "2026-09-11", "novidades": "O MONITOR passa a instalar-se como app PROPRIA, com icone proprio (grafico azul) e nome 'Spap Monitor' — ja nao instala o logo da loja. Cada um (loja e monitor) instala-se separado, com o seu icone." }
+{ "versao": "2.9.68", "data": "2026-09-11", "novidades": "CORRIGIDO bug grave: vendas nao descontavam o stock. Agora o desconto e ATOMICO no servidor (stock = stock - quantidade), a prova de corridas e de recarregamentos. Precisa do SQL atualizacao-v2.9.68.sql (funcao baixar_stock)." }
