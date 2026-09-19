@@ -812,6 +812,7 @@ const CATEGORIAS_POR_TIPO = {
   bottlestore: ['Cervejas','Vinhos','Vinho Caseiro','Bebidas Espirituosas','Refrigerantes','Águas & Sumos','Gelo','Snacks & Tabaco']
 };
 let categoriasOcultas = [];  // categorias padrão que o dono escolheu esconder
+let subcategoriasPorCategoria = {};  // { "Chinelos": ["Homem","Mulher"], ... }
 let intervalo = null;
 let filtroVendasAtivo = 'hoje';
 let isSuperAdmin = false;
@@ -883,7 +884,7 @@ async function iniciar() {
     {
       const r = await supabaseClient
         .from('membros_loja')
-        .select('loja_id, papel, nome_exibicao, lojas(nome, estado, plano, categorias_personalizadas, vendedores, data_expiracao, codigo_relatorios, pin_monitor, tipo_loja, pin_gerente)')
+        .select('loja_id, papel, nome_exibicao, lojas(nome, estado, plano, categorias_personalizadas, subcategorias, vendedores, data_expiracao, codigo_relatorios, pin_monitor, tipo_loja, pin_gerente)')
         .eq('user_id', sessao.user.id).limit(1);
       if (r.error) {
         const r2 = await supabaseClient
@@ -935,6 +936,7 @@ async function iniciar() {
     categoriasPersonalizadas = (membros[0].lojas && membros[0].lojas.categorias_personalizadas) || [];
     lojaVendedores = (membros[0].lojas && membros[0].lojas.vendedores) || [];
     categoriasOcultas = (membros[0].lojas && membros[0].lojas.categorias_ocultas) || [];
+    subcategoriasPorCategoria = (membros[0].lojas && membros[0].lojas.subcategorias) || {};
     lojaCodigoRelatorios = (membros[0].lojas && membros[0].lojas.codigo_relatorios) || '02102';
     modoGeral = false;
     document.getElementById('topbar-loja').textContent = '🏪 ' + nomeLoja;
@@ -2986,44 +2988,51 @@ function abrirCategorias() {
   renderCategorias();
 }
 
-async function gerirSubcategorias(idx) {
-  const cat = categoriasPersonalizadas[idx];
-  const atual = (cat.subs && cat.subs.length) ? cat.subs.join(', ') : '';
-  const txt = prompt('Subcategorias de "' + cat.nome + '" (separa por vírgulas):\nEx: Homem, Mulher, Criança', atual);
-  if (txt === null) return;
-  const subs = txt.split(',').map(s => s.trim()).filter(Boolean);
-  // remove repetidas
-  const vistos = new Set(); const limpas = [];
-  subs.forEach(s => { const k = s.toLowerCase(); if (!vistos.has(k)) { vistos.add(k); limpas.push(s); } });
-  const antigo = cat.subs;
-  categoriasPersonalizadas[idx] = { ...cat, subs: limpas };
-  if (await salvarCategoriasNaLoja()) {
-    renderCategorias();
-    mostrarNotif('✅ Subcategorias guardadas para "' + cat.nome + '".');
-  } else {
-    categoriasPersonalizadas[idx] = { ...cat, subs: antigo };
-  }
-}
-
-// Devolve as subcategorias de uma categoria (pelo nome)
+// Devolve as subcategorias de uma categoria (pelo nome) — de fábrica OU personalizada
 function subcategoriasDe(nomeCategoria) {
+  const doMapa = (subcategoriasPorCategoria && subcategoriasPorCategoria[nomeCategoria]) || [];
   const c = (categoriasPersonalizadas || []).find(x => x.nome === nomeCategoria);
-  return (c && c.subs) ? c.subs : [];
+  const doCustom = (c && c.subs) ? c.subs : [];
+  const set = new Map();
+  [...doMapa, ...doCustom].forEach(s => { if (s) set.set(String(s).toLowerCase(), s); });
+  return Array.from(set.values());
 }
 
-async function gerirSubcategorias2(idx) { return gerirSubcategorias(idx); }
+// Definir/editar as subcategorias de QUALQUER categoria (pelo nome)
+async function gerirSubcategorias(nome) {
+  const atual = (subcategoriasPorCategoria[nome] || subcategoriasDe(nome) || []).join(', ');
+  const txt = prompt('Subcategorias de "' + nome + '" (separa por vírgulas):\nEx: Homem, Mulher, Criança', atual);
+  if (txt === null) return;
+  const subs = []; const vistos = new Set();
+  txt.split(',').map(s => s.trim()).filter(Boolean).forEach(s => { const k = s.toLowerCase(); if (!vistos.has(k)) { vistos.add(k); subs.push(s); } });
+  const antigo = subcategoriasPorCategoria[nome];
+  if (subs.length) subcategoriasPorCategoria[nome] = subs; else delete subcategoriasPorCategoria[nome];
+  if (await salvarSubcategoriasMap()) { renderCategorias(); mostrarNotif('✅ Subcategorias guardadas para "' + nome + '".'); }
+  else { if (antigo) subcategoriasPorCategoria[nome] = antigo; else delete subcategoriasPorCategoria[nome]; }
+}
+
+async function salvarSubcategoriasMap() {
+  const { error } = await supabaseClient.from('lojas').update({ subcategorias: subcategoriasPorCategoria }).eq('id', lojaId);
+  if (error) { mostrarNotif('❌ Corre o SQL v2.9.70 (coluna subcategorias): ' + error.message, true); return false; }
+  return true;
+}
 
 function renderCategorias() {
   const div = document.getElementById('lista-categorias');
   let html = '<div style="font-size:11px;font-weight:bold;color:#94a3b8;margin-bottom:8px;">CATEGORIAS PADRÃO</div>';
   html += CATEGORIAS_BASE.map(c => {
     const oculta = categoriasOcultas.includes(c);
+    const subs = subcategoriasDe(c);
     return `
-    <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:${oculta?'#fef2f2':'#f8fafc'};border-radius:8px;margin-bottom:6px;${oculta?'opacity:0.6;':''}">
-      <span style="font-size:18px;">📦</span>
-      <span style="flex:1;font-size:13px;color:#64748b;">${c}${oculta?' <span style=\'font-size:10px;color:#dc2626;\'>(oculta)</span>':''}</span>
-      <button onclick="editarCategoriaBase('${c.replace(/'/g,"\\'")}')" style="background:#eff6ff;color:#1a56a0;border:1px solid #bfdbfe;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px;font-weight:bold;">✏️</button>
-      <button onclick="toggleOcultarCategoria('${c.replace(/'/g,"\\'")}')" style="background:${oculta?'#f0fdf4':'#fef2f2'};color:${oculta?'#16a34a':'#dc2626'};border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px;font-weight:bold;">${oculta?'👁️ Mostrar':'🚫 Ocultar'}</button>
+    <div style="background:${oculta?'#fef2f2':'#f8fafc'};border-radius:8px;margin-bottom:6px;padding:10px 12px;${oculta?'opacity:0.6;':''}">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:18px;">📦</span>
+        <span style="flex:1;font-size:13px;color:#64748b;">${c}${oculta?' <span style=\'font-size:10px;color:#dc2626;\'>(oculta)</span>':''}</span>
+        <button onclick="gerirSubcategorias('${c.replace(/'/g,"\\'")}')" style="background:#f0fdf4;color:#16a34a;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px;font-weight:bold;">📂 Subcat</button>
+        <button onclick="editarCategoriaBase('${c.replace(/'/g,"\\'")}')" style="background:#eff6ff;color:#1a56a0;border:1px solid #bfdbfe;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px;font-weight:bold;">✏️</button>
+        <button onclick="toggleOcultarCategoria('${c.replace(/'/g,"\\'")}')" style="background:${oculta?'#f0fdf4':'#fef2f2'};color:${oculta?'#16a34a':'#dc2626'};border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px;font-weight:bold;">${oculta?'👁️ Mostrar':'🚫 Ocultar'}</button>
+      </div>
+      ${subs.length ? `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px;">${subs.map(s=>`<span style="font-size:11px;background:#eef2ff;color:#3730a3;border-radius:20px;padding:3px 9px;">${s}</span>`).join('')}</div>` : ''}
     </div>`;
   }).join('');
 
@@ -3031,17 +3040,20 @@ function renderCategorias() {
   if (categoriasPersonalizadas.length === 0) {
     html += '<div style="text-align:center;color:#cbd5e1;padding:20px;font-size:13px;">Ainda não criaste categorias.<br>Usa o campo acima para adicionar.</div>';
   } else {
-    html += categoriasPersonalizadas.map((c, idx) => `
+    html += categoriasPersonalizadas.map((c, idx) => {
+      const subs = subcategoriasDe(c.nome);
+      return `
       <div style="background:white;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:6px;padding:10px 12px;">
         <div style="display:flex;align-items:center;gap:10px;">
           <span style="font-size:18px;">${c.emoji || '🏷️'}</span>
           <span style="flex:1;font-size:13px;font-weight:600;">${c.nome}</span>
-          <button onclick="gerirSubcategorias(${idx})" style="background:#f0fdf4;color:#16a34a;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px;font-weight:bold;">📂 Subcat</button>
+          <button onclick="gerirSubcategorias('${(c.nome||'').replace(/'/g,"\\'")}')" style="background:#f0fdf4;color:#16a34a;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px;font-weight:bold;">📂 Subcat</button>
           <button onclick="editarCategoria(${idx})" style="background:#eff6ff;color:#1a56a0;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px;font-weight:bold;">✏️</button>
           <button onclick="eliminarCategoria(${idx})" style="background:#fef2f2;color:#dc2626;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px;font-weight:bold;">🗑</button>
         </div>
-        ${(c.subs && c.subs.length) ? `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px;">${c.subs.map(s=>`<span style="font-size:11px;background:#eef2ff;color:#3730a3;border-radius:20px;padding:3px 9px;">${s}</span>`).join('')}</div>` : `<div style="margin-top:6px;font-size:11px;color:#cbd5e1;">Sem subcategorias — clica 📂 Subcat</div>`}
-      </div>`).join('');
+        ${subs.length ? `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px;">${subs.map(s=>`<span style="font-size:11px;background:#eef2ff;color:#3730a3;border-radius:20px;padding:3px 9px;">${s}</span>`).join('')}</div>` : `<div style="margin-top:6px;font-size:11px;color:#cbd5e1;">Sem subcategorias — clica 📂 Subcat</div>`}
+      </div>`;
+    }).join('');
   }
   div.innerHTML = html;
 }
@@ -3732,7 +3744,7 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.69';
+const MONITOR_VERSAO = '2.9.70';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
