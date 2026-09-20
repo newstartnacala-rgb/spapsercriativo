@@ -3744,7 +3744,7 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.73';
+const MONITOR_VERSAO = '2.9.74';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -3867,6 +3867,26 @@ const T_MONITOR = {
   }
 };
 
+const CARD_LABELS = {
+  'Relatório':{en:'Report',fr:'Rapport',zh:'报告'},
+  'Rastreio de Produto':{en:'Product Tracking',fr:'Suivi Produit',zh:'产品追踪'},
+  'Stock Crítico':{en:'Critical Stock',fr:'Stock Critique',zh:'库存不足'},
+  'Notifications':{en:'Notifications',fr:'Notifications',zh:'通知'},
+  'Notificações':{en:'Notifications',fr:'Notifications',zh:'通知'},
+  'Products':{en:'Products',fr:'Produits',zh:'产品'},
+  'Produtos':{en:'Products',fr:'Produits',zh:'产品'},
+  'Add Product':{en:'Add Product',fr:'Ajouter Produit',zh:'添加产品'},
+  'Adicionar Produto':{en:'Add Product',fr:'Ajouter Produit',zh:'添加产品'},
+  'Categorias':{en:'Categories',fr:'Catégories',zh:'类别'},
+  'Enviar Despacho':{en:'Send Dispatch',fr:'Envoyer Expédition',zh:'发货'},
+  'Vendedores':{en:'Sellers',fr:'Vendeurs',zh:'销售员'},
+  'Métodos de Pagamento':{en:'Payment Methods',fr:'Moyens de Paiement',zh:'支付方式'},
+  'Visão Geral':{en:'Overview',fr:'Vue d\'ensemble',zh:'概览'},
+  'Diagnóstico de Stock':{en:'Stock Diagnosis',fr:'Diagnostic Stock',zh:'库存诊断'},
+  'Auditoria de Caixa':{en:'Cash Audit',fr:'Audit de Caisse',zh:'现金审计'},
+  'Inventário':{en:'Inventory',fr:'Inventaire',zh:'盘点'}
+};
+
 function aplicarTraducaoMonitor(lang) {
   const t = T_MONITOR[lang] || T_MONITOR['pt'];
 
@@ -3928,6 +3948,13 @@ function aplicarTraducaoMonitor(lang) {
 
   const btnGuardar = document.getElementById('btn-salvar-np');
   if (btnGuardar) btnGuardar.textContent = t.guardar;
+
+  // Cartões da gestão — traduz TODOS pelo texto original (guardado em data-pt)
+  document.querySelectorAll('.card-gestao-nome').forEach(el => {
+    if (!el.dataset.pt) el.dataset.pt = el.textContent.trim();
+    const orig = el.dataset.pt;
+    el.textContent = (lang !== 'pt' && CARD_LABELS[orig] && CARD_LABELS[orig][lang]) ? CARD_LABELS[orig][lang] : orig;
+  });
 }
 
 function abrirModalLinguaMonitor() {
