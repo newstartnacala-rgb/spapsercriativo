@@ -3744,7 +3744,7 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.70';
+const MONITOR_VERSAO = '2.9.73';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -3847,6 +3847,23 @@ const T_MONITOR = {
     funcionarios: 'Employés', relatorios: 'Rapports', atualizarDados: 'Actualiser',
     nome: 'Nom *', preco: '🏷️ Prix de Vente (MT) *', precoCompra: '💰 Prix d\'Achat (MT)',
     stock: 'Stock', codigo: 'Code', categoria: 'Catégorie', guardar: '✅ Enregistrer',
+  },
+  zh: {
+    dashboard: '销售面板',
+    home: '🏠 主页', loja: '🏪 店铺', vendas: '🧾 销售',
+    totalVendas: '总销售额', valorRecebido: '💰 今日利润',
+    numVendas: '销售笔数', itensVendidos: '已售商品', vendaMedia: '平均销售',
+    vendasHora: '每小时销售', topProdutos: '🏆 今日热销',
+    ultimasVendas: '最近销售', storeManagement: '店铺管理',
+    pagarCaixa: '收款 / 收银', produtoStock: '产品 / 库存', outro: '其他',
+    hoje: '今天', semana: '本周', mes: '本月', todas: '全部',
+    atualizar: '↻', sair: '⏻',
+    notifAtivo: '🔔 大额销售提醒已开启 (> MT 500)',
+    notifAtivar: '🔔 开启大额销售提醒 (> MT 500)',
+    produtos: '产品', addProduto: '添加产品', stockCrit: '库存不足',
+    funcionarios: '员工', relatorios: '报告', atualizarDados: '刷新数据',
+    nome: '名称 *', preco: '🏷️ 售价 (MT) *', precoCompra: '💰 进价 (MT)',
+    stock: '库存', codigo: '编号', categoria: '类别', guardar: '✅ 保存产品',
   }
 };
 
@@ -3916,7 +3933,7 @@ function aplicarTraducaoMonitor(lang) {
 function abrirModalLinguaMonitor() {
   const modal = document.getElementById('modal-lingua-monitor');
   if (modal) {
-    ['pt','en','fr'].forEach(l => {
+    ['pt','en','fr','zh'].forEach(l => {
       const btn = document.getElementById('mlang-'+l);
       const check = document.getElementById('mcheck-'+l);
       if (btn) {
@@ -3933,14 +3950,14 @@ function mudarLinguaMonitor(lang) {
   linguaMonitor = lang;
   localStorage.setItem('pdv_lingua', lang);
   aplicarTraducaoMonitor(lang);
-  ['pt','en','fr'].forEach(l => {
+  ['pt','en','fr','zh'].forEach(l => {
     const btn = document.getElementById('mlang-'+l);
     const check = document.getElementById('mcheck-'+l);
     if (btn) { btn.style.borderColor = l===lang?'#1a56a0':'#ddd'; btn.style.background = l===lang?'#eff6ff':'white'; }
     if (check) check.textContent = l===lang?'✓':'';
   });
   document.getElementById('modal-lingua-monitor').style.display = 'none';
-  const nomes = { pt:'Português activado!', en:'English activated!', fr:'Français activé!' };
+  const nomes = { pt:'Português activado!', en:'English activated!', fr:'Français activé!', zh:'中文已启用!' };
   // mostra notif simples
   const n = document.createElement('div');
   n.textContent = '🌐 ' + nomes[lang];
@@ -4761,6 +4778,9 @@ async function carregarContagensEquipa() {
       </button>
       <button id="mlang-fr" onclick="mudarLinguaMonitor('fr')" style="padding:14px;border:2px solid #ddd;border-radius:10px;background:white;font-size:15px;cursor:pointer;display:flex;align-items:center;gap:12px;">
         🇫🇷 <span style="font-weight:bold;">Français</span> <span style="margin-left:auto;color:#1a56a0;" id="mcheck-fr"></span>
+      </button>
+      <button id="mlang-zh" onclick="mudarLinguaMonitor('zh')" style="padding:14px;border:2px solid #ddd;border-radius:10px;background:white;font-size:15px;cursor:pointer;display:flex;align-items:center;gap:12px;">
+        🇨🇳 <span style="font-weight:bold;">中文</span> <span style="margin-left:auto;color:#1a56a0;" id="mcheck-zh"></span>
       </button>
     </div>
     <button onclick="document.getElementById('modal-lingua-monitor').style.display='none'" style="width:100%;padding:12px;background:#1a56a0;color:white;border:none;border-radius:10px;font-size:14px;font-weight:bold;cursor:pointer;">

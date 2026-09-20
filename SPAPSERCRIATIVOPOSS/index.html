@@ -519,21 +519,21 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     <!-- LINHA: Recebido | Troco -->
     <div style="display:flex;border-bottom:2px solid #eee;flex-shrink:0;">
       <div style="flex:1;padding:12px 22px;border-right:2px solid #eee;">
-        <div style="font-size:14px;color:#e05c00;font-weight:600;">Receber: <b id="pag-metodo-txt">Numerário</b></div>
+        <div style="font-size:14px;color:#e05c00;font-weight:600;"><span data-tr="receber">Receber:</span> <b id="pag-metodo-txt">Numerário</b></div>
         <input type="text" inputmode="none" id="pag-recebido" placeholder="0" readonly oninput="calcularTroco()"
           style="width:100%;border:none;outline:none;font-size:32px;font-weight:bold;color:#dc2626;padding:0;background:transparent;">
       </div>
       <div style="flex:1;padding:12px 22px;background:#f0fdf4;">
-        <div style="font-size:14px;color:#64748b;font-weight:600;">Troco:</div>
+        <div style="font-size:14px;color:#64748b;font-weight:600;" data-tr="troco">Troco:</div>
         <div id="pag-troco" style="font-size:32px;font-weight:bold;color:#16a34a;">MT 0,00</div>
       </div>
     </div>
 
     <!-- MÉTODOS -->
     <div class="metodos-pagamento" style="display:flex;gap:0;flex-shrink:0;border-bottom:2px solid #eee;">
-      <button type="button" class="metodo-btn ativo" onclick="selecionarMetodo('Numerário', this)">💵 Numerário</button>
-      <button type="button" class="metodo-btn" onclick="selecionarMetodo('Cartão', this)">💳 Cartão de depósito</button>
-      <button type="button" class="metodo-btn" onclick="selecionarMetodo('Transferência', this)">📱 Transferência</button>
+      <button type="button" class="metodo-btn ativo" data-tr="mNumerario" onclick="selecionarMetodo('Numerário', this)">💵 Numerário</button>
+      <button type="button" class="metodo-btn" data-tr="mCartao" onclick="selecionarMetodo('Cartão', this)">💳 Cartão de depósito</button>
+      <button type="button" class="metodo-btn" data-tr="mTransferencia" onclick="selecionarMetodo('Transferência', this)">📱 Transferência</button>
     </div>
 
     <!-- CORPO: teclado grande à esquerda + notas/confirmar à direita (preenche todo o resto) -->
@@ -563,7 +563,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
         <button type="button" onclick="notaRapida(500)" class="nota-btn-full">500</button>
         <button type="button" onclick="tecladoPagApagar()" class="nota-btn-full" style="background:#fef2f2;color:#dc2626;">⌫ Apagar</button>
         <button type="button" onclick="tecladoPagLimpar()" class="nota-btn-full" style="background:#fee2e2;color:#b91c1c;font-weight:bold;">C — Limpar tudo</button>
-        <button type="button" id="btn-confirmar-venda" style="flex:2;background:#16a34a;color:white;border:none;font-size:20px;font-weight:bold;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,0.2);touch-action:manipulation;border-radius:0;">✅ Confirmar<br>Venda</button>
+        <button type="button" id="btn-confirmar-venda" data-tr-html="confirmarVenda" style="flex:2;background:#16a34a;color:white;border:none;font-size:20px;font-weight:bold;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,0.2);touch-action:manipulation;border-radius:0;">✅ Confirmar<br>Venda</button>
       </div>
     </div>
 
@@ -680,6 +680,9 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
       </button>
       <button onclick="mudarLingua('fr')" id="lang-fr" style="padding:14px;border:2px solid #ddd;border-radius:10px;background:white;font-size:15px;cursor:pointer;display:flex;align-items:center;gap:12px;">
         🇫🇷 <span style="font-weight:bold;">Français</span> <span style="margin-left:auto;color:#999;" id="check-fr"></span>
+      </button>
+      <button onclick="mudarLingua('zh')" id="lang-zh" style="padding:14px;border:2px solid #ddd;border-radius:10px;background:white;font-size:15px;cursor:pointer;display:flex;align-items:center;gap:12px;">
+        🇨🇳 <span style="font-weight:bold;">中文</span> <span style="margin-left:auto;color:#999;" id="check-zh"></span>
       </button>
     </div>
     <div class="modal-botoes">
@@ -1260,7 +1263,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     {
       const r = await supabaseClient
         .from('membros_loja')
-        .select('loja_id, papel, nome_exibicao, lojas(nome, estado, numero_transferencia, codigo_agente, codigo_admin, categorias_personalizadas, categorias_ocultas, nome_empresa, vendedores, metodos_pagamento, telefone, endereco, tipo_loja)')
+        .select('loja_id, papel, nome_exibicao, lojas(nome, estado, numero_transferencia, codigo_agente, codigo_admin, categorias_personalizadas, categorias_ocultas, subcategorias, nome_empresa, vendedores, metodos_pagamento, telefone, endereco, tipo_loja)')
         .eq('user_id', user.id).limit(1);
       membros = r.data; membroError = r.error;
 
@@ -1304,6 +1307,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
       codigoAdmin: (membro.lojas && membro.lojas.codigo_admin) || null,
       categoriasPersonalizadas: (membro.lojas && membro.lojas.categorias_personalizadas) || [],
       categoriasOcultas: (membro.lojas && membro.lojas.categorias_ocultas) || [],
+      subcategorias: (membro.lojas && membro.lojas.subcategorias) || {},
       metodosPagamento: (membro.lojas && membro.lojas.metodos_pagamento) || null,
       nomeEmpresa: (membro.lojas && membro.lojas.nome_empresa) || null,
       telefone: (membro.lojas && membro.lojas.telefone) || null,
@@ -1566,8 +1570,11 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     else if (e.key === 'F3') { e.preventDefault(); if (!dentroDeModal) abrirMenu(); else if (document.getElementById('menu-overlay').classList.contains('ativo')) fecharMenu(); }
     else if (e.key === 'Enter') {
       const modalPag = document.getElementById('modal-pagamento');
+      const ae = document.activeElement;
+      const emProduto = ae && ae.classList && ae.classList.contains('produto-card');
+      const emCategoria = ae && ae.classList && (ae.classList.contains('cat-btn') || ae.classList.contains('subcat-btn'));
       if (modalPag && modalPag.classList.contains('ativo')) { e.preventDefault(); confirmarPagamento(); }
-      else if (document.activeElement !== campoBusca && !dentroDeModal) { e.preventDefault(); if (carrinho && carrinho.length) abrirPagamento(); }
+      else if (ae !== campoBusca && !emProduto && !emCategoria && !dentroDeModal) { e.preventDefault(); if (carrinho && carrinho.length) abrirPagamento(); }
     }
   });
 
@@ -1617,24 +1624,28 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     });
   }
 
-  // Mostra as subcategorias da categoria ativa (derivadas dos produtos) como chips
+  // Mostra as subcategorias da categoria ativa (definidas pelo dono + as dos produtos) como chips
   function renderSubcategorias() {
     const div = document.getElementById('subcategorias-lista');
     if (!div) return;
     if (!categoriaAtiva || categoriaAtiva === 'Mais Vendidos') { div.style.display = 'none'; div.innerHTML = ''; return; }
-    const subs = [];
-    const vistos = new Set();
+    const set = new Map();
+    // 1) subcategorias DEFINIDAS pelo dono no monitor
+    const definidas = (sessaoAtual && sessaoAtual.subcategorias && sessaoAtual.subcategorias[categoriaAtiva]) || [];
+    definidas.forEach(s => { if (s) set.set(String(s).toLowerCase(), s); });
+    // 2) subcategorias que já existem nos produtos desta categoria
     produtos.forEach(p => {
       const pc = (p.categoria && String(p.categoria).trim()) ? p.categoria : 'Outros';
       if (pc !== categoriaAtiva) return;
       const s = (p.subcategoria && String(p.subcategoria).trim()) ? p.subcategoria.trim() : null;
-      if (s && !vistos.has(s.toLowerCase())) { vistos.add(s.toLowerCase()); subs.push(s); }
+      if (s && !set.has(s.toLowerCase())) set.set(s.toLowerCase(), s);
     });
+    const subs = Array.from(set.values());
     if (subs.length === 0) { div.style.display = 'none'; div.innerHTML = ''; return; }
     div.style.display = 'flex';
     const chip = (txt, val) => {
       const ativo = (subcategoriaAtiva === val);
-      return `<button onclick="filtrarSubcategoria(${val===null?'null':`'${String(val).replace(/'/g,"\\'")}'`})" style="padding:6px 12px;border-radius:20px;border:1.5px solid ${ativo?'#e05c00':'#e2e8f0'};background:${ativo?'#fff7ed':'white'};color:${ativo?'#e05c00':'#475569'};font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">${txt}</button>`;
+      return `<button class="subcat-btn" onclick="filtrarSubcategoria(${val===null?'null':`'${String(val).replace(/'/g,"\\'")}'`})" style="padding:6px 12px;border-radius:20px;border:1.5px solid ${ativo?'#e05c00':'#e2e8f0'};background:${ativo?'#fff7ed':'white'};color:${ativo?'#e05c00':'#475569'};font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">${txt}</button>`;
     };
     div.innerHTML = chip('Todos', null) + subs.map(s => chip(s, s)).join('');
   }
@@ -2019,6 +2030,9 @@ async function scannerFechar() {
   // carrinho. Para definir uma quantidade exata, o vendedor usa o botão ✏️ dentro do
   // próprio carrinho — isso evita ambiguidade entre "clique simples" e "clique para editar".
   function cliqueNoProduto(prod) {
+    // 1º clique: adiciona +1. 2º clique (já no carrinho): abre o teclado para digitar a quantidade.
+    const jaNoCarrinho = carrinho.find(i => i.nome === prod.nome);
+    if (jaNoCarrinho) { abrirTecladoQuantidade(prod); return; }
     adicionarAoCarrinho(prod);
   }
 
@@ -3165,51 +3179,18 @@ async function scannerFechar() {
 
   /* ===== SISTEMA DE TRADUÇÕES ===== */
   const TRADUCOES = {
-    pt: {
-      carrinho: '🛒 Carrinho de Compras',
-      itens: 'Itens:',
-      subtotal: 'Subtotal:',
-      total: 'TOTAL:',
-      limpar: '🗑 Limpar tudo',
-      pagar: '💳 PAGAR',
-      pesquisa: 'Pesquisar por nome, código ou código de barras...',
-      menu: 'Menu',
-      sair: 'Sair',
-      addProduto: '+ Adicionar Produto',
-      maisVendidos: '🔥 Mais Vendidos',
-      carrinhoVazio: 'Nenhum produto adicionado.\nClica num produto para adicionar.',
-      totalLabel: 'TOTAL:',
-    },
-    en: {
-      carrinho: '🛒 Shopping Cart',
-      itens: 'Items:',
-      subtotal: 'Subtotal:',
-      total: 'TOTAL:',
-      limpar: '🗑 Clear all',
-      pagar: '💳 PAY',
-      pesquisa: 'Search by name, code or barcode...',
-      menu: 'Menu',
-      sair: 'Exit',
-      addProduto: '+ Add Product',
-      maisVendidos: '🔥 Best Sellers',
-      carrinhoVazio: 'No products added.\nClick a product to add.',
-      totalLabel: 'TOTAL:',
-    },
-    fr: {
-      carrinho: '🛒 Panier d\'achat',
-      itens: 'Articles:',
-      subtotal: 'Sous-total:',
-      total: 'TOTAL:',
-      limpar: '🗑 Tout effacer',
-      pagar: '💳 PAYER',
-      pesquisa: 'Rechercher par nom, code ou code-barres...',
-      menu: 'Menu',
-      sair: 'Quitter',
-      addProduto: '+ Ajouter Produit',
-      maisVendidos: '🔥 Meilleures Ventes',
-      carrinhoVazio: 'Aucun produit ajouté.\nCliquez sur un produit pour ajouter.',
-      totalLabel: 'TOTAL:',
-    }
+    pt: { carrinho:'🛒 Carrinho de Compras', itens:'Itens:', subtotal:'Subtotal:', total:'TOTAL:', limpar:'🗑 Limpar tudo', pagar:'💳 PAGAR', pesquisa:'Pesquisar por nome, código ou código de barras...', menu:'Menu', sair:'Sair', addProduto:'+ Adicionar Produto', maisVendidos:'🔥 Mais Vendidos', carrinhoVazio:'Nenhum produto adicionado.\nClica num produto para adicionar.', totalLabel:'TOTAL:',
+      receber:'Receber:', troco:'Troco:', confirmarVenda:'✅ Confirmar<br>Venda', mNumerario:'💵 Numerário', mCartao:'💳 Cartão de depósito', mTransferencia:'📱 Transferência',
+      menuItens:{ 'recibo-venda':'Recibo de venda','retornar':'Retornar','perda':'Perda','fazer-etiqueta':'Fazer Etiqueta','aviso-despacho':'Aviso de despacho','transferir-loja':'Transferir p/ outra loja','etiquetas':'Criar Código de Barras','impressora':'Impressora & Scanner','lingua':'Idioma','suporte':'Suporte','upgrade':'Ver planos / Upgrade','instalacao':'Sobre o Sistema' } },
+    en: { carrinho:'🛒 Shopping Cart', itens:'Items:', subtotal:'Subtotal:', total:'TOTAL:', limpar:'🗑 Clear all', pagar:'💳 PAY', pesquisa:'Search by name, code or barcode...', menu:'Menu', sair:'Exit', addProduto:'+ Add Product', maisVendidos:'🔥 Best Sellers', carrinhoVazio:'No products added.\nClick a product to add.', totalLabel:'TOTAL:',
+      receber:'Received:', troco:'Change:', confirmarVenda:'✅ Confirm<br>Sale', mNumerario:'💵 Cash', mCartao:'💳 Deposit Card', mTransferencia:'📱 Transfer',
+      menuItens:{ 'recibo-venda':'Sale Receipt','retornar':'Return','perda':'Loss','fazer-etiqueta':'Make Label','aviso-despacho':'Dispatch Notice','transferir-loja':'Transfer to store','etiquetas':'Create Barcode','impressora':'Printer & Scanner','lingua':'Language','suporte':'Support','upgrade':'Plans / Upgrade','instalacao':'About System' } },
+    fr: { carrinho:'🛒 Panier d\'achat', itens:'Articles:', subtotal:'Sous-total:', total:'TOTAL:', limpar:'🗑 Tout effacer', pagar:'💳 PAYER', pesquisa:'Rechercher par nom, code ou code-barres...', menu:'Menu', sair:'Quitter', addProduto:'+ Ajouter Produit', maisVendidos:'🔥 Meilleures Ventes', carrinhoVazio:'Aucun produit ajouté.\nCliquez sur un produit pour ajouter.', totalLabel:'TOTAL:',
+      receber:'Reçu:', troco:'Monnaie:', confirmarVenda:'✅ Confirmer<br>Vente', mNumerario:'💵 Espèces', mCartao:'💳 Carte de dépôt', mTransferencia:'📱 Virement',
+      menuItens:{ 'recibo-venda':'Reçu de vente','retornar':'Retour','perda':'Perte','fazer-etiqueta':'Faire Étiquette','aviso-despacho':'Avis d\'expédition','transferir-loja':'Transférer vers magasin','etiquetas':'Créer Code-barres','impressora':'Imprimante & Scanner','lingua':'Langue','suporte':'Support','upgrade':'Plans / Upgrade','instalacao':'À propos' } },
+    zh: { carrinho:'🛒 购物车', itens:'件数:', subtotal:'小计:', total:'总计:', limpar:'🗑 清空', pagar:'💳 付款', pesquisa:'按名称、编号或条形码搜索...', menu:'菜单', sair:'退出', addProduto:'+ 添加产品', maisVendidos:'🔥 热销', carrinhoVazio:'尚未添加产品。\n点击产品即可添加。', totalLabel:'总计:',
+      receber:'收款:', troco:'找零:', confirmarVenda:'✅ 确认<br>销售', mNumerario:'💵 现金', mCartao:'💳 存款卡', mTransferencia:'📱 转账',
+      menuItens:{ 'recibo-venda':'销售收据','retornar':'退货','perda':'损耗','fazer-etiqueta':'制作标签','aviso-despacho':'发货通知','transferir-loja':'转到其他店','etiquetas':'生成条形码','impressora':'打印机和扫描仪','lingua':'语言','suporte':'客服','upgrade':'套餐/升级','instalacao':'关于系统' } }
   };
 
   function aplicarTraducao(lang) {
@@ -3256,10 +3237,16 @@ async function scannerFechar() {
       const tituloCat = document.getElementById('titulo-categoria');
       if (tituloCat) tituloCat.textContent = t.maisVendidos;
     }
+
+    // Elementos marcados com data-tr / data-tr-html (pagamento, etc.)
+    document.querySelectorAll('[data-tr]').forEach(el => { const k = el.getAttribute('data-tr'); if (t[k] != null) el.textContent = t[k]; });
+    document.querySelectorAll('[data-tr-html]').forEach(el => { const k = el.getAttribute('data-tr-html'); if (t[k] != null) el.innerHTML = t[k]; });
+    // Menu (labels traduzidos)
+    if (typeof renderMenuGrelha === 'function') renderMenuGrelha();
   }
 
   function abrirModalLingua() {
-    ['pt','en','fr'].forEach(l => {
+    ['pt','en','fr','zh'].forEach(l => {
       const btn = document.getElementById('lang-'+l);
       const check = document.getElementById('check-'+l);
       if (btn && check) {
@@ -3275,7 +3262,7 @@ async function scannerFechar() {
   function mudarLingua(lang) {
     linguaActual = lang;
     localStorage.setItem('pdv_lingua', lang);
-    ['pt','en','fr'].forEach(l => {
+    ['pt','en','fr','zh'].forEach(l => {
       const btn = document.getElementById('lang-'+l);
       const check = document.getElementById('check-'+l);
       if (btn && check) {
@@ -3285,7 +3272,7 @@ async function scannerFechar() {
       }
     });
     aplicarTraducao(lang);
-    const nomes = { pt: 'Português activado!', en: 'English activated!', fr: 'Français activé!' };
+    const nomes = { pt: 'Português activado!', en: 'English activated!', fr: 'Français activé!', zh: '中文已启用!' };
     mostrarNotif('🌐 ' + (nomes[lang] || 'Língua alterada!'));
     document.getElementById('modal-lingua').classList.remove('ativo');
   }
@@ -4493,7 +4480,9 @@ async function scannerFechar() {
       if (item.acao) btn.dataset.acao = item.acao;
       // Se há despacho novo, marca o botão a vermelho
       if (item.acao === 'avisoDespacho' && haDespachoNovo) btn.classList.add('menu-item-alerta');
-      btn.innerHTML = `<span class="menu-icone-quadrado ${item.cor}">${item.emoji}</span><span class="menu-icone-label">${item.label}</span>`;
+      const _trM = (typeof TRADUCOES !== 'undefined' && TRADUCOES[linguaActual] && TRADUCOES[linguaActual].menuItens) ? TRADUCOES[linguaActual].menuItens : null;
+      const _lbl = (_trM && _trM[item.id]) ? _trM[item.id] : item.label;
+      btn.innerHTML = `<span class="menu-icone-quadrado ${item.cor}">${item.emoji}</span><span class="menu-icone-label">${_lbl}</span>`;
       btn.onclick = () => executarAcaoMenu(item.acao);
       btn.oncontextmenu = (e) => { e.preventDefault(); abrirMenuContexto(e, item.id); };
       let pressaoLonga;
@@ -4828,7 +4817,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.70';
+  const VERSAO_ATUAL = '2.9.73';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.

@@ -39,12 +39,19 @@
 <div class="box">
   <div style="text-align:center;margin-bottom:20px;">
     <img src="logo.png" alt="Spap-Sercriativo — Tecnologia Varejista de Ponta" style="width:280px;max-width:90%;">
-    <div style="font-size:11px;color:#94a3b8;margin-top:6px;">Sistema de Ponto de Venda</div>
+    <div style="font-size:11px;color:#94a3b8;margin-top:6px;" id="lg-sub">Sistema de Ponto de Venda</div>
+  </div>
+
+  <div style="display:flex;gap:6px;justify-content:center;margin-bottom:16px;flex-wrap:wrap;">
+    <button type="button" onclick="lgLingua('pt')" id="lgl-pt" style="padding:6px 10px;border:1.5px solid #1a56a0;background:#eff6ff;border-radius:8px;cursor:pointer;font-size:12px;font-weight:bold;">🇲🇿 PT</button>
+    <button type="button" onclick="lgLingua('en')" id="lgl-en" style="padding:6px 10px;border:1.5px solid #ddd;background:white;border-radius:8px;cursor:pointer;font-size:12px;font-weight:bold;">🇬🇧 EN</button>
+    <button type="button" onclick="lgLingua('fr')" id="lgl-fr" style="padding:6px 10px;border:1.5px solid #ddd;background:white;border-radius:8px;cursor:pointer;font-size:12px;font-weight:bold;">🇫🇷 FR</button>
+    <button type="button" onclick="lgLingua('zh')" id="lgl-zh" style="padding:6px 10px;border:1.5px solid #ddd;background:white;border-radius:8px;cursor:pointer;font-size:12px;font-weight:bold;">🇨🇳 中文</button>
   </div>
 
   <div class="campo"><span>👤</span><input type="email" id="email" placeholder="Email" autocomplete="email" /></div>
   <div class="campo"><span>🔒</span><input type="password" id="senha" placeholder="Senha" autocomplete="current-password" /></div>
-  <span class="link-esqueci" onclick="esqueceuSenha()">Esqueci a senha</span>
+  <span class="link-esqueci" id="lg-esqueci" onclick="esqueceuSenha()">Esqueci a senha</span>
 
   <button class="btn-principal" id="btn-entrar" onclick="fazerLogin()" style="margin-top:14px;">ENTRAR</button>
   <div class="erro-msg" id="erro-msg"></div>
@@ -199,6 +206,29 @@
     i.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); fazerLogin(); } });
   });
   document.getElementById('email').focus();
+
+  // ===== IDIOMAS no login =====
+  const LG_TR = {
+    pt: { sub:'Sistema de Ponto de Venda', email:'Email', senha:'Senha', esqueci:'Esqueci a senha', entrar:'ENTRAR' },
+    en: { sub:'Point of Sale System', email:'Email', senha:'Password', esqueci:'Forgot password', entrar:'LOG IN' },
+    fr: { sub:'Système de Point de Vente', email:'E-mail', senha:'Mot de passe', esqueci:'Mot de passe oublié', entrar:'SE CONNECTER' },
+    zh: { sub:'销售点系统', email:'邮箱', senha:'密码', esqueci:'忘记密码', entrar:'登录' }
+  };
+  function lgAplicar(lang) {
+    const t = LG_TR[lang] || LG_TR.pt;
+    const set = (id, prop, val) => { const el = document.getElementById(id); if (el) el[prop] = val; };
+    set('lg-sub','textContent',t.sub);
+    set('email','placeholder',t.email);
+    set('senha','placeholder',t.senha);
+    set('lg-esqueci','textContent',t.esqueci);
+    set('btn-entrar','textContent',t.entrar);
+    ['pt','en','fr','zh'].forEach(l => {
+      const b = document.getElementById('lgl-'+l);
+      if (b) { b.style.borderColor = l===lang?'#1a56a0':'#ddd'; b.style.background = l===lang?'#eff6ff':'white'; }
+    });
+  }
+  function lgLingua(lang) { try { localStorage.setItem('pdv_lingua', lang); } catch(e){} lgAplicar(lang); }
+  lgAplicar((function(){ try { return localStorage.getItem('pdv_lingua') || 'pt'; } catch(e){ return 'pt'; } })());
 </script>
 <script>
 let eventoInstalar = null;
