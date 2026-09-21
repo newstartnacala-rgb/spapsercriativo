@@ -252,5 +252,37 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 window.addEventListener('appinstalled', () => { const b = document.getElementById('btn-instalar-app'); if (b) b.remove(); });
 </script>
+
+<!-- ===== GOOGLE TRADUTOR (traduz a pagina toda) ===== -->
+<div id="google_translate_element" style="display:none;"></div>
+<style>
+  .goog-te-banner-frame.skiptranslate, .goog-te-gadget { display:none !important; }
+  body { top:0 !important; }
+  .goog-logo-link, .goog-te-gadget span { display:none !important; }
+  #goog-gt-tt, .goog-te-balloon-frame { display:none !important; }
+  font.goog-text-highlight { background:none !important; box-shadow:none !important; }
+  .skiptranslate iframe { visibility:hidden !important; height:0 !important; }
+</style>
+<script>
+function googleTranslateElementInit(){
+  new google.translate.TranslateElement({pageLanguage:'pt', includedLanguages:'pt,en,fr,zh-CN', autoDisplay:false}, 'google_translate_element');
+}
+function traduzirPagina(lang){
+  if(lang==='zh') lang='zh-CN';
+  try{ localStorage.setItem('pdv_lingua', lang); }catch(e){}
+  var val = (!lang || lang==='pt') ? '' : '/pt/'+lang;
+  document.cookie = 'googtrans='+val+';path=/';
+  try{ document.cookie = 'googtrans='+val+';path=/;domain=.'+location.hostname; }catch(e){}
+  var combo = document.querySelector('.goog-te-combo');
+  if(combo && val){ combo.value = lang; combo.dispatchEvent(new Event('change')); }
+  else { location.reload(); }
+}
+// Os botoes de idioma que ja existem passam a usar o Google Tradutor
+window.mudarLingua = function(l){ traduzirPagina(l); };
+window.lgLingua = function(l){ traduzirPagina(l); };
+window.mudarLinguaMonitor = function(l){ traduzirPagina(l); };
+</script>
+<script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
 </body>
 </html>
