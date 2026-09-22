@@ -2459,8 +2459,23 @@ async function scannerFechar() {
       });
     } catch(e) {}
 
+    // SOBRA AUTOMÁTICA: se entregou mais do que as vendas registadas (menos gastos), guarda a sobra sozinho.
+    const sobra = Math.round((dinheiro - (totalHoje - gastos)) * 100) / 100;
+    let msgSobra = '';
+    if (sobra > 0) {
+      const diaStr = new Date().toISOString().slice(0, 10);
+      try {
+        await supabaseClient.from('caixa_sobras').insert({
+          loja_id: sessaoAtual.lojaId, dia: diaStr,
+          vendedor_codigo: sessaoAtual.vendedorCodigo || null,
+          valor: sobra, usado_no_inventario: false
+        });
+        msgSobra = ' Sobra de MT ' + sobra.toFixed(2) + ' guardada automaticamente.';
+      } catch(e) {}
+    }
+
     fecharModalEntregar();
-    mostrarNotif('✅ Entrega registada. A terminar sessão...');
+    mostrarNotif('✅ Entrega registada.' + msgSobra + ' A terminar sessão...');
     setTimeout(async () => {
       sessionStorage.removeItem('pdv_vendedor_codigo');
       await supabaseClient.auth.signOut();
@@ -4819,7 +4834,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.77';
+  const VERSAO_ATUAL = '2.9.78';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
