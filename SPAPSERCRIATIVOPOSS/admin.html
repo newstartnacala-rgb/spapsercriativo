@@ -204,7 +204,7 @@ async function iniciar() {
 async function carregarLojas() {
   const { data, error } = await supabaseClient
     .from('lojas')
-    .select('id, nome, telefone, endereco, email_dono, plano, estado, numero_transferencia, criado_em, data_expiracao')
+    .select('id, nome, telefone, endereco, email_dono, plano, estado, numero_transferencia, criado_em, data_expiracao, data_upgrade')
     .order('criado_em', { ascending: false });
 
   if (error) { notif('❌ Erro ao carregar: ' + error.message, true); return; }
@@ -365,20 +365,33 @@ function renderLojas() {
     const en = estadoNorm(l.estado);
     const data = l.criado_em ? new Date(l.criado_em).toLocaleDateString('pt-PT') : '—';
     const telLimpo = (l.telefone || '').replace(/\D/g, '');
+    // Datas de subscrição
+    const upg = l.data_upgrade ? new Date(l.data_upgrade).toLocaleDateString('pt-PT') : null;
+    let expHtml = '', alerta = false;
+    if (l.data_expiracao) {
+      const exp = new Date(l.data_expiracao);
+      const dias = Math.ceil((exp - new Date()) / 86400000);
+      const cor = dias < 0 ? '#dc2626' : (dias <= 3 ? '#dc2626' : (dias <= 7 ? '#d97706' : '#16a34a'));
+      const txt = dias < 0 ? ('⚠️ EXPIROU há ' + Math.abs(dias) + ' dia(s)') : (dias + ' dia(s) restantes');
+      expHtml = `<br>⏳ Expira: ${exp.toLocaleDateString('pt-PT')} · <b style="color:${cor}">${txt}</b>`;
+      if (dias <= 3) alerta = true;
+    }
+    const upgHtml = upg ? `<br>⬆️ Upgrade em ${upg}` : '';
     return `
-    <div class="loja-card">
+    <div class="loja-card" ${alerta ? 'style="border:2px solid #dc2626;background:#fff5f5;"' : ''}>
       <div class="loja-topo">
         <div>
           <div class="loja-nome">🏪 ${l.nome || '(sem nome)'}</div>
           <div class="loja-info">
             📧 ${l.email_dono || '<span style="color:#cbd5e1;">sem email registado</span>'}<br>
             📱 ${l.telefone || '—'}${telLimpo ? ' · <a href="https://wa.me/' + (telLimpo.startsWith('258') ? telLimpo : '258' + telLimpo) + '" target="_blank">WhatsApp</a>' : ''}<br>
-            📅 Registada em ${data}${l.numero_transferencia ? ' · 💳 Transf: ' + l.numero_transferencia : ''}
+            📅 Registada em ${data}${l.numero_transferencia ? ' · 💳 Transf: ' + l.numero_transferencia : ''}${upgHtml}${expHtml}
           </div>
         </div>
         <div style="text-align:right;display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
           <span class="badge ${en}">${textoEstado(l.estado)}</span>
           <span class="badge trial">${textoPlano(l.plano)}</span>
+          ${alerta ? '<span style="font-size:11px;color:#dc2626;font-weight:bold;">🔔 A expirar!</span>' : ''}
         </div>
       </div>
       <div class="loja-acoes">
@@ -387,55 +400,75 @@ function renderLojas() {
           <option value="pro" ${l.plano==='pro'||l.plano==='bronze'?'selected':''}>🥈 Médio — MT 1.500/mês</option>
           <option value="anual" ${l.plano==='anual'?'selected':''}>🥇 Avançado — MT 2.000/mês</option>
         </select>
-        ${en !== 'activo' ? `<button class="btn btn-activar" onclick="mudarEstado('${l.id}', 'activo')">✅ Activar</button>` : ''}
-        ${en === 'activo' ? `<button class="btn btn-activar" onclick="mudarEstado('${l.id}', 'activo')">💾 Guardar plano</button>` : ''}
+        ${en !== 'activo' ? `<button class="btn btn-activar" onclick="mudarEstado('${l.id}', 'activo')">✅ Activar (paga agora)</button>` : `<button class="btn btn-activar" onclick="mudarEstado('${l.id}', 'activo')">💾 Renovar / Guardar</button>`}
         ${en !== 'suspenso' ? `<button class="btn btn-suspender" onclick="mudarEstado('${l.id}', 'suspenso')">🚫 Suspender</button>` : ''}
         ${en !== 'pendente' ? `<button class="btn btn-pendente" onclick="mudarEstado('${l.id}', 'pendente')">⏳ Pendente</button>` : ''}
-        <button class="btn" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;" onclick="alertarExpiracao('${l.id}')">🔔 Alertar expiração (3 dias)</button>
+        <button class="btn" style="background:#eff6ff;color:#1a56a0;border:1px solid #bfdbfe;" onclick="adicionarDias('${l.id}')">➕ Dias (manual)</button>
+        <button class="btn" style="background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;" onclick="eliminarLoja('${l.id}', ${JSON.stringify((l.nome||'').replace(/"/g,'&quot;'))})">🗑 Eliminar</button>
       </div>
     </div>`;
   }).join('');
 }
 
-async function alertarExpiracao(id) {
-  const dias = prompt('Em quantos dias expira o pacote desta loja?\n(o dono verá a contagem: verde → laranja → vermelho)', '3');
+async function adicionarDias(id) {
+  const loja = lojas.find(l => l.id === id);
+  const dias = prompt('Quantos dias queres ADICIONAR a esta loja?\n(soma aos dias que já tem; útil quando o dono não está disponível)', '30');
   if (dias === null) return;
   const n = parseInt(dias);
-  if (isNaN(n) || n < 0) { notif('❌ Número de dias inválido.', true); return; }
-  const dataExpira = new Date();
-  dataExpira.setDate(dataExpira.getDate() + n);
+  if (isNaN(n) || n === 0) { notif('❌ Número de dias inválido.', true); return; }
+  // base = expiração atual (se ainda no futuro) senão a partir de hoje
+  let base = new Date();
+  if (loja && loja.data_expiracao) { const exp = new Date(loja.data_expiracao); if (exp > base) base = exp; }
+  base.setDate(base.getDate() + n);
   const { data, error } = await supabaseClient
-    .from('lojas')
-    .update({ data_expiracao: dataExpira.toISOString() })
-    .eq('id', id).select();
-  if (error) { notif('❌ Erro: ' + error.message + ' (corre o SQL v2.4.3)', true); return; }
+    .from('lojas').update({ data_expiracao: base.toISOString() }).eq('id', id).select();
+  if (error) { notif('❌ Erro: ' + error.message + ' (corre o SQL v2.9.77)', true); return; }
   if (!data || !data.length) { notif('❌ Não gravou. Corre o SQL de permissões admin.', true); return; }
-  notif('🔔 Alerta enviado! O dono verá a contagem de ' + n + ' dia(s) no monitor.');
+  if (loja) loja.data_expiracao = data[0].data_expiracao;
+  renderLojas();
+  notif('✅ +' + n + ' dia(s). Nova expiração: ' + new Date(base).toLocaleDateString('pt-PT'));
+}
+
+async function eliminarLoja(id, nome) {
+  if (!confirm('⚠️ ELIMINAR a loja "' + nome + '"?\n\nIsto apaga TUDO desta loja (produtos, vendas, membros) e NÃO se pode desfazer.')) return;
+  if (!confirm('Tens a certeza ABSOLUTA?\n\nEscreve mentalmente: vou perder tudo de "' + nome + '". Clica OK só se for mesmo para apagar.')) return;
+  const { error } = await supabaseClient.rpc('eliminar_loja', { p_loja: id });
+  if (error) { notif('❌ Erro ao eliminar: ' + error.message + ' (corre o SQL v2.9.77)', true); return; }
+  lojas = lojas.filter(l => l.id !== id);
+  renderContadores();
+  renderLojas();
+  notif('🗑 Loja "' + nome + '" eliminada por completo.');
 }
 
 async function mudarEstado(id, novoEstado) {
   const plano = document.getElementById('plano-' + id).value;
   const updateObj = { estado: novoEstado, plano: plano };
-  // Ao ativar (loja paga), limpa a data de expiração para o monitor não mostrar "EXPIROU".
-  if (novoEstado === 'activo') updateObj.data_expiracao = null;
+  // Ao activar (loja PAGOU): regista a data de upgrade e calcula a expiração automaticamente.
+  if (novoEstado === 'activo') {
+    const agora = new Date();
+    const dur = (plano === 'anual') ? 365 : 30;   // anual = 365 dias, mensais = 30
+    const exp = new Date(agora); exp.setDate(exp.getDate() + dur);
+    updateObj.data_upgrade = agora.toISOString();
+    updateObj.data_expiracao = exp.toISOString();
+  }
   const { data, error } = await supabaseClient
     .from('lojas')
     .update(updateObj)
     .eq('id', id)
     .select();
 
-  if (error) { notif('❌ Erro: ' + error.message, true); return; }
+  if (error) { notif('❌ Erro: ' + error.message + ' (corre o SQL v2.9.77)', true); return; }
   if (!data || data.length === 0) {
-    notif('❌ A alteração não foi gravada! Corre o SQL de permissões do admin no Supabase (atualizacao-v1.6.0-admin.sql).', true);
+    notif('❌ A alteração não foi gravada! Corre o SQL de permissões do admin no Supabase.', true);
     return;
   }
 
   const loja = lojas.find(l => l.id === id);
-  if (loja) { loja.estado = novoEstado; loja.plano = plano; }
+  if (loja) { loja.estado = novoEstado; loja.plano = plano; if (data[0]) { loja.data_upgrade = data[0].data_upgrade; loja.data_expiracao = data[0].data_expiracao; } }
   renderContadores();
   renderLojas();
 
-  if (novoEstado === 'activo') notif('✅ "' + (loja?.nome || 'Loja') + '" activada com o plano ' + plano + '!');
+  if (novoEstado === 'activo') notif('✅ "' + (loja?.nome || 'Loja') + '" activada! Expira daqui a ' + ((plano==='anual')?'365':'30') + ' dias.');
   else if (novoEstado === 'suspenso') notif('🚫 "' + (loja?.nome || 'Loja') + '" suspensa.');
   else notif('⏳ "' + (loja?.nome || 'Loja') + '" marcada como pendente.');
 }
