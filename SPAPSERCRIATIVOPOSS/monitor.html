@@ -900,11 +900,16 @@ async function iniciar() {
       }
     }
 
-    // Bloqueio: loja não activa não acede ao monitor
-    if (membros && membros.length > 0 && ((membros[0].lojas && membros[0].lojas.estado) || 'pendente') !== 'activo') {
-      await supabaseClient.auth.signOut();
-      window.location.href = 'login.html?estado=' + encodeURIComponent((membros[0].lojas && membros[0].lojas.estado) || 'pendente');
-      return;
+    // Bloqueio: loja não activa OU expirada não acede ao monitor — mostra pagamento
+    if (membros && membros.length > 0 && membros[0].papel === 'admin') {
+      const _est = (membros[0].lojas && membros[0].lojas.estado) || 'pendente';
+      const _exp = (membros[0].lojas && membros[0].lojas.data_expiracao) ? new Date(membros[0].lojas.data_expiracao) : null;
+      const _expirou = _exp && _exp < new Date();
+      if (_est !== 'activo' || _expirou) {
+        const _motivo = _expirou ? ('A subscrição expirou em ' + _exp.toLocaleDateString('pt-PT') + '.') : (_est === 'pendente' ? 'A tua loja ainda não foi activada.' : 'A tua loja está suspensa.');
+        mostrarEcraSuspenso(_motivo);
+        return;
+      }
     }
 
     if (!membros || membros.length === 0 || (membros[0].papel !== 'admin' && membros[0].papel !== 'gerente')) {
@@ -2416,6 +2421,29 @@ async function montarRastreio(id) {
     (precos||[]).forEach(pr => eventos.push({ data:pr.criado_em, emoji:'🏷️', cor:'#be185d', titulo:'Preço alterado', detalhe:'MT '+(pr.preco_antigo||0)+' → MT '+(pr.preco_novo||0) }));
   } catch(e){}
 
+  // MOVIMENTOS DE STOCK (regista TUDO). Mostramos os que NÃO têm já uma explicação
+  // (venda/reposição/perda/transferência) — assim aparecem os ajustes manuais e o inventário.
+  try {
+    const { data: movs } = await supabaseClient.from('produto_movimentos').select('*').eq('produto_id', id).order('criado_em', { ascending: false }).limit(500);
+    (movs || []).forEach(m => {
+      const d = parseInt(m.delta) || 0;
+      if (m.motivo === 'cadastro') return; // já mostramos "Produto cadastrado"
+      const tM = new Date(m.criado_em).getTime();
+      const jaExplicado = eventos.some(e => e.delta != null && e.delta === d && Math.abs(new Date(e.data).getTime() - tM) < 20000);
+      if (!jaExplicado) {
+        const sinal = d > 0 ? '+' : '';
+        eventos.push({
+          data: m.criado_em,
+          emoji: d >= 0 ? '📥' : '🔧',
+          cor: d >= 0 ? '#0891b2' : '#b45309',
+          titulo: 'Ajuste de stock (' + sinal + d + ')',
+          detalhe: 'ficou ' + m.stock_novo + ' (era ' + m.stock_antigo + ') — manual ou inventário',
+          delta: d
+        });
+      }
+    });
+  } catch(e){}
+
   eventos.sort((a,b) => new Date(b.data) - new Date(a.data));
 
   const alertas = [];
@@ -3780,7 +3808,7 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.78';
+const MONITOR_VERSAO = '2.9.83';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -4245,31 +4273,17 @@ async function guardarDadosPerfil() {
   mostrarNotif('✅ Dados guardados!');
 }
 
-let _emailNovoPendente = '';
 async function trocarEmail() {
   const novo = document.getElementById('perfil-in-email').value.trim();
   if (!novo || !novo.includes('@')) { mostrarNotif('❌ Escreve um e-mail válido.', true); return; }
-  if (!confirm('Enviar um código para ' + novo + '?')) return;
-  const { error } = await supabaseClient.auth.updateUser({ email: novo });
+  if (!confirm('Trocar o e-mail para ' + novo + '?\nVais receber um link de confirmação no e-mail NOVO. A conta só muda depois de clicares nesse link.')) return;
+  const { error } = await supabaseClient.auth.updateUser(
+    { email: novo },
+    { emailRedirectTo: window.location.origin + '/monitor.html' }
+  );
   if (error) { mostrarNotif('❌ ' + error.message, true); return; }
-  _emailNovoPendente = novo;
-  document.getElementById('bloco-codigo-email').style.display = 'block';
-  const bt = document.getElementById('btn-trocar-email'); if (bt) bt.textContent = '🔄 Reenviar código';
-  mostrarNotif('✅ Código enviado para o e-mail NOVO. Escreve-o aqui em baixo.');
-}
-
-async function confirmarCodigoEmail() {
-  const codigo = (document.getElementById('perfil-in-codigo').value || '').trim();
-  const alvo = _emailNovoPendente || document.getElementById('perfil-in-email').value.trim();
-  if (!codigo) { mostrarNotif('❌ Escreve o código que recebeste.', true); return; }
-  if (!alvo) { mostrarNotif('❌ Escreve primeiro o e-mail novo e pede o código.', true); return; }
-  const { error } = await supabaseClient.auth.verifyOtp({ email: alvo, token: codigo, type: 'email_change' });
-  if (error) { mostrarNotif('❌ Código errado ou expirado. ' + error.message, true); return; }
-  mostrarNotif('✅ E-mail trocado com sucesso! Já podes entrar com ' + alvo);
+  mostrarNotif('✅ Link enviado para ' + novo + '. Abre o email e clica no link para confirmar a troca.');
   document.getElementById('perfil-in-email').value = '';
-  document.getElementById('perfil-in-codigo').value = '';
-  document.getElementById('bloco-codigo-email').style.display = 'none';
-  _emailNovoPendente = '';
 }
 
 async function trocarSenha() {
@@ -4949,12 +4963,7 @@ async function carregarContagensEquipa() {
 
       <label style="font-size:13px;color:#64748b;font-weight:600;">Trocar e-mail de acesso</label>
       <input type="email" id="perfil-in-email" placeholder="novo@email.com" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:15px;margin:5px 0 8px;box-sizing:border-box;">
-      <button id="btn-trocar-email" onclick="trocarEmail()" style="width:100%;padding:11px;background:#eff6ff;color:#1a56a0;border:1px solid #bfdbfe;border-radius:9px;font-weight:bold;cursor:pointer;margin-bottom:8px;">✉️ Enviar código</button>
-      <div id="bloco-codigo-email" style="display:none;margin-bottom:16px;">
-        <label style="font-size:13px;color:#64748b;font-weight:600;">Código recebido no e-mail novo</label>
-        <input type="text" inputmode="numeric" id="perfil-in-codigo" placeholder="Ex: 123456" style="width:100%;padding:11px;border:1.5px solid #86efac;border-radius:9px;font-size:15px;margin:5px 0 8px;box-sizing:border-box;letter-spacing:3px;text-align:center;">
-        <button onclick="confirmarCodigoEmail()" style="width:100%;padding:11px;background:#16a34a;color:white;border:none;border-radius:9px;font-weight:bold;cursor:pointer;">✅ Confirmar código e trocar</button>
-      </div>
+      <button id="btn-trocar-email" onclick="trocarEmail()" style="width:100%;padding:11px;background:#eff6ff;color:#1a56a0;border:1px solid #bfdbfe;border-radius:9px;font-weight:bold;cursor:pointer;margin-bottom:16px;">✉️ Trocar e-mail</button>
 
       <label style="font-size:13px;color:#64748b;font-weight:600;">Trocar senha</label>
       <input type="password" id="perfil-in-senha" placeholder="Nova senha (mín. 6 caracteres)" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:15px;margin:5px 0 8px;box-sizing:border-box;">
@@ -4997,6 +5006,74 @@ window.lgLingua = function(l){ traduzirPagina(l); };
 window.mudarLinguaMonitor = function(l){ traduzirPagina(l); };
 </script>
 <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+
+<!-- ===== ECRA DE SUSPENSAO COM PAGAMENTO (loja + monitor) ===== -->
+<script>
+async function _lerConfigSub(chave){
+  try { const { data } = await supabaseClient.from('config_global').select('valor').eq('chave', chave).maybeSingle();
+    if (data && data.valor) { try { return JSON.parse(data.valor); } catch(e) { return data.valor; } } } catch(e){}
+  return null;
+}
+async function mostrarEcraSuspenso(motivo){
+  let m = {}, wa = null;
+  try { m = (await _lerConfigSub('metodos_subscricao')) || {}; } catch(e){}
+  try { wa = await _lerConfigSub('link_whatsapp_pagamento'); } catch(e){}
+  const linha = (icon, nome, num, titular) => (num ? `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:8px;"><div style="font-weight:bold;">${icon} ${nome}</div><div style="font-size:18px;font-weight:bold;color:#0f172a;">${num}</div>${titular?`<div style="font-size:13px;color:#16a34a;">&#128100; ${titular}</div>`:''}</div>` : '');
+  const banco = (m.banco_conta) ? `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:8px;"><div style="font-weight:bold;">&#127974; ${m.banco_nome||'Banco'}</div><div style="font-size:16px;font-weight:bold;">${m.banco_conta}</div>${m.banco_titular?`<div style="font-size:13px;color:#16a34a;">&#128100; ${m.banco_titular}</div>`:''}</div>` : '';
+  const waBtn = wa ? `<a href="${wa}" target="_blank" style="display:block;text-align:center;background:#16a34a;color:white;padding:14px;border-radius:12px;font-weight:bold;text-decoration:none;margin-top:10px;">&#128172; Enviar comprovativo (WhatsApp)</a>` : '';
+  document.body.innerHTML = `<div style="min-height:100vh;display:flex;align-items:flex-start;justify-content:center;background:#f1f5f9;padding:20px;font-family:system-ui,sans-serif;">
+    <div style="max-width:440px;width:100%;background:white;border-radius:16px;padding:24px;margin-top:16px;box-shadow:0 8px 30px rgba(0,0,0,.1);">
+      <div style="text-align:center;font-size:46px;">&#128274;</div>
+      <h2 style="text-align:center;margin:8px 0;color:#dc2626;">Loja suspensa</h2>
+      <p style="text-align:center;color:#475569;font-size:14px;line-height:1.5;">${motivo||'A tua subscricao terminou.'}<br>Para voltar a usar, paga por um dos metodos e envia o comprovativo.</p>
+      <div style="margin-top:16px;">${linha('&#128241;','M-Pesa', m.mpesa, m.mpesa_nome)}${linha('&#128154;','e-Mola', m.emola, m.emola_nome)}${banco}</div>
+      ${waBtn}
+      <button onclick="location.reload()" style="width:100%;margin-top:10px;padding:12px;background:#eff6ff;color:#1a56a0;border:1px solid #bfdbfe;border-radius:12px;font-weight:bold;cursor:pointer;">&#128260; Ja paguei &mdash; verificar de novo</button>
+      <div style="text-align:center;margin-top:12px;"><a href="login.html" style="color:#94a3b8;font-size:13px;">Sair</a></div>
+    </div></div>`;
+}
+</script>
+
+
+<!-- ===== SINO DE EMERGENCIA (alarme no monitor do dono) ===== -->
+<style>@keyframes piscaEmerg{0%,100%{background:rgba(220,38,38,.96);}50%{background:rgba(120,10,10,.96);}}</style>
+<script>
+let _alarmeInt=null,_alarmeCtx=null;
+function tocarAlarme(){
+  try{ _alarmeCtx=new (window.AudioContext||window.webkitAudioContext)();
+    const beep=()=>{ try{ const o=_alarmeCtx.createOscillator(),g=_alarmeCtx.createGain();
+      o.type='square'; o.frequency.setValueAtTime(900,_alarmeCtx.currentTime);
+      o.frequency.setValueAtTime(600,_alarmeCtx.currentTime+0.15);
+      g.gain.setValueAtTime(0.35,_alarmeCtx.currentTime); o.connect(g); g.connect(_alarmeCtx.destination);
+      o.start(); o.stop(_alarmeCtx.currentTime+0.3);}catch(e){} };
+    beep(); _alarmeInt=setInterval(beep,650);
+  }catch(e){}
+}
+function pararAlarme(){ if(_alarmeInt){clearInterval(_alarmeInt);_alarmeInt=null;} try{if(_alarmeCtx)_alarmeCtx.close();}catch(e){} _alarmeCtx=null; }
+function mostrarAlarmeEmergencia(a){
+  if(document.getElementById('alarme-emerg'))return;
+  tocarAlarme();
+  try{ if(navigator.vibrate) navigator.vibrate([400,150,400,150,400]); }catch(e){}
+  const div=document.createElement('div'); div.id='alarme-emerg';
+  div.style.cssText='position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;text-align:center;padding:24px;animation:piscaEmerg .7s infinite;';
+  div.innerHTML='<div style="font-size:70px;">&#128680;</div><h1 style="margin:8px 0;font-size:30px;">EMERGENCIA NA LOJA!</h1><p style="font-size:16px;">'+((a.vendedor||'Balconista'))+' pediu ajuda &middot; '+new Date(a.criado_em).toLocaleTimeString('pt-PT')+'</p><button onclick="dispensarAlarme(\''+a.id+'\')" style="margin-top:22px;padding:16px 30px;background:white;color:#dc2626;border:none;border-radius:12px;font-size:16px;font-weight:bold;cursor:pointer;">&#10003; Vi o alerta (parar alarme)</button>';
+  document.body.appendChild(div);
+}
+async function dispensarAlarme(id){
+  pararAlarme(); const d=document.getElementById('alarme-emerg'); if(d)d.remove();
+  try{ await supabaseClient.from('alertas_emergencia').update({visto:true}).eq('id',id); }catch(e){}
+}
+async function verificarEmergencias(){
+  try{ if(typeof lojaId==='undefined'||!lojaId)return;
+    const { data }=await supabaseClient.from('alertas_emergencia').select('*').eq('loja_id',lojaId).eq('visto',false).order('criado_em',{ascending:false}).limit(1);
+    if(data&&data.length) mostrarAlarmeEmergencia(data[0]);
+  }catch(e){}
+}
+setInterval(verificarEmergencias, 12000);
+setTimeout(verificarEmergencias, 4000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) verificarEmergencias(); });
+</script>
 
 </body>
 </html>

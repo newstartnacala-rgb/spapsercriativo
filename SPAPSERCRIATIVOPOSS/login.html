@@ -190,16 +190,13 @@
   async function esqueceuSenha() {
     const email = document.getElementById('email').value.trim();
     if (!email) { mostrarErro('Escreve primeiro o teu email no campo acima.'); return; }
-
     btn.disabled = true;
-    // URL de redirecionamento após o utilizador clicar no link do email
+    // Link que abre a página onde a pessoa mete a NOVA senha
     const redirectUrl = window.location.origin + window.location.pathname.replace('login.html', 'reset-senha.html');
-
     const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: redirectUrl });
     btn.disabled = false;
-
     if (error) { mostrarErro(traduzirErro(error.message)); return; }
-    mostrarSucesso('Email de recuperação enviado! Verifica a tua caixa de entrada e clica no link.');
+    mostrarSucesso('✅ Email enviado! Abre o email, clica no link, e vais poder escrever a nova senha.');
   }
 
   document.querySelectorAll('.campo input').forEach(i => {

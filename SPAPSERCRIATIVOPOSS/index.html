@@ -1263,7 +1263,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     {
       const r = await supabaseClient
         .from('membros_loja')
-        .select('loja_id, papel, nome_exibicao, lojas(nome, estado, numero_transferencia, codigo_agente, codigo_admin, categorias_personalizadas, categorias_ocultas, subcategorias, nome_empresa, vendedores, metodos_pagamento, telefone, endereco, tipo_loja)')
+        .select('loja_id, papel, nome_exibicao, lojas(nome, estado, numero_transferencia, codigo_agente, codigo_admin, categorias_personalizadas, categorias_ocultas, subcategorias, nome_empresa, vendedores, metodos_pagamento, telefone, endereco, tipo_loja, data_expiracao)')
         .eq('user_id', user.id).limit(1);
       membros = r.data; membroError = r.error;
 
@@ -1288,11 +1288,13 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
     const membro = membros[0];
 
-    // ===== BLOQUEIO: só entra se a loja estiver ACTIVA (pagamento confirmado) =====
+    // ===== BLOQUEIO: só entra se a loja estiver ACTIVA e dentro do prazo =====
     const estadoLoja = (membro.lojas && membro.lojas.estado) || 'pendente';
-    if (estadoLoja !== 'activo') {
-      await supabaseClient.auth.signOut();
-      window.location.href = 'login.html?estado=' + encodeURIComponent(estadoLoja);
+    const expLoja = (membro.lojas && membro.lojas.data_expiracao) ? new Date(membro.lojas.data_expiracao) : null;
+    const expirouLoja = expLoja && expLoja < new Date();
+    if (estadoLoja !== 'activo' || expirouLoja) {
+      const motivo = expirouLoja ? ('A subscrição expirou em ' + expLoja.toLocaleDateString('pt-PT') + '.') : (estadoLoja === 'pendente' ? 'A tua loja ainda não foi activada.' : 'A tua loja está suspensa.');
+      mostrarEcraSuspenso(motivo);
       return;
     }
 
@@ -3149,6 +3151,7 @@ async function scannerFechar() {
     // ---- Secção Stock ----
     { id: 'aviso-despacho',     secao: 'stock',   emoji: '🚚', cor: 'cor-laranja',  label: 'Aviso de despacho',        acao: 'avisoDespacho' },
     { id: 'transferir-loja',    secao: 'stock',   emoji: '🔄', cor: 'cor-azul',     label: 'Transferir p/ outra loja', acao: 'transferirLoja' },
+    { id: 'emergencia',         secao: 'stock',   emoji: '🆘', cor: 'cor-vermelho', label: 'Emergência (avisar dono)', acao: 'emergencia' },
     // ---- Secção Outro ----
     { id: 'etiquetas',          secao: 'outro',   emoji: '🏷️', cor: 'cor-amarelo',  label: 'Criar Código de Barras',  acao: 'abrirEtiquetadora' },
     { id: 'impressora',         secao: 'outro',   emoji: '🖨️', cor: 'cor-laranja',  label: 'Impressora & Scanner',    acao: 'abrirImpressora' },
@@ -3191,6 +3194,7 @@ async function scannerFechar() {
     if (acao === 'avisoDespacho') { fecharMenu(); haDespachoNovo = false; marcarDespachoVermelho(false); const nd=document.getElementById('notif-despacho'); if(nd) nd.style.display='none'; abrirAvisoDespacho(); return; }
     if (acao === 'verPerdas') { fecharMenu(); marcarPerdaVermelho(false); abrirVerPerdas(); return; }
     if (acao === 'transferirLoja') { fecharMenu(); abrirTransferencias(); return; }
+    if (acao === 'emergencia') { fecharMenu(); enviarEmergencia(); return; }
     mostrarNotif('🔧 Esta função ainda não está disponível.', false);
   }
 
@@ -4170,6 +4174,16 @@ async function scannerFechar() {
     finally { delete _transfEmProcesso[id]; }
   }
 
+  async function enviarEmergencia() {
+    if (!confirm('🆘 Enviar ALERTA DE EMERGÊNCIA ao dono?\n\nO dono vai ouvir um alarme no monitor dele. Usa só em caso real (pessoas estranhas, assalto, etc.).')) return;
+    try {
+      await supabaseClient.from('alertas_emergencia').insert({
+        loja_id: sessaoAtual.lojaId, vendedor: sessaoAtual.vendedorCodigo || 'balconista'
+      });
+      mostrarNotif('🆘 Alerta enviado ao dono. Mantém a calma.');
+    } catch(e) { mostrarNotif('❌ Não deu para enviar (corre o SQL v2.9.83): ' + (e.message||e), true); }
+  }
+
   function imprimirGuiaDespacho() {
     const d = despachoAtual;
     const dt = new Date(d.criado_em).toLocaleString('pt-PT', {dateStyle:'long', timeStyle:'short'});
@@ -4834,7 +4848,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.78';
+  const VERSAO_ATUAL = '2.9.83';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -4973,6 +4987,34 @@ window.lgLingua = function(l){ traduzirPagina(l); };
 window.mudarLinguaMonitor = function(l){ traduzirPagina(l); };
 </script>
 <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+
+<!-- ===== ECRA DE SUSPENSAO COM PAGAMENTO (loja + monitor) ===== -->
+<script>
+async function _lerConfigSub(chave){
+  try { const { data } = await supabaseClient.from('config_global').select('valor').eq('chave', chave).maybeSingle();
+    if (data && data.valor) { try { return JSON.parse(data.valor); } catch(e) { return data.valor; } } } catch(e){}
+  return null;
+}
+async function mostrarEcraSuspenso(motivo){
+  let m = {}, wa = null;
+  try { m = (await _lerConfigSub('metodos_subscricao')) || {}; } catch(e){}
+  try { wa = await _lerConfigSub('link_whatsapp_pagamento'); } catch(e){}
+  const linha = (icon, nome, num, titular) => (num ? `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:8px;"><div style="font-weight:bold;">${icon} ${nome}</div><div style="font-size:18px;font-weight:bold;color:#0f172a;">${num}</div>${titular?`<div style="font-size:13px;color:#16a34a;">&#128100; ${titular}</div>`:''}</div>` : '');
+  const banco = (m.banco_conta) ? `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:8px;"><div style="font-weight:bold;">&#127974; ${m.banco_nome||'Banco'}</div><div style="font-size:16px;font-weight:bold;">${m.banco_conta}</div>${m.banco_titular?`<div style="font-size:13px;color:#16a34a;">&#128100; ${m.banco_titular}</div>`:''}</div>` : '';
+  const waBtn = wa ? `<a href="${wa}" target="_blank" style="display:block;text-align:center;background:#16a34a;color:white;padding:14px;border-radius:12px;font-weight:bold;text-decoration:none;margin-top:10px;">&#128172; Enviar comprovativo (WhatsApp)</a>` : '';
+  document.body.innerHTML = `<div style="min-height:100vh;display:flex;align-items:flex-start;justify-content:center;background:#f1f5f9;padding:20px;font-family:system-ui,sans-serif;">
+    <div style="max-width:440px;width:100%;background:white;border-radius:16px;padding:24px;margin-top:16px;box-shadow:0 8px 30px rgba(0,0,0,.1);">
+      <div style="text-align:center;font-size:46px;">&#128274;</div>
+      <h2 style="text-align:center;margin:8px 0;color:#dc2626;">Loja suspensa</h2>
+      <p style="text-align:center;color:#475569;font-size:14px;line-height:1.5;">${motivo||'A tua subscricao terminou.'}<br>Para voltar a usar, paga por um dos metodos e envia o comprovativo.</p>
+      <div style="margin-top:16px;">${linha('&#128241;','M-Pesa', m.mpesa, m.mpesa_nome)}${linha('&#128154;','e-Mola', m.emola, m.emola_nome)}${banco}</div>
+      ${waBtn}
+      <button onclick="location.reload()" style="width:100%;margin-top:10px;padding:12px;background:#eff6ff;color:#1a56a0;border:1px solid #bfdbfe;border-radius:12px;font-weight:bold;cursor:pointer;">&#128260; Ja paguei &mdash; verificar de novo</button>
+      <div style="text-align:center;margin-top:12px;"><a href="login.html" style="color:#94a3b8;font-size:13px;">Sair</a></div>
+    </div></div>`;
+}
+</script>
 
 </body>
 </html>
