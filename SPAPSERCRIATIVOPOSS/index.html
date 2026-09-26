@@ -365,6 +365,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
       <span class="topbar-usuario" id="nome-usuario"></span>
       <button id="btn-scan-loja" onclick="abrirScannerLoja()" title="Ler codigo de barras com a camera" style="background:rgba(255,255,255,0.18);border:none;border-radius:50%;width:40px;height:40px;color:white;font-size:19px;cursor:pointer;">📷</button>
       <button id="btn-sync" onclick="atualizarLojaManual()" title="Atualizar produtos da loja" style="background:rgba(255,255,255,0.18);border:none;border-radius:50%;width:40px;height:40px;color:white;font-size:19px;cursor:pointer;">⟳</button>
+      <button id="btn-emergencia" onclick="acionarEmergencia()" title="Emergência — avisar o dono (ou tecla F9)" style="background:rgba(220,38,38,0.9);border:none;border-radius:50%;width:40px;height:40px;color:white;font-size:18px;cursor:pointer;">🔺</button>
       <button class="topbar-btn-menu" onclick="abrirMenu()" title="Menu" aria-label="Menu">☰</button>
       <button class="topbar-btn vermelho" onclick="fazerLogout()">Sair</button>
     </div>
@@ -1570,6 +1571,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     if (e.key === 'F2') { e.preventDefault(); if (!dentroDeModal) campoBusca.focus(); }
     else if (e.key === 'F4') { e.preventDefault(); if (!dentroDeModal) abrirPagamento(); }
     else if (e.key === 'F3') { e.preventDefault(); if (!dentroDeModal) abrirMenu(); else if (document.getElementById('menu-overlay').classList.contains('ativo')) fecharMenu(); }
+    else if (e.key === 'F9' || (e.ctrlKey && e.shiftKey && (e.key === 'E' || e.key === 'e'))) { e.preventDefault(); acionarEmergencia(); }
     else if (e.key === 'Enter') {
       const modalPag = document.getElementById('modal-pagamento');
       const ae = document.activeElement;
@@ -3756,7 +3758,17 @@ async function scannerFechar() {
       .order('criado_em', { ascending: false }).limit(50);
     if (error) { div.innerHTML = '<div style="text-align:center;color:#dc2626;padding:20px;font-size:13px;">Corre o SQL v2.3.0 para activar as perdas.</div>'; return; }
     if (!data || data.length === 0) { div.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:30px;"><div style="font-size:40px;">✅</div>Nenhuma perda registada.</div>'; return; }
-    div.innerHTML = data.map(p => {
+    const pendentes = data.filter(p => (p.estado||'confirmado') === 'pendente');
+    let topo = '';
+    if (pendentes.length > 0) {
+      const totalUn = pendentes.reduce((s,p)=>s+(parseInt(p.quantidade)||0),0);
+      topo = `<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:14px;margin-bottom:12px;">
+        <div style="font-weight:bold;color:#92400e;font-size:14px;margin-bottom:2px;">📉 ${pendentes.length} perda(s) a aguardar confirmação</div>
+        <div style="font-size:12px;color:#78350f;margin-bottom:10px;">Total: ${totalUn} unidade(s). Ao confirmar, o stock é descontado.</div>
+        <button onclick="confirmarTodasPerdas()" style="width:100%;padding:13px;background:#16a34a;border:none;border-radius:10px;color:white;font-weight:bold;font-size:15px;cursor:pointer;">✅ Confirmar TODAS de uma vez</button>
+      </div>`;
+    }
+    div.innerHTML = topo + data.map(p => {
       const dt = new Date(p.criado_em).toLocaleString('pt-PT', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
       const est = p.estado || 'confirmado';
       if (est === 'pendente') {
@@ -3786,28 +3798,53 @@ async function scannerFechar() {
   }
 
   let _perdasEmProcesso = {};
+  // Confirma UMA perda: marca confirmado (atómico) e desconta o stock pela quantidade (RPC atómico)
+  async function _confirmarPerdaInterna(id, qtd, produtoId) {
+    const { data: rows, error } = await supabaseClient.from('perdas')
+      .update({ estado: 'confirmado', confirmado_por: (sessaoAtual && sessaoAtual.vendedorCodigo) || 'balconista', confirmado_em: new Date().toISOString() })
+      .eq('id', id).eq('estado', 'pendente').select('id, produto_id, quantidade');
+    if (error) throw error;
+    if (!rows || rows.length === 0) return false; // já tratada
+    const pid = produtoId || (rows[0] && rows[0].produto_id);
+    const q = parseInt(qtd) || (rows[0] && parseInt(rows[0].quantidade)) || 0;
+    if (pid && q > 0) {
+      try { await supabaseClient.rpc('baixar_stock', { p_id: pid, p_qtd: q }); }
+      catch(e) {
+        const { data: prod } = await supabaseClient.from('produtos').select('stock').eq('id', pid).maybeSingle();
+        if (prod) await supabaseClient.from('produtos').update({ stock: Math.max(0, (parseInt(prod.stock)||0) - q) }).eq('id', pid);
+      }
+    }
+    return true;
+  }
+
   async function confirmarPerda(id, qtd, produtoId) {
     if (_perdasEmProcesso[id]) return;
     if (!confirm('Confirmar esta perda?\n\nO stock vai baixar ' + qtd + ' unidade(s).')) return;
     _perdasEmProcesso[id] = true;
     try {
-      // Marca confirmado SÓ SE ainda estiver pendente (atómico). Só baixa stock se este clique "ganhar".
-      const { data: rows, error } = await supabaseClient.from('perdas')
-        .update({ estado: 'confirmado', confirmado_por: (sessaoAtual && sessaoAtual.vendedorCodigo) || 'balconista', confirmado_em: new Date().toISOString() })
-        .eq('id', id).eq('estado', 'pendente').select('id');
-      if (error) throw error;
-      if (!rows || rows.length === 0) { mostrarNotif('✅ Esta perda já tinha sido tratada.'); abrirVerPerdas(); return; }
-      if (produtoId) {
-        const { data: prod } = await supabaseClient.from('produtos').select('stock').eq('id', produtoId).maybeSingle();
-        if (prod) {
-          const novo = Math.max(0, (parseInt(prod.stock)||0) - (parseInt(qtd)||0));
-          await supabaseClient.from('produtos').update({ stock: novo }).eq('id', produtoId);
-        }
-      }
-      mostrarNotif('✅ Perda confirmada. Stock atualizado.');
+      const ok = await _confirmarPerdaInterna(id, qtd, produtoId);
+      mostrarNotif(ok ? '✅ Perda confirmada. Stock atualizado.' : '✅ Esta perda já tinha sido tratada.');
       abrirVerPerdas();
     } catch(e) { mostrarNotif('❌ ' + (e.message||e), true); }
     finally { delete _perdasEmProcesso[id]; }
+  }
+
+  let _confirmandoTodasPerdas = false;
+  async function confirmarTodasPerdas() {
+    if (_confirmandoTodasPerdas) return;
+    if (!confirm('Confirmar TODAS as perdas pendentes?\n\nO stock vai descontar todas de uma vez.')) return;
+    _confirmandoTodasPerdas = true;
+    try {
+      const { data: pend } = await supabaseClient.from('perdas')
+        .select('id, produto_id, quantidade').eq('loja_id', sessaoAtual.lojaId).eq('estado', 'pendente');
+      let n = 0;
+      for (const p of (pend || [])) {
+        try { const ok = await _confirmarPerdaInterna(p.id, p.quantidade, p.produto_id); if (ok) n++; } catch(e) {}
+      }
+      mostrarNotif('✅ ' + n + ' perda(s) confirmada(s). Stock atualizado.');
+      abrirVerPerdas();
+    } catch(e) { mostrarNotif('❌ ' + (e.message||e), true); }
+    finally { _confirmandoTodasPerdas = false; }
   }
 
   async function cancelarPerda(id) {
@@ -4174,14 +4211,22 @@ async function scannerFechar() {
     finally { delete _transfEmProcesso[id]; }
   }
 
-  async function enviarEmergencia() {
-    if (!confirm('🆘 Enviar ALERTA DE EMERGÊNCIA ao dono?\n\nO dono vai ouvir um alarme no monitor dele. Usa só em caso real (pessoas estranhas, assalto, etc.).')) return;
+  let _emergEnviando = false;
+  async function acionarEmergencia() {
+    if (_emergEnviando) return;
+    _emergEnviando = true;
     try {
       await supabaseClient.from('alertas_emergencia').insert({
         loja_id: sessaoAtual.lojaId, vendedor: sessaoAtual.vendedorCodigo || 'balconista'
       });
-      mostrarNotif('🆘 Alerta enviado ao dono. Mantém a calma.');
-    } catch(e) { mostrarNotif('❌ Não deu para enviar (corre o SQL v2.9.83): ' + (e.message||e), true); }
+      mostrarNotif('🆘 Alerta enviado ao dono!');
+    } catch(e) { mostrarNotif('❌ Não deu para enviar (corre o SQL v2.9.83)', true); }
+    setTimeout(() => { _emergEnviando = false; }, 4000);
+  }
+
+  async function enviarEmergencia() {
+    if (!confirm('🆘 Enviar ALERTA DE EMERGÊNCIA ao dono?\n\nO dono vai ouvir um alarme no monitor dele. Usa só em caso real.')) return;
+    acionarEmergencia();
   }
 
   function imprimirGuiaDespacho() {
@@ -4848,7 +4893,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.83';
+  const VERSAO_ATUAL = '2.9.85';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.

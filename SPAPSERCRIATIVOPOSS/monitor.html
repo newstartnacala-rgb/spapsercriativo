@@ -411,13 +411,9 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
         <div class="card-gestao-icon" style="background:#fef9c3">🔍</div>
         <div class="card-gestao-nome">Auditoria de Caixa</div>
       </div>
-      <div class="card-gestao" onclick="abrirSubPainel('painel-stock')">
-        <div class="card-gestao-icon" style="background:#fef2f2">🔍</div>
-        <div class="card-gestao-nome">Verificar Stock</div>
-      </div>
       <div class="card-gestao" onclick="abrirSubPainel('painel-funcionarios')">
         <div class="card-gestao-icon" style="background:#f5f3ff">👥</div>
-        <div class="card-gestao-nome">Employees</div>
+        <div class="card-gestao-nome">Gerentes</div>
       </div>
       <div class="card-gestao" onclick="atualizarMonitor(this)">
         <div class="card-gestao-icon" style="background:#eff6ff">↻</div>
@@ -959,8 +955,9 @@ async function iniciar() {
 
   document.getElementById('tela-carregando').style.display = 'none';
 
-  // Se a loja tem PIN definido, pede-o antes de mostrar o monitor
-  if (window._lojaPin && !modoGeral) {
+  // Se a loja tem PIN definido, pede-o antes de mostrar o monitor.
+  // O GERENTE não precisa do pin do dono — já foi aprovado pelo dono.
+  if (window._lojaPin && !modoGeral && !modoGerente) {
     pedirPinMonitor(iniciarMonitor);
   } else {
     iniciarMonitor();
@@ -3808,7 +3805,7 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.83';
+const MONITOR_VERSAO = '2.9.85';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
