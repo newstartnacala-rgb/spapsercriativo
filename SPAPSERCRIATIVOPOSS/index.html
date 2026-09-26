@@ -3759,31 +3759,41 @@ async function scannerFechar() {
     if (error) { div.innerHTML = '<div style="text-align:center;color:#dc2626;padding:20px;font-size:13px;">Corre o SQL v2.3.0 para activar as perdas.</div>'; return; }
     if (!data || data.length === 0) { div.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:30px;"><div style="font-size:40px;">✅</div>Nenhuma perda registada.</div>'; return; }
     const pendentes = data.filter(p => (p.estado||'confirmado') === 'pendente');
+    const outros = data.filter(p => (p.estado||'confirmado') !== 'pendente');
+    const cardPendente = p => {
+      const dt = new Date(p.criado_em).toLocaleString('pt-PT', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+      return `<div style="background:white;border:1px solid #fcd34d;border-radius:10px;padding:12px;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-weight:bold;font-size:14px;color:#92400e;">📉 ${p.produto_nome}</div>
+          <span style="background:#f59e0b;color:white;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:bold;">−${p.quantidade} un.</span>
+        </div>
+        <div style="font-size:12px;color:#78350f;margin-top:4px;">${p.motivo ? '💬 ' + p.motivo + ' · ' : ''}📅 ${dt}</div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button onclick="confirmarPerda('${p.id}', ${p.quantidade||0}, '${p.produto_id||''}')" style="flex:1;padding:11px;background:#16a34a;border:none;border-radius:8px;color:white;font-weight:bold;cursor:pointer;font-size:13px;">✅ Confirmar</button>
+          <button onclick="cancelarPerda('${p.id}')" style="flex:1;padding:11px;background:#dc2626;border:none;border-radius:8px;color:white;font-weight:bold;cursor:pointer;font-size:13px;">✖️ Cancelar</button>
+        </div>
+      </div>`;
+    };
     let topo = '';
     if (pendentes.length > 0) {
       const totalUn = pendentes.reduce((s,p)=>s+(parseInt(p.quantidade)||0),0);
       topo = `<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:14px;margin-bottom:12px;">
-        <div style="font-weight:bold;color:#92400e;font-size:14px;margin-bottom:2px;">📉 ${pendentes.length} perda(s) a aguardar confirmação</div>
-        <div style="font-size:12px;color:#78350f;margin-bottom:10px;">Total: ${totalUn} unidade(s). Ao confirmar, o stock é descontado.</div>
+        <div onclick="togglePerdasDetalhe()" style="cursor:pointer;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-weight:bold;color:#92400e;font-size:14px;">📉 ${pendentes.length} perda(s) a aguardar confirmação</div>
+            <span id="chev-perdas" style="color:#92400e;font-size:14px;display:inline-block;transition:transform .2s;">▶</span>
+          </div>
+          <div style="font-size:12px;color:#78350f;margin:2px 0 10px;">Total: ${totalUn} unidade(s). <b>Clica para abrir</b> e confirmar uma a uma.</div>
+        </div>
         <button onclick="confirmarTodasPerdas()" style="width:100%;padding:13px;background:#16a34a;border:none;border-radius:10px;color:white;font-weight:bold;font-size:15px;cursor:pointer;">✅ Confirmar TODAS de uma vez</button>
+        <div id="perdas-detalhe" style="display:none;margin-top:12px;">
+          ${pendentes.map(cardPendente).join('')}
+        </div>
       </div>`;
     }
-    div.innerHTML = topo + data.map(p => {
+    div.innerHTML = topo + outros.map(p => {
       const dt = new Date(p.criado_em).toLocaleString('pt-PT', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
       const est = p.estado || 'confirmado';
-      if (est === 'pendente') {
-        return `<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:12px;margin-bottom:8px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div style="font-weight:bold;font-size:14px;color:#92400e;">📉 ${p.produto_nome}</div>
-            <span style="background:#f59e0b;color:white;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:bold;">−${p.quantidade} un.</span>
-          </div>
-          <div style="font-size:12px;color:#78350f;margin-top:4px;">${p.motivo ? '💬 ' + p.motivo + ' · ' : ''}📅 ${dt}</div>
-          <div style="display:flex;gap:8px;margin-top:10px;">
-            <button onclick="confirmarPerda('${p.id}', ${p.quantidade}, '${p.produto_id||''}')" style="flex:1;padding:11px;background:#16a34a;border:none;border-radius:8px;color:white;font-weight:bold;cursor:pointer;font-size:13px;">✅ Confirmar</button>
-            <button onclick="cancelarPerda('${p.id}')" style="flex:1;padding:11px;background:#dc2626;border:none;border-radius:8px;color:white;font-weight:bold;cursor:pointer;font-size:13px;">✖️ Cancelar</button>
-          </div>
-        </div>`;
-      }
       const cancel = est === 'cancelado';
       const selo = cancel
         ? '<span style="background:#94a3b8;color:white;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:bold;">✖️ Cancelada</span>'
@@ -3795,6 +3805,15 @@ async function scannerFechar() {
         <div style="font-size:12px;color:#7f1d1d;margin-top:4px;">${p.motivo ? '💬 ' + p.motivo + ' · ' : ''}📅 ${dt}</div>
       </div>`;
     }).join('');
+  }
+
+  function togglePerdasDetalhe() {
+    const d = document.getElementById('perdas-detalhe');
+    const c = document.getElementById('chev-perdas');
+    if (!d) return;
+    const abrir = d.style.display === 'none';
+    d.style.display = abrir ? 'block' : 'none';
+    if (c) c.style.transform = abrir ? 'rotate(90deg)' : 'rotate(0deg)';
   }
 
   let _perdasEmProcesso = {};
@@ -4893,7 +4912,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.85';
+  const VERSAO_ATUAL = '2.9.86';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
