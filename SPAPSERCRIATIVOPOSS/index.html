@@ -3776,20 +3776,28 @@ async function scannerFechar() {
     };
     let topo = '';
     if (pendentes.length > 0) {
-      const totalUn = pendentes.reduce((s,p)=>s+(parseInt(p.quantidade)||0),0);
-      topo = `<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:14px;margin-bottom:12px;">
-        <div onclick="togglePerdasDetalhe()" style="cursor:pointer;">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div style="font-weight:bold;color:#92400e;font-size:14px;">📉 ${pendentes.length} perda(s) a aguardar confirmação</div>
-            <span id="chev-perdas" style="color:#92400e;font-size:14px;display:inline-block;transition:transform .2s;">▶</span>
+      // agrupar por LOTE (cada lançamento separado, como o despacho)
+      const grupos = {};
+      pendentes.forEach(p => { const k = p.lote || ('u-' + p.id); (grupos[k] = grupos[k] || []).push(p); });
+      const chaves = Object.keys(grupos).sort((a,b) => new Date(grupos[b][0].criado_em) - new Date(grupos[a][0].criado_em));
+      window._perdaLotes = {};
+      topo = chaves.map((k, gi) => {
+        window._perdaLotes[gi] = k;
+        const items = grupos[k];
+        const tot = items.reduce((s,p)=>s+(parseInt(p.quantidade)||0),0);
+        const dt = new Date(items[0].criado_em).toLocaleString('pt-PT', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+        return `<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:14px;margin-bottom:12px;">
+          <div onclick="togglePerdaLote(${gi})" style="cursor:pointer;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div style="font-weight:bold;color:#92400e;font-size:14px;">📉 Perda de ${dt} — ${items.length} produto(s)</div>
+              <span id="chev-lote-${gi}" style="color:#92400e;font-size:14px;display:inline-block;transition:transform .2s;">▶</span>
+            </div>
+            <div style="font-size:12px;color:#78350f;margin:2px 0 10px;">Total: ${tot} un. <b>Clica para abrir</b>.</div>
           </div>
-          <div style="font-size:12px;color:#78350f;margin:2px 0 10px;">Total: ${totalUn} unidade(s). <b>Clica para abrir</b> e confirmar uma a uma.</div>
-        </div>
-        <button onclick="confirmarTodasPerdas()" style="width:100%;padding:13px;background:#16a34a;border:none;border-radius:10px;color:white;font-weight:bold;font-size:15px;cursor:pointer;">✅ Confirmar TODAS de uma vez</button>
-        <div id="perdas-detalhe" style="display:none;margin-top:12px;">
-          ${pendentes.map(cardPendente).join('')}
-        </div>
-      </div>`;
+          <button onclick="confirmarLotePerdas(${gi})" style="width:100%;padding:13px;background:#16a34a;border:none;border-radius:10px;color:white;font-weight:bold;font-size:15px;cursor:pointer;">✅ Confirmar este lançamento</button>
+          <div id="lote-${gi}" style="display:none;margin-top:12px;">${items.map(cardPendente).join('')}</div>
+        </div>`;
+      }).join('');
     }
     div.innerHTML = topo + outros.map(p => {
       const dt = new Date(p.criado_em).toLocaleString('pt-PT', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
@@ -3807,13 +3815,33 @@ async function scannerFechar() {
     }).join('');
   }
 
-  function togglePerdasDetalhe() {
-    const d = document.getElementById('perdas-detalhe');
-    const c = document.getElementById('chev-perdas');
+  function togglePerdaLote(gi) {
+    const d = document.getElementById('lote-' + gi);
+    const c = document.getElementById('chev-lote-' + gi);
     if (!d) return;
     const abrir = d.style.display === 'none';
     d.style.display = abrir ? 'block' : 'none';
     if (c) c.style.transform = abrir ? 'rotate(90deg)' : 'rotate(0deg)';
+  }
+
+  let _confirmandoLote = false;
+  async function confirmarLotePerdas(gi) {
+    if (_confirmandoLote) return;
+    const lote = window._perdaLotes && window._perdaLotes[gi];
+    if (!lote) return;
+    if (!confirm('Confirmar este lançamento de perdas?\n\nO stock vai descontar todos os produtos deste lançamento.')) return;
+    _confirmandoLote = true;
+    try {
+      let q = supabaseClient.from('perdas').select('id, produto_id, quantidade').eq('loja_id', sessaoAtual.lojaId).eq('estado', 'pendente');
+      if (lote.startsWith('u-')) q = q.eq('id', lote.slice(2)); else q = q.eq('lote', lote);
+      const { data: pend } = await q;
+      let n = 0;
+      for (const p of (pend || [])) { try { const ok = await _confirmarPerdaInterna(p.id, p.quantidade, p.produto_id); if (ok) n++; } catch(e) {} }
+      mostrarNotif('✅ ' + n + ' perda(s) confirmada(s). Stock descontado.');
+      renderProdutos();
+      abrirVerPerdas();
+    } catch(e) { mostrarNotif('❌ ' + (e.message||e), true); }
+    finally { _confirmandoLote = false; }
   }
 
   let _perdasEmProcesso = {};
@@ -3827,11 +3855,15 @@ async function scannerFechar() {
     const pid = produtoId || (rows[0] && rows[0].produto_id);
     const q = parseInt(qtd) || (rows[0] && parseInt(rows[0].quantidade)) || 0;
     if (pid && q > 0) {
-      try { await supabaseClient.rpc('baixar_stock', { p_id: pid, p_qtd: q }); }
-      catch(e) {
+      // baixar_stock devolve {error} (não atira). Se falhar, descontamos à mão.
+      const { error: eRpc } = await supabaseClient.rpc('baixar_stock', { p_id: pid, p_qtd: q });
+      if (eRpc) {
         const { data: prod } = await supabaseClient.from('produtos').select('stock').eq('id', pid).maybeSingle();
         if (prod) await supabaseClient.from('produtos').update({ stock: Math.max(0, (parseInt(prod.stock)||0) - q) }).eq('id', pid);
       }
+      // atualiza o stock local (para o balconista ver logo)
+      const pl = (typeof produtos !== 'undefined') ? produtos.find(x => x.id === pid) : null;
+      if (pl) pl.stock = Math.max(0, (parseInt(pl.stock)||0) - q);
     }
     return true;
   }
@@ -3843,6 +3875,7 @@ async function scannerFechar() {
     try {
       const ok = await _confirmarPerdaInterna(id, qtd, produtoId);
       mostrarNotif(ok ? '✅ Perda confirmada. Stock atualizado.' : '✅ Esta perda já tinha sido tratada.');
+      renderProdutos();
       abrirVerPerdas();
     } catch(e) { mostrarNotif('❌ ' + (e.message||e), true); }
     finally { delete _perdasEmProcesso[id]; }
@@ -3992,10 +4025,12 @@ async function scannerFechar() {
       // 2) Só agora soma ao stock (garantido uma única vez)
       for (const it of (despachoAtual.itens || [])) {
         if (!it.produto_id) continue;
-        const { data: prod } = await supabaseClient.from('produtos').select('stock').eq('id', it.produto_id).maybeSingle();
-        if (prod) {
-          const novo = (parseInt(prod.stock)||0) + (parseInt(it.enviado)||0);
-          await supabaseClient.from('produtos').update({ stock: novo }).eq('id', it.produto_id);
+        const q = parseInt(it.enviado) || 0;
+        if (q <= 0) continue;
+        try { await supabaseClient.rpc('repor_stock', { p_id: it.produto_id, p_qtd: q }); }
+        catch(e) {
+          const { data: prod } = await supabaseClient.from('produtos').select('stock').eq('id', it.produto_id).maybeSingle();
+          if (prod) await supabaseClient.from('produtos').update({ stock: (parseInt(prod.stock)||0) + q }).eq('id', it.produto_id);
         }
       }
       despachoAtual.estado = 'confirmado';
@@ -4912,7 +4947,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.86';
+  const VERSAO_ATUAL = '2.9.89';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.

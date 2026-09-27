@@ -355,6 +355,10 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
         <div class="card-gestao-icon" style="background:#f0fdf4">📈</div>
         <div class="card-gestao-nome">Relatório</div>
       </div>
+      <div class="card-gestao" onclick="abrirRelatorioAvancado()">
+        <div class="card-gestao-icon" style="background:#faf5ff">📊</div>
+        <div class="card-gestao-nome">Relatório+ (rentáveis)</div>
+      </div>
       <div class="card-gestao" onclick="abrirRastreio()">
         <div class="card-gestao-icon" style="background:#eef2ff">🔎</div>
         <div class="card-gestao-nome">Rastreio de Produto</div>
@@ -2334,6 +2338,60 @@ async function exportarVerificacaoExcel() {
   } catch(e) { alert('Não deu para gerar o Excel: ' + (e.message||e)); }
 }
 
+// ===== RELATÓRIO AVANÇADO (mais vendidos + mais rentáveis) =====
+async function abrirRelatorioAvancado() {
+  let ov = document.getElementById('overlay-rel-av'); if (ov) ov.remove();
+  ov = document.createElement('div'); ov.id = 'overlay-rel-av';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow:auto;';
+  ov.innerHTML = `<div style="background:white;border-radius:16px;max-width:580px;width:100%;padding:20px;margin-top:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <h2 style="margin:0;font-size:19px;">📊 Relatório avançado</h2>
+      <button onclick="document.getElementById('overlay-rel-av').remove()" style="background:#f1f5f9;border:none;border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:16px;">✕</button>
+    </div>
+    <div id="rel-av-corpo"><div style="text-align:center;color:#94a3b8;padding:24px;">A analisar as vendas...</div></div>
+  </div>`;
+  ov.onclick = e => { if (e.target === ov) ov.remove(); };
+  document.body.appendChild(ov);
+  try {
+    const { data: vendas } = await supabaseClient.from('vendas').select('total, criado_em, venda_itens(*)').eq('loja_id', lojaId).order('criado_em', { ascending: false }).limit(2000);
+    const agg = {}; let receita = 0, lucro = 0, nVendas = (vendas||[]).length;
+    (vendas||[]).forEach(v => {
+      receita += parseFloat(v.total) || 0;
+      (v.venda_itens||[]).forEach(it => {
+        const nome = it.produto_nome || '—';
+        const q = Math.abs(parseInt(it.qtd) || 0);
+        const pv = parseFloat(it.preco_unitario) || 0;
+        const prod = (todosProdutos||[]).find(p => p.nome === nome);
+        const custo = prod ? (parseFloat(prod.preco_compra) || 0) : 0;
+        const luc = (pv - custo) * q;
+        lucro += luc;
+        if (!agg[nome]) agg[nome] = { qtd: 0, receita: 0, lucro: 0 };
+        agg[nome].qtd += q; agg[nome].receita += pv * q; agg[nome].lucro += luc;
+      });
+    });
+    const arr = Object.entries(agg).map(([nome, v]) => ({ nome, ...v }));
+    const topVend = [...arr].sort((a,b) => b.qtd - a.qtd).slice(0, 10);
+    const topLucro = [...arr].sort((a,b) => b.lucro - a.lucro).slice(0, 10);
+    const lista = (items, valor, cor) => items.length ? items.map((x,i) => `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f1f5f9;">
+        <div style="width:22px;height:22px;border-radius:50%;background:#eef2ff;color:#3730a3;font-size:12px;font-weight:bold;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${i+1}</div>
+        <div style="flex:1;min-width:0;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${x.nome}</div>
+        <div style="font-size:13px;font-weight:bold;color:${cor};white-space:nowrap;">${valor(x)}</div>
+      </div>`).join('') : '<div style="color:#cbd5e1;font-size:13px;padding:10px;">Sem dados.</div>';
+    document.getElementById('rel-av-corpo').innerHTML = `
+      <div style="display:flex;gap:12px;flex-wrap:wrap;background:#f8fafc;border-radius:12px;padding:14px;margin-bottom:14px;">
+        <div><div style="font-size:11px;color:#94a3b8;">Nº vendas</div><div style="font-size:18px;font-weight:bold;">${nVendas}</div></div>
+        <div><div style="font-size:11px;color:#94a3b8;">Receita total</div><div style="font-size:18px;font-weight:bold;">${money(receita)}</div></div>
+        <div><div style="font-size:11px;color:#94a3b8;">Lucro estimado</div><div style="font-size:18px;font-weight:bold;color:#16a34a;">${money(lucro)}</div></div>
+      </div>
+      <div style="font-weight:bold;font-size:14px;margin-bottom:4px;">🔥 Mais vendidos (quantidade)</div>
+      ${lista(topVend, x => x.qtd + ' un.', '#0891b2')}
+      <div style="font-weight:bold;font-size:14px;margin:16px 0 4px;">💰 Mais rentáveis (lucro)</div>
+      ${lista(topLucro, x => money(x.lucro), '#16a34a')}
+      <div style="font-size:11px;color:#94a3b8;margin-top:12px;">Baseado nas últimas ${nVendas} vendas. O lucro usa o preço de compra que definiste em cada produto.</div>`;
+  } catch(e) { const c = document.getElementById('rel-av-corpo'); if (c) c.innerHTML = '<div style="color:#94a3b8;padding:16px;">Erro: ' + (e.message||e) + '</div>'; }
+}
+
 // ===== RASTREIO DE PRODUTO (aba especial) =====
 function abrirRastreio() {
   let ov = document.getElementById('overlay-rastreio'); if (ov) ov.remove();
@@ -2692,6 +2750,7 @@ async function registarPerda() {
   const btn = document.getElementById('btn-registar-perda');
   btn.disabled = true; btn.textContent = 'A registar...';
 
+  const lote = 'L' + Date.now(); // mesmo lançamento = mesmo lote
   let okCount = 0; const erros = [];
   for (const it of perdaItens) {
     const p = todosProdutos.find(x => x.id === it.produto_id);
@@ -2700,7 +2759,7 @@ async function registarPerda() {
     // NÃO baixa o stock aqui — só quando o balconista confirmar na loja
     const e2 = await supabaseClient.from('perdas').insert({
       loja_id: lojaId, produto_id: it.produto_id, produto_nome: it.nome,
-      quantidade: qtd, motivo: (it.motivo||'').trim() || null, feito_por: nomeLoja, estado: 'pendente'
+      quantidade: qtd, motivo: (it.motivo||'').trim() || null, feito_por: nomeLoja, estado: 'pendente', lote: lote
     });
     if (e2.error) { erros.push(it.nome + ': ' + e2.error.message); continue; }
     okCount++;
@@ -2723,14 +2782,39 @@ async function carregarPerdasMonitor() {
   const { data, error } = await supabaseClient.from('perdas').select('*').eq('loja_id', lojaId).order('criado_em',{ascending:false}).limit(20);
   if (error) { div.innerHTML = '<div style="color:#94a3b8;font-size:12px;">Corre o SQL v2.3.0 para activar.</div>'; return; }
   if (!data || !data.length) { div.innerHTML = '<div style="color:#cbd5e1;font-size:13px;text-align:center;padding:12px;">Nenhuma perda ainda.</div>'; return; }
-  div.innerHTML = data.map(p => {
-    const dt = new Date(p.criado_em).toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-    const est = p.estado || 'confirmado';
-    const badge = est === 'pendente' ? '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold;white-space:nowrap;">⏳ Aguarda loja</span>'
+  const badgeDe = est => est === 'pendente' ? '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold;white-space:nowrap;">⏳ Aguarda loja</span>'
       : est === 'cancelado' ? '<span style="background:#e2e8f0;color:#475569;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold;white-space:nowrap;">✖️ Cancelada</span>'
       : '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold;white-space:nowrap;">✅ Confirmada</span>';
-    return `<div style="background:white;border:1px solid #fecaca;border-radius:8px;padding:10px;margin-bottom:6px;font-size:13px;"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><span><strong>${p.produto_nome}</strong> — <span style="color:#dc2626;">−${p.quantidade}</span></span>${badge}</div>${p.motivo?'<div style="font-size:12px;color:#7f1d1d;margin-top:2px;">💬 '+p.motivo+'</div>':''}<div style="font-size:11px;color:#94a3b8;">${dt}</div></div>`;
+  const grupos = {};
+  data.forEach(p => { const k = p.lote || ('u-' + p.id); (grupos[k] = grupos[k] || []).push(p); });
+  const chaves = Object.keys(grupos).sort((a,b) => new Date(grupos[b][0].criado_em) - new Date(grupos[a][0].criado_em));
+  window._mPerdaLotes = {};
+  div.innerHTML = chaves.map((k, gi) => {
+    window._mPerdaLotes[gi] = k;
+    const items = grupos[k];
+    const dt = new Date(items[0].criado_em).toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    const tot = items.reduce((s,p)=>s+(parseInt(p.quantidade)||0),0);
+    const pend = items.filter(p=>(p.estado||'confirmado')==='pendente').length;
+    const resumo = pend>0 ? ('⏳ '+pend+' a aguardar') : '✅ tratada';
+    const cor = pend>0 ? '#92400e' : '#166534';
+    const detalhe = items.map(p => `<div style="border-top:1px solid #f1f5f9;padding:8px 0;font-size:13px;"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><span><strong>${p.produto_nome}</strong> — <span style="color:#dc2626;">−${p.quantidade}</span></span>${badgeDe(p.estado||'confirmado')}</div>${p.motivo?'<div style="font-size:12px;color:#7f1d1d;">💬 '+p.motivo+'</div>':''}</div>`).join('');
+    return `<div style="background:white;border:1px solid #fecaca;border-radius:8px;margin-bottom:6px;">
+      <div onclick="toggleMPerdaLote(${gi})" style="cursor:pointer;padding:10px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <div style="min-width:0;"><div style="font-weight:bold;font-size:13px;">📉 ${dt} — ${items.length} produto(s)</div><div style="font-size:11px;color:#94a3b8;">${tot} un. · <span style="color:${cor};font-weight:bold;">${resumo}</span></div></div>
+        <span id="mchev-${gi}" style="color:#94a3b8;display:inline-block;transition:transform .2s;">▶</span>
+      </div>
+      <div id="mlote-${gi}" style="display:none;padding:0 10px 8px;">${detalhe}</div>
+    </div>`;
   }).join('');
+}
+
+function toggleMPerdaLote(gi) {
+  const d = document.getElementById('mlote-' + gi);
+  const c = document.getElementById('mchev-' + gi);
+  if (!d) return;
+  const abrir = d.style.display === 'none';
+  d.style.display = abrir ? 'block' : 'none';
+  if (c) c.style.transform = abrir ? 'rotate(90deg)' : 'rotate(0deg)';
 }
 
 // ===== ENTREGAS DOS VENDEDORES =====
@@ -3805,7 +3889,7 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.86';
+const MONITOR_VERSAO = '2.9.89';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -5052,6 +5136,16 @@ function mostrarAlarmeEmergencia(a){
   if(document.getElementById('alarme-emerg'))return;
   tocarAlarme();
   try{ if(navigator.vibrate) navigator.vibrate([400,150,400,150,400]); }catch(e){}
+  // Notificação do SISTEMA (aparece mesmo se o monitor estiver noutra aba / em segundo plano)
+  try {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const n = new Notification('🚨 EMERGÊNCIA NA LOJA!', {
+        body: (a.vendedor||'Balconista') + ' pediu ajuda · ' + new Date(a.criado_em).toLocaleTimeString('pt-PT'),
+        requireInteraction: true, tag: 'emergencia-spap'
+      });
+      n.onclick = () => { try { window.focus(); } catch(e){} n.close(); };
+    }
+  } catch(e){}
   const div=document.createElement('div'); div.id='alarme-emerg';
   div.style.cssText='position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;text-align:center;padding:24px;animation:piscaEmerg .7s infinite;';
   div.innerHTML='<div style="font-size:70px;">&#128680;</div><h1 style="margin:8px 0;font-size:30px;">EMERGENCIA NA LOJA!</h1><p style="font-size:16px;">'+((a.vendedor||'Balconista'))+' pediu ajuda &middot; '+new Date(a.criado_em).toLocaleTimeString('pt-PT')+'</p><button onclick="dispensarAlarme(\''+a.id+'\')" style="margin-top:22px;padding:16px 30px;background:white;color:#dc2626;border:none;border-radius:12px;font-size:16px;font-weight:bold;cursor:pointer;">&#10003; Vi o alerta (parar alarme)</button>';
@@ -5069,6 +5163,7 @@ async function verificarEmergencias(){
 }
 setInterval(verificarEmergencias, 12000);
 setTimeout(verificarEmergencias, 4000);
+try { if ('Notification' in window && Notification.permission === 'default') { setTimeout(() => { try { Notification.requestPermission(); } catch(e){} }, 6000); } } catch(e){}
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) verificarEmergencias(); });
 </script>
 
