@@ -2509,6 +2509,77 @@ async function montarRastreio(id) {
   if (maiorSaida <= -10 || (stockAtual>0 && maiorSaida <= -stockAtual)) alertas.push('⚠️ Queda brusca: saíram '+Math.abs(maiorSaida)+' de uma vez.');
   if (eventos.some(e => e.titulo === 'Preço alterado')) alertas.push('🏷️ O preço já foi alterado (vê no histórico).');
 
+  // ===== RECONCILIAÇÃO A PARTIR DO ÚLTIMO INVENTÁRIO (ponto zero) =====
+  let recBox = '';
+  let baseInv = null, dataInv = null;
+  try {
+    const { data: bals } = await supabaseClient.from('balancos').select('detalhe, criado_em').eq('loja_id', lojaId).order('criado_em', { ascending: false }).limit(30);
+    for (const b of (bals || [])) {
+      const det = Array.isArray(b.detalhe) ? b.detalhe : [];
+      const item = det.find(x => x && x.nome === p.nome);
+      if (item && item.contado != null) { baseInv = parseInt(item.contado) || 0; dataInv = b.criado_em; break; }
+    }
+  } catch(e) {}
+  const stockAtualR = parseInt(p.stock) || 0;
+  if (baseInv != null && dataInv) {
+    const tInv = new Date(dataInv).getTime();
+    let vend = 0, repo = 0, perd = 0, transf = 0;
+    eventos.forEach(e => {
+      if (new Date(e.data).getTime() <= tInv) return; // só o que aconteceu DEPOIS do inventário
+      const d = Math.abs(e.delta || 0);
+      if (/Vendido/.test(e.titulo)) vend += d;
+      else if (/Reposição|Recebido de outra/.test(e.titulo)) repo += d;
+      else if (/Perda/.test(e.titulo)) perd += d;
+      else if (/Enviado p\/ outra/.test(e.titulo)) transf += d;
+    });
+    const esperado = baseInv - vend + repo - perd - transf;
+    const dif = stockAtualR - esperado;
+    const corDif = dif === 0 ? '#16a34a' : '#dc2626';
+    recBox = `<div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:12px;padding:14px;margin-bottom:12px;">
+      <div style="font-weight:bold;color:#3730a3;font-size:14px;margin-bottom:8px;">🧮 Desde o último inventário (${new Date(dataInv).toLocaleDateString('pt-PT')})</div>
+      <div style="font-size:13px;color:#334155;line-height:1.9;">
+        📋 No inventário tinha: <b>${baseInv}</b><br>
+        💰 Vendidos: <b>−${vend}</b> &nbsp; 📦 Repostos: <b>+${repo}</b><br>
+        📉 Perdidos: <b>−${perd}</b> &nbsp; 🔄 Enviados: <b>−${transf}</b><br>
+        <span style="border-top:1px solid #c7d2fe;display:block;margin-top:4px;padding-top:4px;">✅ Devia ter: <b>${esperado}</b> &nbsp; Tem agora: <b>${stockAtualR}</b></span>
+        Diferença: <b style="color:${corDif};font-size:15px;">${dif > 0 ? '+' : ''}${dif}</b> ${dif === 0 ? '— tudo certo ✅' : '— falta explicar ⚠️'}
+      </div>
+    </div>`;
+    if (dif !== 0) alertas.unshift('🧮 Desde o inventário há ' + (dif>0?'+':'') + dif + ' un. sem explicação (erro no balanço, venda não registada ou roubo).');
+  } else {
+    // Sem inventário: o PONTO ZERO é o cadastro (produto entra a 0 e depois recebe despacho)
+    let inicial = 0, dataZero = p.criado_em;
+    try {
+      const { data: mc } = await supabaseClient.from('produto_movimentos').select('stock_novo, criado_em').eq('produto_id', id).eq('motivo', 'cadastro').order('criado_em', { ascending: true }).limit(1);
+      if (mc && mc.length) { inicial = parseInt(mc[0].stock_novo) || 0; dataZero = mc[0].criado_em; }
+    } catch(e) {}
+    const tZero = dataZero ? new Date(dataZero).getTime() : 0;
+    let vend = 0, repo = 0, perd = 0, transf = 0;
+    eventos.forEach(e => {
+      if (tZero && new Date(e.data).getTime() < tZero) return;
+      const d = Math.abs(e.delta || 0);
+      if (/Vendido/.test(e.titulo)) vend += d;
+      else if (/Reposição|Recebido de outra/.test(e.titulo)) repo += d;
+      else if (/Perda/.test(e.titulo)) perd += d;
+      else if (/Enviado p\/ outra/.test(e.titulo)) transf += d;
+    });
+    const esperado = inicial - vend + repo - perd - transf;
+    const dif = stockAtualR - esperado;
+    const corDif = dif === 0 ? '#16a34a' : '#dc2626';
+    recBox = `<div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:12px;padding:14px;margin-bottom:12px;">
+      <div style="font-weight:bold;color:#3730a3;font-size:14px;margin-bottom:8px;">🧮 Desde o cadastro (${dataZero ? new Date(dataZero).toLocaleDateString('pt-PT') : '—'}) · ainda sem inventário</div>
+      <div style="font-size:13px;color:#334155;line-height:1.9;">
+        📋 Ao cadastrar tinha: <b>${inicial}</b><br>
+        💰 Vendidos: <b>−${vend}</b> &nbsp; 📦 Repostos: <b>+${repo}</b><br>
+        📉 Perdidos: <b>−${perd}</b> &nbsp; 🔄 Enviados: <b>−${transf}</b><br>
+        <span style="border-top:1px solid #c7d2fe;display:block;margin-top:4px;padding-top:4px;">✅ Devia ter: <b>${esperado}</b> &nbsp; Tem agora: <b>${stockAtualR}</b></span>
+        Diferença: <b style="color:${corDif};font-size:15px;">${dif > 0 ? '+' : ''}${dif}</b> ${dif === 0 ? '— tudo certo ✅' : '— falta explicar ⚠️'}
+      </div>
+      <div style="font-size:11px;color:#6366f1;margin-top:8px;">💡 Faz um inventário para fixar um novo ponto zero mais recente.</div>
+    </div>`;
+    if (dif !== 0) alertas.unshift('🧮 Desde o cadastro há ' + (dif>0?'+':'') + dif + ' un. sem explicação.');
+  }
+
   const dtf = d => new Date(d).toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
   res.innerHTML = `
     <div style="background:#f8fafc;border-radius:12px;padding:14px;margin-bottom:12px;">
@@ -2520,6 +2591,7 @@ async function montarRastreio(id) {
         <div><div style="font-size:11px;color:#94a3b8;">Total vendido</div><div style="font-size:18px;font-weight:bold;">${totalVendido}</div></div>
       </div>
     </div>
+    ${recBox}
     ${alertas.length ? `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px;margin-bottom:12px;"><div style="font-weight:bold;color:#b45309;font-size:13px;margin-bottom:6px;">⚠️ Alertas</div>${alertas.map(a=>`<div style="font-size:13px;color:#92400e;margin-bottom:2px;">${a}</div>`).join('')}</div>` : '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px;margin-bottom:12px;font-size:13px;color:#166534;">✅ Sem alertas para este produto.</div>'}
     <div style="font-weight:bold;font-size:14px;margin-bottom:8px;">📜 Linha do tempo (${eventos.length})</div>
     ${eventos.length ? eventos.map(e => `
@@ -3889,7 +3961,7 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.89';
+const MONITOR_VERSAO = '2.9.91';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });

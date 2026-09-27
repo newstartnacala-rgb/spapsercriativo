@@ -3112,7 +3112,10 @@ async function scannerFechar() {
     const elLongo = document.getElementById('recibo-numero-longo');
     if (elLongo) elLongo.textContent = 'Nº ' + numeroReciboLongo(venda);
     const fmtN = n => { const v = parseFloat(n)||0; return Number.isInteger(v) ? v.toString() : v.toFixed(2); };
-    document.getElementById('recibo-itens').innerHTML = venda.itens.map(i => `
+    const _semItens = !venda.itens || venda.itens.length === 0;
+    document.getElementById('recibo-itens').innerHTML = _semItens
+      ? `<tr><td colspan="4" style="padding:14px;background:#fef2f2;color:#b91c1c;font-weight:bold;text-align:center;line-height:1.5;">⚠️ Esta venda NÃO registou produtos nem descontou o stock!<br><span style="font-weight:normal;font-size:12px;">Clica em <b>Retornar</b> aqui em baixo e vende de novo, para o stock ficar certo.</span></td></tr>`
+      : venda.itens.map(i => `
       <tr><td class="c-nome">${i.nome}</td><td class="c-num">${fmtN(i.preco)}</td><td class="c-num">${i.qtd}</td><td class="c-num">${fmtN(i.preco*i.qtd)}</td></tr>`).join('');
     const pecas = venda.itens.reduce((s,i) => s + (parseInt(i.qtd)||0), 0);
     const elPecas = document.getElementById('recibo-pecas');
@@ -4947,7 +4950,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.89';
+  const VERSAO_ATUAL = '2.9.91';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
