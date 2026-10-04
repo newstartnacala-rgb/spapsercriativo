@@ -1,1 +1,1 @@
-{ "versao": "2.9.93", "data": "2026-09-11", "novidades": "Recibo melhorado: a morada aparece agora com a etiqueta 'Localizacao' e o endereco por baixo. Retirado o 'Balconista: 00' do recibo do cliente (isso e so para o dono). Vale para o recibo no ecra e o impresso." }
+{ "versao": "2.9.94", "data": "2026-09-11", "novidades": "Recibo personalizavel: em Meu Perfil podes CARREGAR UM LOGOTIPO/BANNER (que aparece no recibo em vez do nome) e EDITAR o texto do RODAPE do recibo (aquele 'nao e factura...'). Precisa do SQL v2.9.94 (colunas logo + recibo_rodape)." }

@@ -1065,6 +1065,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 </div>
 
 <div id="area-recibo">
+  <img id="recibo-logo" src="" alt="" style="display:none;max-width:70%;max-height:70px;object-fit:contain;margin:0 auto 4px;">
   <div class="rec-empresa" id="recibo-empresa-nome">Spap-Sercriativo</div>
   <div class="rec-sub" id="recibo-empresa-sub"></div>
   <div class="rec-sub" id="recibo-empresa-contacto"></div>
@@ -1088,7 +1089,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   <div class="rec-tot" id="recibo-recebido-linha" style="display:none"><span>Recebido</span><span id="recibo-recebido"></span></div>
   <div class="rec-tot" id="recibo-troco-linha" style="display:none"><span>Troco</span><span id="recibo-troco"></span></div>
   <div class="rec-sep"></div>
-  <div class="rec-rodape">Este não é factura, apenas um controlo interno.<br>Obrigado pela preferência!</div>
+  <div class="rec-rodape" id="recibo-rodape-txt">Este não é factura, apenas um controlo interno.<br>Obrigado pela preferência!</div>
 </div>
 
 <div class="notif" id="notif"></div>
@@ -1264,7 +1265,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     {
       const r = await supabaseClient
         .from('membros_loja')
-        .select('loja_id, papel, nome_exibicao, lojas(nome, estado, numero_transferencia, codigo_agente, codigo_admin, categorias_personalizadas, categorias_ocultas, subcategorias, nome_empresa, vendedores, metodos_pagamento, telefone, endereco, tipo_loja, data_expiracao)')
+        .select('loja_id, papel, nome_exibicao, lojas(nome, estado, numero_transferencia, codigo_agente, codigo_admin, categorias_personalizadas, categorias_ocultas, subcategorias, nome_empresa, vendedores, metodos_pagamento, telefone, endereco, tipo_loja, data_expiracao, logo, recibo_rodape)')
         .eq('user_id', user.id).limit(1);
       membros = r.data; membroError = r.error;
 
@@ -1316,6 +1317,8 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
       telefone: (membro.lojas && membro.lojas.telefone) || null,
       tipoLoja: (membro.lojas && membro.lojas.tipo_loja) || 'comercial',
       endereco: (membro.lojas && membro.lojas.endereco) || null,
+      logo: (membro.lojas && membro.lojas.logo) || null,
+      reciboRodape: (membro.lojas && membro.lojas.recibo_rodape) || null,
       vendedores: (membro.lojas && membro.lojas.vendedores) || []
     };
 
@@ -3092,9 +3095,9 @@ async function scannerFechar() {
     if (venda.troco != null) t += _col('Troco:', 'MT ' + fmtN(venda.troco), W) + '\n';
     t += linha + '\n';
     t += ESC + 'a\x01';
-    t += 'Este nao e factura, apenas\n';
-    t += 'um controlo interno.\n';
-    t += 'Obrigado pela preferencia!\n';
+    const _rod = (sessaoAtual && sessaoAtual.reciboRodape && sessaoAtual.reciboRodape.trim());
+    if (_rod) { t += _semAcentos(_rod) + '\n'; }
+    else { t += 'Este nao e factura, apenas\n' + 'um controlo interno.\n' + 'Obrigado pela preferencia!\n'; }
     t += ESC + 'a\x00';
     t += '\n\n\n';
     t += GS + 'V\x00';
@@ -3121,6 +3124,18 @@ async function scannerFechar() {
     const nomeEmp = (sessaoAtual && (sessaoAtual.nomeEmpresa || sessaoAtual.nomeLoja)) || 'Spap-Sercriativo';
     const elEmp = document.getElementById('recibo-empresa-nome');
     if (elEmp) elEmp.textContent = nomeEmp;
+    // Logótipo (se existir) aparece em vez do nome
+    const elLogo = document.getElementById('recibo-logo');
+    if (elLogo) {
+      if (sessaoAtual && sessaoAtual.logo) { elLogo.src = sessaoAtual.logo; elLogo.style.display = 'block'; if (elEmp) elEmp.style.display = 'none'; }
+      else { elLogo.style.display = 'none'; if (elEmp) elEmp.style.display = ''; }
+    }
+    // Rodapé personalizado
+    const elRod = document.getElementById('recibo-rodape-txt');
+    if (elRod) {
+      const r = (sessaoAtual && sessaoAtual.reciboRodape);
+      elRod.innerHTML = (r && r.trim()) ? r.replace(/\n/g, '<br>') : 'Este não é factura, apenas um controlo interno.<br>Obrigado pela preferência!';
+    }
     const elSub = document.getElementById('recibo-empresa-sub');
     if (elSub) elSub.textContent = (sessaoAtual && sessaoAtual.nomeLoja && sessaoAtual.nomeEmpresa && sessaoAtual.nomeLoja !== sessaoAtual.nomeEmpresa) ? sessaoAtual.nomeLoja : '';
     const elCont = document.getElementById('recibo-empresa-contacto');
@@ -4976,7 +4991,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.93';
+  const VERSAO_ATUAL = '2.9.94';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.

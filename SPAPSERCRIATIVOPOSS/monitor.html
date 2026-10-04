@@ -3961,7 +3961,7 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.93';
+const MONITOR_VERSAO = '2.9.94';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -4395,6 +4395,10 @@ async function abrirMeuPerfil() {
       document.getElementById('perfil-in-endereco').value = data.endereco || '';
       var _ca = document.getElementById('perfil-in-codigo'); if (_ca) _ca.value = data.codigo_agente || '';
       var _pg = document.getElementById('perfil-in-pingerente'); if (_pg) _pg.value = data.pin_gerente || '0000';
+      var _rp = document.getElementById('perfil-in-rodape'); if (_rp) _rp.value = data.recibo_rodape || '';
+      _perfilLogoBase64 = null;
+      var _lp = document.getElementById('perfil-logo-preview');
+      if (_lp) { if (data.logo) { _lp.src = data.logo; _lp.style.display = 'block'; } else { _lp.src = ''; _lp.style.display = 'none'; } }
 
       const planos = {
         'basico': { nome: 'Básico', desc: 'Apenas PDV (loja do vendedor)' },
@@ -4409,6 +4413,20 @@ async function abrirMeuPerfil() {
   } catch(e) { mostrarNotif('❌ Erro ao carregar perfil: ' + (e.message||e), true); }
 }
 
+let _perfilLogoBase64 = null; // null = não mexeu; '' = remover; 'data:...' = novo
+function perfilCarregarLogo(input) {
+  const f = input.files && input.files[0]; if (!f) return;
+  if (f.size > 500 * 1024) { mostrarNotif('⚠️ Imagem muito grande (máx ~500KB). Usa uma mais pequena.', true); }
+  const r = new FileReader();
+  r.onload = e => { _perfilLogoBase64 = e.target.result; const img = document.getElementById('perfil-logo-preview'); if (img) { img.src = _perfilLogoBase64; img.style.display = 'block'; } };
+  r.readAsDataURL(f);
+}
+function perfilRemoverLogo() {
+  _perfilLogoBase64 = '';
+  const img = document.getElementById('perfil-logo-preview'); if (img) { img.src = ''; img.style.display = 'none'; }
+  const fi = document.getElementById('perfil-logo-file'); if (fi) fi.value = '';
+}
+
 async function guardarDadosPerfil() {
   const dados = {
     nome: document.getElementById('perfil-in-nome').value.trim(),
@@ -4416,8 +4434,10 @@ async function guardarDadosPerfil() {
     telefone: document.getElementById('perfil-in-telefone').value.trim(),
     endereco: document.getElementById('perfil-in-endereco').value.trim(),
     codigo_agente: document.getElementById('perfil-in-codigo').value.trim(),
-    pin_gerente: (document.getElementById('perfil-in-pingerente').value.trim() || '0000')
+    pin_gerente: (document.getElementById('perfil-in-pingerente').value.trim() || '0000'),
+    recibo_rodape: document.getElementById('perfil-in-rodape').value.trim()
   };
+  if (_perfilLogoBase64 !== null) dados.logo = _perfilLogoBase64 || null;
   if (!dados.nome) { mostrarNotif('❌ O nome da loja não pode ficar vazio.', true); return; }
   const { error } = await supabaseClient.from('lojas').update(dados).eq('id', lojaId);
   if (error) { mostrarNotif('❌ ' + error.message, true); return; }
@@ -5084,11 +5104,21 @@ async function carregarContagensEquipa() {
       <label style="font-size:13px;color:#64748b;font-weight:600;">Nome da empresa (no recibo)</label>
       <input type="text" id="perfil-in-empresa" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:15px;margin:5px 0 12px;box-sizing:border-box;">
 
+      <label style="font-size:13px;color:#64748b;font-weight:600;">🖼️ Logótipo / banner (opcional — aparece no recibo em vez do nome)</label>
+      <div style="display:flex;gap:10px;align-items:center;margin:5px 0 12px;">
+        <img id="perfil-logo-preview" src="" style="width:56px;height:56px;object-fit:contain;border:1px solid #e2e8f0;border-radius:8px;display:none;background:#f8fafc;">
+        <input type="file" accept="image/*" id="perfil-logo-file" onchange="perfilCarregarLogo(this)" style="flex:1;font-size:12px;">
+        <button type="button" onclick="perfilRemoverLogo()" style="padding:8px 10px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;cursor:pointer;font-size:12px;">Remover</button>
+      </div>
+
       <label style="font-size:13px;color:#64748b;font-weight:600;">Telefone / Contacto</label>
       <input type="text" id="perfil-in-telefone" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:15px;margin:5px 0 12px;box-sizing:border-box;">
 
       <label style="font-size:13px;color:#64748b;font-weight:600;">Endereço</label>
       <input type="text" id="perfil-in-endereco" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:15px;margin:5px 0 14px;box-sizing:border-box;">
+
+      <label style="font-size:13px;color:#64748b;font-weight:600;">🧾 Rodapé do recibo (o texto no fundo)</label>
+      <textarea id="perfil-in-rodape" rows="2" placeholder="Ex: Obrigado pela preferência!" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:14px;margin:5px 0 14px;box-sizing:border-box;resize:vertical;"></textarea>
 
       <label style="font-size:13px;color:#64748b;font-weight:600;">🔑 Código de acesso do balconista (loja)</label>
       <input type="text" id="perfil-in-codigo" placeholder="ex: 1234" style="width:100%;padding:11px;border:1.5px solid #fdba74;border-radius:9px;font-size:15px;margin:5px 0 4px;box-sizing:border-box;">
