@@ -3961,7 +3961,7 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.94';
+const MONITOR_VERSAO = '2.9.95';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -4438,7 +4438,7 @@ async function guardarDadosPerfil() {
     recibo_rodape: document.getElementById('perfil-in-rodape').value.trim()
   };
   if (_perfilLogoBase64 !== null) dados.logo = _perfilLogoBase64 || null;
-  if (!dados.nome) { mostrarNotif('❌ O nome da loja não pode ficar vazio.', true); return; }
+  // Sem restrições: campos vazios são permitidos (o recibo simplesmente não mostra o que estiver vazio).
   const { error } = await supabaseClient.from('lojas').update(dados).eq('id', lojaId);
   if (error) { mostrarNotif('❌ ' + error.message, true); return; }
   document.getElementById('perfil-nome-loja').textContent = dados.nome;
