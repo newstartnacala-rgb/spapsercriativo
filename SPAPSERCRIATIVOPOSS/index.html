@@ -1922,6 +1922,37 @@ async function scannerFechar() {
   }
 
 
+  // ===== CAPTADOR GLOBAL DO LEITOR USB (funciona sem clicar na caixa) =====
+  // O leitor "escreve" o código muito rápido e dá Enter. Captamos essa leitura
+  // em qualquer sítio da tela e adicionamos o produto ao carrinho.
+  let _scanBuf = '', _scanLast = 0;
+  document.addEventListener('keydown', function(e) {
+    const ae = document.activeElement;
+    // Se o utilizador está a escrever num campo de dados (nome, preço, etc.), não mexe —
+    // só captamos quando nada está focado OU quando está na caixa de pesquisa.
+    const emCampoDados = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT') && ae.id !== 'campo-busca';
+    const agora = Date.now();
+    if (agora - _scanLast > 120) _scanBuf = '';   // teclas lentas (manual) => reinicia
+    _scanLast = agora;
+    if (e.key === 'Enter') {
+      const code = _scanBuf; _scanBuf = '';
+      if (!emCampoDados && code.length >= 4) {
+        const alvo = code.toLowerCase();
+        const achados = (produtos||[]).filter(p =>
+          (p.codbarras||'').toLowerCase() === alvo || (p.codigo||'').toLowerCase() === alvo);
+        if (achados.length >= 1) {
+          e.preventDefault(); e.stopPropagation();
+          try { selecionarResultadoBusca(achados[0]); } catch(err) { try { cliqueNoProduto(achados[0]); } catch(e2){} }
+          try { mostrarNotif('🔊 ' + achados[0].nome + ' adicionado'); } catch(e3){}
+          const campo = document.getElementById('campo-busca'); if (campo) campo.value = '';
+          return;
+        }
+      }
+      return;
+    }
+    if (!emCampoDados && e.key.length === 1) { _scanBuf += e.key; }
+  }, true);
+
   function fecharModalProduto() { document.getElementById('modal-produto').classList.remove('ativo'); esconderGestao(); }
 
   // Tocar na foto do produto abre-a em ecrã cheio (para o balconista confirmar
@@ -4950,7 +4981,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.91';
+  const VERSAO_ATUAL = '2.9.92';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
