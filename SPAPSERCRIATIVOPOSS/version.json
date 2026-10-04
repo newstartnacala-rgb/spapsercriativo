@@ -1,1 +1,1 @@
-{ "versao": "2.9.96", "data": "2026-09-11", "novidades": "CORRIGIDO o logotipo que nao gravava: a imagem era grande demais e o Supabase recusava. Agora a imagem e ENCOLHIDA e comprimida automaticamente antes de guardar (fica pequena, grava sempre). O rodape tambem passa a gravar junto." }
+{ "versao": "2.9.97", "data": "2026-09-11", "novidades": "Recibo: removida a linha 'Contacto'. O rodape reflete o que escreveres em Meu Perfil > Rodape do recibo (grava agora que o logotipo deixou de bloquear a gravacao). Escreve o rodape, Guarda, recarrega a loja." }
