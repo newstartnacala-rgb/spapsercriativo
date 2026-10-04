@@ -1,1 +1,1 @@
-{ "versao": "2.9.92", "data": "2026-09-11", "novidades": "LEITOR DE CODIGO DE BARRAS (USB) agora funciona em QUALQUER sitio da tela — ja nao e preciso clicar primeiro na caixa de pesquisa. O sistema apanha a leitura e adiciona o produto ao carrinho automaticamente." }
+{ "versao": "2.9.93", "data": "2026-09-11", "novidades": "Recibo melhorado: a morada aparece agora com a etiqueta 'Localizacao' e o endereco por baixo. Retirado o 'Balconista: 00' do recibo do cliente (isso e so para o dono). Vale para o recibo no ecra e o impresso." }

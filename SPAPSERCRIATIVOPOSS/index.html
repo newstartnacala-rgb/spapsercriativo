@@ -3071,11 +3071,10 @@ async function scannerFechar() {
     t += ESC + '@' + ESC + 'a\x01';                          // reset + centrar
     t += _semAcentos(nomeEmp) + '\n';
     if (sub) t += _semAcentos(sub) + '\n';
-    if (end) t += _semAcentos(end) + '\n';
+    if (end) t += 'Localizacao:\n' + _semAcentos(end) + '\n';
     if (tel) t += 'Contacto: ' + _semAcentos(tel) + '\n';
     t += ESC + 'a\x00';
     t += '\n';
-    if (vend) t += 'Balconista: ' + _semAcentos(vend) + '\n';
     t += 'Recibo: ' + (venda.numeroDoDia||'?') + '\n';
     t += 'No ' + numeroReciboLongo(venda) + '\n';
     t += 'Data: ' + new Date(venda.dataISO).toLocaleString('pt-PT') + '\n';
@@ -3126,18 +3125,14 @@ async function scannerFechar() {
     if (elSub) elSub.textContent = (sessaoAtual && sessaoAtual.nomeLoja && sessaoAtual.nomeEmpresa && sessaoAtual.nomeLoja !== sessaoAtual.nomeEmpresa) ? sessaoAtual.nomeLoja : '';
     const elCont = document.getElementById('recibo-empresa-contacto');
     if (elCont) {
-      const partes = [];
-      if (sessaoAtual && sessaoAtual.endereco) partes.push(sessaoAtual.endereco);
-      if (sessaoAtual && sessaoAtual.telefone) partes.push('Contacto: ' + sessaoAtual.telefone);
-      elCont.textContent = partes.join('  ·  ');
+      let html = '';
+      if (sessaoAtual && sessaoAtual.endereco) html += '<div style="font-weight:bold;margin-top:4px;">📍 Localização</div><div>' + sessaoAtual.endereco + '</div>';
+      if (sessaoAtual && sessaoAtual.telefone) html += '<div>Contacto: ' + sessaoAtual.telefone + '</div>';
+      elCont.innerHTML = html;
     }
-    // Número do balconista (vendedor)
-    const vend = venda.vendedorCodigo || (sessaoAtual && sessaoAtual.vendedorCodigo) || (typeof vendedorAtual !== 'undefined' ? vendedorAtual : null);
+    // O balconista NÃO aparece no recibo do cliente (é só para o dono) — escondido sempre.
     const linhaVend = document.getElementById('recibo-vendedor-linha');
-    if (vend && linhaVend) {
-      linhaVend.style.display = 'flex';
-      document.getElementById('recibo-vendedor').textContent = vend;
-    } else if (linhaVend) { linhaVend.style.display = 'none'; }
+    if (linhaVend) linhaVend.style.display = 'none';
 
     document.getElementById('recibo-numero').textContent = '#' + (venda.numeroDoDia || '?');
     const elLongo = document.getElementById('recibo-numero-longo');
@@ -4981,7 +4976,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.92';
+  const VERSAO_ATUAL = '2.9.93';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
