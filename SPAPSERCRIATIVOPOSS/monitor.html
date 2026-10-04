@@ -3961,7 +3961,7 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.95';
+const MONITOR_VERSAO = '2.9.96';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -4416,9 +4416,29 @@ async function abrirMeuPerfil() {
 let _perfilLogoBase64 = null; // null = não mexeu; '' = remover; 'data:...' = novo
 function perfilCarregarLogo(input) {
   const f = input.files && input.files[0]; if (!f) return;
-  if (f.size > 500 * 1024) { mostrarNotif('⚠️ Imagem muito grande (máx ~500KB). Usa uma mais pequena.', true); }
   const r = new FileReader();
-  r.onload = e => { _perfilLogoBase64 = e.target.result; const img = document.getElementById('perfil-logo-preview'); if (img) { img.src = _perfilLogoBase64; img.style.display = 'block'; } };
+  r.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      // Encolhe para no máximo 360px de largura e comprime -> fica pequeno, grava sempre
+      const maxW = 360;
+      const escala = Math.min(1, maxW / img.width);
+      const w = Math.max(1, Math.round(img.width * escala));
+      const h = Math.max(1, Math.round(img.height * escala));
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      try { _perfilLogoBase64 = canvas.toDataURL('image/jpeg', 0.75); }
+      catch(err) { _perfilLogoBase64 = e.target.result; }
+      const prev = document.getElementById('perfil-logo-preview');
+      if (prev) { prev.src = _perfilLogoBase64; prev.style.display = 'block'; }
+      mostrarNotif('✅ Logótipo pronto (otimizado). Agora clica em Guardar.');
+    };
+    img.onerror = () => { _perfilLogoBase64 = e.target.result; const prev = document.getElementById('perfil-logo-preview'); if (prev) { prev.src = _perfilLogoBase64; prev.style.display = 'block'; } };
+    img.src = e.target.result;
+  };
   r.readAsDataURL(f);
 }
 function perfilRemoverLogo() {
