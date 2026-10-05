@@ -722,6 +722,27 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
       <div id="scanner-resultado" style="font-size:13px;color:#16a34a;text-align:center;display:none;padding:8px;background:#f0fdf4;border-radius:6px;"></div>
     </div>
 
+    <div style="font-weight:bold;font-size:13px;color:#4a5568;margin-bottom:10px;">🔌 Impressoras ligadas (USB)</div>
+    <div style="background:#f9fafb;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:14px;">
+      <div id="lista-impressoras-usb" style="font-size:13px;color:#64748b;margin-bottom:10px;">Clica em "Detetar" para ver as impressoras USB ligadas.</div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="detetarImpressorasUSB()" style="flex:1;padding:10px;background:#eff6ff;color:#1a56a0;border:1px solid #bfdbfe;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;">🔍 Detetar</button>
+        <button onclick="ligarImpressoraUSB()" style="flex:1;padding:10px;background:#dcfce7;color:#166534;border:1px solid #86efac;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;">🔌 Forçar ligação</button>
+      </div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:8px;">Por segurança, o navegador só mostra impressoras USB depois de as autorizares. A lista completa do Windows aparece sempre na janela de impressão.</div>
+    </div>
+
+    <div style="font-weight:bold;font-size:13px;color:#4a5568;margin-bottom:10px;">🏷️ Impressora de Etiquetas</div>
+    <div style="background:#f9fafb;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:14px;">
+      <div style="font-size:13px;color:#64748b;margin-bottom:10px;">Abre o criador de etiquetas para imprimir um teste.</div>
+      <button onclick="testarImpressoraEtiqueta()" style="width:100%;padding:11px;background:#7c3aed;color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;">🏷️ Testar etiqueta</button>
+    </div>
+
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px;margin-bottom:14px;">
+      <div style="font-size:13px;color:#92400e;margin-bottom:10px;">Se produtos (ex: por kg) ou novidades não aparecem nesta máquina, limpa a cache e recarrega.</div>
+      <button onclick="limparCacheRecarregar()" style="width:100%;padding:11px;background:#f59e0b;color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;">🔄 Limpar cache e recarregar</button>
+    </div>
+
     <div class="modal-botoes">
       <button class="btn-modal-salvar" style="flex:1" onclick="document.getElementById('modal-impressora').classList.remove('ativo')">Fechar</button>
     </div>
@@ -761,9 +782,11 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     <div class="form-grupo">
       <label>Tamanho do selo (impressora de etiquetas)</label>
       <select id="bc-tamanho" onchange="bcGerar()" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
-        <option value="40x30">Pequeno — 40 × 30 mm (recomendado)</option>
-        <option value="50x30">Médio — 50 × 30 mm</option>
-        <option value="58x40">Grande — 58 × 40 mm</option>
+        <option value="20x30">Etiqueta pequena 20 × 30 mm (com cola)</option>
+        <option value="25x15">Etiqueta pequena 25 × 15 mm (com cola)</option>
+        <option value="30x20">Etiqueta 30 × 20 mm (com cola)</option>
+        <option value="35x25">Etiqueta 35 × 25 mm (com cola)</option>
+        <option value="40x30" selected>Etiqueta 40 × 30 mm (a maior)</option>
         <option value="a4">Folha A4 (impressora normal)</option>
       </select>
     </div>
@@ -2154,6 +2177,12 @@ async function scannerFechar() {
     const n = parseFloat(str);
     return isNaN(n) ? NaN : n;                                                  // número puro = kg
   }
+  function editarPesoCarrinho(i) {
+    const item = carrinho[i]; if (!item) return;
+    const prod = (produtos.find(p => p.nome === item.nome)) || item;
+    pedirPesoKg(prod);
+  }
+
   function pedirPesoKg(prod) {
     const ex = carrinho.find(i => i.nome === prod.nome);
     const precoKg = parseFloat(prod.preco) || 0;
@@ -2299,7 +2328,7 @@ async function scannerFechar() {
             <div class="item-carrinho-preco" onclick="descontarPreco(${i})" style="cursor:pointer;" title="Clica para aplicar desconto (precisa de código do dono)">MT ${(item.preco*item.qtd).toFixed(2)} ${item.precoOriginal ? '🏷️' : '🏷'}</div>
             <div class="item-carrinho-qtd">
               ${(item.unidade === 'kg')
-                ? `<button onclick="pedirPesoKg(produtos.find(p=>p.nome===${JSON.stringify(item.nome)})||carrinho[${i}])" style="border:none;background:#eef3fb;border-radius:6px;padding:4px 12px;cursor:pointer;font-weight:bold;">⚖️ ${item.qtd < 1 ? (Math.round(item.qtd*1000)+' g') : (item.qtd+' kg')} ✏️</button>`
+                ? `<button onclick="editarPesoCarrinho(${i})" style="border:none;background:#eef3fb;border-radius:6px;padding:4px 12px;cursor:pointer;font-weight:bold;">⚖️ ${item.qtd < 1 ? (Math.round(item.qtd*1000)+' g') : (item.qtd+' kg')} ✏️</button>`
                 : `<button class="qtd-btn" onclick="alterarQtd(${i},-1)" title="Diminuir 1" aria-label="Diminuir quantidade">−</button>
               <button class="qtd-num" style="border:none;background:#eef3fb;border-radius:6px;padding:2px 10px;cursor:pointer;" onclick="abrirTecladoQuantidadePorIndice(${i})" title="Digitar quantidade exata">${item.qtd} ✏️</button>
               <button class="qtd-btn" onclick="alterarQtd(${i},1)" title="Aumentar 1" aria-label="Aumentar quantidade">+</button>`}
@@ -3487,6 +3516,34 @@ async function scannerFechar() {
     setTimeout(() => { if (inp) inp.focus(); }, 200);
   }
 
+  async function detetarImpressorasUSB() {
+    const el = document.getElementById('lista-impressoras-usb');
+    if (!navigator.usb) { el.innerHTML = '⚠️ Este navegador não permite ver USB. Usa a janela de impressão para escolher a impressora.'; return; }
+    try {
+      const devs = await navigator.usb.getDevices();
+      if (!devs.length) { el.innerHTML = 'Nenhuma impressora USB autorizada ainda. Clica em "🔌 Forçar ligação" para adicionar.'; return; }
+      el.innerHTML = '<b>Ligadas:</b><br>' + devs.map(d => '🖨️ ' + (d.productName || ('USB ' + d.vendorId + ':' + d.productId))).join('<br>');
+    } catch(e) { el.innerHTML = '⚠️ ' + (e.message||e); }
+  }
+  async function ligarImpressoraUSB() {
+    if (!navigator.usb) { mostrarNotif('Este navegador não permite ligação USB direta.', true); return; }
+    try {
+      const d = await navigator.usb.requestDevice({ filters: [] });
+      if (d) { mostrarNotif('✅ Impressora ligada: ' + (d.productName || 'USB')); detetarImpressorasUSB(); }
+    } catch(e) { if (!/cancel|no device|aborted/i.test(e.message||'')) mostrarNotif('⚠️ ' + (e.message||e), true); }
+  }
+  function testarImpressoraEtiqueta() {
+    document.getElementById('modal-impressora').classList.remove('ativo');
+    try { abrirModalEtiquetadora(); } catch(e) { mostrarNotif('Abre Menu → Criar Código de Barras.', true); }
+  }
+  function limparCacheRecarregar() {
+    if (!confirm('Limpar a cache e recarregar esta máquina?\n\nResolve produtos (ex: por kg) ou novidades que não aparecem. Não perde dados — só recarrega.')) return;
+    try { Object.keys(localStorage).forEach(k => { if (k.indexOf('pdv_cache_') === 0) localStorage.removeItem(k); }); } catch(e){}
+    try { if ('caches' in window) caches.keys().then(ks => ks.forEach(k => caches.delete(k))); } catch(e){}
+    mostrarNotif('🔄 A recarregar...');
+    setTimeout(() => { location.reload(true); }, 500);
+  }
+
   function testarImpressoraRecibo() {
     const conteudo = `
       <html><head><style>
@@ -3650,9 +3707,11 @@ async function scannerFechar() {
 
     // Dimensões de cada selo por tamanho escolhido (largura x altura em mm)
     const dims = {
-      '40x30': { w: 40, h: 30, nomeFs: '8px', precoFs: '9px', bcH: 34, bcW: 1.4, bcFs: 9 },
-      '50x30': { w: 50, h: 30, nomeFs: '9px', precoFs: '10px', bcH: 34, bcW: 1.6, bcFs: 10 },
-      '58x40': { w: 58, h: 40, nomeFs: '10px', precoFs: '12px', bcH: 45, bcW: 1.8, bcFs: 12 },
+      '20x30': { w: 20, h: 30, nomeFs: '5px', precoFs: '6px', bcH: 18, bcW: 0.9, bcFs: 5 },
+      '25x15': { w: 25, h: 15, nomeFs: '5px', precoFs: '6px', bcH: 11, bcW: 0.9, bcFs: 5 },
+      '30x20': { w: 30, h: 20, nomeFs: '6px', precoFs: '7px', bcH: 14, bcW: 1.1, bcFs: 6 },
+      '35x25': { w: 35, h: 25, nomeFs: '7px', precoFs: '8px', bcH: 20, bcW: 1.2, bcFs: 7 },
+      '40x30': { w: 40, h: 30, nomeFs: '8px', precoFs: '9px', bcH: 28, bcW: 1.4, bcFs: 8 },
       'a4':    { w: 0,  h: 0,  nomeFs: '11px', precoFs: '12px', bcH: 50, bcW: 2,   bcFs: 14 }
     };
     const d = dims[tamanho] || dims['40x30'];
@@ -3696,6 +3755,32 @@ async function scannerFechar() {
       </style></head><body>${selos}
       <script>window.onload=function(){window.print();}<\/script>
       </body></html>`);
+    } else if (tamanho === '58-rolo') {
+      // Impressora de RECIBO (58mm): imprime os códigos de barras em fila no rolo contínuo.
+      win.document.write(`<html><head><title>Selos</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <style>
+        @page { size: 58mm auto; margin: 0; }
+        @media print { #barra-imprimir { display:none !important; } html,body { width:58mm; } }
+        * { box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+        html, body { margin:0; padding:0; font-family:Arial, sans-serif; background:white; width:58mm; }
+        #barra-imprimir { position:sticky; top:0; background:#1a56a0; color:white; padding:12px; text-align:center; }
+        #barra-imprimir button { background:white; color:#1a56a0; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; font-size:15px; cursor:pointer; }
+        .selo { width:58mm; text-align:center; padding:2mm 1mm 3mm; border-bottom:1px dashed #bbb; }
+        .s-nome { font-size:${d.nomeFs}; font-weight:bold; line-height:1.1; margin-bottom:1mm; }
+        .s-preco { font-size:${d.precoFs}; font-weight:bold; color:#000; margin-bottom:1mm; }
+        .s-bc svg { max-width:54mm; height:auto; }
+      </style></head><body>
+      <div id="barra-imprimir">
+        🧾 Códigos prontos (rolo 58mm) &nbsp;
+        <button onclick="window.print()">🖨️ Imprimir agora</button>
+        <div style="font-size:11px;margin-top:6px;opacity:0.9;">Na janela de impressão: Margens = Nenhuma, e escolhe a Xprinter.</div>
+      </div>
+      ${selos}
+      <script>window.onload=function(){ setTimeout(function(){ try{window.print();}catch(e){} }, 500); }<\/script>
+      </body></html>`);
+      win.document.close();
+      return;
     } else {
       // Impressora de etiquetas: cada selo é UMA página do tamanho exacto do rolo.
       // No Android reforçamos com html/body do tamanho da etiqueta + botão manual.
@@ -3787,26 +3872,46 @@ async function scannerFechar() {
     const etiquetaHTML = `
       <div class="etiqueta">
         <div class="nome">${nome}</div>
-        ${codigo ? `<div class="codigo">${codigo}</div>` : ''}
+        ${codigo ? `<svg class="barcode" data-code="${String(codigo).replace(/"/g,'')}"></svg>` : ''}
         <div class="preco">MT ${preco}</div>
       </div>`;
 
     const conteudo = `
-      <html><head><style>
+      <html><head><meta charset="utf-8"><style>
         body { font-family: Arial; margin: 0; display: flex; flex-wrap: wrap; gap: 2mm; padding: 4mm; }
         .etiqueta { width: 60mm; height: 35mm; border: 1px solid #000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 3mm; box-sizing: border-box; }
         .nome { font-size: 9pt; font-weight: bold; margin-bottom: 1mm; }
-        .preco { font-size: 13pt; font-weight: bold; color: #c00; }
-        .codigo { font-size: 7pt; color: #666; margin-bottom: 1mm; }
+        .preco { font-size: 13pt; font-weight: bold; color: #c00; margin-top:1mm; }
+        .barcode { max-width: 54mm; height: 14mm; }
         @media print { body { margin: 0; } }
-      </style></head><body>
+      </style>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"><\/script>
+      </head><body>
         ${Array(qtd).fill(etiquetaHTML).join('')}
+        <script>
+          window.onload = function() {
+            try {
+              document.querySelectorAll('.barcode').forEach(function(el){
+                JsBarcode(el, el.getAttribute('data-code'), { format:'CODE128', displayValue:true, height:40, fontSize:14, margin:0 });
+              });
+            } catch(e) {
+              // Sem internet p/ o gerador: mostra o código como texto
+              document.querySelectorAll('.barcode').forEach(function(el){
+                var t = document.createElement('div'); t.style.fontSize='8pt'; t.textContent = el.getAttribute('data-code'); el.parentNode.replaceChild(t, el);
+              });
+            }
+            setTimeout(function(){ window.focus(); window.print(); }, 400);
+          };
+        <\/script>
       </body></html>`;
 
     const janela = window.open('', '_blank');
+    if (!janela) {
+      mostrarNotif('⚠️ O navegador bloqueou a janela. Permite "pop-ups" para este site e tenta de novo.', true);
+      return;
+    }
     janela.document.write(conteudo);
     janela.document.close();
-    janela.print();
     document.getElementById('modal-fazer-etiqueta').classList.remove('ativo');
   }
   async function abrirSobreSistema() {
@@ -5124,7 +5229,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.108';
+  const VERSAO_ATUAL = '2.9.112';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
