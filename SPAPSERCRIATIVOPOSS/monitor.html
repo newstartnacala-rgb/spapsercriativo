@@ -517,9 +517,16 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
         <div style="font-size:10px;color:#f59e0b;margin-top:3px;">🔒 Só o dono vê este valor</div>
       </div>
       <div class="form-campo">
-        <label>🏷️ Preço de Venda (MT) *</label>
+        <label id="np-preco-label">🏷️ Preço de Venda (MT) *</label>
         <input type="number" id="np-preco" placeholder="0.00" step="0.01">
       </div>
+    </div>
+    <div class="form-campo">
+      <label>⚖️ Unidade de venda</label>
+      <select id="np-unidade" onchange="atualizarLabelPreco('np')">
+        <option value="un">Por unidade (normal)</option>
+        <option value="kg">Por quilograma (kg)</option>
+      </select>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="form-campo"><label>Stock</label><input type="number" id="np-stock" placeholder="0" value="0"></div>
@@ -1732,6 +1739,14 @@ async function editarProdutoCompleto(id) {
         </div>
       </div>
 
+      <div style="margin-bottom:4px;">
+        <label style="font-size:12px;font-weight:bold;color:#374151;">⚖️ Unidade de venda</label>
+        <select id="ed-unidade" style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:8px;margin:4px 0 12px;font-size:14px;">
+          <option value="un" ${(p.unidade||'un')!=='kg'?'selected':''}>Por unidade (normal)</option>
+          <option value="kg" ${(p.unidade||'un')==='kg'?'selected':''}>Por quilograma (kg)</option>
+        </select>
+      </div>
+
       <div style="display:flex;gap:10px;">
         <div style="flex:1;">
           <label style="font-size:12px;font-weight:bold;color:#374151;">📦 Stock</label>
@@ -1807,7 +1822,8 @@ async function salvarEdicaoProduto(id, tinhaImg) {
     codigo: document.getElementById('ed-codigo').value.trim(),
     codbarras: document.getElementById('ed-codbarras').value.trim(),
     categoria: document.getElementById('ed-categoria').value,
-    subcategoria: (document.getElementById('ed-subcategoria') && document.getElementById('ed-subcategoria').value) || null
+    subcategoria: (document.getElementById('ed-subcategoria') && document.getElementById('ed-subcategoria').value) || null,
+    unidade: (document.getElementById('ed-unidade') && document.getElementById('ed-unidade').value) || 'un'
   };
   if (editImagemBase64) dados.imagem = editImagemBase64;
   if (!dados.nome) { mostrarNotif('❌ O nome é obrigatório.', true); return; }
@@ -2083,7 +2099,9 @@ async function salvarNovoProduto() {
 
   if (!nome || isNaN(preco)) { msg.textContent = '❌ Preenche nome e preço de venda.'; msg.style.color='#dc2626'; return; }
 
-  const dados = { loja_id: lojaId, nome, preco, preco_compra: precoCompra || null, stock, codigo, categoria, subcategoria, imagem };
+  const _unEl = document.getElementById('np-unidade');
+  const unidade = (_unEl && _unEl.value) || 'un';
+  const dados = { loja_id: lojaId, nome, preco, preco_compra: precoCompra || null, stock, codigo, categoria, subcategoria, imagem, unidade };
   btn.disabled = true; btn.textContent = 'A guardar...';
   msg.textContent = '⏳ A guardar "'+nome+'"...'; msg.style.color='#d97706';
 
@@ -3388,6 +3406,12 @@ function subcategoriasDeTudo(nomeCategoria) {
 }
 
 // Preenche as SUGESTÕES de subcategoria conforme a categoria escolhida (campo é texto livre)
+function atualizarLabelPreco(prefixo) {
+  const un = document.getElementById(prefixo + '-unidade');
+  const lbl = document.getElementById(prefixo + '-preco-label');
+  if (un && lbl) lbl.textContent = (un.value === 'kg') ? '🏷️ Preço por QUILO (MT/kg) *' : '🏷️ Preço de Venda (MT) *';
+}
+
 function atualizarSubcatSelect(catSelId, subInputId, valorAtual) {
   const catSel = document.getElementById(catSelId);
   const subInput = document.getElementById(subInputId);
@@ -3970,7 +3994,7 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.103';
+const MONITOR_VERSAO = '2.9.104';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });

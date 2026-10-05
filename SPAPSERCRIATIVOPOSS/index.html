@@ -1419,7 +1419,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     // Carga LEVE: sem a coluna 'imagem' (base64 pesado) para não estourar o tempo limite
     const { data: produtosData, error: produtosError } = await supabaseClient
       .from('produtos')
-      .select('id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em')
+      .select('id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em,unidade')
       .eq('loja_id', sessaoAtual.lojaId)
       .order('criado_em', { ascending: true });
 
@@ -1526,7 +1526,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   // O Supabase usa nomes de coluna (id, loja_id...); o resto do código já está
   // escrito à volta do formato antigo do localStorage. Esta função traduz.
   function mapearProdutoDoSupabase(p) {
-    return { id: p.id, nome: p.nome, codigo: p.codigo, codbarras: p.codbarras, categoria: p.categoria, subcategoria: p.subcategoria, preco: parseFloat(p.preco), stock: p.stock, imagem: p.imagem };
+    return { id: p.id, nome: p.nome, codigo: p.codigo, codbarras: p.codbarras, categoria: p.categoria, subcategoria: p.subcategoria, preco: parseFloat(p.preco), stock: p.stock, imagem: p.imagem, unidade: p.unidade || 'un' };
   }
 
   function fazerLogout() {
@@ -2126,10 +2126,24 @@ async function scannerFechar() {
   // carrinho. Para definir uma quantidade exata, o vendedor usa o botão ✏️ dentro do
   // próprio carrinho — isso evita ambiguidade entre "clique simples" e "clique para editar".
   function cliqueNoProduto(prod) {
+    // Produto vendido por KG: pede o peso (ex: 0.5, 1.5)
+    if ((prod.unidade || 'un') === 'kg') { pedirPesoKg(prod); return; }
     // 1º clique: adiciona +1. 2º clique (já no carrinho): abre o teclado para digitar a quantidade.
     const jaNoCarrinho = carrinho.find(i => i.nome === prod.nome);
     if (jaNoCarrinho) { abrirTecladoQuantidade(prod); return; }
     adicionarAoCarrinho(prod);
+  }
+
+  function pedirPesoKg(prod) {
+    const ex = carrinho.find(i => i.nome === prod.nome);
+    const precoKg = parseFloat(prod.preco) || 0;
+    const str = prompt('⚖️ ' + prod.nome + '\nPreço: MT ' + precoKg.toFixed(2) + ' / kg\n\nEscreve o peso em kg (ex: 0.5, 1, 1.5, 2):', ex ? ex.qtd : '');
+    if (str === null) return;
+    const peso = parseFloat(String(str).replace(',', '.'));
+    if (isNaN(peso) || peso <= 0) { mostrarNotif('Peso inválido. Escreve um número, ex: 1.5', true); return; }
+    if (ex) ex.qtd = peso; else carrinho.push({...prod, qtd: peso});
+    renderCarrinho(); renderProdutos();
+    mostrarNotif('🛒 ' + prod.nome + ' — ' + peso + ' kg (MT ' + (peso*precoKg).toFixed(2) + ')');
   }
 
   function adicionarAoCarrinho(prod) {
@@ -2263,9 +2277,11 @@ async function scannerFechar() {
             ${pReal && pReal.codbarras ? `<div style="font-size:10px;color:#94a3b8;">${pReal.codbarras}</div>` : ''}
             <div class="item-carrinho-preco" onclick="descontarPreco(${i})" style="cursor:pointer;" title="Clica para aplicar desconto (precisa de código do dono)">MT ${(item.preco*item.qtd).toFixed(2)} ${item.precoOriginal ? '🏷️' : '🏷'}</div>
             <div class="item-carrinho-qtd">
-              <button class="qtd-btn" onclick="alterarQtd(${i},-1)" title="Diminuir 1" aria-label="Diminuir quantidade">−</button>
+              ${(item.unidade === 'kg')
+                ? `<button onclick="pedirPesoKg(produtos.find(p=>p.nome===${JSON.stringify(item.nome)})||carrinho[${i}])" style="border:none;background:#eef3fb;border-radius:6px;padding:4px 12px;cursor:pointer;font-weight:bold;">⚖️ ${item.qtd} kg ✏️</button>`
+                : `<button class="qtd-btn" onclick="alterarQtd(${i},-1)" title="Diminuir 1" aria-label="Diminuir quantidade">−</button>
               <button class="qtd-num" style="border:none;background:#eef3fb;border-radius:6px;padding:2px 10px;cursor:pointer;" onclick="abrirTecladoQuantidadePorIndice(${i})" title="Digitar quantidade exata">${item.qtd} ✏️</button>
-              <button class="qtd-btn" onclick="alterarQtd(${i},1)" title="Aumentar 1" aria-label="Aumentar quantidade">+</button>
+              <button class="qtd-btn" onclick="alterarQtd(${i},1)" title="Aumentar 1" aria-label="Aumentar quantidade">+</button>`}
             </div>
           </div>
           <span class="item-remover" onclick="removerItem(${i})" title="Remover" aria-label="Remover item" tabindex="0" onkeydown="if(event.key==='Enter') removerItem(${i})">×</span>
@@ -5087,7 +5103,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.103';
+  const VERSAO_ATUAL = '2.9.104';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
