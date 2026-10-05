@@ -1822,7 +1822,8 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
         <div class="produto-nome">${prod.nome}</div>
         ${prod.codigo ? `<div class="produto-codigo">📎 ${prod.codigo}</div>` : ''}
         ${prod.codbarras ? `<div class="produto-codigo" style="font-size:10px;color:#94a3b8;">${prod.codbarras}</div>` : ''}
-        <div class="produto-preco">MT ${parseFloat(prod.preco).toFixed(2)}</div>
+        <div class="produto-preco">MT ${parseFloat(prod.preco).toFixed(2)}${prod.unidade === 'kg' ? ' <span style="font-size:11px;color:#16a34a;">/kg</span>' : ''}</div>
+        ${prod.unidade === 'kg' ? '<div style="display:inline-block;background:#dcfce7;color:#166534;font-size:10px;font-weight:bold;padding:1px 8px;border-radius:10px;margin-top:2px;">⚖️ por kg</div>' : ''}
         ${noCarrinho>0 ? '<div class="produto-stock">No carrinho: '+noCarrinho+'</div>' : ''}`;
       card.onclick = () => cliqueNoProduto(prod);
       return card;
@@ -2126,8 +2127,18 @@ async function scannerFechar() {
   // carrinho. Para definir uma quantidade exata, o vendedor usa o botão ✏️ dentro do
   // próprio carrinho — isso evita ambiguidade entre "clique simples" e "clique para editar".
   function cliqueNoProduto(prod) {
-    // Produto vendido por KG: pede o peso (ex: 0.5, 1.5)
-    if ((prod.unidade || 'un') === 'kg') { pedirPesoKg(prod); return; }
+    // Produto vendido por KG: 1º clique mete 1 kg (preço de 1kg). Clicar no peso edita.
+    if ((prod.unidade || 'un') === 'kg') {
+      const ex = carrinho.find(i => i.nome === prod.nome);
+      if (!ex) {
+        carrinho.push({...prod, qtd: 1});
+        renderCarrinho(); renderProdutos();
+        mostrarNotif('🛒 ' + prod.nome + ' — 1 kg (MT ' + ((parseFloat(prod.preco)||0)).toFixed(2) + '). Clica no peso para mudar p/ gramas.');
+      } else {
+        pedirPesoKg(prod);
+      }
+      return;
+    }
     // 1º clique: adiciona +1. 2º clique (já no carrinho): abre o teclado para digitar a quantidade.
     const jaNoCarrinho = carrinho.find(i => i.nome === prod.nome);
     if (jaNoCarrinho) { abrirTecladoQuantidade(prod); return; }
@@ -5113,7 +5124,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.106';
+  const VERSAO_ATUAL = '2.9.108';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
