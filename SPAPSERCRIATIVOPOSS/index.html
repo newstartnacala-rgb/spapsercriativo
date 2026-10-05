@@ -318,24 +318,25 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   .pos-venda-texto { text-align: center; color: #555; font-size: 14px; margin-bottom: 20px; }
 
   #area-recibo { display: none; }
-  #area-recibo .rec-empresa { text-align:center; font-size:13px; font-weight:bold; line-height:1.2; }
-  #area-recibo .rec-sub { text-align:center; font-size:10px; }
-  #area-recibo .rec-meta { font-size:9px; margin-top:4px; line-height:1.35; }
-  #area-recibo .rec-sep { border-top:1px dashed #000; margin:5px 0; }
+  #area-recibo .rec-empresa { text-align:center; font-size:18px; font-weight:bold; line-height:1.2; }
+  #area-recibo .rec-sub { text-align:center; font-size:13px; }
+  #area-recibo .rec-meta { font-size:12px; margin-top:4px; line-height:1.4; }
+  #area-recibo .rec-sep { border-top:1px dashed #000; margin:6px 0; }
   #area-recibo .rec-tabela { width:100%; border-collapse:collapse; }
-  #area-recibo .rec-tabela th { font-size:9px; text-align:right; border-bottom:1px solid #000; padding-bottom:2px; }
+  #area-recibo .rec-tabela th { font-size:12px; text-align:right; border-bottom:1px solid #000; padding-bottom:2px; }
   #area-recibo .rec-tabela th.c-nome, #area-recibo .rec-tabela td.c-nome { text-align:left; }
-  #area-recibo .rec-tabela td { font-size:10px; padding:2px 0; vertical-align:top; }
-  #area-recibo .rec-tabela td.c-num { text-align:right; white-space:nowrap; padding-left:3px; }
-  #area-recibo .rec-tot { display:flex; justify-content:space-between; font-size:10px; margin:2px 0; }
-  #area-recibo .rec-total-grande { font-size:13px; font-weight:bold; }
-  #area-recibo .rec-rodape { text-align:center; font-size:10px; margin-top:6px; line-height:1.4; }
+  #area-recibo .rec-tabela td { font-size:13px; padding:3px 0; vertical-align:top; }
+  #area-recibo .rec-tabela td.c-num { text-align:right; white-space:nowrap; padding-left:4px; }
+  #area-recibo .rec-tot { display:flex; justify-content:space-between; font-size:13px; margin:3px 0; }
+  #area-recibo .rec-total-grande { font-size:19px; font-weight:bold; }
+  #area-recibo .rec-rodape { text-align:center; font-size:13px; margin-top:8px; line-height:1.45; }
   @media print {
     /* Esconde TUDO menos o recibo (display:none colapsa a altura — evita páginas em branco) */
     body > *:not(#area-recibo) { display: none !important; }
-    html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
-    #area-recibo { display: block !important; position: static !important; width: 58mm; box-sizing: border-box; padding: 1mm 2mm; font-family: 'Courier New', monospace; color: #000; }
-    @page { size: 58mm auto; margin: 0; }
+    html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; width:80mm !important; }
+    /* 80mm preenche o papel todo (sem espaço vazio à direita). Letras maiores. */
+    #area-recibo { display: block !important; position: static !important; width: 80mm; box-sizing: border-box; padding: 2mm 3mm; font-family: 'Courier New', monospace; color: #000; }
+    @page { size: 80mm auto; margin: 0; }
   }
   .recibo-linha { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 3px; }
   .recibo-sep { border-top: 1px dashed #333; margin: 8px 0; }
@@ -700,6 +701,11 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
     <div style="font-weight:bold;font-size:13px;color:#4a5568;margin-bottom:10px;">🖨️ Impressora de Recibo</div>
     <div style="background:#f9fafb;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:14px;">
+      <div style="font-size:13px;color:#64748b;margin-bottom:8px;">Largura do papel (conforme a tua impressora):</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <button id="larg-58" onclick="definirLarguraRecibo('58')" style="flex:1;padding:11px;border:2px solid #e2e8f0;background:white;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;">58mm (estreito)</button>
+        <button id="larg-80" onclick="definirLarguraRecibo('80')" style="flex:1;padding:11px;border:2px solid #e2e8f0;background:white;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;">80mm (largo)</button>
+      </div>
       <div style="font-size:13px;color:#64748b;margin-bottom:10px;">Imprime um recibo de teste para verificar a ligação.</div>
       <button onclick="testarImpressoraRecibo()" style="width:100%;padding:11px;background:#1a56a0;color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;">
         🖨️ Imprimir Recibo de Teste
@@ -1973,6 +1979,34 @@ async function scannerFechar() {
     }
     if (!emCampoDados && e.key.length === 1) { _scanBuf += e.key; }
   }, true);
+
+  // ===== LARGURA DO RECIBO (58mm / 80mm) =====
+  function aplicarLarguraRecibo() {
+    const w = (localStorage.getItem('pdv_recibo_largura') || '80');
+    const f = (w === '80')
+      ? { emp:18, sub:13, meta:12, th:12, td:13, tot:13, grande:19, rod:13, pad:'2mm 3mm' }
+      : { emp:13, sub:10, meta:9,  th:9,  td:10, tot:10, grande:13, rod:10, pad:'1mm 2mm' };
+    let st = document.getElementById('estilo-recibo-largura');
+    if (!st) { st = document.createElement('style'); st.id = 'estilo-recibo-largura'; document.head.appendChild(st); }
+    st.textContent = '@media print{'
+      + '#area-recibo{width:'+w+'mm !important;padding:'+f.pad+' !important;}'
+      + 'html,body{width:'+w+'mm !important;}'
+      + '@page{size:'+w+'mm auto;margin:0;}'
+      + '#area-recibo .rec-empresa{font-size:'+f.emp+'px;}'
+      + '#area-recibo .rec-sub{font-size:'+f.sub+'px;}'
+      + '#area-recibo .rec-meta{font-size:'+f.meta+'px;}'
+      + '#area-recibo .rec-tabela th{font-size:'+f.th+'px;}'
+      + '#area-recibo .rec-tabela td{font-size:'+f.td+'px;}'
+      + '#area-recibo .rec-tot{font-size:'+f.tot+'px;}'
+      + '#area-recibo .rec-total-grande{font-size:'+f.grande+'px;}'
+      + '#area-recibo .rec-rodape{font-size:'+f.rod+'px;}'
+      + '}';
+    const b58 = document.getElementById('larg-58'), b80 = document.getElementById('larg-80');
+    if (b58) { b58.style.borderColor = w==='58'?'#1a56a0':'#e2e8f0'; b58.style.background = w==='58'?'#eff6ff':'white'; }
+    if (b80) { b80.style.borderColor = w==='80'?'#1a56a0':'#e2e8f0'; b80.style.background = w==='80'?'#eff6ff':'white'; }
+  }
+  function definirLarguraRecibo(w) { try { localStorage.setItem('pdv_recibo_largura', w); } catch(e){} aplicarLarguraRecibo(); try { mostrarNotif('✅ Recibo definido para ' + w + 'mm'); } catch(e){} }
+  setTimeout(aplicarLarguraRecibo, 1200);
 
   function fecharModalProduto() { document.getElementById('modal-produto').classList.remove('ativo'); esconderGestao(); }
 
@@ -5007,7 +5041,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.97';
+  const VERSAO_ATUAL = '2.9.99';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.

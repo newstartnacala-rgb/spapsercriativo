@@ -1,1 +1,1 @@
-{ "versao": "2.9.97", "data": "2026-09-11", "novidades": "Recibo: removida a linha 'Contacto'. O rodape reflete o que escreveres em Meu Perfil > Rodape do recibo (grava agora que o logotipo deixou de bloquear a gravacao). Escreve o rodape, Guarda, recarrega a loja." }
+{ "versao": "2.9.99", "data": "2026-09-11", "novidades": "Opcao para escolher a LARGURA do recibo (58mm ou 80mm) em Menu > Impressora & Scanner. Escolhes conforme o papel da tua impressora e o recibo ajusta-se (tamanho e letras) para encher o papel." }
