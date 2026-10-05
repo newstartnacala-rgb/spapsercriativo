@@ -1,1 +1,1 @@
-{ "versao": "2.9.105", "data": "2026-09-11", "novidades": "Produtos sem imagem mostram agora um CARRINHO DE COMPRAS (🛒) igual para todos — em vez do emoji da categoria (ex: o batom dos cosmeticos). Fica uniforme e profissional, e indica claramente que o produto ainda nao tem imagem." }
+{ "versao": "2.9.106", "data": "2026-09-11", "novidades": "Venda por peso melhorada: aceita quilos grandes (20, 10), decimais (1.5, 0.5) e tambem GRAMAS (escreve 500g). O carrinho mostra 'g' quando e menos de 1kg e 'kg' quando e mais. Mensagem mais clara ao pedir o peso." }

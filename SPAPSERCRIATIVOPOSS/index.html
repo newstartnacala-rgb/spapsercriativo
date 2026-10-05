@@ -2134,16 +2134,26 @@ async function scannerFechar() {
     adicionarAoCarrinho(prod);
   }
 
+  // Converte o que a pessoa escreve em KG. Aceita: 20, 10, 1.5, 0.5 (kg) e 500g, 250 g (gramas)
+  function _parsePesoKg(str) {
+    str = String(str).toLowerCase().trim().replace(',', '.');
+    let m;
+    if ((m = str.match(/^([\d.]+)\s*kg$/))) return parseFloat(m[1]);           // "20kg"
+    if ((m = str.match(/^([\d.]+)\s*g(r|ramas?)?$/))) return parseFloat(m[1]) / 1000; // "500g"
+    const n = parseFloat(str);
+    return isNaN(n) ? NaN : n;                                                  // número puro = kg
+  }
   function pedirPesoKg(prod) {
     const ex = carrinho.find(i => i.nome === prod.nome);
     const precoKg = parseFloat(prod.preco) || 0;
-    const str = prompt('⚖️ ' + prod.nome + '\nPreço: MT ' + precoKg.toFixed(2) + ' / kg\n\nEscreve o peso em kg (ex: 0.5, 1, 1.5, 2):', ex ? ex.qtd : '');
+    const str = prompt('⚖️ ' + prod.nome + '\nPreço: MT ' + precoKg.toFixed(2) + ' / kg\n\nEscreve o peso:\n• 20 ou 10 → quilos\n• 1.5 → um quilo e meio\n• 0.5 → meio quilo\n• 500g → gramas', ex ? ex.qtd : '');
     if (str === null) return;
-    const peso = parseFloat(String(str).replace(',', '.'));
-    if (isNaN(peso) || peso <= 0) { mostrarNotif('Peso inválido. Escreve um número, ex: 1.5', true); return; }
+    const peso = _parsePesoKg(str);
+    if (isNaN(peso) || peso <= 0) { mostrarNotif('Peso inválido. Ex: 20, 1.5, 0.5 ou 500g', true); return; }
     if (ex) ex.qtd = peso; else carrinho.push({...prod, qtd: peso});
     renderCarrinho(); renderProdutos();
-    mostrarNotif('🛒 ' + prod.nome + ' — ' + peso + ' kg (MT ' + (peso*precoKg).toFixed(2) + ')');
+    const mostra = peso < 1 ? (Math.round(peso*1000) + ' g') : (peso + ' kg');
+    mostrarNotif('🛒 ' + prod.nome + ' — ' + mostra + ' (MT ' + (peso*precoKg).toFixed(2) + ')');
   }
 
   function adicionarAoCarrinho(prod) {
@@ -2278,7 +2288,7 @@ async function scannerFechar() {
             <div class="item-carrinho-preco" onclick="descontarPreco(${i})" style="cursor:pointer;" title="Clica para aplicar desconto (precisa de código do dono)">MT ${(item.preco*item.qtd).toFixed(2)} ${item.precoOriginal ? '🏷️' : '🏷'}</div>
             <div class="item-carrinho-qtd">
               ${(item.unidade === 'kg')
-                ? `<button onclick="pedirPesoKg(produtos.find(p=>p.nome===${JSON.stringify(item.nome)})||carrinho[${i}])" style="border:none;background:#eef3fb;border-radius:6px;padding:4px 12px;cursor:pointer;font-weight:bold;">⚖️ ${item.qtd} kg ✏️</button>`
+                ? `<button onclick="pedirPesoKg(produtos.find(p=>p.nome===${JSON.stringify(item.nome)})||carrinho[${i}])" style="border:none;background:#eef3fb;border-radius:6px;padding:4px 12px;cursor:pointer;font-weight:bold;">⚖️ ${item.qtd < 1 ? (Math.round(item.qtd*1000)+' g') : (item.qtd+' kg')} ✏️</button>`
                 : `<button class="qtd-btn" onclick="alterarQtd(${i},-1)" title="Diminuir 1" aria-label="Diminuir quantidade">−</button>
               <button class="qtd-num" style="border:none;background:#eef3fb;border-radius:6px;padding:2px 10px;cursor:pointer;" onclick="abrirTecladoQuantidadePorIndice(${i})" title="Digitar quantidade exata">${item.qtd} ✏️</button>
               <button class="qtd-btn" onclick="alterarQtd(${i},1)" title="Aumentar 1" aria-label="Aumentar quantidade">+</button>`}
@@ -5103,7 +5113,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.105';
+  const VERSAO_ATUAL = '2.9.106';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
