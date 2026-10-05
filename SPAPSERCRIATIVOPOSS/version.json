@@ -1,1 +1,1 @@
-{ "versao": "2.9.99", "data": "2026-09-11", "novidades": "Opcao para escolher a LARGURA do recibo (58mm ou 80mm) em Menu > Impressora & Scanner. Escolhes conforme o papel da tua impressora e o recibo ajusta-se (tamanho e letras) para encher o papel." }
+{ "versao": "2.9.100", "data": "2026-09-11", "novidades": "Recibo: o NOME da loja volta a aparecer SEMPRE no impresso (mesmo com logotipo), porque a impressora termica muitas vezes nao imprime a imagem. Reforcado para a imagem imprimir quando a impressora suportar. Logotipo e sempre visivel no ecra." }

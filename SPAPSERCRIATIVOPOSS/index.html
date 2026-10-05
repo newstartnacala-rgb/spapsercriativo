@@ -335,7 +335,8 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     body > *:not(#area-recibo) { display: none !important; }
     html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; width:80mm !important; }
     /* 80mm preenche o papel todo (sem espaço vazio à direita). Letras maiores. */
-    #area-recibo { display: block !important; position: static !important; width: 80mm; box-sizing: border-box; padding: 2mm 3mm; font-family: 'Courier New', monospace; color: #000; }
+    #area-recibo { display: block !important; position: static !important; width: 80mm; box-sizing: border-box; padding: 2mm 3mm; font-family: 'Courier New', monospace; color: #000; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    #area-recibo img { display: block !important; max-width: 90% !important; margin: 0 auto 4px !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     @page { size: 80mm auto; margin: 0; }
   }
   .recibo-linha { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 3px; }
@@ -3178,8 +3179,11 @@ async function scannerFechar() {
     // Logótipo (se existir) aparece em vez do nome
     const elLogo = document.getElementById('recibo-logo');
     if (elLogo) {
-      if (sessaoAtual && sessaoAtual.logo) { elLogo.src = sessaoAtual.logo; elLogo.style.display = 'block'; if (elEmp) elEmp.style.display = 'none'; }
-      else { elLogo.style.display = 'none'; if (elEmp) elEmp.style.display = ''; }
+      // Mostra o logótipo (se existir) E mantém o nome em texto — porque a impressora
+      // térmica muitas vezes não imprime a imagem, mas o texto sai sempre.
+      if (sessaoAtual && sessaoAtual.logo) { elLogo.src = sessaoAtual.logo; elLogo.style.display = 'block'; }
+      else { elLogo.style.display = 'none'; }
+      if (elEmp) elEmp.style.display = '';
     }
     // Rodapé personalizado
     const elRod = document.getElementById('recibo-rodape-txt');
@@ -5041,7 +5045,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.99';
+  const VERSAO_ATUAL = '2.9.100';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
