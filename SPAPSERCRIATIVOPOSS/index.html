@@ -1818,7 +1818,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
       // A imagem aparece no carrinho, para o vendedor confirmar o produto.
       card.innerHTML = `
         ${selo}
-        <div class="produto-emoji">${categoriasInfo[prod.categoria]||'📦'}</div>
+        <div class="produto-emoji">${'🛒'}</div>
         <div class="produto-nome">${prod.nome}</div>
         ${prod.codigo ? `<div class="produto-codigo">📎 ${prod.codigo}</div>` : ''}
         ${prod.codbarras ? `<div class="produto-codigo" style="font-size:10px;color:#94a3b8;">${prod.codbarras}</div>` : ''}
@@ -2098,7 +2098,7 @@ async function scannerFechar() {
     if (produtos.length === 0) { div.innerHTML = '<div class="gestao-vazio">Nenhum produto cadastrado.</div>'; return; }
     div.innerHTML = produtos.map((p, i) => `
       <div class="linha-gestao">
-        <div class="linha-gestao-emoji">${p.imagem ? `<img src="${p.imagem}" style="width:28px;height:28px;border-radius:6px;object-fit:cover" onerror="this.style.display='none'">` : (categoriasInfo[p.categoria]||'📦')}</div>
+        <div class="linha-gestao-emoji">${p.imagem ? `<img src="${p.imagem}" style="width:28px;height:28px;border-radius:6px;object-fit:cover" onerror="this.style.display='none'">` : ('🛒')}</div>
         <div class="linha-gestao-info">
           <div class="linha-gestao-nome">${p.nome}</div>
           <div class="linha-gestao-meta">${p.categoria} • MT ${parseFloat(p.preco).toFixed(2)}</div>
@@ -2174,9 +2174,9 @@ async function scannerFechar() {
     atualizarSubtotalQtd();
     const imgWrap = document.getElementById('qtd-produto-imagem-wrap');
     if (prod.imagem) {
-      imgWrap.innerHTML = `<img src="${prod.imagem}" alt="${prod.nome}" onclick="abrirImagemGrande('${prod.imagem}')" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in;" onerror="this.parentElement.textContent='${categoriasInfo[prod.categoria]||'📦'}'">`;
+      imgWrap.innerHTML = `<img src="${prod.imagem}" alt="${prod.nome}" onclick="abrirImagemGrande('${prod.imagem}')" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in;" onerror="this.parentElement.textContent='${'🛒'}'">`;
     } else {
-      imgWrap.textContent = categoriasInfo[prod.categoria] || '📦';
+      imgWrap.textContent = '🛒';
     }
     document.getElementById('modal-quantidade').classList.add('ativo');
   }
@@ -2269,7 +2269,7 @@ async function scannerFechar() {
         const pReal = produtos.find(p => p.nome === item.nome);
         const thumb = (pReal && pReal.imagem)
           ? `<img src="${pReal.imagem}" style="width:52px;height:52px;object-fit:cover;border-radius:8px;border:1px solid #eee;flex-shrink:0;" onerror="this.style.display='none'">`
-          : `<div style="width:52px;height:52px;border-radius:8px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">${categoriasInfo[(pReal && pReal.categoria)]||'📦'}</div>`;
+          : `<div style="width:52px;height:52px;border-radius:8px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">${'🛒'}</div>`;
         return `<div class="item-carrinho">
           ${thumb}
           <div class="item-carrinho-info">
@@ -2342,7 +2342,7 @@ async function scannerFechar() {
     }
     buscaResultadosDiv.innerHTML = buscaListaAtual.map((p, i) => `
       <div class="busca-item ${i === buscaSelecionado ? 'selecionado' : ''}" onclick='selecionarResultadoBuscaPorIndice(${i})'>
-        <span class="busca-item-emoji">${categoriasInfo[p.categoria]||'📦'}</span>
+        <span class="busca-item-emoji">${'🛒'}</span>
         <div class="busca-item-info">
           <div class="busca-item-nome">${p.nome}</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:4px;">
@@ -5103,7 +5103,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.104';
+  const VERSAO_ATUAL = '2.9.105';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
