@@ -546,9 +546,10 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
       </select>
     </div>
     <div class="form-campo" id="np-subcategoria-campo">
-      <label>Subcategoria (opcional)</label>
+      <label>Subcategoria (opcional) — clica numa já criada ou escreve</label>
       <input type="text" id="np-subcategoria" list="np-sub-sugestoes" placeholder="Ex: Homem, Mulher, Criança" style="width:100%;">
       <datalist id="np-sub-sugestoes"></datalist>
+      <div id="np-subcategoria-chips" style="margin-top:6px;"></div>
     </div>
     <div class="form-campo">
       <label>📸 Imagem do Produto</label>
@@ -1756,8 +1757,9 @@ async function editarProdutoCompleto(id) {
 
       <div id="ed-subcategoria-campo">
         <label style="font-size:12px;font-weight:bold;color:#374151;">📂 Subcategoria (opcional)</label>
-        <input type="text" id="ed-subcategoria" list="ed-sub-sugestoes" value="${(p.subcategoria||'').replace(/"/g,'&quot;')}" placeholder="Ex: Homem, Mulher, Criança" style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:8px;margin:4px 0 12px;font-size:14px;">
+        <input type="text" id="ed-subcategoria" list="ed-sub-sugestoes" value="${(p.subcategoria||'').replace(/"/g,'&quot;')}" placeholder="Ex: Homem, Mulher, Criança" style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:8px;margin:4px 0 6px;font-size:14px;">
         <datalist id="ed-sub-sugestoes">${subcategoriasDeTudo(p.categoria).map(s=>`<option value="${s}">`).join('')}</datalist>
+        <div id="ed-subcategoria-chips" style="margin-bottom:12px;">${subcategoriasDeTudo(p.categoria).map(s=>`<button type="button" onclick="document.getElementById('ed-subcategoria').value=this.textContent" style="padding:6px 12px;margin:3px 5px 0 0;background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;font-size:12px;cursor:pointer;color:#1a56a0;font-weight:600;">${s}</button>`).join('')}</div>
       </div>
 
       <label style="font-size:12px;font-weight:bold;color:#374151;">📷 Imagem</label>
@@ -3397,6 +3399,13 @@ function atualizarSubcatSelect(catSelId, subInputId, valorAtual) {
   const campo = document.getElementById(subInputId + '-campo');
   if (campo) campo.style.display = '';   // sempre visível
   if (valorAtual !== undefined) subInput.value = valorAtual || '';
+  // Chips clicáveis com as subcategorias já criadas (clica e preenche)
+  const chipsEl = document.getElementById(subInputId + '-chips');
+  if (chipsEl) {
+    chipsEl.innerHTML = (subs && subs.length)
+      ? subs.map(s => `<button type="button" onclick="document.getElementById('${subInputId}').value=this.textContent" style="padding:6px 12px;margin:3px 5px 0 0;background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;font-size:12px;cursor:pointer;color:#1a56a0;font-weight:600;">${s}</button>`).join('')
+      : '<span style="font-size:11px;color:#94a3b8;">Sem subcategorias nesta categoria. Escreve uma, ou cria em Categorias › 📂 Subcat.</span>';
+  }
 }
 
 // ===== INVENTÁRIO / BALANÇO (só plano Anual) =====
@@ -3961,7 +3970,7 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.100';
+const MONITOR_VERSAO = '2.9.101';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -4395,6 +4404,7 @@ async function abrirMeuPerfil() {
       document.getElementById('perfil-in-endereco').value = data.endereco || '';
       var _ca = document.getElementById('perfil-in-codigo'); if (_ca) _ca.value = data.codigo_agente || '';
       var _pg = document.getElementById('perfil-in-pingerente'); if (_pg) _pg.value = data.pin_gerente || '0000';
+      var _cd = document.getElementById('perfil-in-codigodesc'); if (_cd) _cd.value = data.codigo_desconto || '';
       var _rp = document.getElementById('perfil-in-rodape'); if (_rp) _rp.value = data.recibo_rodape || '';
       _perfilLogoBase64 = null;
       var _lp = document.getElementById('perfil-logo-preview');
@@ -4455,6 +4465,7 @@ async function guardarDadosPerfil() {
     endereco: document.getElementById('perfil-in-endereco').value.trim(),
     codigo_agente: document.getElementById('perfil-in-codigo').value.trim(),
     pin_gerente: (document.getElementById('perfil-in-pingerente').value.trim() || '0000'),
+    codigo_desconto: (document.getElementById('perfil-in-codigodesc').value.trim() || null),
     recibo_rodape: document.getElementById('perfil-in-rodape').value.trim()
   };
   if (_perfilLogoBase64 !== null) dados.logo = _perfilLogoBase64 || null;
@@ -5147,6 +5158,10 @@ async function carregarContagensEquipa() {
       <label style="font-size:13px;color:#64748b;font-weight:600;">🔒 Código do Monitor Extra (gerente)</label>
       <input type="text" id="perfil-in-pingerente" placeholder="0000" style="width:100%;padding:11px;border:1.5px solid #fdba74;border-radius:9px;font-size:15px;margin:5px 0 4px;box-sizing:border-box;">
       <div style="font-size:11px;color:#64748b;margin:0 0 14px;">Pedido a quem abre o link do monitor extra. Só tu podes mudar aqui.</div>
+
+      <label style="font-size:13px;color:#64748b;font-weight:600;">🏷️ Código de Desconto (para o balconista descontar)</label>
+      <input type="text" id="perfil-in-codigodesc" placeholder="ex: 5050" style="width:100%;padding:11px;border:1.5px solid #86efac;border-radius:9px;font-size:15px;margin:5px 0 4px;box-sizing:border-box;">
+      <div style="font-size:11px;color:#64748b;margin:0 0 14px;">Na loja, o balconista clica no preço de um produto do carrinho e, com este código, pode baixar o preço para o cliente. Deixa vazio para não permitir descontos.</div>
 
       <button onclick="guardarDadosPerfil()" style="width:100%;padding:12px;background:#16a34a;border:none;border-radius:10px;color:white;font-weight:bold;cursor:pointer;">💾 Guardar dados</button>
     </div>

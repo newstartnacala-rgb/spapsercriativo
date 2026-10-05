@@ -1272,7 +1272,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     {
       const r = await supabaseClient
         .from('membros_loja')
-        .select('loja_id, papel, nome_exibicao, lojas(nome, estado, numero_transferencia, codigo_agente, codigo_admin, categorias_personalizadas, categorias_ocultas, subcategorias, nome_empresa, vendedores, metodos_pagamento, telefone, endereco, tipo_loja, data_expiracao, logo, recibo_rodape)')
+        .select('loja_id, papel, nome_exibicao, lojas(nome, estado, numero_transferencia, codigo_agente, codigo_admin, categorias_personalizadas, categorias_ocultas, subcategorias, nome_empresa, vendedores, metodos_pagamento, telefone, endereco, tipo_loja, data_expiracao, logo, recibo_rodape, codigo_desconto)')
         .eq('user_id', user.id).limit(1);
       membros = r.data; membroError = r.error;
 
@@ -1326,6 +1326,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
       endereco: (membro.lojas && membro.lojas.endereco) || null,
       logo: (membro.lojas && membro.lojas.logo) || null,
       reciboRodape: (membro.lojas && membro.lojas.recibo_rodape) || null,
+      codigoDesconto: (membro.lojas && membro.lojas.codigo_desconto) || null,
       vendedores: (membro.lojas && membro.lojas.vendedores) || []
     };
 
@@ -1349,10 +1350,11 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     (async () => {
       try {
         const { data: lj } = await supabaseClient.from('lojas')
-          .select('logo, recibo_rodape, endereco, nome, nome_empresa, telefone').eq('id', sessaoAtual.lojaId).maybeSingle();
+          .select('logo, recibo_rodape, endereco, nome, nome_empresa, telefone, codigo_desconto').eq('id', sessaoAtual.lojaId).maybeSingle();
         if (lj) {
           sessaoAtual.logo = lj.logo || null;
           sessaoAtual.reciboRodape = lj.recibo_rodape || null;
+          sessaoAtual.codigoDesconto = lj.codigo_desconto || null;
           if (lj.endereco != null) sessaoAtual.endereco = lj.endereco;
           if (lj.nome) sessaoAtual.nomeLoja = lj.nome;
           if (lj.nome_empresa != null) sessaoAtual.nomeEmpresa = lj.nome_empresa;
@@ -2226,6 +2228,24 @@ async function scannerFechar() {
     renderCarrinho(); renderProdutos();
   }
 
+  function descontarPreco(i) {
+    const item = carrinho[i]; if (!item) return;
+    const codigo = (sessaoAtual && sessaoAtual.codigoDesconto);
+    if (!codigo) { mostrarNotif('O dono ainda não definiu um código de desconto (Meu Perfil).', true); return; }
+    const inserido = prompt('🏷️ DESCONTO em "' + item.nome + '"\n\nEscreve o código de desconto (pede ao dono):');
+    if (inserido === null) return;
+    if (inserido.trim() !== String(codigo).trim()) { mostrarNotif('❌ Código de desconto errado.', true); return; }
+    const atual = (item.precoOriginal || item.preco);
+    const novoStr = prompt('Novo preço por unidade de "' + item.nome + '":\n(preço normal: MT ' + atual + ')', item.preco);
+    if (novoStr === null) return;
+    const novo = parseFloat(String(novoStr).replace(',', '.'));
+    if (isNaN(novo) || novo < 0) { mostrarNotif('Preço inválido.', true); return; }
+    if (!item.precoOriginal) item.precoOriginal = item.preco;
+    item.preco = novo;
+    renderCarrinho();
+    mostrarNotif('✅ Desconto aplicado: MT ' + novo.toFixed(2) + ' /un.');
+  }
+
   function renderCarrinho() {
     const div = document.getElementById('carrinho-itens');
     if (carrinho.length === 0) { const tt = (typeof TRADUCOES !== 'undefined' && TRADUCOES[linguaActual]) ? TRADUCOES[linguaActual] : null; div.innerHTML = '<div class="carrinho-vazio">' + (tt ? tt.carrinhoVazio.replace('\n','<br>') : 'Nenhum produto adicionado.<br>Clica num produto para adicionar.') + '</div>'; }
@@ -2240,7 +2260,7 @@ async function scannerFechar() {
           <div class="item-carrinho-info">
             <div class="item-carrinho-nome">${item.nome}</div>
             ${pReal && pReal.codbarras ? `<div style="font-size:10px;color:#94a3b8;">${pReal.codbarras}</div>` : ''}
-            <div class="item-carrinho-preco">MT ${(item.preco*item.qtd).toFixed(2)}</div>
+            <div class="item-carrinho-preco" onclick="descontarPreco(${i})" style="cursor:pointer;" title="Clica para aplicar desconto (precisa de código do dono)">MT ${(item.preco*item.qtd).toFixed(2)} ${item.precoOriginal ? '🏷️' : '🏷'}</div>
             <div class="item-carrinho-qtd">
               <button class="qtd-btn" onclick="alterarQtd(${i},-1)" title="Diminuir 1" aria-label="Diminuir quantidade">−</button>
               <button class="qtd-num" style="border:none;background:#eef3fb;border-radius:6px;padding:2px 10px;cursor:pointer;" onclick="abrirTecladoQuantidadePorIndice(${i})" title="Digitar quantidade exata">${item.qtd} ✏️</button>
@@ -5045,7 +5065,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.100';
+  const VERSAO_ATUAL = '2.9.101';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
