@@ -1073,7 +1073,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <div id="area-recibo">
   <img id="recibo-logo" src="" alt="" style="display:none;max-width:70%;max-height:70px;object-fit:contain;margin:0 auto 4px;">
-  <div class="rec-empresa" id="recibo-empresa-nome">Spap-Sercriativo</div>
+  <div class="rec-empresa" id="recibo-empresa-nome"></div>
   <div class="rec-sub" id="recibo-empresa-sub"></div>
   <div class="rec-sub" id="recibo-empresa-contacto"></div>
   <div class="rec-meta">
@@ -1353,6 +1353,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
           .select('logo, recibo_rodape, endereco, nome, nome_empresa, telefone, codigo_desconto').eq('id', sessaoAtual.lojaId).maybeSingle();
         if (lj) {
           sessaoAtual.logo = lj.logo || null;
+          if (sessaoAtual.logo) { try { _logoParaPB(sessaoAtual.logo, pb => { sessaoAtual.logoPB = pb; }); } catch(e){} } else { sessaoAtual.logoPB = null; }
           sessaoAtual.reciboRodape = lj.recibo_rodape || null;
           sessaoAtual.codigoDesconto = lj.codigo_desconto || null;
           if (lj.endereco != null) sessaoAtual.endereco = lj.endereco;
@@ -1366,7 +1367,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
     // Nome da empresa no recibo
     const rc = document.getElementById('recibo-empresa');
-    if (rc) rc.textContent = '🧾 ' + (sessaoAtual.nomeEmpresa || sessaoAtual.nomeLoja || 'Spap-Sercriativo');
+    if (rc) rc.textContent = (sessaoAtual.nomeEmpresa || sessaoAtual.nomeLoja) ? ('🧾 ' + (sessaoAtual.nomeEmpresa || sessaoAtual.nomeLoja)) : '🧾 Recibo';
 
     document.getElementById('nome-usuario').textContent = '👤 ' + sessaoAtual.nomeExibicao + ' — ' + sessaoAtual.nomeLoja;
     document.getElementById('tela-carregando').style.display = 'none';
@@ -3136,7 +3137,7 @@ async function scannerFechar() {
 
   function reciboTexto(venda) {
     const W = 48, linha = '-'.repeat(W);
-    const nomeEmp = (sessaoAtual && (sessaoAtual.nomeEmpresa || sessaoAtual.nomeLoja)) || 'Spap-Sercriativo';
+    const nomeEmp = (sessaoAtual && (sessaoAtual.nomeEmpresa || sessaoAtual.nomeLoja)) || '';
     const sub = (sessaoAtual && sessaoAtual.nomeLoja && sessaoAtual.nomeEmpresa && sessaoAtual.nomeLoja !== sessaoAtual.nomeEmpresa) ? sessaoAtual.nomeLoja : '';
     const tel = (sessaoAtual && sessaoAtual.telefone) || '';
     const end = (sessaoAtual && sessaoAtual.endereco) || '';
@@ -3190,20 +3191,41 @@ async function scannerFechar() {
     setTimeout(() => { try { window.print(); } catch(e){} }, 100);
   }
 
+  // Converte o logótipo para PRETO-E-BRANCO (melhor para impressora térmica)
+  function _logoParaPB(dataUrl, cb) {
+    try {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+          const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(img, 0, 0);
+          const d = ctx.getImageData(0, 0, c.width, c.height);
+          for (let i = 0; i < d.data.length; i += 4) {
+            const lum = 0.3*d.data[i] + 0.59*d.data[i+1] + 0.11*d.data[i+2];
+            const v = lum > 140 ? 255 : 0;  // limiar: fica preto ou branco
+            d.data[i] = d.data[i+1] = d.data[i+2] = v;
+          }
+          ctx.putImageData(d, 0, 0);
+          cb(c.toDataURL('image/png'));
+        } catch(e) { cb(dataUrl); }
+      };
+      img.onerror = () => cb(dataUrl);
+      img.src = dataUrl;
+    } catch(e) { cb(dataUrl); }
+  }
+
   function renderizarAreaRecibo(venda) {
     const total = venda.total;
     // Nome da empresa no cabeçalho (definido no perfil/registo); se não houver, usa o nome da loja
-    const nomeEmp = (sessaoAtual && (sessaoAtual.nomeEmpresa || sessaoAtual.nomeLoja)) || 'Spap-Sercriativo';
+    const nomeEmp = (sessaoAtual && (sessaoAtual.nomeEmpresa || sessaoAtual.nomeLoja)) || '';
+    const temLogo = !!(sessaoAtual && sessaoAtual.logo);
     const elEmp = document.getElementById('recibo-empresa-nome');
-    if (elEmp) elEmp.textContent = nomeEmp;
-    // Logótipo (se existir) aparece em vez do nome
+    if (elEmp) { elEmp.textContent = nomeEmp; elEmp.style.display = (temLogo || !nomeEmp) ? 'none' : ''; }
+    // Com logótipo, mostra SÓ o logótipo (sem nome de texto). Usa a versão P&B (melhor na térmica).
     const elLogo = document.getElementById('recibo-logo');
     if (elLogo) {
-      // Mostra o logótipo (se existir) E mantém o nome em texto — porque a impressora
-      // térmica muitas vezes não imprime a imagem, mas o texto sai sempre.
-      if (sessaoAtual && sessaoAtual.logo) { elLogo.src = sessaoAtual.logo; elLogo.style.display = 'block'; }
+      if (temLogo) { elLogo.src = (sessaoAtual.logoPB || sessaoAtual.logo); elLogo.style.display = 'block'; }
       else { elLogo.style.display = 'none'; }
-      if (elEmp) elEmp.style.display = '';
     }
     // Rodapé personalizado
     const elRod = document.getElementById('recibo-rodape-txt');
@@ -3439,7 +3461,7 @@ async function scannerFechar() {
         .total { font-size: 15px; font-weight: bold; }
         .centro { text-align: center; font-size: 11px; }
       </style></head><body>
-        <h2 id="recibo-empresa">Spap-Sercriativo</h2>
+        <h2 id="recibo-empresa"></h2>
         <div class="centro">RECIBO DE TESTE</div>
         <hr>
         <div class="linha"><span>Produto Teste A</span><span>MT 100</span></div>
@@ -5065,7 +5087,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.101';
+  const VERSAO_ATUAL = '2.9.103';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.

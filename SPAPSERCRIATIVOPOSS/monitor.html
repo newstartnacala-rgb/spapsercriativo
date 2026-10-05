@@ -3970,7 +3970,7 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.101';
+const MONITOR_VERSAO = '2.9.103';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -4389,7 +4389,7 @@ async function abrirMeuPerfil() {
     document.getElementById('perfil-email').textContent = email;
 
     const { data } = await supabaseClient.from('lojas')
-      .select('nome, nome_empresa, telefone, endereco, plano, pin_monitor, codigo_agente, pin_gerente').eq('id', lojaId).maybeSingle();
+      .select('nome, nome_empresa, telefone, endereco, plano, pin_monitor, codigo_agente, pin_gerente, logo, recibo_rodape, codigo_desconto').eq('id', lojaId).maybeSingle();
     if (data) {
       const estPin = document.getElementById('perfil-pin-estado');
       if (estPin) {
@@ -4424,32 +4424,44 @@ async function abrirMeuPerfil() {
 }
 
 let _perfilLogoBase64 = null; // null = não mexeu; '' = remover; 'data:...' = novo
-function perfilCarregarLogo(input) {
-  const f = input.files && input.files[0]; if (!f) return;
+// ===== COMPRESSOR UNIVERSAL DE IMAGENS (resize + qualidade) — usado em todo o lado =====
+function comprimirImagemFile(file, cb, maxW, quality) {
+  maxW = maxW || 800; quality = quality || 0.7;
   const r = new FileReader();
   r.onload = e => {
     const img = new Image();
     img.onload = () => {
-      // Encolhe para no máximo 360px de largura e comprime -> fica pequeno, grava sempre
-      const maxW = 360;
       const escala = Math.min(1, maxW / img.width);
       const w = Math.max(1, Math.round(img.width * escala));
       const h = Math.max(1, Math.round(img.height * escala));
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h);
-      ctx.drawImage(img, 0, 0, w, h);
-      try { _perfilLogoBase64 = canvas.toDataURL('image/jpeg', 0.75); }
-      catch(err) { _perfilLogoBase64 = e.target.result; }
-      const prev = document.getElementById('perfil-logo-preview');
-      if (prev) { prev.src = _perfilLogoBase64; prev.style.display = 'block'; }
-      mostrarNotif('✅ Logótipo pronto (otimizado). Agora clica em Guardar.');
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const ctx = c.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,w,h); ctx.drawImage(img, 0, 0, w, h);
+      try { cb(c.toDataURL('image/jpeg', quality)); } catch(err) { cb(e.target.result); }
     };
-    img.onerror = () => { _perfilLogoBase64 = e.target.result; const prev = document.getElementById('perfil-logo-preview'); if (prev) { prev.src = _perfilLogoBase64; prev.style.display = 'block'; } };
+    img.onerror = () => cb(e.target.result);
     img.src = e.target.result;
   };
-  r.readAsDataURL(f);
+  r.readAsDataURL(file);
+}
+
+function perfilCarregarLogo(input) {
+  const f = input.files && input.files[0]; if (!f) return;
+  comprimirImagemFile(f, (dataUrl) => {
+    _perfilLogoBase64 = dataUrl;
+    const prev = document.getElementById('perfil-logo-preview');
+    if (prev) { prev.src = dataUrl; prev.style.display = 'block'; }
+    mostrarNotif('✅ Logótipo pronto (otimizado). Clica em "Guardar só o logótipo".');
+  }, 360, 0.75);
+}
+
+async function guardarLogo() {
+  if (_perfilLogoBase64 === null) { mostrarNotif('Escolhe um logótipo primeiro (ou carrega em Remover).', true); return; }
+  try {
+    const { error } = await supabaseClient.from('lojas').update({ logo: _perfilLogoBase64 || null }).eq('id', lojaId);
+    if (error) throw error;
+    mostrarNotif('✅ Logótipo guardado!');
+    _perfilLogoBase64 = null;
+  } catch(e) { mostrarNotif('❌ ' + (e.message||e), true); }
 }
 function perfilRemoverLogo() {
   _perfilLogoBase64 = '';
@@ -5141,6 +5153,7 @@ async function carregarContagensEquipa() {
         <input type="file" accept="image/*" id="perfil-logo-file" onchange="perfilCarregarLogo(this)" style="flex:1;font-size:12px;">
         <button type="button" onclick="perfilRemoverLogo()" style="padding:8px 10px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;cursor:pointer;font-size:12px;">Remover</button>
       </div>
+      <button type="button" onclick="guardarLogo()" style="width:100%;padding:11px;background:#16a34a;color:white;border:none;border-radius:9px;font-weight:bold;cursor:pointer;font-size:14px;margin-bottom:14px;">💾 Guardar só o logótipo</button>
 
       <label style="font-size:13px;color:#64748b;font-weight:600;">Telefone / Contacto</label>
       <input type="text" id="perfil-in-telefone" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:15px;margin:5px 0 12px;box-sizing:border-box;">
