@@ -3,6 +3,8 @@ on:
   push:
     paths: [ 'tconnect/**', '.github/workflows/tconnect-apk.yml' ]
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -12,12 +14,10 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Instalar componentes do SDK (usa o SDK pré-instalado do runner)
+      - name: Instalar componentes do SDK
         run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
           SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           [ -x "$SDKM" ] || SDKM="$(command -v sdkmanager)"
-          echo "sdkmanager=$SDKM"
           yes | "$SDKM" --licenses >/dev/null 2>&1 || true
           "$SDKM" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
       - name: Compilar APKs debug
@@ -25,14 +25,20 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew assembleChildDebug assembleGuardianDebug --no-daemon --stacktrace
-      - name: Reunir APKs
+      - name: Gravar APKs no repositório
         run: |
-          mkdir -p out
-          cp tconnect/android-native/app/build/outputs/apk/child/debug/app-child-debug.apk out/TConnect-MinhaEmergencia.apk
-          cp tconnect/android-native/app/build/outputs/apk/guardian/debug/app-guardian-debug.apk out/TConnect-Guardian.apk
-          ls -lh out
+          mkdir -p apks-build
+          cp tconnect/android-native/app/build/outputs/apk/child/debug/app-child-debug.apk apks-build/TConnect-MinhaEmergencia.apk
+          cp tconnect/android-native/app/build/outputs/apk/guardian/debug/app-guardian-debug.apk apks-build/TConnect-Guardian.apk
+          ls -lh apks-build
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f apks-build/*.apk
+          git commit -m "APKs compilados [skip ci]" || echo "sem mudanças"
+          git pull --rebase --autostash || true
+          git push
       - uses: actions/upload-artifact@v4
         with:
           name: tconnect-apks
-          path: out/*.apk
+          path: apks-build/*.apk
           retention-days: 7
