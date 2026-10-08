@@ -1440,11 +1440,22 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     }
 
     // Carga LEVE: sem a coluna 'imagem' (base64 pesado) para não estourar o tempo limite
-    const { data: produtosData, error: produtosError } = await supabaseClient
+    let { data: produtosData, error: produtosError } = await supabaseClient
       .from('produtos')
       .select('id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em,unidade')
       .eq('loja_id', sessaoAtual.lojaId)
       .order('criado_em', { ascending: true });
+
+    // Se falhou (ex: loja sem a coluna 'unidade' ainda), tenta SEM essa coluna —
+    // assim os produtos carregam sempre, mesmo que o SQL do kg ainda não tenha sido corrido.
+    if (produtosError) {
+      const _r = await supabaseClient
+        .from('produtos')
+        .select('id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em')
+        .eq('loja_id', sessaoAtual.lojaId)
+        .order('criado_em', { ascending: true });
+      if (!_r.error) { produtosData = _r.data; produtosError = null; }
+    }
 
     if (produtosError) {
       // Falha de rede: usa a cópia local guardada no aparelho
@@ -5229,7 +5240,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.112';
+  const VERSAO_ATUAL = '2.9.113';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
