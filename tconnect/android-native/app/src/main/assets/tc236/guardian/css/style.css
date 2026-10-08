@@ -1054,3 +1054,49 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Ari
 /* Só o painel de vidro transparente mostra a informação: esconder caixas/terminais antigos sobre o mapa */
 .tc-location-summary-host,.tc-exact-coordinate-hud,.map .mapkey,.map-terminal-overlay{display:none!important}
 .map.map-with-terminal,.map.location-map-only{grid-template-columns:1fr!important}
+/* ===== v2.39.7 · pós-fixação: imagem limpa + telas de foto holográficas + painel auto-rolável ===== */
+/* Depois de travar o alvo, o mapa fica FIXO e LIMPO (esconde a decoração de varredura) */
+.tc-scifi-hud.tc-clean .tc-sf-globe,
+.tc-scifi-hud.tc-clean .tc-sf-binary,
+.tc-scifi-hud.tc-clean .tc-sf-gauges,
+.tc-scifi-hud.tc-clean .tc-sf-bars,
+.tc-scifi-hud.tc-clean .tc-sf-grid,
+.tc-scifi-hud.tc-clean .tc-scifi-scan,
+.tc-scifi-hud.tc-clean .tc-scifi-radar{display:none!important}
+.tc-scifi-hud.tc-clean .tc-sf-vignette{background:radial-gradient(circle at 50% 50%, rgba(3,10,20,0) 66%, rgba(3,10,20,.4) 86%, rgba(3,10,20,.78) 100%)!important}
+/* Painel de informação: rola sozinho para mostrar tudo */
+.tc-glass-panel{height:clamp(126px,40%,176px)!important}
+.tc-glass-body{overflow-y:auto!important;scrollbar-width:none}
+.tc-glass-body::-webkit-scrollbar{display:none}
+.tc-g-mini{margin-top:6px!important}
+/* ===== Telas de vidro com FOTOS reais da área (holograma) ===== */
+.tc-photo-deck{position:absolute;inset:0;pointer-events:none;z-index:8;overflow:hidden}
+.tc-photo-frame{position:absolute;width:104px;opacity:0;transition:opacity .4s}
+.tc-photo-frame.on{opacity:1;animation:tcHoloFloat 5.2s ease-in-out .7s infinite}
+.tc-photo-frame.right{right:12px;top:44%}
+.tc-photo-frame.mid{left:50%;margin-left:-52px;bottom:14px}
+.pf-inner{position:relative;width:104px;min-height:72px;border-radius:8px;overflow:hidden;border:1px solid rgba(34,211,238,.6);background:rgba(6,18,28,.35);box-shadow:0 0 16px rgba(34,211,238,.4),inset 0 0 14px rgba(34,211,238,.12);transform:perspective(420px) rotateX(18deg) scaleY(.08);opacity:0;transition:transform .55s cubic-bezier(.2,.9,.2,1),opacity .45s}
+.tc-photo-frame.on .pf-inner{transform:perspective(420px) rotateX(5deg) scaleY(1);opacity:1}
+.pf-img{display:block;width:104px;height:72px;object-fit:cover;filter:saturate(1.12) contrast(1.05) brightness(1.03)}
+.pf-inner.pf-noimg{background:linear-gradient(135deg,rgba(10,40,60,.65),rgba(4,14,24,.65))}
+.pf-inner.pf-noimg::before{content:"SATÉLITE";position:absolute;inset:0;display:grid;place-items:center;font:800 9px 'Courier New',monospace;letter-spacing:2px;color:#6fd0e6;opacity:.7;z-index:1}
+.pf-inner::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(34,211,238,.1) 0 1px,transparent 1px 3px);pointer-events:none}
+.pf-scan{position:absolute;left:0;right:0;top:0;height:55%;background:linear-gradient(180deg,rgba(34,211,238,.3),transparent);animation:tcPfScan 2.4s linear infinite;pointer-events:none;z-index:2}
+@keyframes tcPfScan{0%{transform:translateY(-100%)}100%{transform:translateY(240%)}}
+.pf-corner{position:absolute;width:9px;height:9px;border:1.5px solid #8df7ff;z-index:3}
+.pf-corner.tl{top:4px;left:4px;border-right:0;border-bottom:0}
+.pf-corner.tr{top:4px;right:4px;border-left:0;border-bottom:0}
+.pf-corner.bl{bottom:4px;left:4px;border-right:0;border-top:0}
+.pf-corner.br{bottom:4px;right:4px;border-left:0;border-top:0}
+.pf-cap{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(0deg,rgba(2,10,18,.88),transparent);padding:12px 6px 4px;text-align:center;z-index:3}
+.pf-cap b{display:block;font:800 8px/1.2 'Courier New',monospace;letter-spacing:1px;color:#aef0ff;text-shadow:0 1px 3px #000}
+.pf-cap span{font:700 6.5px 'Courier New',monospace;letter-spacing:1px;color:#7fd6e6}
+/* linha/holograma por baixo das telas (projetor) */
+.holo-base{position:absolute;left:50%;bottom:-7px;width:86px;height:13px;margin-left:-43px;border-radius:50%;background:radial-gradient(ellipse at center,rgba(34,211,238,.55),transparent 70%);filter:blur(1px);opacity:0;z-index:0}
+.tc-photo-frame.on .holo-base{opacity:1;animation:tcHoloBase 2.2s ease-in-out infinite}
+.holo-beam{position:absolute;left:50%;margin-left:-1px;bottom:-6px;width:2px;height:0;background:linear-gradient(0deg,rgba(34,211,238,.85),rgba(34,211,238,0));box-shadow:0 0 8px #22d3ee;opacity:0;z-index:0}
+.tc-photo-frame.on .holo-beam{height:28px;opacity:.8;animation:tcHoloFlicker 1.6s steps(2) infinite}
+@keyframes tcHoloFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes tcHoloFlicker{0%,100%{opacity:.85}50%{opacity:.45}}
+@keyframes tcHoloBase{0%,100%{opacity:.5;transform:scaleX(.85)}50%{opacity:.9;transform:scaleX(1.12)}}
+@media(prefers-reduced-motion:reduce){.tc-photo-frame.on,.pf-scan,.holo-beam,.holo-base{animation:none!important}}

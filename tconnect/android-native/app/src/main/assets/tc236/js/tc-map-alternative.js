@@ -115,7 +115,7 @@
   let tcAcquired=false, tcAcquiring=false;
   function sizeGlobe(){ try{ if(!mapContainer) return; const d=Math.min(mapContainer.clientWidth||0, mapContainer.clientHeight||0); if(!d) return; const scifi=mapContainer.querySelector('.tc-scifi-hud'); if(!scifi) return; const g=scifi.querySelector('.tc-sf-globe'); if(g){ g.style.width=Math.round(d*0.94)+'px'; g.style.height=Math.round(d*0.94)+'px'; } }catch(_){} }
   function tcAcquire(lat,lng){ if(!map||tcAcquiring) return; tcAcquiring=true; const scifi=mapContainer&&mapContainer.querySelector('.tc-scifi-hud');
-    if(scifi){ scifi.classList.remove('tc-locked'); scifi.classList.add('tc-scanning','tc-detected'); const st=scifi.querySelector('.tc-scifi-status span'); if(st) st.textContent='ALVO DETETADO · A APROXIMAR'; }
+    if(scifi){ scifi.classList.remove('tc-locked','tc-clean'); scifi.classList.add('tc-scanning','tc-detected'); const st=scifi.querySelector('.tc-scifi-status span'); if(st) st.textContent='ALVO DETETADO · A APROXIMAR'; const od=scifi.querySelector('.tc-photo-deck'); if(od) od.parentNode.removeChild(od); try{ stopPanelAutoScroll(); }catch(_){} }
     positionReticle(); try{ tcDetectAlert(); }catch(_){} setTimeout(function(){ try{ tcApproachTone(); }catch(_){} },260);
     // vista ampla primeiro, depois zoom lento de ~9s até à rua
     try{ map.setView([lat,lng], 12, { animate:true, duration:0.6 }); }catch(_){}
@@ -123,28 +123,55 @@
     setTimeout(function(){ tcAcquiring=false; tcAcquired=true; if(scifi) scifi.classList.remove('tc-detected'); try{ positionReticle(); scifiLock(); }catch(_){} try{ map.invalidateSize(false); }catch(_){} }, 10200);
   }
 
-  function scifiLock(){ if(!mapContainer) return; const scifi=mapContainer.querySelector('.tc-scifi-hud'); if(!scifi) return; scifi.classList.remove('tc-scanning'); scifi.classList.add('tc-locked'); const st=scifi.querySelector('.tc-scifi-status span'); if(st) st.textContent='ALVO LOCALIZADO'; positionReticle(); const ret=scifi.querySelector('.tc-scifi-reticle'); if(ret){ ret.classList.remove('lock-anim'); void ret.offsetWidth; ret.classList.add('lock-anim'); } try{ tcSonarPing(); }catch(_){} try{ openGlassPanel(); }catch(_){} try{ updateGrid(); setTimeout(function(){ updateLeader(); },120); }catch(_){} }
+  // ===== Telas de vidro com FOTOS da área (imagens de satélite reais do ponto) =====
+  function lon2tile(lon,z){ return Math.floor((lon+180)/360*Math.pow(2,z)); }
+  function lat2tile(lat,z){ return Math.floor((1-Math.log(Math.tan(lat*Math.PI/180)+1/Math.cos(lat*Math.PI/180))/Math.PI)/2*Math.pow(2,z)); }
+  function tcSatUrl(lat,lng,z){ try{ return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/'+z+'/'+lat2tile(lat,z)+'/'+lon2tile(lng,z); }catch(_){ return ''; } }
+  function openPhotoScreens(){ if(!mapContainer||!lastKnownLocation) return; const scifi=mapContainer.querySelector('.tc-scifi-hud'); if(!scifi) return;
+    let deck=scifi.querySelector('.tc-photo-deck'); if(deck) deck.parentNode.removeChild(deck);
+    const lat=lastKnownLocation.lat, lng=lastKnownLocation.lng;
+    const shots=[ {cls:'mid', z:18, tag:'ALVO · PLANO A', sub:'VISTA PRÓXIMA'}, {cls:'right', z:16, tag:'ÁREA · PLANO B', sub:'ENQUADRAMENTO'} ];
+    deck=document.createElement('div'); deck.className='tc-photo-deck';
+    deck.innerHTML=shots.map(function(s){ const url=tcSatUrl(lat,lng,s.z);
+      return '<figure class="tc-photo-frame '+s.cls+'"><span class="holo-beam"></span><span class="holo-base"></span>'
+        +'<div class="pf-inner"><div class="pf-scan"></div>'
+        +'<img class="pf-img" alt="" src="'+url+'" onerror="this.style.display=\'none\';this.parentNode.classList.add(\'pf-noimg\')"/>'
+        +'<span class="pf-corner tl"></span><span class="pf-corner tr"></span><span class="pf-corner bl"></span><span class="pf-corner br"></span>'
+        +'<div class="pf-cap"><b>'+s.tag+'</b><span>'+s.sub+'</span></div></div></figure>'; }).join('');
+    scifi.appendChild(deck);
+    requestAnimationFrame(function(){ deck.querySelectorAll('.tc-photo-frame').forEach(function(f,i){ setTimeout(function(){ f.classList.add('on'); },120+i*260); }); });
+  }
+  // ===== Auto-rolagem do painel de informação (mostra tudo sozinho) =====
+  let tcPanelScrollTimer=null;
+  function startPanelAutoScroll(){ try{ stopPanelAutoScroll(); const p=mapContainer&&mapContainer.querySelector('.tc-glass-panel'); if(!p) return; const body=p.querySelector('.tc-glass-body'); if(!body) return; let dir=1; tcPanelScrollTimer=setInterval(function(){ if(!body||!document.body.contains(body)){ stopPanelAutoScroll(); return; } const max=body.scrollHeight-body.clientHeight; if(max<=2) return; let nv=body.scrollTop+dir*0.6; if(nv>=max){ nv=max; dir=-1; } else if(nv<=0){ nv=0; dir=1; } body.scrollTop=nv; },40); }catch(_){} }
+  function stopPanelAutoScroll(){ if(tcPanelScrollTimer){ clearInterval(tcPanelScrollTimer); tcPanelScrollTimer=null; } }
+  function scifiLock(){ if(!mapContainer) return; const scifi=mapContainer.querySelector('.tc-scifi-hud'); if(!scifi) return; scifi.classList.remove('tc-scanning'); scifi.classList.add('tc-locked','tc-clean'); const st=scifi.querySelector('.tc-scifi-status span'); if(st) st.textContent='ALVO LOCALIZADO'; positionReticle(); const ret=scifi.querySelector('.tc-scifi-reticle'); if(ret){ ret.classList.remove('lock-anim'); void ret.offsetWidth; ret.classList.add('lock-anim'); } try{ if(map&&lastKnownLocation) map.setView([lastKnownLocation.lat,lastKnownLocation.lng], map.getZoom(), {animate:false}); }catch(_){} try{ tcSonarPing(); }catch(_){} try{ openGlassPanel(); }catch(_){} try{ openPhotoScreens(); }catch(_){} try{ updateGrid(); setTimeout(function(){ updateLeader(); },120); }catch(_){} setTimeout(startPanelAutoScroll, 1600); }
   window.TC_MAP_SCIFI = { lock: scifiLock, scan: tcScanSweep, ping: tcSonarPing };
   function tcCinematicOpen(){ const c=tcMapAudio(); if(!c) return; const n=c.currentTime;
     const o=c.createOscillator(); o.type='sawtooth'; const g=c.createGain(); g.gain.value=0.0001; const lp=c.createBiquadFilter(); lp.type='lowpass'; lp.frequency.setValueAtTime(400,n); lp.frequency.exponentialRampToValueAtTime(4200,n+0.5); o.connect(g); g.connect(lp); lp.connect(c.destination); o.frequency.setValueAtTime(180,n); o.frequency.exponentialRampToValueAtTime(700,n+0.55); g.gain.linearRampToValueAtTime(0.22,n+0.1); g.gain.exponentialRampToValueAtTime(0.0001,n+0.8); o.start(n); o.stop(n+0.85);
     [1318,1760].forEach(function(fr){ const sx=c.createOscillator(); sx.type='sine'; const sg=c.createGain(); sg.gain.value=0.0001; sx.connect(sg); sg.connect(c.destination); sx.frequency.setValueAtTime(fr,n+0.15); sg.gain.exponentialRampToValueAtTime(0.12,n+0.25); sg.gain.exponentialRampToValueAtTime(0.0001,n+0.95); sx.start(n+0.15); sx.stop(n+1.0); }); }
   const tcTypers = {};
   function tcTypeInto(el, text){ if(!el) return; text=String(text==null?'':text); const key=el.getAttribute('data-k')||Math.random(); if(tcTypers[key]) clearInterval(tcTypers[key]); el.textContent=''; el.classList.add('tc-type-caret'); let i=0; tcTypers[key]=setInterval(function(){ i++; el.textContent=text.slice(0,i); if(i>=text.length){ clearInterval(tcTypers[key]); delete tcTypers[key]; el.classList.remove('tc-type-caret'); } }, 24); }
-  function tcGlassInfo(){ const d=window.TC_DEVICE_INFO||{}; const lat=lastKnownLocation?lastKnownLocation.lat:null, lng=lastKnownLocation?lastKnownLocation.lng:null; const now=new Date();
-    return { name:(window.TC_DEVICE_NAME||d.name||'Child'), coords:(lat!=null&&lng!=null)?(Number(lat).toFixed(6)+'°, '+Number(lng).toFixed(6)+'°'):'—', addr: areaName || 'a localizar endereço…', acc:(lastKnownLocation&&lastKnownLocation.accuracy?Math.round(lastKnownLocation.accuracy)+' m':'—'), bat:(d.battery!=null&&d.battery!==''?d.battery+'%':'—'), st:(d.status?(d.status==='online'?'ONLINE':String(d.status).toUpperCase()):'ONLINE'), upd: now.toLocaleTimeString('pt-PT') }; }
+  function tcGlassInfo(){ const d=window.TC_DEVICE_INFO||{}; const ad=window.TC_MAP_ADDRESS||{}; const lat=lastKnownLocation?lastKnownLocation.lat:null, lng=lastKnownLocation?lastKnownLocation.lng:null; const now=new Date();
+    return { name:(window.TC_DEVICE_NAME||d.name||'Child'), coords:(lat!=null&&lng!=null)?(Number(lat).toFixed(6)+'°, '+Number(lng).toFixed(6)+'°'):'—', addr: (ad.via||areaName) || 'a localizar endereço…', zona:(ad.bairro||ad.distrito||'—'), cidade:(ad.cidade||'—'), pais:(ad.pais||'—'), acc:(lastKnownLocation&&lastKnownLocation.accuracy?Math.round(lastKnownLocation.accuracy)+' m':'—'), bat:(d.battery!=null&&d.battery!==''?d.battery+'%':'—'), st:(d.status?(d.status==='online'?'ONLINE':String(d.status).toUpperCase()):'ONLINE'), upd: now.toLocaleTimeString('pt-PT') }; }
   function openGlassPanel(){ if(!mapContainer) return; let p=mapContainer.querySelector('.tc-glass-panel'); const info=tcGlassInfo();
-    if(!p){ p=document.createElement('div'); p.className='tc-glass-panel'; p.innerHTML='<div class="tc-glass-head"><span class="tc-glass-dot"></span><b data-k="name">ALVO</b><button class="tc-glass-close" aria-label="Fechar">×</button></div><div class="tc-glass-body"><div class="tc-g-line"><span>COORDENADAS</span><b data-k="coords"></b></div><div class="tc-g-line"><span>LOCAL / RUA</span><b data-k="addr"></b></div><div class="tc-g-mini"><div><span>BAT</span><b data-k="bat"></b></div><div><span>PREC</span><b data-k="acc"></b></div><div><span>EST</span><b data-k="st"></b></div></div></div>';
-      mapContainer.appendChild(p); p.querySelector('.tc-glass-close').addEventListener('click',function(){ p.classList.remove('open'); try{updateLeader();}catch(_){} });
+    if(!p){ p=document.createElement('div'); p.className='tc-glass-panel'; p.innerHTML='<div class="tc-glass-head"><span class="tc-glass-dot"></span><b data-k="name">ALVO</b><button class="tc-glass-close" aria-label="Fechar">×</button></div><div class="tc-glass-body"><div class="tc-g-line"><span>COORDENADAS</span><b data-k="coords"></b></div><div class="tc-g-line"><span>LOCAL / RUA</span><b data-k="addr"></b></div><div class="tc-g-line"><span>BAIRRO / ZONA</span><b data-k="zona"></b></div><div class="tc-g-line"><span>CIDADE</span><b data-k="cidade"></b></div><div class="tc-g-line"><span>PAÍS</span><b data-k="pais"></b></div><div class="tc-g-line"><span>ATUALIZADO</span><b data-k="upd"></b></div><div class="tc-g-mini"><div><span>BAT</span><b data-k="bat"></b></div><div><span>PREC</span><b data-k="acc"></b></div><div><span>EST</span><b data-k="st"></b></div></div></div>';
+      mapContainer.appendChild(p); p.querySelector('.tc-glass-close').addEventListener('click',function(){ p.classList.remove('open'); try{stopPanelAutoScroll();}catch(_){} try{updateLeader();}catch(_){} });
       requestAnimationFrame(function(){ p.classList.add('open'); }); try{ tcCinematicOpen(); }catch(_){}
       tcTypeInto(p.querySelector('[data-k=name]'), info.name);
       setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=coords]'), info.coords); },140);
       setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=addr]'), info.addr); },320);
-      setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=bat]'), info.bat); },500);
-      setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=acc]'), info.acc); },620);
-      setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=st]'), info.st); },740);
+      setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=zona]'), info.zona); },440);
+      setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=cidade]'), info.cidade); },540);
+      setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=pais]'), info.pais); },640);
+      setTimeout(function(){ const u=p.querySelector('[data-k=upd]'); if(u) u.textContent=info.upd; },700);
+      setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=bat]'), info.bat); },760);
+      setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=acc]'), info.acc); },860);
+      setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=st]'), info.st); },960);
     } else { if(!p.classList.contains('open')){ p.classList.add('open'); try{ tcCinematicOpen(); }catch(_){} } updateGlassPanel(); } }
   function updateGlassPanel(){ if(!mapContainer) return; const p=mapContainer.querySelector('.tc-glass-panel'); if(!p||!p.classList.contains('open')) return; const info=tcGlassInfo();
     tcTypeInto(p.querySelector('[data-k=coords]'), info.coords); tcTypeInto(p.querySelector('[data-k=addr]'), info.addr);
+    const sset=function(k,v){ const el=p.querySelector('[data-k='+k+']'); if(el) el.textContent=v; }; sset('zona',info.zona); sset('cidade',info.cidade); sset('pais',info.pais);
     const bat=p.querySelector('[data-k=bat]'); if(bat) bat.textContent=info.bat; const st=p.querySelector('[data-k=st]'); if(st) st.textContent=info.st; const upd=p.querySelector('[data-k=upd]'); if(upd) upd.textContent=info.upd; }
   window.TC_MAP_SCIFI.panel = openGlassPanel; window.TC_MAP_SCIFI.updatePanel = updateGlassPanel;
 
@@ -391,7 +418,9 @@
         if (marker && typeof marker.bringToFront === "function") setTimeout(() => marker.bringToFront(), 1200);
         setTimeout(() => { if (map) map.invalidateSize(false); }, 120);
       }
-      try { positionReticle(); scifiLock(); } catch (_) {}
+      // Não travar durante a sequência cinemática (deixa o zoom de ~10s terminar);
+      // só trava de imediato quando não há aquisição em curso nem já adquirida (ex.: restauro).
+      try { positionReticle(); if (!tcAcquiring && !tcAcquired) scifiLock(); } catch (_) {}
     },
     clearLocation() {
       // Keep the last known point visible. Offline/temporary loss must not erase it.
@@ -407,6 +436,7 @@
       try { localStorage.removeItem('tc:lastKnownLocation'); } catch (e) {}
       try { if (marker) marker.setOpacity(0); } catch (e) {}
       try { if (accuracyCircle) accuracyCircle.setStyle({opacity:0, fillOpacity:0}); } catch (e) {}
+      try { stopPanelAutoScroll(); const sc=mapContainer&&mapContainer.querySelector('.tc-scifi-hud'); if(sc){ sc.classList.remove('tc-clean','tc-locked'); const dk=sc.querySelector('.tc-photo-deck'); if(dk) dk.parentNode.removeChild(dk); const gp=sc.parentNode&&sc.parentNode.querySelector('.tc-glass-panel'); if(gp) gp.classList.remove('open'); } } catch (e) {}
     },
     isLocationLive() { return hasLiveLocation; },
     locateUser() {
