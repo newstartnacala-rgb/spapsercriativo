@@ -1060,9 +1060,10 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Ari
 .tc-scifi-hud.tc-clean .tc-sf-binary,
 .tc-scifi-hud.tc-clean .tc-sf-gauges,
 .tc-scifi-hud.tc-clean .tc-sf-bars,
-.tc-scifi-hud.tc-clean .tc-sf-grid,
 .tc-scifi-hud.tc-clean .tc-scifi-scan,
 .tc-scifi-hud.tc-clean .tc-scifi-radar{display:none!important}
+/* quadradinhos de dados (BAT/PREC/SINAL/ATU) ficam visíveis com info real, mesmo no modo limpo */
+.tc-scifi-hud.tc-clean .tc-sf-grid{display:grid!important;bottom:12px;left:12px}
 .tc-scifi-hud.tc-clean .tc-sf-vignette{background:radial-gradient(circle at 50% 50%, rgba(3,10,20,0) 66%, rgba(3,10,20,.4) 86%, rgba(3,10,20,.78) 100%)!important}
 /* Painel de informação: rola sozinho para mostrar tudo */
 .tc-glass-panel{height:clamp(126px,40%,176px)!important}
@@ -1100,3 +1101,32 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Ari
 @keyframes tcHoloFlicker{0%,100%{opacity:.85}50%{opacity:.45}}
 @keyframes tcHoloBase{0%,100%{opacity:.5;transform:scaleX(.85)}50%{opacity:.9;transform:scaleX(1.12)}}
 @media(prefers-reduced-motion:reduce){.tc-photo-frame.on,.pf-scan,.holo-beam,.holo-base{animation:none!important}}
+/* ===== v2.39.8 · fotos em mosaico centrado + clique para ampliar + sem marca Leaflet ===== */
+/* marca d'água do Leaflet / atribuição no canto: remover */
+.leaflet-control-attribution,.leaflet-control-attribution a{display:none!important}
+/* telas de foto: mosaico de tiles centrado no ponto + clicável */
+.tc-photo-frame{pointer-events:auto;cursor:pointer}
+.pf-tiles{position:absolute;inset:0;overflow:hidden;z-index:0;background:#061018}
+.pf-tile{position:absolute;width:256px;height:256px;object-fit:cover;image-rendering:auto}
+.pf-img{display:none!important}
+.pf-mark{position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:#ff3b3b;box-shadow:0 0 0 3px rgba(255,59,59,.35),0 0 10px #ff3b3b;z-index:3;animation:tcBlipCore 1.1s ease-in-out infinite}
+.pf-mark::after{content:"";position:absolute;left:50%;top:50%;width:14px;height:14px;transform:translate(-50%,-50%);border-radius:50%;border:2px solid #ff3b3b;animation:tcBlipRing 1.8s ease-out infinite}
+/* lightbox de foto em qualidade */
+.tc-photo-modal{position:absolute;inset:0;z-index:900;display:grid;place-items:center;background:rgba(2,8,14,.72);opacity:0;transition:opacity .25s;pointer-events:auto}
+.tc-photo-modal.on{opacity:1}
+.tc-photo-modal .pm-box{max-width:94%;border:1px solid #22d3ee99;border-radius:14px;overflow:hidden;background:linear-gradient(160deg,rgba(7,22,34,.96),rgba(4,12,22,.98));box-shadow:0 20px 60px #000b,0 0 26px #22d3ee33;transform:scale(.94);transition:transform .3s cubic-bezier(.2,.9,.2,1);font-family:'Courier New',monospace}
+.tc-photo-modal.on .pm-box{transform:scale(1)}
+.pm-head{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid #22d3ee33}
+.pm-head b{font-size:12px;letter-spacing:1.5px;color:#aef0ff}
+.pm-close{background:transparent;border:0;color:#9beaf7;font-size:22px;line-height:1;cursor:pointer;padding:0 4px}
+.pm-view{position:relative;overflow:hidden;background:#061018}
+.pm-tiles{position:absolute;inset:0;overflow:hidden}
+.pm-tiles img{position:absolute;width:256px;height:256px}
+.pm-scan{position:absolute;left:0;right:0;top:0;height:40%;background:linear-gradient(180deg,rgba(34,211,238,.22),transparent);animation:tcPfScan 3s linear infinite;pointer-events:none;z-index:2}
+.pm-mark{position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:#ff3b3b;box-shadow:0 0 0 4px rgba(255,59,59,.3),0 0 14px #ff3b3b;z-index:3;animation:tcBlipCore 1.1s ease-in-out infinite}
+.pm-c{position:absolute;width:16px;height:16px;border:2px solid #8df7ff;z-index:3}
+.pm-c.tl{top:8px;left:8px;border-right:0;border-bottom:0}
+.pm-c.tr{top:8px;right:8px;border-left:0;border-bottom:0}
+.pm-c.bl{bottom:8px;left:8px;border-right:0;border-top:0}
+.pm-c.br{bottom:8px;right:8px;border-left:0;border-top:0}
+.pm-foot{display:flex;justify-content:space-between;padding:8px 12px;font-size:9px;letter-spacing:1px;color:#7fd6e6;border-top:1px solid #22d3ee33}
