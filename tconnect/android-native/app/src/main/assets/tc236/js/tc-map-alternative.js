@@ -10,7 +10,7 @@
   // em silêncio para sempre; `init()` passa a reagendar-se até o Leaflet existir.
   let leafletWaitTimer = null, leafletWaitTries = 0;
   const DEFAULT = [-15.1165, 39.2666]; // Nampula, Mozambique: initial map center only; marker remains hidden until a real location is received
-  let map, marker, accuracyCircle, trail = [], currentType = 'roadmap';
+  let map, marker, accuracyCircle, pulseMarker = null, trail = [], currentType = 'roadmap';
   let lastKnownLocation = null, gridLayer = null;
   let mapContainer = null;
   let hasLiveLocation = false;
@@ -93,7 +93,8 @@
 
   function destroyMap() {
     try { if (map) map.remove(); } catch (e) {}
-    map = null; marker = null; accuracyCircle = null; roadLayer = null;
+    try { if (pulseMarker) map.removeLayer(pulseMarker); } catch (e) {}
+    map = null; marker = null; accuracyCircle = null; pulseMarker = null; roadLayer = null;
     satelliteLayer = null; hybridLabels = null; fallbackRoadLayer = null; mapContainer = null;
     initToken++;
   }
@@ -110,7 +111,10 @@
   function tcData(ctx,t,n,gain){ try{ for(let i=0;i<n;i++){ const o=ctx.createOscillator(); o.type='square'; const g=ctx.createGain(); const tt=t+i*0.045; const f=500+Math.random()*2200; o.frequency.setValueAtTime(f,tt); const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=3200; g.gain.setValueAtTime(0.0001,tt); g.gain.exponentialRampToValueAtTime(gain,tt+0.005); g.gain.exponentialRampToValueAtTime(0.0001,tt+0.05); o.connect(lp); lp.connect(g); g.connect(tcBus(ctx)); o.start(tt); o.stop(tt+0.06); } }catch(_){}}
   function tcSonarPing(){ const ctx=tcMapAudio(); if(!ctx) return; const n=ctx.currentTime; tcBoom(ctx,n,120,0.13,0.9); tcData(ctx,n+0.02,5,0.045); try{ const o=ctx.createOscillator(); o.type='triangle'; const g=ctx.createGain(); const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=1800; bp.Q.value=6; o.frequency.setValueAtTime(2200,n); o.frequency.exponentialRampToValueAtTime(900,n+0.25); g.gain.setValueAtTime(0.0001,n); g.gain.exponentialRampToValueAtTime(0.09,n+0.01); g.gain.exponentialRampToValueAtTime(0.0001,n+0.45); o.connect(bp); bp.connect(g); g.connect(tcBus(ctx)); o.start(n); o.stop(n+0.5); }catch(_){}}
   function tcScanSweep(){ const ctx=tcMapAudio(); if(!ctx) return; const n=ctx.currentTime; tcRiser(ctx,n,0.9,300,1600,0.045); tcData(ctx,n+0.1,4,0.03); }
-  function positionReticle(){ if(!map||!mapContainer||!lastKnownLocation) return; const scifi=mapContainer.querySelector('.tc-scifi-hud'); if(!scifi) return; try{ const pt=map.latLngToContainerPoint([lastKnownLocation.lat,lastKnownLocation.lng]); const ret=scifi.querySelector('.tc-scifi-reticle'); if(ret){ ret.style.left=pt.x+'px'; ret.style.top=pt.y+'px'; } const blip=scifi.querySelector('.tc-sf-blip'); if(blip){ blip.style.left=pt.x+'px'; blip.style.top=pt.y+'px'; } updateLeader(pt); }catch(_){} }
+  function positionReticle(){ if(!map||!mapContainer||!lastKnownLocation) return; const scifi=mapContainer.querySelector('.tc-scifi-hud'); if(!scifi) return; try{ const pt=map.latLngToContainerPoint([lastKnownLocation.lat,lastKnownLocation.lng]); const ret=scifi.querySelector('.tc-scifi-reticle'); if(ret){ ret.style.left=pt.x+'px'; ret.style.top=pt.y+'px'; } const blip=scifi.querySelector('.tc-sf-blip'); if(blip){ blip.style.left=pt.x+'px'; blip.style.top=pt.y+'px'; } ensurePulseMarker(); updateLeader(pt); }catch(_){} }
+  // Ponto vermelho animado como MARCADOR do Leaflet: fica cravado na coordenada
+  // exata e acompanha pan/zoom e cada atualização em tempo real (sem "fugir").
+  function ensurePulseMarker(){ try{ if(!map||!lastKnownLocation||!window.L) return; const pos=[lastKnownLocation.lat,lastKnownLocation.lng]; if(!pulseMarker){ const html='<div class="tc-pulse"><span class="pr r1"></span><span class="pr r2"></span><span class="pc"></span></div>'; pulseMarker=window.L.marker(pos,{ icon:window.L.divIcon({className:'tc-pulse-icon',html:html,iconSize:[0,0],iconAnchor:[0,0]}), interactive:false, keyboard:false, zIndexOffset:4000 }).addTo(map); } else { pulseMarker.setLatLng(pos); } }catch(_){} }
   function updateLeader(pt){ try{ const scifi=mapContainer&&mapContainer.querySelector('.tc-scifi-hud'); if(!scifi) return; const ln=scifi.querySelector('.tc-sf-leader line'); const panel=mapContainer.querySelector('.tc-glass-panel'); if(!ln) return; if(!pt&&lastKnownLocation){ pt=map.latLngToContainerPoint([lastKnownLocation.lat,lastKnownLocation.lng]); } if(!pt||!panel||!panel.classList.contains('open')){ ln.setAttribute('x2', ln.getAttribute('x1')||0); return; } const prect=panel.getBoundingClientRect(); const mrect=mapContainer.getBoundingClientRect(); const px=prect.left-mrect.left; const py=prect.top-mrect.top+34; ln.setAttribute('x1', pt.x); ln.setAttribute('y1', pt.y); ln.setAttribute('x2', px); ln.setAttribute('y2', py); }catch(_){} }
   function updateGrid(){ try{ const scifi=mapContainer&&mapContainer.querySelector('.tc-scifi-hud'); if(!scifi) return; const d=window.TC_DEVICE_INFO||{}; const g=function(k,v){ const el=scifi.querySelector('[data-g='+k+']'); if(el) el.textContent=v; }; g('bat',(d.battery!=null&&d.battery!==''?d.battery+'%':'—')); g('acc',(lastKnownLocation&&lastKnownLocation.accuracy?Math.round(lastKnownLocation.accuracy)+'m':'—')); g('sig',(d.status==='online'||!d.status?'FORTE':'FRACO')); g('upd',new Date().toLocaleTimeString('pt-PT').slice(0,5)); }catch(_){} }
   function tcDetectAlert(){ const c=tcMapAudio(); if(!c) return; const n=c.currentTime; tcRiser(c,n,0.5,1800,220,0.055); tcBoom(c,n+0.42,70,0.15,1.2); tcData(c,n+0.44,7,0.045); }
@@ -452,6 +456,7 @@
       try { localStorage.removeItem('tc:lastKnownLocation'); } catch (e) {}
       try { if (marker) marker.setOpacity(0); } catch (e) {}
       try { if (accuracyCircle) accuracyCircle.setStyle({opacity:0, fillOpacity:0}); } catch (e) {}
+      try { if (pulseMarker && map) map.removeLayer(pulseMarker); pulseMarker = null; } catch (e) {}
       try { stopPanelAutoScroll(); if(window.__tcGridTimer){ clearInterval(window.__tcGridTimer); window.__tcGridTimer=null; } const sc=mapContainer&&mapContainer.querySelector('.tc-scifi-hud'); if(sc){ sc.classList.remove('tc-clean','tc-locked'); const dk=sc.querySelector('.tc-photo-deck'); if(dk) dk.parentNode.removeChild(dk); const md=mapContainer.querySelector('.tc-photo-modal'); if(md) md.parentNode.removeChild(md); const gp=sc.parentNode&&sc.parentNode.querySelector('.tc-glass-panel'); if(gp) gp.classList.remove('open'); } } catch (e) {}
     },
     isLocationLive() { return hasLiveLocation; },

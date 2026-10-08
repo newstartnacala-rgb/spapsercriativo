@@ -1130,3 +1130,18 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Ari
 .pm-c.bl{bottom:8px;left:8px;border-right:0;border-top:0}
 .pm-c.br{bottom:8px;right:8px;border-left:0;border-top:0}
 .pm-foot{display:flex;justify-content:space-between;padding:8px 12px;font-size:9px;letter-spacing:1px;color:#7fd6e6;border-top:1px solid #22d3ee33}
+/* ===== v2.39.11 · ponto vermelho animado cravado na coordenada (marcador Leaflet) ===== */
+.tc-pulse-icon{background:none!important;border:0!important}
+.tc-pulse{position:relative;width:0;height:0}
+.tc-pulse .pc{position:absolute;left:0;top:0;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;background:#ff2d2d;box-shadow:0 0 10px #ff2d2d,0 0 4px #fff;animation:tcPulseCore 1s ease-in-out infinite;z-index:2}
+.tc-pulse .pr{position:absolute;left:0;top:0;border-radius:50%;border:2px solid #ff3b3b;transform:translate(-50%,-50%);z-index:1}
+.tc-pulse .r1{animation:tcPulseRing 1.8s ease-out infinite}
+.tc-pulse .r2{animation:tcPulseRing 1.8s ease-out infinite .9s}
+@keyframes tcPulseCore{0%,100%{transform:scale(1);box-shadow:0 0 10px #ff2d2d,0 0 4px #fff}50%{transform:scale(1.3);box-shadow:0 0 20px #ff2d2d,0 0 8px #fff}}
+@keyframes tcPulseRing{0%{width:12px;height:12px;opacity:.95}100%{width:84px;height:84px;opacity:0}}
+/* evitar ponto duplicado/desalinhado: o ponto passa a ser só o marcador acima */
+.tc-sf-blip{display:none!important}
+@media(prefers-reduced-motion:reduce){.tc-pulse .pc,.tc-pulse .pr{animation:none!important}}
+/* alertas deslizáveis para apagar */
+.tc-notification-item{touch-action:pan-y;cursor:grab;will-change:transform,opacity}
+.tc-notification-item:active{cursor:grabbing}
