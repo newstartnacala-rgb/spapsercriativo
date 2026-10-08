@@ -107,8 +107,23 @@
     function beep(delay,gv){ const o=ctx.createOscillator(); o.type='sine'; const g=ctx.createGain(); g.gain.value=0.0001; o.connect(g); g.connect(ctx.destination); o.frequency.setValueAtTime(1500, now+delay); o.frequency.exponentialRampToValueAtTime(540, now+delay+0.5); g.gain.exponentialRampToValueAtTime(gv, now+delay+0.03); g.gain.exponentialRampToValueAtTime(0.0001, now+delay+0.72); o.start(now+delay); o.stop(now+delay+0.78); }
     beep(0,0.5); beep(0.2,0.22); }
   function tcScanSweep(){ const ctx=tcMapAudio(); if(!ctx) return; const now=ctx.currentTime; const o=ctx.createOscillator(); o.type='triangle'; const g=ctx.createGain(); g.gain.value=0.0001; o.connect(g); g.connect(ctx.destination); o.frequency.setValueAtTime(300, now); o.frequency.linearRampToValueAtTime(1200, now+0.7); g.gain.linearRampToValueAtTime(0.16, now+0.1); g.gain.linearRampToValueAtTime(0.0001, now+0.75); o.start(now); o.stop(now+0.8); }
-  function positionReticle(){ if(!map||!mapContainer||!lastKnownLocation) return; const scifi=mapContainer.querySelector('.tc-scifi-hud'); const ret=scifi&&scifi.querySelector('.tc-scifi-reticle'); if(!ret) return; try{ const pt=map.latLngToContainerPoint([lastKnownLocation.lat,lastKnownLocation.lng]); ret.style.left=pt.x+'px'; ret.style.top=pt.y+'px'; }catch(_){} }
-  function scifiLock(){ if(!mapContainer) return; const scifi=mapContainer.querySelector('.tc-scifi-hud'); if(!scifi) return; scifi.classList.remove('tc-scanning'); scifi.classList.add('tc-locked'); const st=scifi.querySelector('.tc-scifi-status span'); if(st) st.textContent='ALVO LOCALIZADO'; positionReticle(); const ret=scifi.querySelector('.tc-scifi-reticle'); if(ret){ ret.classList.remove('lock-anim'); void ret.offsetWidth; ret.classList.add('lock-anim'); } try{ tcSonarPing(); }catch(_){} try{ openGlassPanel(); }catch(_){} }
+  function positionReticle(){ if(!map||!mapContainer||!lastKnownLocation) return; const scifi=mapContainer.querySelector('.tc-scifi-hud'); if(!scifi) return; try{ const pt=map.latLngToContainerPoint([lastKnownLocation.lat,lastKnownLocation.lng]); const ret=scifi.querySelector('.tc-scifi-reticle'); if(ret){ ret.style.left=pt.x+'px'; ret.style.top=pt.y+'px'; } const blip=scifi.querySelector('.tc-sf-blip'); if(blip){ blip.style.left=pt.x+'px'; blip.style.top=pt.y+'px'; } updateLeader(pt); }catch(_){} }
+  function updateLeader(pt){ try{ const scifi=mapContainer&&mapContainer.querySelector('.tc-scifi-hud'); if(!scifi) return; const ln=scifi.querySelector('.tc-sf-leader line'); const panel=mapContainer.querySelector('.tc-glass-panel'); if(!ln) return; if(!pt&&lastKnownLocation){ pt=map.latLngToContainerPoint([lastKnownLocation.lat,lastKnownLocation.lng]); } if(!pt||!panel||!panel.classList.contains('open')){ ln.setAttribute('x2', ln.getAttribute('x1')||0); return; } const prect=panel.getBoundingClientRect(); const mrect=mapContainer.getBoundingClientRect(); const px=prect.left-mrect.left; const py=prect.top-mrect.top+34; ln.setAttribute('x1', pt.x); ln.setAttribute('y1', pt.y); ln.setAttribute('x2', px); ln.setAttribute('y2', py); }catch(_){} }
+  function updateGrid(){ try{ const scifi=mapContainer&&mapContainer.querySelector('.tc-scifi-hud'); if(!scifi) return; const d=window.TC_DEVICE_INFO||{}; const g=function(k,v){ const el=scifi.querySelector('[data-g='+k+']'); if(el) el.textContent=v; }; g('bat',(d.battery!=null&&d.battery!==''?d.battery+'%':'—')); g('acc',(lastKnownLocation&&lastKnownLocation.accuracy?Math.round(lastKnownLocation.accuracy)+'m':'—')); g('sig',(d.status==='online'||!d.status?'FORTE':'FRACO')); g('upd',new Date().toLocaleTimeString('pt-PT').slice(0,5)); }catch(_){} }
+  function tcDetectAlert(){ const c=tcMapAudio(); if(!c) return; const n=c.currentTime; for(let i=0;i<3;i++){ const o=c.createOscillator(); o.type='square'; const g=c.createGain(); g.gain.value=0.0001; o.connect(g); g.connect(c.destination); const t=n+i*0.16; o.frequency.setValueAtTime(1600,t); g.gain.exponentialRampToValueAtTime(0.18,t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+0.1); o.start(t); o.stop(t+0.12); } }
+  function tcApproachTone(){ const c=tcMapAudio(); if(!c) return; const n=c.currentTime; const o=c.createOscillator(); o.type='sawtooth'; const g=c.createGain(); g.gain.value=0.0001; const lp=c.createBiquadFilter(); lp.type='lowpass'; lp.frequency.setValueAtTime(500,n); lp.frequency.linearRampToValueAtTime(2600,n+9); o.connect(g); g.connect(lp); lp.connect(c.destination); o.frequency.setValueAtTime(110,n); o.frequency.exponentialRampToValueAtTime(330,n+9); g.gain.linearRampToValueAtTime(0.10,n+0.5); g.gain.setValueAtTime(0.10,n+8); g.gain.exponentialRampToValueAtTime(0.0001,n+9.4); o.start(n); o.stop(n+9.5);
+    for(let k=0;k<9;k++){ const b=c.createOscillator(); b.type='sine'; const bg=c.createGain(); bg.gain.value=0.0001; b.connect(bg); bg.connect(c.destination); const t=n+k; b.frequency.setValueAtTime(880+k*40,t); bg.gain.exponentialRampToValueAtTime(0.09,t+0.02); bg.gain.exponentialRampToValueAtTime(0.0001,t+0.18); b.start(t); b.stop(t+0.2); } }
+  let tcAcquired=false, tcAcquiring=false;
+  function tcAcquire(lat,lng){ if(!map||tcAcquiring) return; tcAcquiring=true; const scifi=mapContainer&&mapContainer.querySelector('.tc-scifi-hud');
+    if(scifi){ scifi.classList.remove('tc-locked'); scifi.classList.add('tc-scanning','tc-detected'); const st=scifi.querySelector('.tc-scifi-status span'); if(st) st.textContent='ALVO DETETADO · A APROXIMAR'; }
+    positionReticle(); try{ tcDetectAlert(); }catch(_){} setTimeout(function(){ try{ tcApproachTone(); }catch(_){} },260);
+    // vista ampla primeiro, depois zoom lento de ~9s até à rua
+    try{ map.setView([lat,lng], Math.min(8, map.getZoom()), { animate:true, duration:0.8 }); }catch(_){}
+    setTimeout(function(){ try{ map.flyTo([lat,lng], 18, { animate:true, duration:9 }); }catch(_){} positionReticle(); }, 900);
+    setTimeout(function(){ tcAcquiring=false; tcAcquired=true; if(scifi) scifi.classList.remove('tc-detected'); try{ positionReticle(); scifiLock(); }catch(_){} try{ map.invalidateSize(false); }catch(_){} }, 10200);
+  }
+  window.TC_MAP_SCIFI.acquire = tcAcquire;
+  function scifiLock(){ if(!mapContainer) return; const scifi=mapContainer.querySelector('.tc-scifi-hud'); if(!scifi) return; scifi.classList.remove('tc-scanning'); scifi.classList.add('tc-locked'); const st=scifi.querySelector('.tc-scifi-status span'); if(st) st.textContent='ALVO LOCALIZADO'; positionReticle(); const ret=scifi.querySelector('.tc-scifi-reticle'); if(ret){ ret.classList.remove('lock-anim'); void ret.offsetWidth; ret.classList.add('lock-anim'); } try{ tcSonarPing(); }catch(_){} try{ openGlassPanel(); }catch(_){} try{ updateGrid(); setTimeout(function(){ updateLeader(); },120); }catch(_){} }
   window.TC_MAP_SCIFI = { lock: scifiLock, scan: tcScanSweep, ping: tcSonarPing };
   function tcCinematicOpen(){ const c=tcMapAudio(); if(!c) return; const n=c.currentTime;
     const o=c.createOscillator(); o.type='sawtooth'; const g=c.createGain(); g.gain.value=0.0001; const lp=c.createBiquadFilter(); lp.type='lowpass'; lp.frequency.setValueAtTime(400,n); lp.frequency.exponentialRampToValueAtTime(4200,n+0.5); o.connect(g); g.connect(lp); lp.connect(c.destination); o.frequency.setValueAtTime(180,n); o.frequency.exponentialRampToValueAtTime(700,n+0.55); g.gain.linearRampToValueAtTime(0.22,n+0.1); g.gain.exponentialRampToValueAtTime(0.0001,n+0.8); o.start(n); o.stop(n+0.85);
@@ -119,7 +134,7 @@
     return { name:(window.TC_DEVICE_NAME||d.name||'Child'), coords:(lat!=null&&lng!=null)?(Number(lat).toFixed(6)+'°, '+Number(lng).toFixed(6)+'°'):'—', addr: areaName || 'a localizar endereço…', acc:(lastKnownLocation&&lastKnownLocation.accuracy?Math.round(lastKnownLocation.accuracy)+' m':'—'), bat:(d.battery!=null&&d.battery!==''?d.battery+'%':'—'), st:(d.status?(d.status==='online'?'ONLINE':String(d.status).toUpperCase()):'ONLINE'), upd: now.toLocaleTimeString('pt-PT') }; }
   function openGlassPanel(){ if(!mapContainer) return; let p=mapContainer.querySelector('.tc-glass-panel'); const info=tcGlassInfo();
     if(!p){ p=document.createElement('div'); p.className='tc-glass-panel'; p.innerHTML='<div class="tc-glass-head"><span class="tc-glass-dot"></span><b>ALVO LOCALIZADO</b><button class="tc-glass-close" aria-label="Fechar">×</button></div><div class="tc-glass-name" data-k="name"></div><div class="tc-glass-rows"><div class="tc-glass-row"><span>COORDENADAS</span><b data-k="coords"></b></div><div class="tc-glass-row"><span>LOCAL / RUA</span><b data-k="addr"></b></div><div class="tc-glass-row"><span>PRECISÃO</span><b data-k="acc"></b></div><div class="tc-glass-row"><span>BATERIA</span><b data-k="bat"></b></div><div class="tc-glass-row"><span>ESTADO</span><b data-k="st"></b></div><div class="tc-glass-row"><span>ATUALIZADO</span><b data-k="upd"></b></div></div><div class="tc-glass-foot"><span class="tc-glass-live">● LIVE</span><span>TC::TARGET-LOCK</span></div>';
-      mapContainer.appendChild(p); p.querySelector('.tc-glass-close').addEventListener('click',function(){ p.classList.remove('open'); });
+      mapContainer.appendChild(p); p.querySelector('.tc-glass-close').addEventListener('click',function(){ p.classList.remove('open'); try{updateLeader();}catch(_){} });
       requestAnimationFrame(function(){ p.classList.add('open'); }); try{ tcCinematicOpen(); }catch(_){}
       tcTypeInto(p.querySelector('[data-k=name]'), info.name);
       setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=coords]'), info.coords); },160);
@@ -247,7 +262,7 @@
     if (!scifiHud) {
       scifiHud = document.createElement('div');
       scifiHud.className = 'tc-scifi-hud tc-scanning';
-      scifiHud.innerHTML = '<div class="tc-scifi-corner tl"></div><div class="tc-scifi-corner tr"></div><div class="tc-scifi-corner bl"></div><div class="tc-scifi-corner br"></div><div class="tc-scifi-radar"></div><div class="tc-scifi-scan"></div><div class="tc-scifi-status"><i></i><span>A PROCURAR ALVO…</span></div><div class="tc-scifi-reticle"><div class="r1"></div><div class="r2"></div><div class="r3"></div><div class="rx"></div><div class="ry"></div><b>ALVO</b></div>';
+      scifiHud.innerHTML = '<div class="tc-scifi-corner tl"></div><div class="tc-scifi-corner tr"></div><div class="tc-scifi-corner bl"></div><div class="tc-scifi-corner br"></div>'+'<div class="tc-sf-beam top"></div><div class="tc-sf-beam bot"></div><div class="tc-sf-ring ring-top"></div><div class="tc-sf-ring ring-bot"></div>'+'<div class="tc-scifi-radar"></div><div class="tc-scifi-scan"></div>'+'<div class="tc-sf-binary left">1010110100 0110101 10110 01001010 11010<br>1010110100 0110101 10110 01001010 11010<br>1010110100 0110101 10110 01001010 11010</div><div class="tc-sf-binary right">1010110100 0110101 10110 01001010 11010<br>1010110100 0110101 10110 01001010 11010<br>1010110100 0110101 10110 01001010 11010</div>'+'<div class="tc-sf-gauges"><svg viewBox="0 0 40 40"><circle class="g-bg" cx="20" cy="20" r="15"/><circle class="g-fg a" cx="20" cy="20" r="15"/></svg><svg viewBox="0 0 40 40"><circle class="g-bg" cx="20" cy="20" r="15"/><circle class="g-fg b" cx="20" cy="20" r="15"/></svg></div>'+'<div class="tc-sf-bars"><i></i><i></i><i></i><i></i><i></i></div>'+'<div class="tc-sf-grid"><div><span>BAT</span><b data-g="bat">—</b></div><div><span>PREC</span><b data-g="acc">—</b></div><div><span>SINAL</span><b data-g="sig">—</b></div><div><span>ATU</span><b data-g="upd">—</b></div></div>'+'<svg class="tc-sf-leader" preserveAspectRatio="none"><defs><linearGradient id="tcLeadG" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ff3b3b"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs><line x1="0" y1="0" x2="0" y2="0" stroke="url(#tcLeadG)" stroke-width="1.5" stroke-dasharray="4 4"/></svg>'+'<div class="tc-sf-blip"><span class="b1"></span><span class="b2"></span><span class="b3"></span></div>'+'<div class="tc-scifi-status"><i></i><span>A PROCURAR ALVO…</span></div>'+'<div class="tc-scifi-reticle"><div class="r1"></div><div class="r2"></div><div class="r3"></div><div class="rx"></div><div class="ry"></div><b>ALVO</b></div>';
       el.appendChild(scifiHud);
       try { tcScanSweep(); } catch (_) {}
     }
@@ -362,10 +377,15 @@
       // Do not draw a route/trail over the map. Keep only the live/last-known marker.
       if (window.refreshLocationTerminalUI) window.refreshLocationTerminalUI();
       if (follow) {
-        const targetZoom = 17;
-        const center = map.getCenter();
-        const movedFar = center && map.distance(center, pos) > 120;
-        if (movedFar || map.getZoom() < 17) map.flyTo(pos, targetZoom, { animate: true, duration: 0.65 }); else map.panTo(pos, { animate: true, duration: 0.35 });
+        if (!tcAcquired && !tcAcquiring) {
+          tcAcquire(lat, lng); // sequência: ponto vermelho + rotação + zoom de ~10s + linha + espelho
+        } else if (!tcAcquiring) {
+          // atualização silenciosa (já travado): segue o alvo sem repetir o show
+          const center = map.getCenter();
+          const movedFar = center && map.distance(center, pos) > 60;
+          if (movedFar) map.panTo(pos, { animate: true, duration: 0.6 });
+          try { positionReticle(); updateGrid(); updateGlassPanel(); } catch (_) {}
+        }
         if (marker && typeof marker.bringToFront === "function") setTimeout(() => marker.bringToFront(), 1200);
         setTimeout(() => { if (map) map.invalidateSize(false); }, 120);
       }
@@ -381,7 +401,7 @@
     },
     reset() {
       // Chamado no logout: nenhuma localização do Child fica guardada neste navegador.
-      lastKnownLocation = null; hasLiveLocation = false; areaName = ''; lastGeocodeKey = '';
+      lastKnownLocation = null; hasLiveLocation = false; areaName = ''; lastGeocodeKey = ''; tcAcquired = false; tcAcquiring = false;
       try { localStorage.removeItem('tc:lastKnownLocation'); } catch (e) {}
       try { if (marker) marker.setOpacity(0); } catch (e) {}
       try { if (accuracyCircle) accuracyCircle.setStyle({opacity:0, fillOpacity:0}); } catch (e) {}

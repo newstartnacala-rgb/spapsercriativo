@@ -939,3 +939,45 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Ari
 @keyframes tcCaret{0%,50%{opacity:1}51%,100%{opacity:0}}
 .tc-glass-foot{display:flex;justify-content:space-between;align-items:center;font-size:8.5px;letter-spacing:1.5px;color:#5f93a8;border-top:1px solid #22d3ee33;padding-top:9px;margin-top:8px;position:relative;z-index:1}
 .tc-glass-live{color:#8df7c0}
+.tc-sf-beam{position:absolute;left:50%;transform:translateX(-50%);width:54px;background:linear-gradient(#22d3ee00,#22d3ee40,#22d3ee00);filter:blur(7px);opacity:.45;pointer-events:none;z-index:1}
+.tc-sf-beam.top{top:-8%;height:52%}.tc-sf-beam.bot{bottom:-8%;height:52%}
+.tc-sf-ring{position:absolute;left:50%;width:44%;height:44%;border:1.5px dashed #22d3ee66;border-radius:50%;box-shadow:0 0 18px #22d3ee22,inset 0 0 14px #22d3ee18;opacity:.4;pointer-events:none;z-index:1}
+.tc-sf-ring.ring-top{top:-5%;transform:translateX(-50%) scaleY(.34);animation:tcRingSpin 9s linear infinite}
+.tc-sf-ring.ring-bot{bottom:-5%;transform:translateX(-50%) scaleY(.34);animation:tcRingSpin 12s linear infinite reverse}
+@keyframes tcRingSpin{to{transform:translateX(-50%) scaleY(.34) rotate(360deg)}}
+.tc-sf-binary{position:absolute;font-family:'Courier New',monospace;font-size:8px;letter-spacing:2px;color:#22d3ee;opacity:.26;line-height:1.6;pointer-events:none;z-index:2;animation:tcBinFlk 3s steps(1) infinite}
+.tc-sf-binary.left{left:14px;top:40%}.tc-sf-binary.right{right:14px;top:28%;text-align:right}
+@keyframes tcBinFlk{0%,100%{opacity:.26}50%{opacity:.1}}
+.tc-sf-gauges{position:absolute;top:44px;left:12px;display:flex;gap:8px;pointer-events:none;z-index:2}
+.tc-sf-gauges svg{width:34px;height:34px;transform:rotate(-90deg)}
+.tc-sf-gauges .g-bg{fill:none;stroke:#0e3346;stroke-width:3}
+.tc-sf-gauges .g-fg{fill:none;stroke-width:3;stroke-linecap:round;stroke-dasharray:94;filter:drop-shadow(0 0 3px #22d3ee)}
+.tc-sf-gauges .g-fg.a{stroke:#22d3ee;animation:tcG1 4s ease-in-out infinite}
+.tc-sf-gauges .g-fg.b{stroke:#8df7c0;animation:tcG2 5s ease-in-out infinite}
+@keyframes tcG1{0%,100%{stroke-dashoffset:34}50%{stroke-dashoffset:12}}
+@keyframes tcG2{0%,100%{stroke-dashoffset:60}50%{stroke-dashoffset:28}}
+.tc-sf-bars{position:absolute;right:14px;bottom:46px;display:flex;align-items:flex-end;gap:3px;height:34px;pointer-events:none;z-index:2}
+.tc-sf-bars i{width:4px;background:#22d3ee;box-shadow:0 0 6px #22d3ee88;transform-origin:bottom;animation:tcBar 1.4s ease-in-out infinite}
+.tc-sf-bars i:nth-child(1){height:40%}.tc-sf-bars i:nth-child(2){height:70%;animation-delay:.15s}.tc-sf-bars i:nth-child(3){height:50%;animation-delay:.3s}.tc-sf-bars i:nth-child(4){height:90%;animation-delay:.45s}.tc-sf-bars i:nth-child(5){height:60%;animation-delay:.6s}
+@keyframes tcBar{0%,100%{transform:scaleY(.5)}50%{transform:scaleY(1)}}
+.tc-sf-grid{position:absolute;bottom:40px;left:12px;display:grid;grid-template-columns:1fr 1fr;gap:4px;pointer-events:none;z-index:2}
+.tc-sf-grid>div{background:rgba(6,22,34,.62);border:1px solid #22d3ee33;border-radius:5px;padding:3px 7px;min-width:50px}
+.tc-sf-grid span{display:block;font-size:7px;letter-spacing:1.5px;color:#4d86a5;font-family:'Courier New',monospace}
+.tc-sf-grid b{font-size:11px;color:#9beaf7;font-family:'Courier New',monospace}
+.tc-sf-leader{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:4}
+.tc-sf-leader line{filter:drop-shadow(0 0 3px #22d3ee);animation:tcLeadFlow .6s linear infinite}
+@keyframes tcLeadFlow{to{stroke-dashoffset:-8}}
+.tc-sf-blip{position:absolute;left:50%;top:50%;width:0;height:0;opacity:0;transition:opacity .3s;z-index:4}
+.tc-detected .tc-sf-blip,.tc-locked .tc-sf-blip{opacity:1}
+.tc-sf-blip span{position:absolute;left:0;top:0;border-radius:50%;transform:translate(-50%,-50%)}
+.tc-sf-blip .b1{width:12px;height:12px;background:#ff3b3b;box-shadow:0 0 12px #ff3b3b,0 0 4px #fff;animation:tcBlipCore 1s ease-in-out infinite}
+.tc-sf-blip .b2,.tc-sf-blip .b3{border:2px solid #ff3b3b99}
+.tc-sf-blip .b2{animation:tcBlipRing 1.8s ease-out infinite}
+.tc-sf-blip .b3{animation:tcBlipRing 1.8s ease-out infinite .9s}
+@keyframes tcBlipCore{0%,100%{box-shadow:0 0 12px #ff3b3b,0 0 4px #fff}50%{box-shadow:0 0 22px #ff3b3b,0 0 7px #fff}}
+@keyframes tcBlipRing{0%{width:12px;height:12px;opacity:.9}100%{width:72px;height:72px;opacity:0}}
+.tc-detected .tc-scifi-reticle{opacity:1}
+.tc-detected .tc-scifi-reticle .r1,.tc-detected .tc-scifi-reticle .r2,.tc-detected .tc-scifi-reticle .r3{border-color:#ff3b3b!important;box-shadow:0 0 8px #ff3b3b88!important}
+.tc-detected .tc-scifi-reticle .rx,.tc-detected .tc-scifi-reticle .ry{background:#ff3b3b!important;box-shadow:0 0 6px #ff3b3b!important}
+.tc-detected .tc-scifi-reticle b{color:#ffb3b3;border-color:#ff3b3b55}
+@media(prefers-reduced-motion:reduce){.tc-sf-ring,.tc-sf-bars i,.tc-sf-blip span,.tc-sf-leader line,.tc-sf-gauges .g-fg,.tc-sf-binary{animation:none!important}}
