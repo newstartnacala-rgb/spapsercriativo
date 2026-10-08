@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.39.9';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.39.10';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -157,7 +157,21 @@ var tcAudioCtx=null;
 function tcAudioContext(){try{if(!tcAudioCtx)tcAudioCtx=new (window.AudioContext||window.webkitAudioContext)();if(tcAudioCtx.state==='suspended')tcAudioCtx.resume();return tcAudioCtx;}catch(_){return null;}}
 try{['click','touchstart','keydown'].forEach(function(ev){window.addEventListener(ev,function(){tcAudioContext();},{once:true,passive:true});});}catch(_){}
 function tcVibrate(pattern){try{if(window.TCNativeVoice&&window.TCNativeVoice.vibrate){window.TCNativeVoice.vibrate(JSON.stringify(pattern));return;}}catch(_){}try{if(navigator.vibrate)navigator.vibrate(pattern);}catch(_){}}
-function tcEmergencyAlarm(){tcVibrate([0,700,250,700,250,700,250,1000]);var ctx=tcAudioContext();if(!ctx)return;var now=ctx.currentTime;var master=ctx.createGain();master.gain.value=0.9;var lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=5200;master.connect(lp);lp.connect(ctx.destination);var osc=ctx.createOscillator();osc.type='sawtooth';var og=ctx.createGain();og.gain.value=0.55;osc.connect(og);og.connect(master);var t=now;for(var i=0;i<10;i++){osc.frequency.setValueAtTime(820,t);osc.frequency.linearRampToValueAtTime(1280,t+0.26);osc.frequency.setValueAtTime(1280,t+0.26);osc.frequency.linearRampToValueAtTime(820,t+0.52);t+=0.52;}var pt=now;for(var j=0;j<20;j++){master.gain.setValueAtTime(0.95,pt);master.gain.setValueAtTime(0.35,pt+0.13);pt+=0.26;}master.gain.setValueAtTime(0.9,t-0.1);master.gain.exponentialRampToValueAtTime(0.0001,t+0.3);osc.start(now);osc.stop(t+0.35);}
+function tcEmergencyAlarm(){tcVibrate([0,600,160,600,160,600,160,1100]);var ctx=tcAudioContext();if(!ctx)return;try{if(ctx.state==='suspended')ctx.resume();}catch(_){}
+  var now=ctx.currentTime;
+  // barramento com reverb curto (som cinematográfico de filme)
+  var bus=ctx.createGain();bus.gain.value=0.85;var conv=null;try{conv=ctx.createConvolver();var sr=ctx.sampleRate,len=Math.floor(sr*1.5),b=ctx.createBuffer(2,len,sr);for(var ch=0;ch<2;ch++){var dd=b.getChannelData(ch);for(var ii=0;ii<len;ii++)dd[ii]=(Math.random()*2-1)*Math.pow(1-ii/len,3);}conv.buffer=b;}catch(_){conv=null;}
+  var dry=ctx.createGain();dry.gain.value=0.92;bus.connect(dry);dry.connect(ctx.destination);if(conv){var wet=ctx.createGain();wet.gain.value=0.3;bus.connect(conv);conv.connect(wet);wet.connect(ctx.destination);}
+  function boom(t,f,g,dur){var o=ctx.createOscillator();o.type='sine';var gg=ctx.createGain();o.frequency.setValueAtTime(f*2.4,t);o.frequency.exponentialRampToValueAtTime(f,t+dur*0.5);gg.gain.setValueAtTime(0.0001,t);gg.gain.exponentialRampToValueAtTime(g,t+0.02);gg.gain.exponentialRampToValueAtTime(0.0001,t+dur);o.connect(gg);gg.connect(bus);o.start(t);o.stop(t+dur+0.05);}
+  boom(now,58,0.6,1.3);
+  // klaxon duplo "alerta vermelho" — 4 varreduras com detune
+  var t=now+0.05;
+  for(var k=0;k<4;k++){
+    [0,0.6].forEach(function(det){var o=ctx.createOscillator();o.type='sawtooth';var g=ctx.createGain();var lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.setValueAtTime(1100,t);lp.frequency.linearRampToValueAtTime(3200,t+0.34);o.frequency.setValueAtTime(430+det,t);o.frequency.linearRampToValueAtTime(900+det,t+0.33);o.frequency.linearRampToValueAtTime(430+det,t+0.62);g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(0.3,t+0.05);g.gain.setValueAtTime(0.3,t+0.5);g.gain.exponentialRampToValueAtTime(0.0001,t+0.66);o.connect(lp);lp.connect(g);g.connect(bus);o.start(t);o.stop(t+0.7);});
+    var h=ctx.createOscillator();h.type='square';var hg=ctx.createGain();hg.gain.value=0.0001;h.frequency.setValueAtTime(1760,t);hg.gain.linearRampToValueAtTime(0.045,t+0.05);hg.gain.exponentialRampToValueAtTime(0.0001,t+0.6);h.connect(hg);hg.connect(bus);h.start(t);h.stop(t+0.62);
+    t+=0.66;
+  }
+  boom(t-0.1,70,0.4,0.8);}
 window.tcEmergencyAlarm=tcEmergencyAlarm;window.tcVibrate=tcVibrate;
 function tcSpeak(text){try{if(window.TCNativeVoice&&window.TCNativeVoice.available&&window.TCNativeVoice.available()){window.TCNativeVoice.speak(String(text));return true;}}catch(_){}try{if(window.speechSynthesis){var u=new SpeechSynthesisUtterance(String(text));u.lang='pt-PT';u.rate=1;u.pitch=1;var vs=window.speechSynthesis.getVoices()||[];var pv=vs.find(function(v){return /pt/i.test(v.lang)});if(pv)u.voice=pv;window.speechSynthesis.cancel();window.speechSynthesis.speak(u);return true;}}catch(_){}return false;}
 function tcAnnounce(text){tcSpeak(text);try{var eyes=document.querySelectorAll('.tcbe');eyes.forEach(function(eye){eye.classList.add('tcbe-speaking');if(!eye.querySelector('.tcbe-speaker')){var sp=document.createElement('div');sp.className='tcbe-speaker';sp.innerHTML='<span></span><span></span><span></span><span></span>';eye.appendChild(sp);}var cap=eye.querySelector('.tcbe-caption');if(!cap){cap=document.createElement('div');cap.className='tcbe-caption';eye.appendChild(cap);}cap.textContent=text;});clearTimeout(window.__tcSpeakT);window.__tcSpeakT=setTimeout(function(){document.querySelectorAll('.tcbe').forEach(function(eye){eye.classList.remove('tcbe-speaking');var sp=eye.querySelector('.tcbe-speaker');if(sp)sp.remove();var cap=eye.querySelector('.tcbe-caption');if(cap)cap.remove();});},3400);}catch(_){}}
@@ -218,14 +232,14 @@ function ensureEmergencySpeaker(){
   if(el)return el;
   el=document.createElement('button');el.id='tc-emergency-speaker';el.type='button';el.className='tc-emergency-speaker';el.setAttribute('aria-label','Alerta de emergência recebido');
   el.innerHTML='<span class="tc-es-icon">🔊</span><span class="tc-es-copy"><b>EMERGÊNCIA</b><small>Alerta recebido da Criança</small></span><span class="tc-es-waves"><i></i><i></i><i></i></span>';
-  el.onclick=()=>{playAlertSound(true);el.classList.remove('tc-es-replay');void el.offsetWidth;el.classList.add('tc-es-replay');};
+  el.onclick=()=>{tcEmergencyAlarm();el.classList.remove('tc-es-replay');void el.offsetWidth;el.classList.add('tc-es-replay');};
   document.body.appendChild(el);return el;
 }
 function playAlertSound(force=false){try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;const c=window.__tcAlertAudioContext||new AC();window.__tcAlertAudioContext=c;if(c.state==='suspended')c.resume().catch(()=>{});const now=c.currentTime+0.02;const master=c.createGain();master.gain.setValueAtTime(.0001,now);master.gain.linearRampToValueAtTime(.20,now+.025);master.gain.exponentialRampToValueAtTime(.0001,now+.72);master.connect(c.destination);const notes=[880,1174.66,1567.98,1174.66,1760];notes.forEach((freq,i)=>{const o=c.createOscillator();const g=c.createGain();const t=now+i*.13;o.type=i%2?'triangle':'sine';o.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.7,t+.018);g.gain.exponentialRampToValueAtTime(.0001,t+.105);o.connect(g).connect(master);o.start(t);o.stop(t+.12)});setTimeout(()=>{try{master.disconnect()}catch(e){}},1100)}catch(e){console.debug('Som de alerta indisponível',e)}}
 function triggerEmergencyFeedback(){
   const el=ensureEmergencySpeaker();el.classList.remove('tc-es-replay');void el.offsetWidth;el.classList.add('tc-es-active');
-  if(navigator.vibrate){try{navigator.vibrate([180,90,180,90,320,120,180])}catch(e){}}
-  playAlertSound();
+  tcVibrate([0,600,160,600,160,600,160,1100]);
+  tcEmergencyAlarm();
   if('Notification' in window && Notification.permission==='granted'){try{new Notification('T Connect — EMERGÊNCIA',{body:'A Criança acionou o botão de emergência.',tag:'tc-emergency',silent:false})}catch(e){}}
   clearTimeout(window.__tcEmergencyFeedbackTimer);window.__tcEmergencyFeedbackTimer=setTimeout(()=>el.classList.remove('tc-es-active'),6500);
 }
