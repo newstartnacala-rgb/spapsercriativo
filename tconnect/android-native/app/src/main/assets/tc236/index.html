@@ -1,0 +1,12 @@
+<!doctype html><html lang="pt-MZ"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#06101b"><link rel="apple-touch-icon" href="assets/icons/tconnect-logo-192.png"><title>T Connect</title><style>*{box-sizing:border-box}body{font-family:system-ui;background:radial-gradient(circle at 50% 15%,#123b5c,#050d18 60%);color:#fff;display:grid;place-items:center;min-height:100vh;margin:0}.box{width:min(430px,92vw);text-align:center;background:#0a1b2b;border:1px solid #1e4058;border-radius:22px;padding:30px;box-shadow:0 25px 70px #0008}.brand{font-size:31px;font-weight:900}.brand span{color:#38bdf8}.muted{color:#91a8bd}.btn{display:block;width:100%;margin:12px 0;padding:15px;border-radius:13px;border:1px solid #2a4a65;background:#10263b;color:#fff;font-size:16px;text-decoration:none}.primary{background:#0ea5e9;border-color:#0ea5e9}.small{color:#59768c;font-size:11px;margin-top:18px}</style>
+
+</head><body><div class="box"><img src="assets/icons/tconnect-logo-192.png" alt="T-Connect" style="width:82px;height:82px;border-radius:22px;box-shadow:0 12px 35px #0006;margin-bottom:14px"><div class="brand">T <span>CONNECT</span></div><p class="muted">Family Safety Platform</p><a class="btn primary" href="guardian/index.html">Abrir Guardian</a><a class="btn" href="child/index.html">Abrir Child</a><div class="small">v2.39.5</div></div>
+
+<script>
+(function(){
+ let d=null;
+ window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();d=e;});
+ window.installTConnect=function(){if(d){d.prompt();d.userChoice.finally(()=>{d=null});}else{alert('Para instalar no Android, abra o T-Connect no Chrome e use o menu ⋮ → Instalar aplicativo.');}};
+ if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(()=>{});}
+})();
+</script></body></html>

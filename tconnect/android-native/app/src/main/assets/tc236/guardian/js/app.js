@@ -1,0 +1,1022 @@
+window.TC_APP_VERSION='2.39.6';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
+const POS=[-25.9692,32.5732];
+const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
+const t=k=>window.TC_I18N?.t(k)||k;
+const langOptions=()=>window.TC_I18N?.options?.map(k=>`<option value="${k}" ${window.TC_I18N.lang===k?'selected':''}>${window.TC_I18N.flag[k]} ${window.TC_I18N.labels[k]}</option>`).join('')||'';
+function languageSelect(extra=''){return `<div class="auth-lang ${extra}"><span>🌐 ${esc(t('language'))}</span><select class="lang-select" aria-label="${esc(t('language'))}" onchange="changeLanguage(this.value)">${langOptions()}</select></div>`}
+function changeLanguage(lang){window.TC_I18N.setLang(lang);render()}
+window.changeLanguage=changeLanguage;
+window.tcOnBackPressed=function(){
+  try{
+    if(document.getElementById('tc-screen-preview')||document.getElementById('tc-audio-only-panel')){
+      try{endRemoteCapture(tcCaptureRequestId)}catch(_){var a=document.getElementById('tc-screen-preview')||document.getElementById('tc-audio-only-panel');if(a)a.remove();}
+      return true;
+    }
+    var ids=['tc-metric-popup','tc-notification-panel','tc-pay-overlay','tc-plan-overlay','tc-profile-overlay','tc-contact-overlay','tc-communication-prompt','tc-welcome-overlay','tc-emergency-speaker'];
+    for(var i=0;i<ids.length;i++){var el=document.getElementById(ids[i]);if(el){el.remove();return true;}}
+    var modal=document.querySelector('.modal');if(modal){modal.remove();return true;}
+    if(state.menuOpen){state.menuOpen=false;render();return true;}
+    if(tcNav.length){go(tcNav.pop(),true);return true;}
+    if(state.page!=='overview'){go('overview',true);return true;}
+  }catch(e){}
+  return false;
+};
+window.addEventListener('tc-language',()=>{if(document.getElementById('app'))render()});
+const contacts=[];
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+function save(){localStorage.setItem('tc_events',JSON.stringify(state.events));localStorage.setItem('tc_notifications',JSON.stringify(state.notifications))}
+function alertName(ev){const d=state.devices[0]||{};return ev.contact||ev.child_name||d.device_name||'Child'}
+// Um dispositivo só está realmente "online" se o último heartbeat for recente.
+// Sem isto, o status fica preso em 'online' no Supabase mesmo depois do aparelho
+// parar de enviar dados. Considera offline se passaram mais de 2 minutos.
+const TC_ONLINE_MAX_AGE_MS=120000;
+function isDeviceOnline(d){if(!d||d.status!=='online')return false;if(!d.last_seen_at)return true;const age=Date.now()-new Date(d.last_seen_at).getTime();return !(age>=0&&age>TC_ONLINE_MAX_AGE_MS)}
+// Super Admin: visível APENAS para esta conta.
+const TC_SUPER_ADMIN_EMAIL='bonifacioadelino1@gmail.com';
+function isSuperAdmin(){const e=String(window.TC_DB?.user?.email||'').trim().toLowerCase();return e===TC_SUPER_ADMIN_EMAIL}
+// Pesquisa de contacto: identifica a operadora pelo prefixo (Moçambique) e procura o
+// nome conhecido nos registos. O resultado abre uma tela flutuante estilo vidro (blur).
+function mozOperator(num){
+  const d=String(num).replace(/\D/g,'').replace(/^258/,'');
+  const p=d.slice(0,2);
+  if(['84','85'].includes(p))return 'Vodacom';
+  if(['82','83'].includes(p))return 'Tmcel (mCel)';
+  if(['86','87'].includes(p))return 'Movitel';
+  return 'Operadora desconhecida';
+}
+function knownContactName(num){
+  const d=String(num).replace(/\D/g,'');
+  for(const e of state.events){
+    const blob=`${e.detail||''} ${e.contact||''} ${e.child_name||''}`;
+    if(d && blob.replace(/\D/g,'').includes(d.slice(-7)) && (e.contact||e.child_name)){
+      return e.contact||e.child_name;
+    }
+  }
+  return '';
+}
+function lookupContact(query){
+  tcSound&&tcSound('tap');
+  const raw=String(query||'').trim();
+  const digits=raw.replace(/\D/g,'');
+  if(digits.length<6){ state.search=raw; render(); return; }
+  const operator=mozOperator(digits);
+  const name=knownContactName(digits)||'Não identificado nos registos';
+  const display=digits.startsWith('258')?('+'+digits):(digits.length===9?('+258 '+digits):digits);
+  addEvent('PESQUISA','Pesquisa de contacto: '+display+' · '+operator,{status:'CONSULTADO',source:'Guardian',contact:name});
+  showContactCard({number:display,operator,name});
+}
+window.lookupContact=lookupContact;
+function showContactCard(info){
+  const old=document.getElementById('tc-contact-overlay');if(old)old.remove();
+  const el=document.createElement('div');el.id='tc-contact-overlay';el.className='tc-contact-overlay';
+  const initial=(info.name&&info.name[0]&&/[a-zA-Z]/.test(info.name[0]))?info.name[0].toUpperCase():'?';
+  el.innerHTML=`<div class="tc-contact-card" onclick="event.stopPropagation()"><button class="tc-contact-close" aria-label="Fechar" onclick="document.getElementById('tc-contact-overlay').remove()">×</button>
+    <div class="tc-contact-avatar">${esc(initial)}</div>
+    <div class="tc-contact-name">${esc(info.name)}</div>
+    <div class="tc-contact-number">${esc(info.number)}</div>
+    <div class="tc-contact-rows">
+      <div class="tc-contact-row"><span>Operadora</span><b>${esc(info.operator)}</b></div>
+      <div class="tc-contact-row"><span>País</span><b>Moçambique</b></div>
+      <div class="tc-contact-row"><span>Registo</span><b>${info.name==='Não identificado nos registos'?'Sem correspondência':'Identificado'}</b></div>
+    </div>
+    <p class="tc-contact-note">O nome do titular registado na operadora só é fornecido por consulta oficial autorizada. Aqui é mostrado o nome conhecido nos registos do dispositivo.</p>
+  </div>`;
+  el.onclick=()=>el.remove();
+  document.body.appendChild(el);
+}
+window.showContactCard=showContactCard;
+// Som profissional (sintetizado, sem ficheiros) para os ícones animados.
+let tcSfxCtx=null;
+function tcSound(kind){
+  try{
+    const Ctx=window.AudioContext||window.webkitAudioContext; if(!Ctx)return;
+    tcSfxCtx=tcSfxCtx||new Ctx(); if(tcSfxCtx.state==='suspended')tcSfxCtx.resume().catch(()=>{});
+    const now=tcSfxCtx.currentTime;
+    // Cada tipo tem um par de notas distinto (duas notas = som "profissional" curto).
+    const seq={
+      'msg-in':[[660,0],[880,0.09]],
+      'msg-out':[[880,0],[660,0.09]],
+      'call-in':[[523,0],[784,0.1],[1046,0.2]],
+      'call-out':[[784,0],[523,0.1]],
+      'tap':[[720,0]]
+    }[kind]||[[720,0]];
+    const master=tcSfxCtx.createGain(); master.gain.value=0.0001; master.connect(tcSfxCtx.destination);
+    master.gain.setValueAtTime(0.0001,now); master.gain.exponentialRampToValueAtTime(0.16,now+0.01); master.gain.exponentialRampToValueAtTime(0.0001,now+0.42);
+    seq.forEach(([freq,t])=>{
+      const o=tcSfxCtx.createOscillator(); const g=tcSfxCtx.createGain();
+      o.type='sine'; o.frequency.setValueAtTime(freq,now+t);
+      g.gain.setValueAtTime(0.0001,now+t); g.gain.exponentialRampToValueAtTime(0.22,now+t+0.015); g.gain.exponentialRampToValueAtTime(0.0001,now+t+0.16);
+      o.connect(g); g.connect(master); o.start(now+t); o.stop(now+t+0.2);
+    });
+  }catch(_){}
+}
+window.tcSound=tcSound;
+// Perfil do Guardian: nome e foto personalizados (guardados localmente por conta).
+function profileKey(){const uid=window.TC_DB?.user?.id||'local';return 'tc_profile_'+uid}
+function loadProfile(){try{return JSON.parse(localStorage.getItem(profileKey())||'null')||{}}catch(_){return {}}}
+function saveProfile(p){try{localStorage.setItem(profileKey(),JSON.stringify(p))}catch(_){}}
+function profileDisplayName(){const p=loadProfile();return p.name||(window.TC_DB?.user?.email||'Conta local').split('@')[0]}
+function profileAvatarHtml(){const p=loadProfile();if(p.photo){return `<div class="tc-profile-avatar has-photo"><img src="${esc(p.photo)}" alt="Perfil"></div>`;}return '<div class="tc-profile-avatar"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg></div>';}
+function openProfileEditor(){
+  const p=loadProfile();
+  const old=document.getElementById('tc-profile-overlay');if(old)old.remove();
+  const el=document.createElement('div');el.id='tc-profile-overlay';el.className='tc-contact-overlay';
+  el.innerHTML=`<div class="tc-contact-card tc-profile-editor" onclick="event.stopPropagation()"><button class="tc-contact-close" onclick="document.getElementById('tc-profile-overlay').remove()">×</button>
+    <div class="tc-profile-edit-avatar" id="tc-profile-preview">${p.photo?`<img src="${esc(p.photo)}" alt="Perfil">`:'<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>'}</div>
+    <label class="btn small tc-photo-btn">📷 Colocar foto<input type="file" accept="image/*" id="tc-profile-file" hidden></label>
+    <label class="tc-profile-label">Nome</label>
+    <input class="tc-profile-input" id="tc-profile-name" value="${esc(p.name||profileDisplayName())}" placeholder="O seu nome" maxlength="40">
+    <div class="tc-profile-actions"><button class="btn primary wide" onclick="saveProfileEditor()">Guardar</button></div>
+  </div>`;
+  el.onclick=()=>el.remove();
+  document.body.appendChild(el);
+  const file=document.getElementById('tc-profile-file');
+  file.onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;if(f.size>2*1024*1024){alert('Imagem muito grande (máx. 2MB).');return;}const r=new FileReader();r.onload=()=>{const prev=document.getElementById('tc-profile-preview');prev.innerHTML=`<img src="${r.result}" alt="Perfil">`;prev.dataset.photo=r.result;};r.readAsDataURL(f);};
+}
+function saveProfileEditor(){
+  const p=loadProfile();
+  const name=(document.getElementById('tc-profile-name')?.value||'').trim();
+  const prev=document.getElementById('tc-profile-preview');
+  if(name)p.name=name;
+  if(prev&&prev.dataset.photo)p.photo=prev.dataset.photo;
+  saveProfile(p);
+  // Supabase: grava nome (profiles.full_name) e foto (profiles.avatar_url).
+  if(supaReady()&&window.tcSaveMyProfile){window.tcSaveMyProfile({name:p.name||'',photo:p.photo||''}).catch(err=>console.warn('Supabase perfil:',err.message));}
+  const ov=document.getElementById('tc-profile-overlay');if(ov)ov.remove();
+  addEvent('PERFIL','Perfil atualizado'+(name?(' — '+name):''),{status:'ATUALIZADO',source:'Guardian'});
+  render();
+}
+window.openProfileEditor=openProfileEditor;window.saveProfileEditor=saveProfileEditor;
+function deviceName(){const d=state.devices[0];return (d&&d.device_name)||'Child'}
+function syncDeviceName(){window.TC_DEVICE_NAME=deviceName()}
+// Só contam como alerta (sino) emergências reais e eventos críticos — não os
+// eventos de rotina online/offline/heartbeat, que antes inflavam a contagem.
+function isAlertEvent(ev){const type=String(ev.type||'').toUpperCase();return type==='SOS'||type==='EMERGENCIA'||type==='ALERTA'||String(ev.severity||'').toLowerCase()==='critical'||/emerg[eê]nc/i.test(String(ev.detail||''))}
+var tcAudioCtx=null;
+function tcAudioContext(){try{if(!tcAudioCtx)tcAudioCtx=new (window.AudioContext||window.webkitAudioContext)();if(tcAudioCtx.state==='suspended')tcAudioCtx.resume();return tcAudioCtx;}catch(_){return null;}}
+try{['click','touchstart','keydown'].forEach(function(ev){window.addEventListener(ev,function(){tcAudioContext();},{once:true,passive:true});});}catch(_){}
+function tcVibrate(pattern){try{if(window.TCNativeVoice&&window.TCNativeVoice.vibrate){window.TCNativeVoice.vibrate(JSON.stringify(pattern));return;}}catch(_){}try{if(navigator.vibrate)navigator.vibrate(pattern);}catch(_){}}
+function tcEmergencyAlarm(){tcVibrate([0,700,250,700,250,700,250,1000]);var ctx=tcAudioContext();if(!ctx)return;var now=ctx.currentTime;var master=ctx.createGain();master.gain.value=0.9;var lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=5200;master.connect(lp);lp.connect(ctx.destination);var osc=ctx.createOscillator();osc.type='sawtooth';var og=ctx.createGain();og.gain.value=0.55;osc.connect(og);og.connect(master);var t=now;for(var i=0;i<10;i++){osc.frequency.setValueAtTime(820,t);osc.frequency.linearRampToValueAtTime(1280,t+0.26);osc.frequency.setValueAtTime(1280,t+0.26);osc.frequency.linearRampToValueAtTime(820,t+0.52);t+=0.52;}var pt=now;for(var j=0;j<20;j++){master.gain.setValueAtTime(0.95,pt);master.gain.setValueAtTime(0.35,pt+0.13);pt+=0.26;}master.gain.setValueAtTime(0.9,t-0.1);master.gain.exponentialRampToValueAtTime(0.0001,t+0.3);osc.start(now);osc.stop(t+0.35);}
+window.tcEmergencyAlarm=tcEmergencyAlarm;window.tcVibrate=tcVibrate;
+function tcSpeak(text){try{if(window.TCNativeVoice&&window.TCNativeVoice.available&&window.TCNativeVoice.available()){window.TCNativeVoice.speak(String(text));return true;}}catch(_){}try{if(window.speechSynthesis){var u=new SpeechSynthesisUtterance(String(text));u.lang='pt-PT';u.rate=1;u.pitch=1;var vs=window.speechSynthesis.getVoices()||[];var pv=vs.find(function(v){return /pt/i.test(v.lang)});if(pv)u.voice=pv;window.speechSynthesis.cancel();window.speechSynthesis.speak(u);return true;}}catch(_){}return false;}
+function tcAnnounce(text){tcSpeak(text);try{var eyes=document.querySelectorAll('.tcbe');eyes.forEach(function(eye){eye.classList.add('tcbe-speaking');if(!eye.querySelector('.tcbe-speaker')){var sp=document.createElement('div');sp.className='tcbe-speaker';sp.innerHTML='<span></span><span></span><span></span><span></span>';eye.appendChild(sp);}var cap=eye.querySelector('.tcbe-caption');if(!cap){cap=document.createElement('div');cap.className='tcbe-caption';eye.appendChild(cap);}cap.textContent=text;});clearTimeout(window.__tcSpeakT);window.__tcSpeakT=setTimeout(function(){document.querySelectorAll('.tcbe').forEach(function(eye){eye.classList.remove('tcbe-speaking');var sp=eye.querySelector('.tcbe-speaker');if(sp)sp.remove();var cap=eye.querySelector('.tcbe-caption');if(cap)cap.remove();});},3400);}catch(_){}}
+window.tcSpeak=tcSpeak;window.tcAnnounce=tcAnnounce;
+function addNotification(ev){if(!isAlertEvent(ev))return;const type=String(ev.type||'').toUpperCase();let title='Novo alerta',icon='🔔';if(type==='SOS'||type==='EMERGENCIA'||/emerg[eê]nc/i.test(ev.detail||'')){title='Alerta de emergência';icon='🚨'}else if(type==='ONLINE'){title='Dispositivo online';icon='🟢'}else if(type==='OFFLINE'){title='Dispositivo offline';icon='⚫'}else if(type==='ALERTA'||String(ev.severity||'').toLowerCase()==='critical'){title='Alerta do sistema';icon='⚠️'}state.notifications.unshift({id:ev.id,title,icon,name:alertName(ev),detail:ev.detail||'Nova atividade requer atenção.',at:ev.at,read:false});state.notifications=state.notifications.slice(0,100);save();try{if(window.tcAnnounce){var isEmerg=(type==='SOS'||type==='EMERGENCIA'||/emerg[eê]nc/i.test(ev.detail||''));var ph=isEmerg?'Emergência detetada':type==='ONLINE'?'Alvo online':type==='OFFLINE'?'Alvo offline':'Alerta detetado';tcAnnounce(ph);if(isEmerg&&window.tcEmergencyAlarm)tcEmergencyAlarm();}}catch(_){}}
+function unreadNotifications(){return state.notifications.filter(n=>!n.read).length}
+function markNotificationsRead(){state.notifications=state.notifications.map(n=>({...n,read:true}));save();render()}
+function showNotifications(){const old=document.getElementById('tc-notification-panel');if(old){old.remove();return}const items=state.notifications.slice(0,20);
+  // Basta tocar no sino para "ler": a contagem desaparece imediatamente, e o cartão de
+  // Alertas do Monitoramento fica sincronizado com o sino do topo.
+  if(state.notifications.some(n=>!n.read)){state.notifications=state.notifications.map(n=>({...n,read:true}));save();const b=document.querySelector('.top-alert-btn');if(b){b.classList.remove('has-unread');const em=b.querySelector('em');if(em)em.remove()}const card=document.querySelector('.metric-alert');if(card){const ic=card.querySelector('.icon-bell');if(ic){ic.classList.remove('has-alert','alert-pulse');const e=ic.querySelector('em');if(e)e.remove()}const val=card.querySelector('.compact-value');if(val)val.textContent='0'}}const el=document.createElement('div');el.id='tc-notification-panel';el.className='tc-notification-layer';el.innerHTML=`<div class="tc-notification-card" role="dialog" aria-label="Alertas"><div class="tc-notification-head"><div><b>Alertas</b><small>${items.length?items.length+' registo'+(items.length===1?'':'s'):'Nenhum alerta'}</small></div><button class="tc-popup-close" type="button" aria-label="Fechar">×</button></div><div class="tc-notification-list">${items.length?items.map(n=>`<div class="tc-notification-item ${n.read?'read':'unread'}"><span class="tc-notification-icon">${n.icon}</span><div><b>${esc(n.title)}</b><strong>${esc(n.name)}</strong><p>${esc(String(n.detail||'').slice(0,80))}</p><small>${esc(n.at||'')}</small></div></div>`).join(''):'<div class="terminal-empty">Nenhum alerta recebido.</div>'}</div><button class="btn small" type="button" id="tc-mark-alerts">Marcar como lidos</button></div>`;document.body.appendChild(el);requestAnimationFrame(()=>el.classList.add('show'));el.querySelector('.tc-popup-close').onclick=()=>el.remove();el.onclick=e=>{if(e.target===el)el.remove()};el.querySelector('#tc-mark-alerts').onclick=markNotificationsRead}
+
+async function boot(){try{if(window.TC_DB_READY) await window.TC_DB_READY;}catch(e){console.warn('Database initialization:',e)}window.TC_DB=window.TC_DB||{enabled:false,user:null,client:null};const demo=sessionStorage.getItem('tc_demo')==='1';const recoveryHash=/#.*(?:type=recovery|access_token=)/i.test(location.hash);if(window.TC_DB.user||demo){state.authenticated=!recoveryHash;state.authMode=recoveryHash?'recoverUpdate':'login';if(window.TC_DB.user&&window.TC_DB.enabled){try{state.profile=await tcProfile();state.devices=await tcDevices();const dbEvents=await tcLoadEvents();if(dbEvents.length){state.events=dbEvents;save()}try{if(window.__tcGuardianRealtimeChannel&&window.TC_DB.client?.removeChannel)await window.TC_DB.client.removeChannel(window.__tcGuardianRealtimeChannel)}catch(_){}window.__tcGuardianRealtimeChannel=await tcRealtime(handleRealtimeEvent,handleDeviceUpdate);state.realtime=true}catch(e){console.warn('Backend:',e.message)}
+    // Supabase como fonte de verdade: carrega planos, a subscrição da conta e o perfil.
+    try{ if(window.tcLoadPlans){const plans=await window.tcLoadPlans();if(Array.isArray(plans)&&plans.length)adminSavePlans(plans);} }catch(e){console.warn('Planos:',e.message);}
+    try{ if(window.tcMySubscription){const sub=await window.tcMySubscription();if(sub&&sub.plan){localStorage.setItem(userPlanKey(),JSON.stringify({plan:sub.plan,days:sub.days,paidAt:sub.paidAt}));} } }catch(e){console.warn('Subscrição:',e.message);}
+    try{ if(window.tcLoadMyProfile){const prof=await window.tcLoadMyProfile();if(prof&&(prof.name||prof.photo)){const cur=loadProfile();if(prof.name)cur.name=prof.name;if(prof.photo)cur.photo=prof.photo;saveProfile(cur);} } }catch(e){console.warn('Perfil:',e.message);}
+    try{ if(isSuperAdmin()&&window.tcLoadSubscriptions){const subs=await window.tcLoadSubscriptions();if(Array.isArray(subs)&&subs.length)adminSaveUsers(subs);} }catch(e){console.warn('Subscrições admin:',e.message);}
+  }}render()}
+function normalizeEvent(x){return {id:x.id||crypto.randomUUID?.()||String(Date.now()),type:x.type||'EVENTO',detail:x.detail||'',at:x.at||new Date().toLocaleString('pt-PT'),status:x.status||'CONCLUÍDO',contact:x.contact||'',source:x.source||'Child Android',severity:x.severity||'info'}}
+function showMetricPopup(kind){
+  const d=state.devices[0]||{};
+  const online=isDeviceOnline(d);
+  // Offline: não mostrar a percentagem antiga; a bateria só é fiável com o dispositivo ligado.
+  const battery=(!online||d.battery==null)?null:Number(d.battery);
+  const sos=state.events.filter(e=>e.type==='SOS');
+  const old=document.getElementById('tc-metric-popup');
+  if(old) old.remove();
+  let title='',body='',icon='';
+  if(kind==='alert'){
+    title='Alertas'; icon='🔔';
+    const alerts=state.events.filter(isAlertEvent);
+    const a0=alerts[0];
+    body=alerts.length?`<b>${alerts.length} alerta${alerts.length===1?'':'s'}</b><small>${esc((a0?.detail||'Requer atenção no dispositivo.')).slice(0,90)} · ${esc(alertName(a0||{}))}</small>`:'<b>Nenhum alerta ativo</b><small>O sino mostra apenas emergências e eventos críticos reais.</small>';
+  }else if(kind==='battery'){
+    title='Bateria'; icon='🔋';
+    const pct=battery==null?null:Math.max(0,Math.min(100,battery));
+    body=pct==null?'<b>Sem dados</b><small>Aguardando informação real do dispositivo Child.</small>':`<div class="popup-battery"><i style="width:${pct}%"></i></div><b class="popup-battery-percent">${pct}%</b><small>${pct<=20?'Bateria baixa':pct<=50?'Bateria moderada':'Bateria normal'} · valor real recebido do dispositivo</small>`;
+  }else{
+    title='Conexão'; icon=online?'🟢':'⚫';
+    body=online?'<b>ONLINE</b><small>O dispositivo está ligado e conectado.</small>':'<b>OFFLINE</b><small>O dispositivo não está conectado neste momento.</small>';
+  }
+  const el=document.createElement('div');
+  el.id='tc-metric-popup';
+  el.className='tc-metric-popup';
+  el.innerHTML=`<div class="tc-metric-popup-card" role="status" aria-live="polite"><div class="tc-popup-head"><span class="tc-popup-icon">${icon}</span><div><b>${title}</b><small>T CONNECT</small></div><button type="button" class="tc-popup-close" aria-label="Fechar">×</button></div><div class="tc-popup-body">${body}</div><button type="button" class="tc-popup-gear" aria-label="Abrir definições" title="Definições">⚙</button></div>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('show'));
+  const close=()=>{el.classList.remove('show');setTimeout(()=>el.remove(),180)};
+  el.querySelector('.tc-popup-close').addEventListener('click',close);
+  el.addEventListener('click',e=>{if(e.target===el)close()});
+  el.querySelector('.tc-popup-gear').addEventListener('click',()=>{close();go('settings')});
+  setTimeout(()=>{if(document.getElementById('tc-metric-popup')===el)close()},4500);
+}
+
+function ensureEmergencySpeaker(){
+  let el=document.getElementById('tc-emergency-speaker');
+  if(el)return el;
+  el=document.createElement('button');el.id='tc-emergency-speaker';el.type='button';el.className='tc-emergency-speaker';el.setAttribute('aria-label','Alerta de emergência recebido');
+  el.innerHTML='<span class="tc-es-icon">🔊</span><span class="tc-es-copy"><b>EMERGÊNCIA</b><small>Alerta recebido da Criança</small></span><span class="tc-es-waves"><i></i><i></i><i></i></span>';
+  el.onclick=()=>{playAlertSound(true);el.classList.remove('tc-es-replay');void el.offsetWidth;el.classList.add('tc-es-replay');};
+  document.body.appendChild(el);return el;
+}
+function playAlertSound(force=false){try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;const c=window.__tcAlertAudioContext||new AC();window.__tcAlertAudioContext=c;if(c.state==='suspended')c.resume().catch(()=>{});const now=c.currentTime+0.02;const master=c.createGain();master.gain.setValueAtTime(.0001,now);master.gain.linearRampToValueAtTime(.20,now+.025);master.gain.exponentialRampToValueAtTime(.0001,now+.72);master.connect(c.destination);const notes=[880,1174.66,1567.98,1174.66,1760];notes.forEach((freq,i)=>{const o=c.createOscillator();const g=c.createGain();const t=now+i*.13;o.type=i%2?'triangle':'sine';o.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.7,t+.018);g.gain.exponentialRampToValueAtTime(.0001,t+.105);o.connect(g).connect(master);o.start(t);o.stop(t+.12)});setTimeout(()=>{try{master.disconnect()}catch(e){}},1100)}catch(e){console.debug('Som de alerta indisponível',e)}}
+function triggerEmergencyFeedback(){
+  const el=ensureEmergencySpeaker();el.classList.remove('tc-es-replay');void el.offsetWidth;el.classList.add('tc-es-active');
+  if(navigator.vibrate){try{navigator.vibrate([180,90,180,90,320,120,180])}catch(e){}}
+  playAlertSound();
+  if('Notification' in window && Notification.permission==='granted'){try{new Notification('T Connect — EMERGÊNCIA',{body:'A Criança acionou o botão de emergência.',tag:'tc-emergency',silent:false})}catch(e){}}
+  clearTimeout(window.__tcEmergencyFeedbackTimer);window.__tcEmergencyFeedbackTimer=setTimeout(()=>el.classList.remove('tc-es-active'),6500);
+}
+function maybeAlertSound(ev){if(String(ev.type||'').toUpperCase()==='SOS' || String(ev.severity||'').toLowerCase()==='critical'){triggerEmergencyFeedback()}}
+function handleRealtimeEvent(x){const ev=normalizeEvent({id:x.id,type:x.type,detail:x.detail,at:new Date(x.occurred_at).toLocaleString('pt-PT'),status:x.status,contact:x.contact,source:x.source,severity:x.severity,child_name:x.child_name});state.events.unshift(ev);state.events=state.events.slice(0,200);addNotification(ev);render();maybeAlertSound(ev)}
+function handleDeviceUpdate(d){
+  const i=state.devices.findIndex(x=>x.id===d.id);
+  const previous=i>=0?state.devices[i]:null;
+  if(i>=0)state.devices[i]={...state.devices[i],...d};else state.devices.unshift(d);try{window.TC_DEVICE_INFO={name:d.device_name||(previous&&previous.device_name)||'Child',battery:d.battery,status:d.status,lastSeen:d.last_seen_at};if(d.device_name)window.TC_DEVICE_NAME=d.device_name;if(window.TC_MAP_SCIFI&&window.TC_MAP_SCIFI.updatePanel)window.TC_MAP_SCIFI.updatePanel();}catch(_){}
+  if(previous && previous.status!==d.status && (d.status==='online'||d.status==='offline')){
+    const ev=normalizeEvent({id:`status-${d.id}-${d.status}-${Date.now()}`,type:d.status.toUpperCase(),detail:`${d.device_name||'Child'} ficou ${d.status==='online'?'online':'offline'}`,status:'INFORMADO',source:'Child Android',severity:'info',child_name:d.device_name});
+    state.events.unshift(ev);state.events=state.events.slice(0,200);addNotification(ev);if(d.status==='online')playAlertSound();
+  }
+  const lat=Number(d?.last_lat), lng=Number(d?.last_lng);
+  if(Number.isFinite(lat) && Number.isFinite(lng)){
+    state.lastLocation={lat,lng,accuracy:Number(d?.accuracy_m)||60};
+  }
+  render();
+  if(Number.isFinite(lat) && Number.isFinite(lng)){
+    setTimeout(()=>{
+      if(window.TC_MAP) window.TC_MAP.setLocation(lat,lng,Number(d?.accuracy_m)||60,true);
+    },90);
+  }
+}
+async function refreshDevices(){if(window.TC_DB.enabled&&window.TC_DB.user){try{state.devices=await tcDevices()}catch(e){console.warn(e)}}render()}
+async function addEvent(type,detail,meta={}){const ev=normalizeEvent({type,detail,at:new Date().toLocaleString('pt-PT'),status:meta.status||'CONCLUÍDO',contact:meta.contact||'',source:meta.source||'Guardian',severity:meta.severity||'info',child_name:meta.child_name});state.events.unshift(ev);state.events=state.events.slice(0,200);addNotification(ev);save();render();maybeAlertSound(ev);try{await tcInsertEvent(ev)}catch(e){console.warn('Evento não sincronizado:',e.message)}}
+function contactLabel(i=0){const c=contacts.length?contacts[i%contacts.length]:null;return c?`${c.name} · ${c.number}`:''}
+function openCommunicationPrompt(kind){
+  const isMsg=kind==='message-received'||kind==='message-sent';
+  const received=kind==='message-received';
+  const data=received||kind==='message-sent'?{title:received?'Mensagens recebidas':'Mensagens enviadas',label:received?'Mensagem recebida':'Mensagem enviada',icon:received?'✉':'↗'}:{title:kind==='call-received'?'Chamadas recebidas':'Chamadas efetuadas',label:kind==='call-received'?'Chamada recebida':'Chamada efetuada',icon:'☎'};
+  const items=state.events.filter(e=>{
+    if(isMsg)return received?e.type==='MENSAGEM_RECEBIDA':e.type==='MENSAGEM_ENVIADA';
+    return kind==='call-received'?e.type==='CHAMADA_RECEBIDA':e.type==='CHAMADA_EFETUADA';
+  }).map(e=>{
+    let payload={};try{payload=JSON.parse(e.detail||'{}')}catch(_){}
+    return {name:e.child_name||'Child',number:e.contact||payload.address||'—',text:payload.body||'',direction:kind==='call-received'?'Recebida':'Efetuada',at:payload.date?new Date(payload.date).toLocaleString('pt-PT'):e.at||'—'};
+  }).slice(0,50);
+  const old=document.getElementById('tc-communication-prompt');if(old)old.remove();
+  const el=document.createElement('div');el.id='tc-communication-prompt';el.className='tc-popup-layer';
+  const empty=`<div class="communication-empty">Nenhum registo real/autorizado encontrado.</div>`;
+  el.innerHTML=`<div class="tc-popup-card communication-prompt" role="dialog" aria-label="${data.title}"><div class="tc-popup-head"><div><span class="section-kicker">${data.label.toUpperCase()}</span><h3>${data.title}</h3></div><button class="tc-popup-close" type="button" aria-label="Fechar">×</button></div><div class="communication-list">${items.length?items.map(x=>`<div class="communication-item"><span class="communication-icon">${data.icon}</span><div><b>${esc(x.name)}</b><small>${esc(x.number)}</small>${x.text?`<p>${esc(x.text)}</p>`:`<p>${esc(x.direction)}</p>`}<small class="communication-time">${esc(x.at)}</small></div></div>`).join(''):empty}</div><div class="tc-popup-prompt"><span>${data.label}</span><b>${items.length} registo${items.length===1?'':'s'}</b></div></div>`;
+  document.body.appendChild(el);requestAnimationFrame(()=>el.classList.add('show'));el.querySelector('.tc-popup-close').onclick=()=>el.remove();el.onclick=e=>{if(e.target===el)el.remove()};
+}
+async function recoverPassword(e){
+  e.preventDefault();
+  if(state.loading)return;
+  const fd=new FormData(e.target);
+  const email=String(fd.get('email')||'').trim();
+  state.loading=true; state.authError=''; state.recoverySent=false; render();
+  try{
+    if(!window.TC_DB.enabled) throw new Error('Configure o Supabase para ativar a recuperação de senha.');
+    const {error}=await tcResetPasswordForEmail(email);
+    if(error)throw error;
+    state.loading=false; state.recoverySent=true; render();
+  }catch(err){
+    state.loading=false; state.authError=err?.message||'Não foi possível iniciar a recuperação da senha.'; render();
+  }
+}
+async function updateRecoveredPassword(e){
+  e.preventDefault();
+  if(state.loading)return;
+  const fd=new FormData(e.target);
+  const password=String(fd.get('password')||'');
+  const confirm=String(fd.get('confirmPassword')||'');
+  if(password.length<8){state.authError='A senha deve ter pelo menos 8 caracteres.';render();return;}
+  if(password!==confirm){state.authError='As senhas não coincidem.';render();return;}
+  state.loading=true; state.authError=''; render();
+  try{
+    if(!window.TC_DB.enabled) throw new Error('Configure o Supabase para redefinir a senha.');
+    const {error}=await tcUpdatePassword(password);
+    if(error)throw error;
+    await tcSignOut();
+    history.replaceState({},document.title,location.pathname);
+    state.loading=false; state.recoverySent=false; state.authMode='login'; state.authenticated=false;
+    state.authError='Senha redefinida com sucesso. Agora entre com a nova senha.'; render();
+  }catch(err){state.loading=false;state.authError=err?.message||'Não foi possível redefinir a senha.';render();}
+}
+async function login(e){e.preventDefault();if(state.loading)return;const fd=new FormData(e.target);state.loading=true;state.authError='';render();try{if(window.TC_DB.enabled){const result=await tcSignIn(String(fd.get('email')||'').trim(),String(fd.get('password')||''));if(result?.error)throw result.error;window.TC_DB.user=result?.data?.user||result?.data?.session?.user||window.TC_DB.user;state.authenticated=!!window.TC_DB.user;if(!state.authenticated)throw new Error('A sessão não foi criada. Tente entrar novamente.');state.loading=false;await addEvent('AUTENTICAÇÃO','Sessão iniciada',{source:'Supabase Auth',status:'AUTORIZADO'});await boot();showPreparationThenContinue();if(state.update.auto){checkForUpdates(true);setTimeout(autoUpdateIfNeeded,800)}}else{state.authenticated=true;sessionStorage.setItem('tc_demo','1');state.loading=false;await addEvent('AUTENTICAÇÃO','Sessão local de demonstração',{source:'Demo',status:'TESTE'});render();showPreparationThenContinue()}}catch(err){state.loading=false;state.authError=err?.message||t('login')+' — erro';render()}}
+function tcPwdStrength(v){v=String(v||'');let sc=0;if(v.length>=8)sc++;if(v.length>=12)sc++;if(/[a-z]/.test(v)&&/[A-Z]/.test(v))sc++;if(/[0-9]/.test(v))sc++;if(/[^A-Za-z0-9]/.test(v))sc++;const m=document.getElementById('tc-pwd-meter');if(!m)return;const bar=m.querySelector('.tc-pwd-bar i'),lab=m.querySelector('.tc-pwd-label');let pct,color,txt;if(!v){pct=0;color='#22364a';txt='';}else if(sc<=1){pct=25;color='#ef4444';txt='Senha fraca';}else if(sc===2){pct=50;color='#f59e0b';txt='Senha média';}else if(sc===3){pct=75;color='#eab308';txt='Senha boa';}else{pct=100;color='#22c55e';txt='Senha forte';}if(bar){bar.style.width=pct+'%';bar.style.background=color;}if(lab){lab.textContent=txt;lab.style.color=color;}}
+function tcPwdMatch(v){const p=document.getElementById('tc-signup-pwd');const el=document.getElementById('tc-pwd-match');if(!p||!el)return;if(!v){el.textContent='';return;}if(v===p.value){el.textContent='✓ As senhas coincidem';el.style.color='#22c55e';}else{el.textContent='✗ As senhas não coincidem';el.style.color='#ef4444';}}
+window.tcPwdStrength=tcPwdStrength;window.tcPwdMatch=tcPwdMatch;
+async function signup(e){
+  e.preventDefault();
+  if(state.loading)return;
+  const fd=new FormData(e.target);
+  state.loading=true; state.authError=''; render();
+  try{
+    if(!window.TC_DB.enabled)throw new Error('Configure o Supabase em guardian/js/supabase-config.js antes de criar contas reais.');
+    const email=String(fd.get('email')||'').trim();
+    const password=String(fd.get('password')||'');
+    const name=String(fd.get('name')||'').trim();
+    const confirm=String(fd.get('confirmPassword')||'');
+    if(password!==confirm)throw new Error('As senhas não coincidem.');
+    if(password.length<8)throw new Error('A senha deve ter pelo menos 8 caracteres.');
+    const {data,error}=await tcSignUp(email,password,name);
+    if(error)throw error;
+    if(!data?.session){
+      const signed=await tcSignIn(email,password);
+      if(signed.error){
+        if(/not confirmed|confirm/i.test(signed.error.message||''))throw new Error('A confirmação de email está ativada no Supabase. Desative-a em Authentication → Providers → Email (opção "Confirm email") para criar contas sem confirmação.');
+        throw signed.error;
+      }
+    }
+    state.authenticated=true;
+    state.authMode='login';
+    state.loading=false;
+    // Sem alert/OK: a sessão do Supabase já está criada; recarregar leva direto ao Guardian.
+    location.reload();
+  }catch(err){
+    state.loading=false;
+    state.authError=err?.message||'Falha no cadastro';
+    render();
+  }
+}
+async function google(){
+  if(state.loading)return;
+  state.loading=true; state.authError=''; render();
+  try{
+    if(!window.TC_DB.enabled)throw new Error('Configure o Supabase para ativar o Google OAuth.');
+    const result=await tcGoogle();
+    if(result?.error)throw result.error;
+  }catch(err){
+    state.loading=false;
+    const raw=String(err?.message||'');
+    state.authError=/provider.*not enabled|unsupported provider/i.test(raw)
+      ? 'O login com Google ainda não está ativado no Supabase. Ative Authentication → Sign In / Providers → Google e configure o OAuth antes de testar novamente.'
+      : (raw||'Não foi possível iniciar o login com Google.');
+    render();
+  }
+}
+async function fetchReleaseManifest(){
+  const cfg=window.TC_SUPABASE||{};
+  const remote=String(cfg.updateManifestUrl||'').trim();
+  const urls=[];
+  if(remote)urls.push(remote);
+  urls.push('../updates/t-connect-update.json','/updates/t-connect-update.json');
+  for(const url of urls){
+    try{const r=await fetch(url,{cache:'no-store'});if(r.ok)return await r.json()}catch(_){}}
+  return null;
+}
+// Compara versões "x.y.z". >0 se a>b. Serve de base para contar a partir da versão atual.
+function cmpVersion(a,b){const pa=String(a||'0').split('.').map(n=>parseInt(n,10)||0);const pb=String(b||'0').split('.').map(n=>parseInt(n,10)||0);for(let i=0;i<Math.max(pa.length,pb.length);i++){const d=(pa[i]||0)-(pb[i]||0);if(d)return d>0?1:-1}return 0}
+async function checkForUpdates(silent=false){
+  if(state.update.checking)return;
+  state.update.checking=true; state.update.error=''; if(!silent)render();
+  try{
+    let release=await fetchReleaseManifest();
+    if(!release && window.TC_DB?.enabled){ try{ release=await tcLatestRelease(); }catch(_){} }
+    // Só conta como atualização se a versão publicada for MAIS RECENTE que a instalada
+    // (as versões passam a contar a partir da atual, v${window.TC_APP_VERSION}).
+    const current=window.TC_APP_VERSION||'2.39.5';
+    if(release && cmpVersion(release.version, current)>0){
+      state.update.latest=release;
+    }else{
+      state.update.latest=null;
+      if(!silent && release) state.update.error='';
+    }
+  }catch(err){ state.update.error=err?.message||'Não foi possível verificar atualizações.'; }
+  finally{state.update.checking=false;render();}
+}
+function toggleAutoUpdates(enabled){state.update.auto=!!enabled;localStorage.setItem('tc_auto_updates',state.update.auto?'1':'0');render();if(state.update.auto)checkForUpdates(true)}
+async function updateAppNow(){
+  state.update.checking=true; state.update.error=''; render();
+  try{
+    const release=await fetchReleaseManifest();
+    if('serviceWorker' in navigator){
+      const reg=await navigator.serviceWorker.getRegistration('../');
+      if(reg){ await tcTimeout(reg.update(),8000); if(reg.waiting){ reg.waiting.postMessage({type:'SKIP_WAITING'}); } }
+    }
+    if(release) state.update.latest=release;
+    const apkUrl=state.update.latest?.apk_url;
+    if(window.TCNativeUpdater && apkUrl){
+      const url=new URL(apkUrl,location.origin).href;
+      const result=window.TCNativeUpdater.installFromUrl(url);
+      if(result==='STARTED') state.update.error='A atualização foi baixada. O Android solicitará a instalação sem remover os seus dados.';
+      else state.update.error='Não foi possível iniciar a atualização Android: '+result;
+    } else if(state.update.latest?.download_url){
+      openRelease(state.update.latest);
+    } else if(document.getElementById('pwa-update-status')) document.getElementById('pwa-update-status').textContent='O T-Connect já está na versão disponível mais recente.';
+  }catch(err){ state.update.error=err?.message||'Não foi possível atualizar agora.'; }
+  finally{state.update.checking=false;render();}
+}
+async function tcCheckAndUpdate(){if(state.update.checking)return;await checkForUpdates(false);if(state.update.latest){await updateAppNow()}}
+function openRelease(release){const u=release?.apk_url||release?.download_url;if(u)window.open(u,'_blank','noopener')}
+
+function isStandaloneApp(){return !!(window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone===true)}
+// Chave de "boas-vindas já vistas", por conta (ou sessão local de demonstração).
+function welcomeKey(){const uid=window.TC_DB?.user?.id||'';return 'tc_welcome_seen'+(uid?('_'+uid):'')}
+function hasSeenWelcome(){try{return localStorage.getItem(welcomeKey())==='1'}catch(_){return false}}
+function markWelcomeSeen(){try{localStorage.setItem(welcomeKey(),'1')}catch(_){}}
+function buildPreparationOverlay(){
+  const old=document.getElementById('tc-preparation-overlay'); if(old) return null;
+  const el=document.createElement('div'); el.id='tc-preparation-overlay'; el.style.cssText='position:fixed;inset:0;z-index:100000;display:grid;place-items:center;background:radial-gradient(circle at 50% 18%,rgba(18,69,105,.94),rgba(3,9,16,.99) 64%);color:#fff;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;';
+  el.innerHTML='<div style="text-align:center;width:min(340px,86vw)"><img src="../assets/icons/tconnect-logo-192.png" alt="T-Connect" style="width:82px;height:82px;border-radius:22px;object-fit:cover;box-shadow:0 18px 55px rgba(0,174,255,.24);margin-bottom:22px"><div style="margin:0 auto 24px;transform:scale(1.4);display:flex;justify-content:center">'+tcEye()+'</div><div style="font-weight:900;letter-spacing:.12em;font-size:17px">T-CONNECT</div><div style="margin-top:8px;color:#8faabd;font-size:12px">Processando<span class="tcbe-dots"></span></div><div style="margin-top:5px;color:#5f7d93;font-size:11px">Pode demorar alguns segundos…</div></div>';
+  if(!document.getElementById('tc-prep-style')){const st=document.createElement('style');st.id='tc-prep-style';st.textContent='.tcbe-dots::after{content:"";animation:tcbeDots 1.4s steps(1) infinite}@keyframes tcbeDots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}';document.head.appendChild(st)}
+  document.body.appendChild(el);
+  return el;
+}
+// Dados de pagamento (reais) mostrados nos planos.
+const TC_PAYMENT={mpesa:'844219918',emola:'861667843',name:'BONIFACIO DICKSON'};
+function runPreparation(){
+  const el=buildPreparationOverlay();
+  const after=()=>{ if(el&&el.isConnected)el.remove(); if(!isSuperAdmin()&&!userHasPlan())showPlanChooser(); };
+  if(!el){ after(); return; }
+  setTimeout(after,2200);
+}
+// Plano escolhido pela conta (por utilizador). Persistido localmente.
+function userPlanKey(){const uid=window.TC_DB?.user?.id||'local';return 'tc_user_plan_'+uid}
+// O Super Admin (dono) tem acesso total e nunca precisa de plano/pagamento.
+function userHasPlan(){if(isSuperAdmin())return true;try{return !!localStorage.getItem(userPlanKey())}catch(_){return false}}
+function getUserPlan(){if(isSuperAdmin())return{plan:'owner',days:99999,paidAt:null};try{return JSON.parse(localStorage.getItem(userPlanKey())||'null')}catch(_){return null}}
+function userPlanId(){const p=getUserPlan();return p?p.plan:''}
+// Verifica se o plano pago expirou (ex.: 30 dias após o pagamento). O Super Admin e o
+// plano Grátis não expiram. Quando expira, o acesso é bloqueado até novo pagamento.
+function isPlanExpired(){
+  if(isSuperAdmin())return false;
+  const p=getUserPlan();
+  if(!p||!p.plan||p.plan==='free')return false;
+  if(!p.paidAt||!p.days)return false;
+  const ms=Date.now()-new Date(p.paidAt).getTime();
+  return ms > (p.days*24*60*60*1000);
+}
+function planDaysLeft(){const p=getUserPlan();if(!p||!p.paidAt||!p.days)return null;const left=Math.ceil((p.days*86400000-(Date.now()-new Date(p.paidAt).getTime()))/86400000);return left}
+function enforcePlan(){
+  // Se o plano pago expirou, remove o acesso e força o ecrã de pagamento.
+  if(isPlanExpired()){
+    try{localStorage.removeItem(userPlanKey())}catch(_){}
+    const email=(window.TC_DB?.user?.email||'').toLowerCase();
+    addEvent('PLANO','O plano expirou (30 dias). Renove o pagamento para continuar.',{status:'EXPIRADO',source:'Conta',contact:email});
+    showPlanChooser();
+    return true;
+  }
+  return false;
+}
+function isFreePlan(){return userPlanId()==='free'}
+function setUserPlan(id){const plans=(typeof adminLoadPlans==='function')?adminLoadPlans():[];const pl=plans.find(p=>p.id===id);const rec={plan:id,days:pl?pl.days:(id==='free'?0:30),paidAt:id==='free'?null:new Date().toISOString()};try{localStorage.setItem(userPlanKey(),JSON.stringify(rec))}catch(_){}
+  try{const email=(window.TC_DB?.user?.email||'').toLowerCase();if(email){const users=adminLoadUsers();let u=users.find(x=>x.email===email);if(!u){u={email,plan:'',days:0,paidAt:null};users.push(u)}if(id!=='free'){u.plan=id;u.days=rec.days;u.paidAt=rec.paidAt}adminSaveUsers(users)}}catch(_){}
+  // Supabase: grava a subscrição da própria conta (fonte de verdade entre dispositivos).
+  if(supaReady()&&window.tcSetMyPlan){window.tcSetMyPlan(id).catch(err=>console.warn('Supabase plano:',err.message));}
+}
+function choosePlanAccount(id){
+  // Free entra direto (com limitações). Planos pagos exigem confirmar o pagamento.
+  if(id==='free'){ setUserPlan('free'); const ov=document.getElementById('tc-plan-overlay'); if(ov)ov.remove(); addEvent('PLANO','Conta entrou no plano Grátis (com limitações).',{status:'ATIVO',source:'Conta'}); render(); return; }
+  showPaymentScreen(id);
+}
+window.choosePlanAccount=choosePlanAccount;
+function confirmPayment(id){
+  setUserPlan(id);
+  const ov=document.getElementById('tc-plan-overlay'); if(ov)ov.remove();
+  const pay=document.getElementById('tc-pay-overlay'); if(pay)pay.remove();
+  const nm=planLabel(id);
+  addEvent('PLANO','Pagamento confirmado — plano '+nm+' ativado.',{status:'PAGO',source:'Conta'});
+  render();
+}
+window.confirmPayment=confirmPayment;
+function planLabel(id){return {free:'Grátis',familiar:'Familiar',premium:'Premium',anual:'Anual'}[id]||id}
+function allPlans(){
+  const plans=(typeof adminLoadPlans==='function')?adminLoadPlans():[];
+  const get=(id,d)=>plans.find(p=>p.id===id)||d;
+  const fam=get('familiar',{price:350,days:30,features:[]});
+  const pre=get('premium',{price:750,days:30,features:[]});
+  const anu=get('anual',{price:6500,days:365,features:[]});
+  return [
+    {id:'free',name:'Grátis',price:0,days:0,period:'',feat:['1 dispositivo Child','Localização em tempo real','Alertas de emergência (SOS)','Histórico de 24 horas'],primary:false},
+    {id:'familiar',name:'Familiar',price:fam.price,days:fam.days,period:'/'+fam.days+' dias',feat:(fam.features&&fam.features.length)?fam.features:['Até 5 dispositivos','Histórico de 30 dias','Mensagens e chamadas','Captura de câmera e áudio'],primary:true},
+    {id:'premium',name:'Premium',price:pre.price,days:pre.days,period:'/'+pre.days+' dias',feat:(pre.features&&pre.features.length)?pre.features:['Dispositivos ilimitados','Histórico completo','Todas as capturas','Geofencing e relatórios'],primary:false},
+    {id:'anual',name:'Anual',price:anu.price,days:anu.days,period:'/ano',feat:(anu.features&&anu.features.length)?anu.features:['Tudo do Premium','12 meses de acesso','2 meses grátis','Prioridade máxima de suporte'],primary:false}
+  ];
+}
+function showPlanChooser(){
+  if(!state.authenticated||isSuperAdmin()) return;
+  if(document.getElementById('tc-plan-overlay')) return;
+  const cards=allPlans();
+  const el=document.createElement('div');el.id='tc-plan-overlay';el.className='tc-plan-overlay';
+  el.innerHTML=`<div class="tc-plan-card"><div class="tc-plan-brand">T<span>-CONNECT</span></div><h2>Escolha o seu plano</h2><p class="tc-plan-sub">Para usar a plataforma precisa de um plano. O plano Grátis dá acesso limitado; os planos pagos desbloqueiam todas as funções.</p><div class="tc-plan-grid four">${cards.map(c=>`<section class="plan-card ${c.primary?'plan-featured':''}">${c.primary?'<span class="plan-tag">Mais popular</span>':''}<h3>${c.name}</h3><div class="plan-price"><b>${c.price===0?'0 MT':c.price+' MT'}</b><span>${esc(c.period)}</span></div><ul class="plan-features">${c.feat.map(f=>`<li>✓ ${esc(f)}</li>`).join('')}</ul><button class="btn ${c.primary?'primary':''} plan-cta" onclick="choosePlanAccount('${c.id}')">${c.id==='free'?'Entrar grátis (limitado)':'Escolher '+c.name}</button></section>`).join('')}</div><div class="plan-note">Não é possível aceder à plataforma sem escolher um plano.</div></div>`;
+  document.body.appendChild(el);
+}
+window.showPlanChooser=showPlanChooser;
+const TC_WHATSAPP_URL='https://wa.me/258844219918?s=t';
+function waProof(planName,price){
+  const msg=encodeURIComponent('Olá, acabei de pagar o plano '+planName+' ('+price+' MT) do T-Connect. Segue o comprovante do pagamento.');
+  // O link base fornecido; acrescenta a mensagem pré-preenchida quando possível.
+  const url=TC_WHATSAPP_URL.includes('?')?(TC_WHATSAPP_URL+'&text='+msg):(TC_WHATSAPP_URL+'?text='+msg);
+  try{window.open(url,'_blank','noopener')}catch(_){location.href=TC_WHATSAPP_URL}
+}
+window.waProof=waProof;
+const mpesaIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18"/><circle cx="7.5" cy="14.5" r="1.4"/></svg>';
+const emolaIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M4 10h16"/><path d="M8 15h4"/></svg>';
+const waIcon='<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3C9.4 3 4 8.4 4 15c0 2.3.6 4.5 1.8 6.4L4 29l7.8-1.8c1.8 1 3.9 1.5 6.2 1.5 6.6 0 12-5.4 12-12S22.6 3 16 3Z"/><path d="M21.5 18.2c-.3-.2-1.9-1-2.2-1.1-.3-.1-.5-.2-.8.2-.2.3-.8 1-1 1.2-.2.2-.4.2-.7.1-1.8-.7-3-1.9-4-3.5-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5 0-.2-.8-1.9-1-2.5-.3-.6-.5-.5-.8-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.3 3.1c.2.2 2.2 3.4 5.4 4.6 2.6 1 3.1.8 3.7.8.6-.1 1.9-.8 2.1-1.5.3-.7.3-1.3.2-1.4-.1-.2-.3-.2-.6-.4Z" fill="#fff"/></svg>';
+function showPaymentScreen(id){
+  const p=allPlans().find(x=>x.id===id);if(!p)return;
+  const old=document.getElementById('tc-pay-overlay');if(old)old.remove();
+  const el=document.createElement('div');el.id='tc-pay-overlay';el.className='tc-plan-overlay';
+  el.innerHTML=`<div class="tc-plan-card tc-pay-card"><button class="admin-back-gear" onclick="document.getElementById('tc-pay-overlay').remove()">${gearSvg}<span>Voltar</span></button><div class="tc-plan-brand">T<span>-CONNECT</span></div><h2>Pagamento — Plano ${esc(p.name)}</h2><p class="tc-plan-sub">Valor: <b>${p.price} MT</b> ${esc(p.period)}. Transfira para um dos contactos abaixo.</p>
+    <div class="pay-boxes">
+      <div class="pay-box"><div class="pay-box-top"><span class="pay-ico mpesa">${mpesaIcon}</span><span class="pay-badge mpesa">M-Pesa</span></div><div class="pay-number">${esc(TC_PAYMENT.mpesa)}</div><div class="pay-name">${esc(TC_PAYMENT.name)}</div><button class="btn small" onclick="navigator.clipboard&&navigator.clipboard.writeText('${esc(TC_PAYMENT.mpesa)}');this.textContent='Copiado ✓'">⧉ Copiar número</button></div>
+      <div class="pay-box"><div class="pay-box-top"><span class="pay-ico emola">${emolaIcon}</span><span class="pay-badge emola">e-Mola</span></div><div class="pay-number">${esc(TC_PAYMENT.emola)}</div><div class="pay-name">${esc(TC_PAYMENT.name)}</div><button class="btn small" onclick="navigator.clipboard&&navigator.clipboard.writeText('${esc(TC_PAYMENT.emola)}');this.textContent='Copiado ✓'">⧉ Copiar número</button></div>
+    </div>
+    <div class="pay-auto">
+      <div class="pay-auto-title">Pagar automaticamente (recebe o pedido de PIN no telemóvel)</div>
+      <div class="pay-method-toggle"><button type="button" class="pay-method-btn is-on" data-m="mpesa" onclick="tcSelectPayMethod('mpesa')">M-Pesa</button><button type="button" class="pay-method-btn" data-m="emola" onclick="tcSelectPayMethod('emola')">e-Mola</button></div>
+      <input class="pay-phone-input" id="tc-pay-phone" inputmode="tel" placeholder="Seu número (ex: 84XXXXXXX)" maxlength="12">
+      <button class="btn primary wide" id="tc-pay-now" onclick="tcPayNow('${p.id}',${p.price},${p.days})">Pagar ${p.price} MT agora</button>
+      <div class="pay-auto-status" id="tc-pay-status"></div>
+    </div>
+    <div class="pay-divider"><span>ou pague manualmente</span></div>
+    <div class="pay-actions">
+      <button class="btn wide" onclick="confirmPayment('${p.id}')">Já paguei (confirmação manual)</button>
+      <button class="btn wa-btn wide" onclick="waProof('${esc(p.name)}','${p.price}')"><span class="wa-ico">${waIcon}</span> Enviar comprovante via WhatsApp</button>
+    </div>
+    <p class="plan-note">O pagamento automático precisa da integração configurada no Supabase. Caso ainda não esteja, transfira ${p.price} MT para ${esc(TC_PAYMENT.name)} e use a confirmação manual.</p>
+  </div>`;
+  document.body.appendChild(el);
+}
+window.showPaymentScreen=showPaymentScreen;
+let tcPayMethod='mpesa';
+function tcSelectPayMethod(m){tcPayMethod=m;document.querySelectorAll('.pay-method-btn').forEach(b=>b.classList.toggle('is-on',b.dataset.m===m));const ph=document.getElementById('tc-pay-phone');if(ph)ph.placeholder=m==='mpesa'?'Seu número M-Pesa (84/85XXXXXXX)':'Seu número e-Mola (86/87XXXXXXX)';}
+window.tcSelectPayMethod=tcSelectPayMethod;
+async function tcPayNow(planId,amount,days){
+  const phoneEl=document.getElementById('tc-pay-phone');
+  const statusEl=document.getElementById('tc-pay-status');
+  const btn=document.getElementById('tc-pay-now');
+  const phone=(phoneEl?.value||'').replace(/\D/g,'');
+  if(phone.length<9){statusEl.textContent='Introduza um número válido.';statusEl.className='pay-auto-status err';return;}
+  if(!(window.TC_DB?.enabled&&window.tcCharge)){statusEl.textContent='Pagamento automático ainda não configurado. Use a confirmação manual abaixo.';statusEl.className='pay-auto-status err';return;}
+  btn.disabled=true;statusEl.className='pay-auto-status';statusEl.textContent='A enviar pedido… confirme o PIN no seu telemóvel.';
+  try{
+    const res=await window.tcCharge({method:tcPayMethod,plan:planId,amount,days,phone});
+    if(res&&res.status==='paid'){statusEl.className='pay-auto-status ok';statusEl.textContent='Pagamento confirmado! A ativar o plano…';setTimeout(()=>confirmPayment(planId),800);}
+    else if(res&&res.status==='pending'){statusEl.className='pay-auto-status';statusEl.textContent='Pagamento em processamento. Aguarde a confirmação no telemóvel.';if(res.reference)tcPollPayment(res.reference,planId,days,statusEl);}
+    else{statusEl.className='pay-auto-status err';statusEl.textContent='Pagamento não concluído ('+(res?.error||res?.status||'falhou')+'). Tente de novo ou pague manualmente.';btn.disabled=false;}
+  }catch(e){statusEl.className='pay-auto-status err';statusEl.textContent='Erro: '+(e.message||'falha')+'. Use a confirmação manual.';btn.disabled=false;}
+}
+window.tcPayNow=tcPayNow;
+function tcPollPayment(reference,planId,days,statusEl){
+  let tries=0;const timer=setInterval(async()=>{
+    tries++;if(tries>20){clearInterval(timer);return;}
+    try{const r=await window.tcChargeStatus({reference,plan:planId,days});if(r&&r.status==='paid'){clearInterval(timer);statusEl.className='pay-auto-status ok';statusEl.textContent='Pagamento confirmado! A ativar…';setTimeout(()=>confirmPayment(planId),800);}else if(r&&r.status==='failed'){clearInterval(timer);statusEl.className='pay-auto-status err';statusEl.textContent='Pagamento falhou. Tente novamente.';}}catch(_){}
+  },4000);
+}
+window.tcPollPayment=tcPollPayment;
+function showWelcomeIfNeeded(){
+  if(!state.authenticated) return;
+  const old=document.getElementById('tc-welcome-overlay'); if(old) return;
+  const el=document.createElement('div'); el.id='tc-welcome-overlay'; el.style.cssText='position:fixed;inset:0;z-index:99999;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 50% 12%,rgba(19,83,130,.72),rgba(3,10,18,.98) 62%);backdrop-filter:blur(12px);color:#fff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;';
+  el.innerHTML=`<div style="width:min(430px,94vw);text-align:center;padding:32px 24px 28px;border:1px solid rgba(56,189,248,.32);border-radius:28px;background:linear-gradient(180deg,rgba(10,28,45,.97),rgba(4,13,23,.98));box-shadow:0 30px 100px rgba(0,0,0,.55)"><img src="../assets/icons/tconnect-logo-192.png" alt="T-Connect" style="width:112px;height:112px;object-fit:cover;border-radius:26px;box-shadow:0 12px 45px rgba(0,174,255,.22);margin-bottom:18px"><div style="font-size:29px;font-weight:900;letter-spacing:.04em">T<span style="color:#38bdf8">-CONNECT</span></div><div style="margin-top:7px;color:#55d9ff;font-size:12px;font-weight:800;letter-spacing:.16em">SEGURANÇA EM TEMPO REAL</div><h2 style="font-size:28px;line-height:1.08;margin:30px 0 12px">Está preparado para fazer o <span style="color:#38bdf8">monitoramento?</span></h2><p style="color:#a9bfd1;line-height:1.55;margin:0 auto 24px;max-width:340px">Tudo pronto para acompanhar os seus dispositivos com segurança, rapidez e informação em tempo real.</p><button id="tc-welcome-start" style="width:100%;border:0;border-radius:15px;padding:15px 18px;background:linear-gradient(135deg,#0ea5e9,#1677ff);color:#fff;font-weight:800;font-size:16px">Começar monitoramento</button><small style="display:block;margin-top:18px;color:#6f879b">T-Connect · Sempre com você.</small></div>`;
+  document.body.appendChild(el);
+  el.querySelector('#tc-welcome-start').onclick=()=>{el.remove();markWelcomeSeen();runPreparation();};
+}
+function showPreparationThenContinue(){
+  if(!state.authenticated) return;
+  // Primeira vez (conta nova / primeiro login): boas-vindas e, ao começar, o processamento.
+  // Sessões seguintes: só o processamento, sem a mensagem de boas-vindas.
+  if(!hasSeenWelcome()){ showWelcomeIfNeeded(); return; }
+  runPreparation();
+}
+
+async function logout(){try{await tcSignOut()}catch(e){}try{['tc_events','tc_notifications','tc_map_terminal_events','tc:lastKnownLocation','tc_auto_update_target'].forEach(k=>localStorage.removeItem(k));window.TC_MAP?.reset?.()}catch(_){}sessionStorage.removeItem('tc_demo');state.authenticated=false;location.reload()}
+async function toggleTrail(){if(state.trailOn){state.trailOn=false;try{if(window.TC_MAP&&TC_MAP.clearTrail)TC_MAP.clearTrail()}catch(_){}render();return}state.trailOn=true;render();try{const d=state.devices[0];if(!d?.id||!window.TC_DB?.enabled||!window.TC_DB.client)return;const start=new Date();start.setHours(0,0,0,0);const {data}=await window.TC_DB.client.from('location_history').select('lat,lng,epoch_ms').eq('device_id',d.id).gte('epoch_ms',start.getTime()).order('epoch_ms',{ascending:true}).limit(2000);if(window.TC_MAP&&TC_MAP.showTrail)TC_MAP.showTrail((data||[]).map(p=>({lat:p.lat,lng:p.lng})))}catch(e){console.warn('trail',e&&e.message)}}
+async function loadContacts(){if(!window.TC_DB?.enabled||!window.TC_DB.client)return;try{const d=state.devices[0];let q=window.TC_DB.client.from('contacts').select('*').order('name',{ascending:true}).limit(1000);if(d?.id)q=q.eq('device_id',d.id);const {data}=await q;state.contactsList=data||[];try{if(d?.id){const[c,m]=await Promise.all([window.TC_DB.client.from('calls').select('number,name').eq('device_id',d.id).limit(5000),window.TC_DB.client.from('messages').select('address').eq('device_id',d.id).limit(5000)]);const counts={};const norm=x=>String(x||'').replace(/[^0-9+]/g,'').slice(-9);(c.data||[]).forEach(r=>{const k=norm(r.number);if(k){counts[k]=counts[k]||{n:0,calls:0,sms:0,name:r.name||'',number:r.number};counts[k].n++;counts[k].calls++;if(r.name)counts[k].name=r.name}});(m.data||[]).forEach(r=>{const k=norm(r.address);if(k){counts[k]=counts[k]||{n:0,calls:0,sms:0,name:'',number:r.address};counts[k].n++;counts[k].sms++}});(state.contactsList||[]).forEach(ct=>{const k=norm(ct.number);if(k&&counts[k]&&!counts[k].name)counts[k].name=ct.name});state.contactStats=Object.values(counts).sort((a,b)=>b.n-a.n)}}catch(_){state.contactStats=[]}ensureCommsRealtime();if(state.page==='contacts')render()}catch(e){console.warn('loadContacts',e&&e.message)}}
+async function loadApps(){if(!window.TC_DB?.enabled||!window.TC_DB.client)return;try{const d=state.devices[0];let q=window.TC_DB.client.from('apps').select('*').order('usage_minutes',{ascending:false}).limit(1000);if(d?.id)q=q.eq('device_id',d.id);const {data}=await q;state.appsList=data||[];ensureCommsRealtime();if(state.page==='apps')render()}catch(e){console.warn('loadApps',e&&e.message)}}
+function tcStatCard(label,value,sub){return `<div class="tcst-card"><span class="tcst-label">${esc(label)}</span><b class="tcst-value">${esc(value)}</b>${sub?`<small class="tcst-sub">${esc(sub)}</small>`:''}</div>`}
+function tcBarRow(name,val,max,fmt){const pct=max>0?Math.max(4,Math.round(val/max*100)):0;return `<div class="tcst-row"><span class="tcst-name">${esc(name)}</span><div class="tcst-track"><i style="width:${pct}%"></i></div><span class="tcst-val">${esc(fmt?fmt(val):String(val))}</span></div>`}
+function renderAppsStats(){const apps=(state.appsList||[]);const total=apps.reduce((s,a)=>s+Number(a.usage_minutes||0),0);const top=[...apps].sort((a,b)=>(b.usage_minutes||0)-(a.usage_minutes||0));const most=top[0];const max=most?Number(most.usage_minutes||0):0;const cards=`<div class="tcst-grid">${tcStatCard('App mais usado',most&&most.usage_minutes?most.label:'—',most&&most.usage_minutes?tcUsageFmt(most.usage_minutes)+' nas últimas 24h':'sem dados de uso')}${tcStatCard('Tempo total (24h)',tcUsageFmt(total))}${tcStatCard('Apps instaladas',String(apps.length))}</div>`;const used=top.filter(a=>a.usage_minutes>0).slice(0,8);const bars=max>0?`<div class="tcst-bars"><div class="tcst-bars-title">Mais usados (24h)</div>${used.map(a=>tcBarRow(a.label||a.package,Number(a.usage_minutes||0),max,tcUsageFmt)).join('')}</div>`:`<div class="tc-stats-note">Sem dados de uso. No telemóvel do Child, ative "Acesso ao uso" nas Definições do Android para ver o tempo por app.</div>`;return cards+bars}
+function renderContactsStats(){const st=state.contactStats||[];const total=(state.contactsList||[]).length;const inter=st.reduce((s,x)=>s+x.n,0);const most=st[0];const max=most?most.n:0;const cards=`<div class="tcst-grid">${tcStatCard('Contacto mais frequente',most?(most.name||most.number):'—',most?most.n+' interações':'sem interações ainda')}${tcStatCard('Total de contactos',String(total))}${tcStatCard('Interações (chamadas+SMS)',String(inter))}</div>`;const bars=max>0?`<div class="tcst-bars"><div class="tcst-bars-title">Mais contactados</div>${st.slice(0,8).map(x=>tcBarRow(x.name||x.number,x.n,max,v=>v+'×')).join('')}</div>`:`<div class="tc-stats-note">Ainda sem interações registadas. As estatísticas aparecem quando houver chamadas/SMS sincronizadas.</div>`;return cards+bars}
+function renderContactsList(){if(!state.contactsList||!state.contactsList.length)return '<div class="terminal-empty">[TC::WAIT] 0x0000 :: SEM CONTATOS SINCRONIZADOS</div>';return '<table class="table"><tr><th>Nome</th><th>Número</th></tr>'+state.contactsList.map(c=>`<tr><td>${esc(c.name||'—')}</td><td>${esc(c.number||'—')}</td></tr>`).join('')+'</table>'}
+function tcUsageFmt(m){m=Number(m||0);if(m<60)return m+' min';const h=Math.floor(m/60),mm=m%60;return h+'h '+mm+'m'}
+function renderAppsList(){if(!state.appsList||!state.appsList.length)return '<div class="terminal-empty">[TC::WAIT] 0x0000 :: SEM APPS SINCRONIZADAS</div>';return '<table class="table"><tr><th>Aplicativo</th><th>Pacote</th><th>Uso (24h)</th></tr>'+state.appsList.map(a=>`<tr><td>${esc(a.label||'—')}</td><td style="color:#7891a5;font-size:11px">${esc(a.package||'')}</td><td>${a.usage_minutes?tcUsageFmt(a.usage_minutes):'—'}</td></tr>`).join('')+'</table>'}
+function tcFmtWhen(ms){try{return new Date(Number(ms||0)).toLocaleString('pt-PT')}catch(_){return ''}}
+function tcFmtDur(s){s=Number(s||0);const m=Math.floor(s/60),ss=s%60;return m?(m+'m '+ss+'s'):(ss+'s')}
+async function loadMessages(){if(!window.TC_DB?.enabled||!window.TC_DB.client)return;try{const d=state.devices[0];let q=window.TC_DB.client.from('messages').select('*').order('epoch_ms',{ascending:false}).limit(200);if(d?.id)q=q.eq('device_id',d.id);const {data}=await q;state.messages=data||[];ensureCommsRealtime();if(state.page==='messages')render()}catch(e){console.warn('loadMessages',e&&e.message)}}
+async function loadCalls(){if(!window.TC_DB?.enabled||!window.TC_DB.client)return;try{const d=state.devices[0];let q=window.TC_DB.client.from('calls').select('*').order('epoch_ms',{ascending:false}).limit(200);if(d?.id)q=q.eq('device_id',d.id);const {data}=await q;state.calls=data||[];ensureCommsRealtime();if(state.page==='calls')render()}catch(e){console.warn('loadCalls',e&&e.message)}}
+function ensureCommsRealtime(){if(state.commsSub||!window.TC_DB?.enabled||!window.TC_DB.client)return;try{state.commsSub=true;window.TC_DB.client.channel('tc-comms').on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},p=>{state.messages.unshift(p.new);state.messages=state.messages.slice(0,300);if(state.page==='messages')render()}).on('postgres_changes',{event:'INSERT',schema:'public',table:'calls'},p=>{state.calls.unshift(p.new);state.calls=state.calls.slice(0,300);if(state.page==='calls')render()}).subscribe()}catch(e){state.commsSub=false;console.warn('comms realtime',e&&e.message)}}
+function renderMsgList(){if(!state.messages||!state.messages.length)return '<div class="terminal-empty">[TC::WAIT] 0x0000 :: SEM MENSAGENS SINCRONIZADAS</div>';return '<table class="table"><tr><th>Direção</th><th>Contacto</th><th>Mensagem</th><th>Data</th></tr>'+state.messages.map(m=>`<tr><td>${m.direction==='ENVIADA'?'▲ Enviada':'▼ Recebida'}</td><td>${esc(m.address||'—')}</td><td>${esc((m.body||'').slice(0,160))}</td><td>${esc(tcFmtWhen(m.epoch_ms))}</td></tr>`).join('')+'</table>'}
+function renderCallList(){if(!state.calls||!state.calls.length)return '<div class="terminal-empty">[TC::WAIT] 0x0000 :: SEM CHAMADAS SINCRONIZADAS</div>';return '<table class="table"><tr><th>Direção</th><th>Nome</th><th>Número</th><th>Duração</th><th>Data</th></tr>'+state.calls.map(c=>`<tr><td>${c.direction==='EFETUADA'?'▲ Efetuada':'▼ Recebida'}</td><td>${esc(c.name||'—')}</td><td>${esc(c.number||'—')}</td><td>${esc(tcFmtDur(c.duration_s))}</td><td>${esc(tcFmtWhen(c.epoch_ms))}</td></tr>`).join('')+'</table>'}
+function tcEye(cls){return `<div class="tcbe ${cls||''}"><svg viewBox="0 0 120 72" role="img" aria-label="T-Connect"><defs><radialGradient id="tcIrisG" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#d4f5ff"/><stop offset="35%" stop-color="#38bdf8"/><stop offset="100%" stop-color="#0a6fb0"/></radialGradient><clipPath id="tcEyeClip"><path d="M60 8 C92 8 114 36 114 36 C114 36 92 64 60 64 C28 64 6 36 6 36 C6 36 28 8 60 8 Z"/></clipPath></defs><path class="tcbe-outline" d="M60 8 C92 8 114 36 114 36 C114 36 92 64 60 64 C28 64 6 36 6 36 C6 36 28 8 60 8 Z"/><g clip-path="url(#tcEyeClip)"><rect x="0" y="0" width="120" height="72" fill="#02121f"/><g class="tcbe-ball"><circle class="tcbe-iris" cx="60" cy="36" r="20" fill="url(#tcIrisG)"/><circle cx="60" cy="36" r="9" fill="#02121f"/><circle cx="54" cy="30" r="3.2" fill="#eafaff"/></g><rect class="tcbe-laser" x="-6" y="0" width="6" height="72"/></g><path class="tcbe-lid" d="M60 8 C92 8 114 36 114 36 C114 36 92 64 60 64 C28 64 6 36 6 36 C6 36 28 8 60 8 Z"/></svg></div>`}
+let tcNav=[];
+function go(p,fromBack){
+  if(!fromBack&&p!==state.page){tcNav.push(state.page);if(tcNav.length>60)tcNav.shift();}
+  // Regista a navegação no terminal de atividades (em tempo real, sem ir à base de dados).
+  if(p!==state.page){const nomes={overview:'Monitoramento',activity:'Atividades',status:'Estado',map:'Localização',messages:'Mensagens',calls:'Chamadas',contacts:'Contatos',apps:'Aplicativos',screen:'Câmera',permissions:'Permissões',devices:'Dispositivos',admin:'Super Admin',settings:'Definições'};const ev=normalizeEvent({type:'NAVEGACAO',detail:'Abriu '+(nomes[p]||p),status:'OK',source:'Guardian'});state.events.unshift(ev);state.events=state.events.slice(0,200);}
+  if(p!=='admin')state.adminUserView=null;
+  state.page=p;state.menuOpen=false;render();if(p==='messages')loadMessages();if(p==='calls')loadCalls();if(p==='contacts')loadContacts();if(p==='apps')loadApps();
+  // Ao abrir o Super Admin, refresca planos/subscrições do Supabase.
+  if(p==='admin'&&typeof syncAdminFromSupabase==='function')syncAdminFromSupabase();
+}
+function toggleMenu(){state.menuOpen=!state.menuOpen;render()}
+function closeMenu(){if(state.menuOpen){state.menuOpen=false;render()}}
+function title(){return ({overview:'Monitoramento',activity:'Atividades',map:t('locationMap'),messages:t('messageCapture'),calls:t('callHistory'),contacts:'Contatos',apps:'Aplicativos',screen:t('screenCapture'),permissions:t('childPermissions'),devices:t('childDevices'),admin:'Super Admin',settings:t('definitions')}[state.page])||'Monitoramento'}
+function eventBadge(status){const cls=String(status).toLowerCase().replace(/[^a-z]/g,'-');return `<span class="status-badge ${cls}">${esc(status)}</span>`}
+async function verifyPermission(name){
+  if(!state.permissionChecks)state.permissionChecks={};
+  const key=String(name||'').trim();
+  state.permissionChecks[key]={status:'PROCESSANDO',detail:'Verificando permissão…'}; render();
+  let status='PENDENTE', detail='A permissão ainda não foi concedida.';
+  try{
+    // No APK Android, consulta o estado REAL das permissões do sistema e, se preciso,
+    // pede a permissão nativa — é assim que as permissões funcionam com o Android.
+    const nativeKey={'Localização':'location','Notificações':'notifications','Microfone':'microphone','Câmera':'camera','Câmara':'camera','SMS / mensagens':'sms','Captura de tela':'screen'}[key];
+    if(window.TCNativePermissions && nativeKey){
+      let st={};
+      try{const raw=window.TCNativePermissions.getStatus?.();st=raw?(typeof raw==='string'?JSON.parse(raw):raw):{};}catch(_){ }
+      if(st[nativeKey]){status='ATIVA';detail='Permissão concedida no Android.';}
+      else{
+        // Pede a permissão nativa adequada.
+        try{
+          if(nativeKey==='camera'&&window.TCNativePermissions.requestCamera)window.TCNativePermissions.requestCamera();
+          else if(nativeKey==='microphone'&&window.TCNativePermissions.requestMicrophone)window.TCNativePermissions.requestMicrophone();
+          else if(window.TCNativePermissions.requestAll)window.TCNativePermissions.requestAll();
+        }catch(_){}
+        status='PENDENTE';detail='A pedir a permissão ao Android. Confirme no diálogo do sistema.';
+      }
+      state.permissionChecks[key]={status,detail};
+      await addEvent('PERMISSÃO',`${key} · verificação Android`,{status,source:'Android'});
+      render();return;
+    }
+    const map={
+      'Localização':'geolocation',
+      'Notificações':'notifications',
+      'Microfone':'microphone',
+      'Câmara':'camera'
+    };
+    const permName=map[key];
+    if(permName && navigator.permissions?.query){
+      const result=await navigator.permissions.query({name:permName});
+      if(result.state==='granted'){status='ATIVA';detail='Permissão concedida neste navegador/dispositivo.';}
+      else if(result.state==='denied'){status='BLOQUEADA';detail='Permissão bloqueada. Altere-a nas definições do navegador/Android.';}
+      else {status='PENDENTE';detail='Permissão ainda não concedida. A solicitação será feita somente pela função que precisar dela.';}
+    }else if(key==='SMS / mensagens'){
+      status='INDISPONÍVEL';detail='A Web/PWA não pode verificar SMS diretamente. É necessária uma API Android autorizada.';
+    }else if(key==='Captura de tela'){
+      status='PENDENTE';detail='A captura exige autorização explícita do sistema Android no momento da captura.';
+    }else{
+      status='INDISPONÍVEL';detail='Este ambiente não expõe uma verificação automática para esta permissão.';
+    }
+  }catch(err){status='INDISPONÍVEL';detail=err?.message||'Não foi possível verificar esta permissão neste navegador.';}
+  state.permissionChecks[key]={status,detail};
+  await addEvent('PERMISSÃO',`${key} · verificação concluída`,{status,source:'Permission Check'});
+  render();
+}
+
+function terminalEvents(limit=30,filter='all'){let ev=state.events;if(filter==='message')ev=ev.filter(e=>/mensagem|whatsapp/i.test(e.type));if(filter==='call')ev=ev.filter(e=>/chamada|call/i.test(e.type));if(filter==='screen')ev=ev.filter(e=>/captura de tela|screen|c[âa]mera|[áa]udio|proje[çc][ãa]o|captura|conexao|conex[ãa]o/i.test(e.type));if(state.search)ev=ev.filter(e=>`${e.type} ${e.detail} ${e.contact}`.toLowerCase().includes(state.search.toLowerCase()));if(!ev.length)return '<div class="terminal-empty">[TC::WAIT] 0x0000 :: AWAITING_AUTHORIZED_ACTIVITY</div>';return ev.slice(0,limit).map((e,i)=>terminalCodeLine(e,i)).join('')}
+function terminalHash(e,i=0){const raw=`${e.id||''}|${e.type||''}|${e.at||''}|${i}`;let h=2166136261;for(let n=0;n<raw.length;n++){h^=raw.charCodeAt(n);h=Math.imul(h,16777619)}return (h>>>0).toString(16).toUpperCase().padStart(8,'0')}
+function terminalCodeLine(e,i=0){const type=String(e.type||'EVENT').toUpperCase().replace(/[^A-Z0-9_]/g,'_').slice(0,14);const status=String(e.status||'OK').toUpperCase().replace(/[^A-Z0-9_]/g,'_').slice(0,12);const code=terminalHash(e,i);const stamp=esc(e.at||'--:--:--');const dev=String(e.child_name||e.contact||deviceName()||'').slice(0,18);const devTag=dev?`<span class="code-dev">${esc(dev)}</span>`:'';return `<div class="code-line"><span class="code-time">[${stamp}]</span><span class="code-prefix">TC::</span><span class="code-op">${esc(type)}</span>${devTag}<span class="code-id">0x${code}</span><span class="code-status">${esc(status)}</span><span class="code-cursor">▮</span></div>`}
+function mapTerminalEvents(limit=80){return (state.mapTerminalEvents||[]).slice(0,limit).map((e,i)=>terminalCodeLine(e,i)).join('')||'<div class="terminal-empty">[TC::MAP] 0x0000 :: AGUARDANDO_INTERAÇÃO</div>'}
+function pushMapTerminal(type,detail,status='OK',meta={}){const e=normalizeEvent({type,detail,status,source:'Map Terminal',...meta});state.mapTerminalEvents=state.mapTerminalEvents||[];state.mapTerminalEvents.unshift(e);state.mapTerminalEvents=state.mapTerminalEvents.slice(0,200);try{localStorage.setItem('tc_map_terminal_events',JSON.stringify(state.mapTerminalEvents))}catch(_){};const el=document.querySelector('.location-code-terminal');if(el){const row=document.createElement('div');row.innerHTML=terminalCodeLine(e,0);if(row.firstElementChild){el.prepend(row.firstElementChild);while(el.children.length>80)el.removeChild(el.lastElementChild)}}}
+function refreshApplication(){try{if('serviceWorker' in navigator){navigator.serviceWorker.getRegistration().then(r=>r&&r.update()).catch(()=>{});}}catch(_){} setTimeout(()=>location.reload(),120)}
+async function refreshMonitoring(){
+  if(state.monitorRefreshing)return;
+  state.monitorRefreshing=true;
+  updateMonitorRefreshUI();
+  try{
+    pushMapTerminal('MONITORAMENTO','ATUALIZACAO_SOLICITADA','PROCESSANDO',{detail:'Atualização completa do painel'});
+    // Atualiza os dados sem destruir a sessão. Em seguida refaz a interface e
+    // reconstrói apenas o mapa necessário, sem exigir fechar/reabrir o aplicativo.
+    if('serviceWorker' in navigator){ try{ const reg=await navigator.serviceWorker.getRegistration(); if(reg) reg.update().catch(()=>{}); }catch(_){} }
+    if(window.TC_DB?.enabled&&window.TC_DB?.user){
+      const results=await Promise.allSettled([tcTimeout(tcDevices()),tcTimeout(tcLoadEvents())]);
+      if(results[0].status==='fulfilled'&&Array.isArray(results[0].value)) state.devices=results[0].value;
+      if(results[1].status==='fulfilled'&&Array.isArray(results[1].value)){state.events=results[1].value;save();}
+    }
+    const wantedPage=state.page;
+    const wantedMap=state.mapType;
+    render();
+    if(state.page===wantedPage && ['overview','map'].includes(wantedPage)){
+      setTimeout(()=>{ try{ window.TC_MAP?.refresh?.(); window.TC_MAP?.setType?.(wantedMap); }catch(_){} },80);
+    }
+    pushMapTerminal('MONITORAMENTO','ATUALIZACAO_CONCLUIDA','OK',{detail:'Dados, interface e mapa atualizados sem fechar o aplicativo'});
+  }catch(e){
+    console.warn('Atualizar monitoramento:',e);
+    pushMapTerminal('MONITORAMENTO','ATUALIZACAO_ERRO','ERRO',{detail:e?.message||'Falha na atualização'});
+  }finally{
+    state.monitorRefreshing=false;
+    updateMonitorRefreshUI();
+  }
+}
+function updateMonitorRefreshUI(){
+  const btn=document.querySelector('.monitor-refresh-inline, .monitor-refresh-btn');
+  if(!btn)return;
+  const loading=!!state.monitorRefreshing;
+  btn.disabled=loading;
+  btn.classList.toggle('is-loading',loading);
+  // O rótulo "Atualizar/Atualizando…" é o primeiro <b> dentro do botão, seja no
+  // layout inline (.refresh-inline-icon + <span><b>) ou no antigo (.refresh-copy b).
+  const b=btn.querySelector('.refresh-copy b')||btn.querySelector('b'); if(b)b.textContent=loading?'Atualizando…':'Atualizar';
+  const glyph=btn.querySelector('.refresh-glyph')||btn.querySelector('.refresh-inline-icon'); if(glyph)glyph.setAttribute('aria-label',loading?'Atualizando':'Atualizar');
+}
+
+window.tcMapTerminalEvent=(type,detail,status,meta)=>pushMapTerminal(type,detail,status,meta);
+function authView(){
+  if(state.authMode==='signup')return `<div class="auth-page"><div class="auth-card">${languageSelect('top-lang')}${tcEye()}<div class="brand hero">T <span>CONNECT</span></div><div class="auth-tag">${esc(t('guardianAccount'))}</div><h1>${esc(t('signupTitle'))}</h1><p class="muted">${esc(t('signupDesc'))}</p>${state.authError?`<div class="auth-error" role="alert">${esc(state.authError)}</div>`:''}<form onsubmit="signup(event)"><label>${esc(t('name'))}<input name="name" required placeholder="${esc(t('fullName'))}"></label><label>${esc(t('email'))}<input name="email" type="email" required placeholder="guardian@email.com"></label><label>${esc(t('password'))}<input name="password" id="tc-signup-pwd" type="password" minlength="8" required placeholder="${esc(t('minPassword'))}" oninput="tcPwdStrength(this.value)"></label><div id="tc-pwd-meter" class="tc-pwd-meter"><div class="tc-pwd-bar"><i></i></div><small class="tc-pwd-label"></small></div><label>Confirmar senha<input name="confirmPassword" type="password" minlength="8" required placeholder="Repita a senha" oninput="tcPwdMatch(this.value)"></label><small id="tc-pwd-match" class="tc-pwd-match"></small><button class="btn primary wide" ${state.loading?'disabled':''}>${state.loading?esc(t('creating')):esc(t('createNow'))}</button></form><button class="text-btn" onclick="state.authMode='login';render()">${esc(t('backLogin'))}</button></div></div>`;
+  if(state.authMode==='recover')return `<div class="auth-page"><div class="auth-card">${languageSelect('top-lang')}${tcEye()}<div class="brand hero">T <span>CONNECT</span></div><div class="auth-tag">${esc(t('guardianAccount'))}</div><h1>⚙️ ${esc(t('recoverTitle'))}</h1><p class="muted">${esc(t('recoverDesc'))}</p>${state.authError?`<div class="auth-error" role="alert">${esc(state.authError)}</div>`:''}${state.recoverySent?`<div class="auth-success" role="status">${esc(t('recoverSent'))}</div>`:''}<form onsubmit="recoverPassword(event)"><label>${esc(t('email'))}<input name="email" type="email" required placeholder="guardian@email.com" autocomplete="email"></label><button class="btn primary wide" ${state.loading?'disabled':''}>${state.loading?esc(t('recoverSending')):esc(t('recoverAction'))}</button></form><button class="text-btn" onclick="state.authMode='login';state.recoverySent=false;state.authError='';render()">${esc(t('backLogin'))}</button></div></div>`;
+  if(state.authMode==='recoverUpdate')return `<div class="auth-page"><div class="auth-card">${languageSelect('top-lang')}${tcEye()}<div class="brand hero">T <span>CONNECT</span></div><div class="auth-tag">${esc(t('guardianAccount'))}</div><h1>${esc(t('newPasswordTitle'))}</h1><p class="muted">${esc(t('newPasswordDesc'))}</p>${state.authError?`<div class="auth-error" role="alert">${esc(state.authError)}</div>`:''}<form onsubmit="updateRecoveredPassword(event)"><label>${esc(t('password'))}<input name="password" type="password" minlength="8" required placeholder="${esc(t('minPassword'))}" autocomplete="new-password"></label><label>${esc(t('confirmPassword'))}<input name="confirmPassword" type="password" minlength="8" required placeholder="${esc(t('confirmPasswordPlaceholder'))}" autocomplete="new-password"></label><button class="btn primary wide" ${state.loading?'disabled':''}>${state.loading?esc(t('savingPassword')):esc(t('savePassword'))}</button></form></div></div>`;
+  return `<div class="auth-page"><div class="auth-card">${languageSelect('top-lang')}${tcEye()}<div class="brand hero">T <span>CONNECT</span></div><div class="auth-tag">${esc(t('familySafety'))}</div><h1>${esc(t('loginTitle'))}</h1><p class="muted">${esc(t('loginDesc'))}</p>${state.authError?`<div class="auth-error" role="alert">${esc(state.authError)}</div>`:''}<form onsubmit="login(event)"><label>${esc(t('email'))}<input name="email" type="email" required placeholder="guardian@email.com"></label><label>${esc(t('password'))}<input name="password" type="password" required placeholder="••••••••"></label><button class="btn primary wide" ${state.loading?'disabled':''}>${state.loading?esc(t('signingIn')):esc(t('login'))}</button></form><button class="text-btn recovery-link" onclick="state.authMode='recover';state.authError='';state.recoverySent=false;render()">⚙️ ${esc(t('recoverPassword'))}</button><button class="text-btn" onclick="state.authMode='signup';render()">${esc(t('noAccount'))} <b>${esc(t('signup'))}</b></button><div class="demo-note">${window.TC_DB?.enabled?esc(t('supabaseOn')):esc(t('localMode'))}</div></div></div>`;
+}
+function appShell(){const child=state.devices[0];const nav=[['overview',t('overview'),'◈'],['activity',t('activity'),'⌁'],['status','Estado','◉'],['map',t('location'),'⌖'],['messages',t('messages'),'✉'],['calls',t('calls'),'☎'],['contacts','Contatos','◧'],['apps','Apps','▦'],['screen',t('screenCapture'),'▣'],['permissions',t('permissions'),'✓'],['devices',t('devices'),'⌘'],...(isSuperAdmin()?[['admin','Super Admin','★']]:[])];const menu=state.menuOpen?`<div class="mobile-menu-backdrop" onclick="closeMenu()"><aside class="mobile-menu" onclick="event.stopPropagation()"><div class="mobile-menu-head"><b>MENU</b><button class="icon-btn" aria-label="Fechar menu" onclick="closeMenu()">×</button></div><div class="nav">${nav.map(([k,v,i])=>`<button class="${state.page===k?'active':''}" onclick="go('${k}')"><i>${i}</i><span>${v}</span>${k==='activity'&&state.events.length?'<em>'+Math.min(state.events.length,99)+'</em>':''}</button>`).join('')}</div><div class="mobile-menu-sep"></div><button class="nav-link mobile-menu-link ${state.page==='settings'?'active':''}" onclick="go('settings')">☷ <span>${esc(t('settings'))}</span></button><button class="nav-link mobile-menu-link" onclick="logout()">↪ <span>${esc(t('logout'))}</span></button></aside></div>`:'';return `${menu}<div class="shell"><aside class="side"><div class="brand"><span class="brand-mark">T</span><div><strong>T <span>CONNECT</span></strong><small>FAMILY SAFETY PLATFORM</small></div></div><div class="child-mini ${child?'has-child':''}"><div class="avatar">${child?'C':'?'}</div><div class="child-mini-main"><b>${child?esc(child.device_name||'Child'):'Sem Child'}</b><small>${child?(isDeviceOnline(child)?'● Online':'○ Offline'):'Vincule um dispositivo'}</small></div><span class="chevron">›</span></div><div class="nav">${nav.map(([k,v,i])=>`<button class="${state.page===k?'active':''}" onclick="go('${k}')"><i>${i}</i><span>${v}</span>${k==='activity'&&state.events.length?'<em>'+Math.min(state.events.length,99)+'</em>':''}</button>`).join('')}</div><div class="side-bottom"><div class="nav-label">SISTEMA</div><button class="nav-link ${state.page==='settings'?'active':''}" onclick="go('settings')">☷ <span>${esc(t('settings'))}</span></button><button class="nav-link" onclick="logout()">↪ <span>${esc(t('logout'))}</span></button></div></aside><main class="main ${state.page==='overview'?'overview-mode':''}"><header class="top"><div class="top-title"><button class="mobile-menu-trigger" aria-label="Abrir menu" aria-expanded="${state.menuOpen?'true':'false'}" onclick="toggleMenu()">☰</button><div class="brand top-brand"><span class="brand-mark">T</span><div><strong>T <span>CONNECT</span></strong></div>${tcEye('tcbe-sm')}</div></div><div class="top-actions"><button class="top-alert-btn ${unreadNotifications()?'has-unread':''}" type="button" onclick="showNotifications()" aria-label="Abrir alertas" title="Alertas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z"/><path d="M10 21h4"/></svg>${unreadNotifications()?`<em>${Math.min(unreadNotifications(),99)}</em>`:''}</button><span class="protected">● ${state.realtime?t("realtime"):t("protected")}</span></div></header>${content()}</main></div>`}
+function deviceCard(d){const age=d.last_seen_at?Math.max(0,Math.floor((Date.now()-new Date(d.last_seen_at).getTime())/1000)):null;return `<div class="device-card"><div class="device-icon">C</div><div class="device-main"><div class="device-title"><b>${esc(d.device_name||'Child')}</b>${eventBadge(isDeviceOnline(d)?'ONLINE':'OFFLINE')}</div><div class="muted">${esc(d.device_code)} · ${esc(d.platform||'android')}</div><div class="device-meta"><span>🔋 ${d.battery==null?'—':d.battery+'%'}</span><span>📡 ${age==null?'sem ligação':age<60?age+'s atrás':Math.floor(age/60)+'min atrás'}</span><span>📍 ${d.last_lat!=null?d.last_lat.toFixed(5)+', '+d.last_lng.toFixed(5):'sem GPS'}</span></div></div></div>`}
+function locationTerminalMarkup(d, online, area=''){
+  const has=online&&Number.isFinite(Number(d?.last_lat))&&Number.isFinite(Number(d?.last_lng));
+  const lat=has?Number(d.last_lat).toFixed(6):'—', lng=has?Number(d.last_lng).toFixed(6):'—';
+  const status=online?'ATIVO':'OFFLINE';
+  const place=has?(area||'Aguardando identificação da área'):'—';
+  const updated=d?.last_seen_at?new Date(d.last_seen_at).toLocaleString('pt-PT'):'Aguardando atualização';
+  return `<div class="tc-location-summary"><div class="tc-location-summary-head"><span class="tc-location-live ${online?'on':'off'}">● ${status}</span><b>${has?'LOCALIZAÇÃO ATIVA':'SEM LOCALIZAÇÃO'}</b></div><div class="tc-location-grid"><div><small>PONTO</small><strong>${has?lat+', '+lng:'—'}</strong></div><div><small>ÁREA / RUA</small><strong class="tc-location-area">${esc(place)}</strong></div><div><small>DISPOSITIVO</small><strong>${esc(d?.device_name||'Child')}</strong></div><div><small>ATUALIZAÇÃO</small><strong>${esc(updated)}</strong></div></div></div>`;
+}
+function refreshLocationTerminalUI(){
+  const d=state.devices[0]||{}; const online=isDeviceOnline(d); const area=window.TC_MAP_AREA_NAME||'';
+  document.querySelectorAll('.tc-location-summary-host').forEach(el=>{el.innerHTML=locationTerminalMarkup(d,online,area)});
+}
+// ---- Super Admin: planos e utilizadores (persistido em localStorage) ----
+const TC_DEFAULT_PLANS=[
+  {id:'familiar',name:'Familiar',price:350,days:30,features:['Até 5 dispositivos Child','Histórico de 30 dias','Mensagens e chamadas','Captura de câmera e áudio']},
+  {id:'premium',name:'Premium',price:750,days:30,features:['Dispositivos ilimitados','Histórico completo','Todas as capturas','Geofencing e relatórios','Suporte 24/7']},
+  {id:'anual',name:'Anual',price:6500,days:365,features:['Tudo do Premium','12 meses de acesso','2 meses grátis','Prioridade máxima de suporte']}
+];
+// Modelo híbrido: o Supabase é a fonte de verdade; o localStorage serve de cache para
+// o render síncrono e de fallback offline. Ao arrancar, syncAdminFromSupabase() carrega
+// do Supabase para a cache; as escritas vão à cache e ao Supabase (quando ligado).
+function supaReady(){return !!(window.TC_DB&&window.TC_DB.enabled&&window.TC_DB.client);}
+function adminLoadPlans(){try{const v=JSON.parse(localStorage.getItem('tc_admin_plans')||'null');if(Array.isArray(v)&&v.length)return v}catch(_){}return JSON.parse(JSON.stringify(TC_DEFAULT_PLANS))}
+function adminSavePlans(p){try{localStorage.setItem('tc_admin_plans',JSON.stringify(p))}catch(_){}}
+function adminLoadUsers(){try{const v=JSON.parse(localStorage.getItem('tc_admin_users')||'null');if(Array.isArray(v))return v}catch(_){}
+  const seed=[{email:window.TC_DB?.user?.email||'conta@local',plan:'',days:0,paidAt:null}];adminSaveUsers(seed);return seed}
+function adminSaveUsers(u){try{localStorage.setItem('tc_admin_users',JSON.stringify(u))}catch(_){}}
+// Carrega planos + subscrições do Supabase para a cache local e re-renderiza.
+async function syncAdminFromSupabase(){
+  if(!supaReady())return;
+  try{ if(window.tcLoadPlans){const plans=await window.tcLoadPlans();if(Array.isArray(plans)&&plans.length)adminSavePlans(plans);} }catch(e){console.warn('Planos:',e.message);}
+  try{ if(isSuperAdmin()&&window.tcLoadSubscriptions){const subs=await window.tcLoadSubscriptions();if(Array.isArray(subs))adminSaveUsers(subs);} }catch(e){console.warn('Subscrições:',e.message);}
+  if(state.page==='admin')render();
+}
+window.syncAdminFromSupabase=syncAdminFromSupabase;
+function adminAddUser(){const email=prompt('Email do utilizador a cadastrar:');if(!email)return;const e=email.trim().toLowerCase();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)){alert('Email inválido.');return}const users=adminLoadUsers();if(users.some(u=>u.email===e)){alert('Esse email já está cadastrado.');return}const rec={email:e,plan:'',days:0,paidAt:null};users.push(rec);adminSaveUsers(users);if(supaReady()&&window.tcAdminUpsertSubscription){window.tcAdminUpsertSubscription({...rec,status:'none'}).catch(err=>console.warn('Supabase add:',err.message));}render()}
+function adminActivatePlan(email,planId){const users=adminLoadUsers();const plans=adminLoadPlans();const pl=plans.find(p=>p.id===planId);if(!pl)return;let u=users.find(x=>x.email===email);if(!u){u={email,plan:'',days:0,paidAt:null};users.push(u);}u.plan=planId;u.days=pl.days;u.paidAt=new Date().toISOString();adminSaveUsers(users);if(supaReady()&&window.tcAdminUpsertSubscription){window.tcAdminUpsertSubscription({email,plan:planId,days:pl.days,paidAt:u.paidAt,status:'active'}).catch(err=>console.warn('Supabase ativar:',err.message));}addEvent('PLANO',`Plano ${pl.name} ativado para ${email} (${pl.price} MT, ${pl.days} dias).`,{status:'ATIVADO',source:'Super Admin',contact:email});render()}
+function adminEditDays(email){const users=adminLoadUsers();const u=users.find(x=>x.email===email);if(!u)return;const v=prompt('Número de dias do plano para '+email+':',String(u.days||0));if(v===null)return;const n=parseInt(v,10);if(!Number.isFinite(n)||n<0){alert('Valor inválido.');return}u.days=n;if(!u.paidAt)u.paidAt=new Date().toISOString();adminSaveUsers(users);if(supaReady()&&window.tcAdminUpsertSubscription){window.tcAdminUpsertSubscription({email,plan:u.plan,days:n,paidAt:u.paidAt,status:u.plan?'active':'none'}).catch(err=>console.warn('Supabase dias:',err.message));}addEvent('PLANO',`Dias do plano de ${email} definidos para ${n}.`,{status:'EDITADO',source:'Super Admin',contact:email});render()}
+function adminDeleteUser(email){if(!confirm('Eliminar a conta '+email+'? Esta ação remove-a da lista de gestão.'))return;let users=adminLoadUsers();users=users.filter(x=>x.email!==email);adminSaveUsers(users);if(supaReady()&&window.tcAdminDeleteSubscription){window.tcAdminDeleteSubscription(email).catch(err=>console.warn('Supabase del:',err.message));}addEvent('CONTA',`Conta ${email} eliminada da gestão.`,{status:'ELIMINADO',source:'Super Admin',contact:email});render()}
+function adminEditPlan(planId){const plans=adminLoadPlans();const p=plans.find(x=>x.id===planId);if(!p)return;const price=prompt('Preço (MT) do plano '+p.name+':',String(p.price));if(price===null)return;const days=prompt('Dias de validade do plano '+p.name+':',String(p.days));if(days===null)return;const pr=parseInt(price,10),dy=parseInt(days,10);if(!Number.isFinite(pr)||pr<0||!Number.isFinite(dy)||dy<0){alert('Valores inválidos.');return}p.price=pr;p.days=dy;adminSavePlans(plans);if(supaReady()&&window.tcSavePlan){window.tcSavePlan(p).catch(err=>console.warn('Supabase plano:',err.message));}addEvent('PLANO',`Plano ${p.name} atualizado: ${pr} MT / ${dy} dias.`,{status:'EDITADO',source:'Super Admin'});render()}
+window.adminAddUser=adminAddUser;window.adminActivatePlan=adminActivatePlan;window.adminEditDays=adminEditDays;window.adminDeleteUser=adminDeleteUser;window.adminEditPlan=adminEditPlan;
+function fmtDateTime(iso){if(!iso)return '—';try{const d=new Date(iso);return d.toLocaleDateString('pt-PT')+' '+d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'})}catch(_){return '—'}}
+function planName(id){const p=adminLoadPlans().find(x=>x.id===id);return p?p.name:'—'}
+const gearSvg='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z"/><path d="m19.4 13.5 1.1.9-1.7 3-1.3-.5a7.6 7.6 0 0 1-1.6.9l-.2 1.4h-3.5l-.2-1.4a7.6 7.6 0 0 1-1.6-.9l-1.3.5-1.7-3 1.1-.9a7.7 7.7 0 0 1 0-1.9l-1.1-.9 1.7-3 1.3.5a7.6 7.6 0 0 1 1.6-.9l.2-1.4h3.5l.2 1.4a7.6 7.6 0 0 1 1.6.9l1.3-.5 1.7 3-1.1.9a7.7 7.7 0 0 1 0 1.9Z"/></svg>';
+// Sub-aba de um utilizador. Abre com um registo no histórico, para que o botão
+// físico "Voltar" do Android (popstate) feche a sub-aba e volte à lista.
+function openAdminUser(email){state.adminUserView=email;try{history.pushState({tcAdminUser:email},'','#admin-user');}catch(_){}render()}
+function closeAdminUser(fromPop){state.adminUserView=null;if(!fromPop){try{if(location.hash==='#admin-user')history.back();}catch(_){}}render()}
+window.openAdminUser=openAdminUser;window.closeAdminUser=closeAdminUser;
+window.addEventListener('popstate',()=>{ if(state.adminUserView){ state.adminUserView=null; render(); } });
+function adminUserDetailPage(email){
+  const users=adminLoadUsers();const plans=adminLoadPlans();
+  const u=users.find(x=>x.email===email);
+  if(!u)return `<div class="card"><button class="btn" onclick="closeAdminUser()">‹ Voltar</button><p class="muted" style="margin-top:12px">Utilizador não encontrado.</p></div>`;
+  const planCards=plans.map(p=>{const chosen=u.plan===p.id;return `<section class="plan-card ${p.id==='familiar'?'plan-featured':''} ${chosen?'plan-chosen':''}">${p.id==='familiar'?'<span class="plan-tag">Mais popular</span>':''}<button class="plan-gear" title="Editar plano" aria-label="Editar plano" onclick="adminEditPlan('${p.id}')">${gearSvg}</button><h3>${esc(p.name)}</h3><div class="plan-price"><b>${esc(String(p.price))} MT</b><span>/${esc(String(p.days))} dias</span></div><ul class="plan-features">${p.features.map(f=>`<li>✓ ${esc(f)}</li>`).join('')}</ul><button class="btn ${chosen?'primary':''} plan-cta" onclick="adminActivatePlan('${esc(email)}','${p.id}')">${chosen?'✓ Plano ativo':('Ativar '+esc(p.name))}</button></section>`}).join('');
+  return `<div class="admin-page admin-user-detail">
+    <div class="admin-detail-bar"><button class="admin-back-gear" title="Voltar" aria-label="Voltar" onclick="closeAdminUser()">${gearSvg}<span>Voltar</span></button></div>
+    <section class="card admin-head-card"><div class="section-kicker">CONTA</div><h2 style="word-break:break-all">${esc(email)}</h2>
+      <div class="admin-detail-top"><div><small>DATA/HORA DO PAGAMENTO</small><b>${fmtDateTime(u.paidAt)}</b></div><div><small>PLANO ATUAL</small><b>${u.plan?esc(planName(u.plan)):'Nenhum'}</b></div><div><small>DIAS</small><b>${esc(String(u.days||0))} <button class="admin-gear tiny" title="Editar dias" aria-label="Editar dias" onclick="adminEditDays('${esc(email)}')">${gearSvg}</button></b></div></div>
+    </section>
+    <section class="card"><div class="section-head"><div><h3>Ativar / editar plano</h3><p class="muted">Escolha Familiar ou Premium para ativar. A engrenagem edita preço/dias.</p></div></div><div class="plans-grid">${planCards}</div><div class="pay-methods"><span class="pay-chip">M-Pesa</span><span class="pay-chip">e-Mola</span><span class="pay-chip">Cartão</span></div></section>
+    <section class="card"><div class="section-head"><div><h3>Conta</h3><p class="muted">Ações administrativas sobre esta conta.</p></div></div><button class="btn danger" onclick="adminDeleteUser('${esc(email)}');closeAdminUser();">🗑 Eliminar conta</button></section>
+  </div>`;
+}
+function adminPage(){
+  if(state.adminUserView)return adminUserDetailPage(state.adminUserView);
+  const email=window.TC_DB?.user?.email||'Conta local';
+  const plans=adminLoadPlans();
+  const users=adminLoadUsers();
+  const plansHtml=plans.map(p=>`<section class="plan-card ${p.id==='familiar'?'plan-featured':''}">${p.id==='familiar'?'<span class="plan-tag">Mais popular</span>':''}<button class="plan-gear" title="Editar plano" aria-label="Editar plano" onclick="adminEditPlan('${p.id}')">${gearSvg}</button><h3>${esc(p.name)}</h3><div class="plan-price"><b>${esc(String(p.price))} MT</b><span>/${esc(String(p.days))} dias</span></div><ul class="plan-features">${p.features.map(f=>`<li>✓ ${esc(f)}</li>`).join('')}</ul></section>`).join('');
+  const usersHtml=users.length?users.map(u=>{const active=!!u.plan;return `<button class="admin-user as-link ${active?'is-active':''}" onclick="openAdminUser('${esc(u.email)}')"><div class="admin-user-head"><div class="tc-profile-avatar sm"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg></div><div class="admin-user-id"><b>${esc(u.email)}</b><small>${active?('Plano '+esc(planName(u.plan))+' · '+esc(String(u.days))+' dias'):'Sem plano ativo'}</small></div><span class="admin-user-chevron">›</span></div></button>`}).join(''):'<div class="terminal-empty">Nenhum utilizador cadastrado.</div>';
+  return `<div class="admin-page"><section class="card admin-head-card"><div class="section-kicker">SUPER ADMIN</div><h2>Gestão de planos e contas</h2><p class="muted">Edite os planos, veja as pessoas cadastradas, ative planos, ajuste os dias e faça a gestão das contas.</p><div class="admin-account"><div class="tc-profile-avatar"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg></div><div><b>${esc(email)}</b><small>Super Administrador</small></div></div></section>
+  <section class="card"><div class="section-head"><div><h3>Planos de pagamento</h3><p class="muted">Toque na engrenagem para editar preço e dias.</p></div></div><div class="plans-grid">${plansHtml}</div><div class="pay-methods"><span class="pay-chip">M-Pesa</span><span class="pay-chip">e-Mola</span><span class="pay-chip">Cartão</span></div></section>
+  <section class="card"><div class="section-head"><div><h3>Pessoas / emails cadastrados</h3><p class="muted">Ative o plano Familiar ou Premium, edite os dias (engrenagem) ou elimine a conta (🗑).</p></div><button class="btn primary small" onclick="adminAddUser()">＋ Cadastrar email</button></div><div class="admin-users">${usersHtml}</div></section></div>`;
+}
+function content(){if(state.page==='devices')return `<div class="layout single"><section class="card"><div class="section-head"><div><h3>Vínculo Guardian ↔ Child</h3><p class="muted">Crie um código manual de 6 dígitos. O QR e o link são opções adicionais para o mesmo convite.</p></div><span class="live">● EM TEMPO REAL</span></div><div class="pairing-workspace"><div class="pair-left"><div class="pair-box"><div><span class="muted">Convite de vinculação</span><b class="pair-code">${state.pairCode?'CÓDIGO ATIVO':'CÓDIGO NÃO GERADO'}</b></div><button class="btn primary" onclick="createPairing()" ${state.pairingBusy?'disabled':''}>${state.pairingBusy?'Gerando código…':state.pairCode?'Gerar novo código':'Gerar código de vinculação'}</button></div>${state.pairingMessage?`<div class="notice" role="status">${esc(state.pairingMessage)}</div>`:''}${state.pairCode?`<div class="manual-code-card"><div><span class="muted">Código manual</span><strong class="manual-pair-code">${esc(state.pairCode)}</strong><small>Use este mesmo código no Child para vincular sem QR.</small></div><button class="btn" onclick="copyPairCode()">⧉ Copiar código</button></div><div class="invite-actions"><button class="btn primary" onclick="shareInvite()">↗ Enviar convite</button><button class="btn" onclick="copyInvite()">⧉ Copiar link</button><button class="btn" onclick="shareWhatsApp()">WhatsApp</button><button class="btn" onclick="shareEmail()">E-mail</button><button class="btn" onclick="shareSMS()">SMS</button></div><div class="invite-link"><span>Link de convite</span><code>${esc(state.pairLink||'')}</code></div><p class="muted small-note">O QR e o código manual usam o mesmo convite temporário. O código expira e só pode ser usado uma vez.</p>`:''}</div><div class="qr-panel"><div class="qr-frame"><div id="pairQr"></div></div><b>QR de vinculação</b><small>${state.pairCode?'Leia este QR dentro do aplicativo T-Connect Child.':'Gere um QR para iniciar a vinculação.'}</small>${state.pairCode&&!window.TC_SUPABASE?.childApkUrl?'<span class="qr-note">APK Child ainda não configurado. O convite web continua disponível.</span>':''}</div></div><div class="install-panel"><div><b>Aplicativo Child</b><p class="muted">O convite é destinado ao aplicativo Child, não ao Guardian. Depois de publicar o APK assinado, coloque o endereço em <code>childApkUrl</code> no arquivo de configuração.</p></div>${window.TC_SUPABASE?.childApkUrl?`<a class="btn primary" href="${esc(window.TC_SUPABASE.childApkUrl)}" target="_blank" rel="noopener">⬇ Baixar APK Child</a>`:'<span class="status-badge pendente">APK não configurado</span>'}</div><h3 class="mt">Dispositivos vinculados</h3><div class="device-list">${(()=>{const on=state.devices.filter(d=>isDeviceOnline(d));return on.length?on.map(deviceCard).join(''):'<div class="terminal-empty">Nenhum dispositivo online no momento.</div>'})()}</div></section></div>`;if(state.page==='overview'){const sos=state.events.filter(e=>e.type==='SOS');const d=state.devices[0];const online=isDeviceOnline(d);const battery=isDeviceOnline(d)?d?.battery:null;const locationReady=isDeviceOnline(d)&&d?.last_lat!=null;const recent=terminalEvents(40);return `<div class="overview-actions"><div class="overview-title-mark">MONITORAMENTO</div><button class="monitor-refresh-inline ${state.monitorRefreshing?'is-loading':''}" type="button" onclick="refreshMonitoring()" ${state.monitorRefreshing?'disabled':''} aria-label="Atualizar monitoramento" title="Atualizar monitoramento"><span class="refresh-inline-icon" aria-hidden="true">↻</span><span><b>${state.monitorRefreshing?'Atualizando…':'Atualizar'}</b></span></button></div><div class="grid dashboard-metrics compact-metrics"><button type="button" class="metric metric-online compact-metric metric-interactive ${online?'online-card':'offline-card'}" onclick="showMetricPopup('connection')" aria-label="Ver estado da conexão"><div class="compact-icon icon-state ${online?'is-live online-pulse':'is-offline offline-pulse'}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><path d="M12 8v4l2.5 1.5"/></svg></div><b class="compact-value ${online?'online':''}">${online?'Online':'Offline'}</b><small>${online?'Conectado':'Sem conexão'}</small><div class="metric-bar"><i style="width:${online?'100':'18'}%"></i></div></button><button type="button" class="metric metric-battery compact-metric metric-interactive" onclick="showMetricPopup('battery')" aria-label="Ver bateria"><div class="compact-icon icon-battery ${battery!=null?'is-live':''}"><svg viewBox="0 0 28 24" aria-hidden="true"><rect x="2" y="6" width="21" height="12" rx="3"/><path d="M25 10v4"/><rect class="battery-fill" x="5" y="9" width="15" height="6" rx="1.5"/></svg></div><b class="compact-value">${battery==null?'—':battery+'%'}</b><small>Bateria</small><div class="metric-bar"><i style="width:${battery==null?'0':Math.max(5,Math.min(100,battery))}%"></i></div></button><button type="button" class="metric metric-alert compact-metric metric-interactive" onclick="showNotifications()" aria-label="Ver alertas"><div class="compact-icon icon-bell ${unreadNotifications()?'has-alert alert-pulse':''}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z"/><path d="M10 21h4"/></svg>${unreadNotifications()?`<em>${unreadNotifications()}</em>`:''}</div><b class="compact-value">${unreadNotifications()?String(unreadNotifications()):'0'}</b><small>Alertas</small><div class="metric-bar"><i style="width:${sos.length?'70':'0'}%"></i></div></button></div><div class="layout dashboard-layout"><section class="card map-card dashboard-map-card"><div class="section-head"><div><div class="section-kicker">LOCALIZAÇÃO</div><p class="muted location-status-text">${locationReady?'LOCALIZADO':'LOCALIZANDO...'}</p></div><div class="actions map-mode-actions"><button data-map-type="satellite" class="btn map-mode-btn ${state.mapType==='satellite'?'primary':''}" onclick="setMap('satellite')" title="Satélite" aria-label="Satélite" aria-pressed="${state.mapType==='satellite'?'true':'false'}"><span class="map-mode-icon icon-satellite"><svg viewBox="0 0 24 24"><path d="m13 5 6 6"/><path d="M7 17 4 20"/><path d="m5 12 7 7"/><path d="M9 5 19 15"/><path d="M4 7 7 4l13 13-3 3Z"/><circle cx="5" cy="19" r="2"/></svg></span><span>Satélite</span></button><button data-map-type="hybrid" class="btn map-mode-btn ${state.mapType==='hybrid'?'primary':''}" onclick="setMap('hybrid')" title="Híbrido" aria-label="Híbrido" aria-pressed="${state.mapType==='hybrid'?'true':'false'}"><span class="map-mode-icon icon-hybrid"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="M4 15h16"/><path d="m8 18 2-4 3 2 2-3 5 4"/><path d="M8 10h3M14 10h3"/></svg></span><span>Híbrido</span></button><button data-map-type="roadmap" class="btn map-mode-btn ${state.mapType==='roadmap'?'primary':''}" onclick="setMap('roadmap')" title="Mapa" aria-label="Mapa" aria-pressed="${state.mapType==='roadmap'?'true':'false'}"><span class="map-mode-icon icon-map"><svg viewBox="0 0 24 24"><path d="m9 18-6 3V6l6-3 6 3 6-3v15l-6 3-6-3Z"/><path d="M9 3v15M15 6v15"/></svg></span><span>Mapa</span></button><button class="btn map-mode-btn ${state.trailOn?'primary':''}" onclick="toggleTrail()" title="Trajeto de hoje" aria-label="Trajeto"><span class="map-mode-icon"><svg viewBox="0 0 24 24"><path d="M4 19c4-11 12-11 16 0"/><circle cx="4" cy="19" r="2"/><circle cx="20" cy="19" r="2"/></svg></span><span>Trajeto</span></button></div></div><div class="map map-with-terminal"><div id="map"></div><div class="mapkey"><span class="mapkey-dot"></span><div><b>${online?'Online':'Offline'}</b><br><span class="muted">${locationReady?d.last_lat.toFixed(6)+', '+d.last_lng.toFixed(6):'sem coordenadas'}</span></div></div><div class="tc-location-summary-host">${locationTerminalMarkup(d,online,window.TC_MAP_AREA_NAME||'')}</div><div class="map-terminal-overlay"><div class="map-terminal-head"><div><span class="map-terminal-kicker">ATIVIDADES RECENTES</span><b>Terminal de comando</b></div><span class="live">● ${state.realtime?'LIVE':'LOCAL'}</span></div><div class="terminal code-terminal auto-terminal overview-code-terminal">${recent}</div><div class="terminal-footer"><span class="live-dot"></span><span>TC::MONITOR · STREAM ACTIVE</span><button class="text-btn" onclick="go('activity')">Abrir terminal completo →</button></div></div></div></section></div></div>`}if(state.page==='status'){const d=state.devices[0];const online=isDeviceOnline(d);const battery=isDeviceOnline(d)?d?.battery:null;const locationReady=isDeviceOnline(d)&&d?.last_lat!=null;const sos=state.events.filter(e=>e.type==='SOS');return `<div class="dashboard-head"><div><span class="dashboard-kicker">MONITORAMENTO</span><h2>Estado</h2><p class="muted">Estado atual do dispositivo e dos principais serviços.</p></div><div class="dashboard-actions"><button class="btn" onclick="go('activity')">⌁ Ver atividades</button></div></div><div class="grid dashboard-metrics"><div class="metric status-feature"><div class="metric-top"><span>Estado Child</span><span class="metric-icon icon-state ${online?'is-live':''}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 1.5"/><path d="M7 5.8 5.8 4.6M17 5.8l1.2-1.2"/></svg></span></div><b class="${online?'online':''}">${online?'Online':'Offline'}</b><small>${d?.device_name||'Nenhum dispositivo vinculado'}</small></div><div class="metric status-feature"><div class="metric-top"><span>Bateria</span><span class="metric-icon icon-battery ${battery!=null?'is-live':''}"><svg viewBox="0 0 28 24" aria-hidden="true"><rect x="2" y="6" width="21" height="12" rx="3"/><path d="M25 10v4"/><path d="m9 12 2 2 4-5"/></svg></span></div><b>${battery==null?'—':battery+'%'}</b><small>${d?.last_seen_at?'Atualizada no heartbeat':'Aguardando dados'}</small></div><div class="metric status-feature"><div class="metric-top"><span>Localização</span><span class="metric-icon icon-location ${locationReady?'is-live':''}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12A7 7 0 0 0 5 9c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/><path d="M3 19h4M17 19h4"/></svg></span></div><b>${locationReady?'LIVE':'—'}</b><small>${locationReady?'GPS disponível':'Aguardando GPS'}</small></div><div class="metric status-feature"><div class="metric-top"><span>Alertas</span><span class="metric-icon icon-bell ${sos.length?'has-alert':''}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z"/><path d="M10 21h4"/></svg>${sos.length?`<em>${sos.length}</em>`:''}</span></div><b>${sos.length||'—'}</b><small>${sos.length?'Requer atenção':'Aguardando alertas'}</small></div></div><div class="layout"><section class="card"><div class="section-head"><div><h3>Estado do dispositivo</h3><p class="muted">Informações atuais recebidas pelo Guardian.</p></div><span class="live">● ${online?'ONLINE':'OFFLINE'}</span></div><div class="device-list">${d?deviceCard(d):'<div class="terminal-empty">Nenhum Child vinculado ainda.</div>'}</div></section><section class="card"><h3>Serviços</h3><div class="setting"><span>Em tempo real</span><b class="${state.realtime?'online':''}">${state.realtime?'● Ativo':'○ Inativo'}</b></div><div class="setting"><span>Conexão do dispositivo</span><b class="${online?'online':''}">${online?'● Online':'○ Offline'}</b></div><div class="setting"><span>Localização (GPS)</span><b>${locationReady?'● Disponível':'○ Aguardando'}</b></div><div class="setting"><span>Bateria</span><b>${battery==null?'—':battery+'%'}</b></div><div class="setting"><span>Último heartbeat</span><b>${d?.last_seen_at?new Date(d.last_seen_at).toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—'}</b></div><p class="muted small-note">Os detalhes técnicos do backend ficam disponíveis em Definições, não no painel de monitoramento.</p></section></div>`} 
+if(state.page==='map'){const d=state.devices[0];const online=isDeviceOnline(d);const locationReady=isDeviceOnline(d)&&d?.last_lat!=null;const recent=mapTerminalEvents(80);return `<div class="layout dashboard-layout location-only-layout"><section class="card map-card dashboard-map-card"><div class="section-head"><div><div class="section-kicker">LOCALIZAÇÃO</div><p class="muted location-status-text">${locationReady?'LOCALIZADO':'LOCALIZANDO...'}</p></div><div class="actions map-mode-actions"><button data-map-type="roadmap" class="btn map-mode-btn ${state.mapType==='roadmap'?'primary':''}" onclick="setMap('roadmap')" title="Mapa" aria-label="Mapa" aria-pressed="${state.mapType==='roadmap'?'true':'false'}"><span class="map-mode-icon icon-map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18-6 3V6l6-3 6 3 6-3v15l-6 3-6-3Z"/><path d="M9 3v15M15 6v15"/></svg></span><span>Mapa</span></button><button data-map-type="satellite" class="btn map-mode-btn ${state.mapType==='satellite'?'primary':''}" onclick="setMap('satellite')" title="Satélite" aria-label="Satélite" aria-pressed="${state.mapType==='satellite'?'true':'false'}"><span class="map-mode-icon icon-satellite"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 5 6 6"/><path d="M7 17 4 20"/><path d="m5 12 7 7"/><path d="M9 5 19 15"/><path d="M4 7 7 4l13 13-3 3Z"/><circle cx="5" cy="19" r="2"/></svg></span><span>Satélite</span></button><button data-map-type="hybrid" class="btn map-mode-btn ${state.mapType==='hybrid'?'primary':''}" onclick="setMap('hybrid')" title="Híbrido" aria-label="Híbrido" aria-pressed="${state.mapType==='hybrid'?'true':'false'}"><span class="map-mode-icon icon-hybrid"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v12H4z"/><path d="M4 15h16"/><path d="m8 18 2-4 3 2 2-3 5 4"/><path d="M8 10h3M14 10h3"/></svg></span><span>Híbrido</span></button></div></div><div class="map location-map-only"><div id="map"></div><div class="mapkey"><span class="mapkey-dot"></span><div><b>${online?'Online':'Offline'}</b><br><span class="muted">${locationReady?Number(d.last_lat).toFixed(6)+', '+Number(d.last_lng).toFixed(6):'sem coordenadas'}</span></div></div><div class="tc-location-summary-host">${locationTerminalMarkup(d,online,window.TC_MAP_AREA_NAME||'')}</div><div class="map-terminal-overlay location-map-terminal"><div class="map-terminal-head"><div><span class="map-terminal-kicker">ATIVIDADES RECENTES</span><b>Terminal de localização</b></div><span class="live">● ${state.realtime?'LIVE':'LOCAL'}</span></div><div class="terminal code-terminal location-code-terminal">${recent}</div><div class="terminal-footer"><span class="live-dot"></span><span>TC::LOCATION · STREAM ACTIVE</span><button class="text-btn" onclick="go('activity')">Abrir terminal →</button></div></div></div></section></div>`}
+if(state.page==='activity')return `<div class="card"><div class="section-head"><div><h3>Atividades do terminal</h3><p class="muted">Fluxo técnico das atividades autorizadas em tempo real.</p></div><span class="live">● ${state.realtime?'LIVE':'LOCAL'}</span></div><div class="toolbar"><input id="tc-activity-search" placeholder="Pesquisar atividade, contacto ou número de telemóvel..." value="${esc(state.search)}" oninput="state.search=this.value;render()" onkeydown="if(event.key==='Enter')lookupContact(this.value)"><button class="btn primary" onclick="lookupContact(document.getElementById('tc-activity-search').value)" title="Pesquisar contacto"><span class="lookup-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span> Pesquisar contacto</button><button class="btn" onclick="state.search='';render()">Limpar</button></div><div class="terminal activity-terminal">${terminalEvents(100)}</div></div>`;if(state.page==='messages')return `<div class="messages-layout"><section class="card"><div class="section-head"><div><h3>Captura de mensagens</h3><p class="muted">Somente fontes autorizadas pelo Android.</p></div><span class="live">● LIVE</span></div><div class="command-grid two"><button class="command comm-btn" onclick="tcSound('msg-in');openCommunicationPrompt('message-received')"><span class="comm-ico comm-in" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v12H8l-4 3Z"/><path d="m9 11 3 3 5-6" class="comm-check"/></svg></span><b>Mensagens recebidas</b><small>Ver mensagens recebidas</small></button><button class="command comm-btn" onclick="tcSound('msg-out');openCommunicationPrompt('message-sent')"><span class="comm-ico comm-out" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v12H8l-4 3Z"/><path d="m8 11 4-2 4 2-4 2Z" class="comm-arrow"/></svg></span><b>Mensagens enviadas</b><small>Ver mensagens enviadas</small></button></div><div class="terminal big-terminal auto-terminal">${renderMsgList()}</div></section><aside class="card integration"><div class="integration-icon">WA</div><h3>WhatsApp</h3><p class="muted">Sem interceptação de conversas privadas. Integrações dependem de APIs oficiais.</p><div class="notice">🔒 <b>Privacidade protegida</b><br><span>Somente integração oficial e autorizada.</span></div><button class="btn" onclick="addEvent('WHATSAPP','Integração oficial: o WhatsApp não permite ler conversas privadas de terceiros. Apenas APIs oficiais autorizadas.',{status:'BLOQUEADO',source:'Guardian'});alert('O WhatsApp não permite que aplicações de terceiros leiam conversas privadas. Só integrações oficiais autorizadas são possíveis.')">Verificar integração</button></aside></div>`;if(state.page==='calls')return `<div class="card"><div class="section-head"><div><h3>Histórico de chamadas</h3><p class="muted">Disponibilidade real depende das permissões e APIs Android.</p></div></div><div class="command-grid two call-actions"><button class="command comm-btn" onclick="tcSound('call-in');openCommunicationPrompt('call-received')"><span class="comm-ico call-in" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h3l1.5 4-2 1.5a12 12 0 0 0 5 5l1.5-2 4 1.5v3a1.6 1.6 0 0 1-1.7 1.6A15 15 0 0 1 3.4 5.7 1.6 1.6 0 0 1 5 4Z" class="call-body"/><path d="M14 8l5-5M19 3v4M19 3h-4" class="call-dir-in"/></svg></span><b>Chamadas recebidas</b><small>Ver chamadas recebidas</small></button><button class="command comm-btn" onclick="tcSound('call-out');openCommunicationPrompt('call-sent')"><span class="comm-ico call-out" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h3l1.5 4-2 1.5a12 12 0 0 0 5 5l1.5-2 4 1.5v3a1.6 1.6 0 0 1-1.7 1.6A15 15 0 0 1 3.4 5.7 1.6 1.6 0 0 1 5 4Z" class="call-body"/><path d="M19 3l-5 5M14 3h5M19 3v5" class="call-dir-out"/></svg></span><b>Chamadas efetuadas</b><small>Ver chamadas efetuadas</small></button></div><h3 class="mt">Terminal de chamadas</h3><div class="terminal call-terminal auto-terminal">${renderCallList()}</div></div>`;if(state.page==='contacts')return `<div class="card"><div class="section-head"><div><h3>Contatos</h3><p class="muted">Agenda do dispositivo, sincronizada automaticamente.</p></div><span class="live">● LIVE</span></div>${renderContactsStats()}${renderContactsList()}</div>`;if(state.page==='apps')return `<div class="card"><div class="section-head"><div><h3>Aplicativos</h3><p class="muted">Apps instaladas e tempo de uso nas últimas 24h.</p></div><span class="live">● LIVE</span></div>${renderAppsStats()}${renderAppsList()}</div>`;if(state.page==='screen')return `<div class="card narrow screen-capture-page"><div class="section-head"><div><h3>Câmera da Criança</h3><p class="muted">Visual ao vivo somente após aceitação explícita no aplicativo Minha Segurança.</p></div><div class="screen-glass-wrap"><button class="screen-glass" type="button" onclick="if(!this.dataset.dragged)openScreenCapture()" aria-label="Abrir câmera da Criança" title="Abrir câmera autorizada"><div class="screen-glass-sheen"></div><span class="screen-glass-dot"></span><span class="screen-glass-label">CÂMERA · TOCAR PARA VISUALIZAR</span></button></div></div><div class="permission-box"><span>Estado</span><b>● Pronto para solicitar</b><small>A Criança deverá aceitar o pedido e autorizar a câmera no Android.</small></div><div class="capture-actions"><button class="btn primary capture-btn ${state.capturePending==='camera'?'is-searching':''}" data-cap="camera" onclick="tcSound('tap');requestScreenCapture()"><span class="cap-ico cap-ico-cam" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="13" height="10" rx="2"/><path d="m16 10 5-3v10l-5-3Z"/></svg></span><span class="cap-label">Solicitar câmera</span><span class="cap-search" aria-hidden="true"><i></i><i></i><i></i></span></button><button class="btn capture-btn ${state.capturePending==='audio'?'is-searching':''}" data-cap="audio" onclick="tcSound('tap');requestAudioOnly()"><span class="cap-ico cap-ico-mic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3"/></svg></span><span class="cap-label">Escutar áudio</span><span class="cap-search" aria-hidden="true"><i></i><i></i><i></i></span></button><button class="btn capture-btn ${state.capturePending==='screen'?'is-searching':''}" data-cap="screen" onclick="tcSound('tap');requestScreenProjection()"><span class="cap-ico cap-ico-screen" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></span><span class="cap-label">Projetar tela</span><span class="cap-search" aria-hidden="true"><i></i><i></i><i></i></span></button></div><div class="terminal screen-terminal auto-terminal">${terminalEvents(20,'screen')}</div></div>`;if(state.page==='permissions')return `<div class="permission-grid">${[['Localização','Necessária para GPS e SOS','ATIVA'],['Notificações','Alertas e eventos do sistema','ATIVA'],['SMS / mensagens','Somente se permitido pela função Android aplicável','PENDENTE'],['Câmera','Exige autorização da Criança e do Android','PENDENTE'],['Microfone','Somente quando a função de áudio for usada','DESATIVADA']].map(x=>{const c=state.permissionChecks?.[x[0]];const st=c?.status||x[2];return `<div class="permission-row"><div><b>${x[0]}</b><span>${x[1]}</span>${c?.detail?`<small class="permission-detail">${esc(c.detail)}</small>`:''}</div>${eventBadge(st)}<button class="btn small" onclick="verifyPermission('${x[0]}')" ${c?.status==='PROCESSANDO'?'disabled':''}>${c?.status==='PROCESSANDO'?'Verificando…':'Verificar'}</button></div>`}).join('')}</div>`;if(state.page==='admin')return isSuperAdmin()?adminPage():'<div class="card"><h3>Acesso restrito</h3><p class="muted">Esta área é exclusiva do Super Administrador.</p></div>';return `<div class="settings-grid"><section class="card tc-profile-card"><div class="section-kicker">PERFIL</div><button class="tc-profile-badge" onclick="openProfileEditor()" title="Editar perfil" style="width:100%;margin-top:8px">${profileAvatarHtml()}<div class="tc-profile-meta"><b>${esc(profileDisplayName())}</b><small>Guardian · toque para editar</small></div></button></section><section class="card settings-main-card"><div class="section-kicker">CONFIGURAÇÕES</div><h3>Definições</h3><p class="muted">Idioma, vinculação e ferramentas administrativas ficam reunidos aqui.</p><div class="setting"><span>Idioma / Tradutor</span><div>${languageSelect('settings-lang')}</div></div><div class="setting"><span>Vincular criança</span><button class="btn small" onclick="go('devices')">Abrir vinculação</button></div><div class="setting"><span>QR e convite</span><button class="btn small" onclick="go('devices')">QR / Convite</button></div></section><section class="card"><h3>Conta e sessão</h3><div class="setting"><span>Guardian</span><b>${esc(window.TC_DB?.user?.email||'Conta local')}</b></div><div class="setting"><span>Estado da sessão</span><b>${window.TC_DB?.user?'● Ativa':'○ Local'}</b></div><div class="setting"><span>Atualização em tempo real</span><b>${state.realtime?'● Ativa':'○ Inativa'}</b></div></section><section class="card pwa-install-card"><div class="section-kicker">APLICATIVO</div><div style="display:flex;align-items:center;gap:14px;margin:8px 0 16px"><img src="../assets/icons/tconnect-logo-192.png" alt="T-Connect" style="width:72px;height:72px;border-radius:18px;object-fit:cover;box-shadow:0 8px 28px rgba(14,165,233,.2)"><div><b style="font-size:18px">T-Connect</b><small style="display:block;color:#7f98aa;margin-top:3px">Segurança em tempo real</small></div></div><div class="section-head"><div><h3><span class="settings-gear-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z"/><path d="m19.4 13.5 1.1.9-1.7 3-1.3-.5a7.6 7.6 0 0 1-1.6.9l-.2 1.4h-3.5l-.2-1.4a7.6 7.6 0 0 1-1.6-.9l-1.3.5-1.7-3 1.1-.9a7.7 7.7 0 0 1 0-1.9l-1.1-.9 1.7-3 1.3.5a7.6 7.6 0 0 1 1.6-.9l.2-1.4h3.5l.2 1.4a7.6 7.6 0 0 1 1.6.9l1.3-.5 1.7 3-1.1.9a7.7 7.7 0 0 1 0 1.9Z"/></svg></span>Instalar aplicativo</h3><p class="muted">Instale o T Connect diretamente pelo próprio aplicativo e abra-o em modo Android.</p></div><span class="version-pill">PWA</span></div><button class="btn primary install-app-btn" type="button" onclick="installTConnect()"><span class="install-app-icon">＋</span> Instalar aplicativo</button><p class="muted small-note" id="pwa-install-status">A instalação usa o recurso oficial do Chrome. No Android, quando o botão do navegador estiver disponível, o T-Connect pode ser instalado com o mesmo logotipo e abrir como aplicativo. Se o Chrome ainda não oferecer o botão, use ⋮ → Instalar aplicativo.</p></section><section class="card update-card"><div class="section-head"><div><div class="section-kicker">SOFTWARE</div><h3>Atualizações</h3><p class="muted">Verifique novos recursos, melhorias e correções do T-Connect.</p></div><span class="version-pill">v${esc(window.TC_APP_VERSION||'2.39.5')}</span></div><div class="update-toggle"><div><b>Atualização automática</b><small>Baixa a nova versão automaticamente quando houver uma atualização publicada.</small></div><label class="switch"><input type="checkbox" ${state.update.auto?'checked':''} onchange="toggleAutoUpdates(this.checked)"><span></span></label></div><div class="setting"><span>Versão instalada</span><b>v${esc(window.TC_APP_VERSION||'2.39.5')}</b></div><div class="update-actions"><button class="btn primary" onclick="tcCheckAndUpdate()" ${state.update.checking?'disabled':''} title="Verificar e atualizar"><span class="settings-gear-icon ${state.update.checking?'spin':''}" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z"/><path d="m19.4 13.5 1.1.9-1.7 3-1.3-.5a7.6 7.6 0 0 1-1.6.9l-.2 1.4h-3.5l-.2-1.4a7.6 7.6 0 0 1-1.6-.9l-1.3.5-1.7-3 1.1-.9a7.7 7.7 0 0 1 0-1.9l-1.1-.9 1.7-3 1.3.5a7.6 7.6 0 0 1 1.6-.9l.2-1.4h3.5l.2 1.4a7.6 7.6 0 0 1 1.6.9l1.3-.5 1.7 3-1.1.9a7.7 7.7 0 0 1 0 1.9Z"/></svg></span> ${state.update.checking?'A verificar…':'Verificar e atualizar'}</button>${state.update.latest?.download_url?`<button class="btn" onclick='openRelease(${JSON.stringify(state.update.latest).replace(/'/g,'&#39;')})'>Abrir nova versão</button>`:''}</div>${!state.update.checking&&!state.update.latest&&!state.update.error?`<div class="update-note ok">✓ Está na versão mais recente (v${esc(window.TC_APP_VERSION||'2.39.5')}).</div>`:''}${state.update.error?`<div class="update-note">${esc(state.update.error)}</div>`:''}${state.update.latest?`<div class="release-panel"><div class="release-title"><b>${esc(state.update.latest.title||'Nova versão')}</b><span>v${esc(state.update.latest.version||'?')}</span></div><div class="release-date">${state.update.latest.released_at?new Date(state.update.latest.released_at).toLocaleString('pt-PT'):'Atualização disponível'}</div><p>${esc(state.update.latest.description||'Melhorias e correções.')}</p>${Array.isArray(state.update.latest.changelog)?`<ul>${state.update.latest.changelog.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}</div>`:''}</section></div>`}
+function childEntryUrl(code){const cfg=window.TC_SUPABASE||{};let base=String(cfg.childInviteBaseUrl||'').trim();if(!base){if(/^https?:$/i.test(location.protocol)){base=new URL('../child/invite.html',location.href).href}else{base='child/invite.html'}}let u;try{u=new URL(base,location.href)}catch(e){throw new Error('URL do convite inválida. Configure childInviteBaseUrl nas definições do projeto.')}u.searchParams.set('pair',String(code).trim().toUpperCase());u.searchParams.set('device',`TC-CHILD-${Math.random().toString(36).slice(2,8).toUpperCase()}`);if(cfg.childApkUrl)u.searchParams.set('apk',cfg.childApkUrl);return u.href}
+function inviteText(){return `Convite T-Connect Child\nAbra o link para baixar/abrir o aplicativo Child e concluir a vinculação.\n${state.pairLink}`}
+async function copyPairCode(){if(!state.pairCode){state.pairingMessage='Gere primeiro um convite.';render();return}try{await navigator.clipboard.writeText(state.pairCode);state.pairingMessage='Código manual copiado.'}catch(e){state.pairingMessage='Não foi possível copiar o código.'}render()}
+function initPairQR(){const el=document.getElementById('pairQr');if(!el||!state.pairCode)return;if(typeof QRCode==='undefined'){state.pairingMessage='O gerador de QR não carregou. Use temporariamente o código manual abaixo.';return}el.innerHTML='';const payload=state.pairLink||state.pairCode;new QRCode(el,{text:payload,width:240,height:240,colorDark:'#39ff88',colorLight:'#06140d',correctLevel:QRCode.CorrectLevel.M});}
+async function createPairing(){if(state.pairingBusy)return;state.pairingBusy=true;state.pairingMessage='';state.pairCode='';state.pairLink='';render();try{if(!window.TC_DB.enabled)throw new Error('Supabase não está configurado ou não ficou disponível.');if(!window.TC_DB.user)throw new Error('Inicie sessão no Guardian antes de gerar o código.');const client=window.TC_DB.client;let code='';let inserted=false;for(let attempt=0;attempt<5&&!inserted;attempt++){if(window.crypto?.getRandomValues){const a=new Uint32Array(1);crypto.getRandomValues(a);code=String(a[0]%1000000).padStart(6,'0')}else{code=String(Math.floor(Math.random()*1000000)).padStart(6,'0')}const expiresAt=new Date(Date.now()+10*60*1000).toISOString();const {error}=await client.from('pairing_codes').insert({guardian_id:window.TC_DB.user.id,code,expires_at:expiresAt});if(!error)inserted=true;else if(!/duplicate key|unique/i.test(error.message||''))throw error}if(!inserted)throw new Error('Não foi possível gerar um código único. Tente novamente.');state.pairCode=code;state.pairLink=childEntryUrl(state.pairCode);await addEvent('PAIRING','Código manual de vinculação criado',{status:'AUTORIZADO',source:'Guardian'});state.pairingMessage='Código criado com sucesso. Válido por 10 minutos e de uso único.';}catch(e){const raw=String(e?.message||e||'');state.pairingMessage=/relation .*pairing_codes.*does not exist|schema cache|PGRST/i.test(raw)?'A tabela de vinculação ainda não está disponível no Supabase. Execute supabase/schema.sql e tente novamente.':raw||'Não foi possível criar o código.';}finally{state.pairingBusy=false;render();if(state.pairCode)setTimeout(initPairQR,80)}}
+async function shareInvite(){if(!state.pairLink){state.pairingMessage='Gere primeiro um código de vinculação.';render();return}try{if(navigator.share)await navigator.share({title:'Convite T-Connect Child',text:inviteText(),url:state.pairLink});else await copyInvite()}catch(e){if(e.name!=='AbortError')await copyInvite()}}
+async function copyInvite(){if(!state.pairLink){state.pairingMessage='Gere primeiro um código de vinculação.';render();return}try{await navigator.clipboard.writeText(inviteText());state.authError='Convite copiado para a área de transferência.'}catch(e){state.authError='Não foi possível copiar o convite.'}render()}
+function shareWhatsApp(){if(!state.pairLink){state.pairingMessage='Gere primeiro um código de vinculação.';render();return}window.open('https://wa.me/?text='+encodeURIComponent(inviteText()),'_blank','noopener')}
+function shareEmail(){if(!state.pairLink){state.pairingMessage='Gere primeiro um código de vinculação.';render();return}location.href='mailto:?subject='+encodeURIComponent('Convite T-Connect Child')+'&body='+encodeURIComponent(inviteText())}
+function shareSMS(){if(!state.pairLink){state.pairingMessage='Gere primeiro um código de vinculação.';render();return}location.href='sms:?body='+encodeURIComponent(inviteText())}
+function setMap(t){
+  const nextType=['roadmap','satellite','hybrid'].includes(t)?t:'roadmap';
+  state.mapType=nextType;
+  document.querySelectorAll('.map-mode-actions .map-mode-btn').forEach(btn=>{
+    const active=btn.dataset.mapType===nextType || btn.getAttribute('onclick')?.includes(`setMap('${nextType}')`);
+    btn.classList.toggle('primary',active);
+    btn.setAttribute('aria-pressed',active?'true':'false');
+  });
+  pushMapTerminal('MAPA',`CAMADA_${String(nextType).toUpperCase()}_SELECIONADA`,'OK',{detail:`Modo ${nextType} selecionado`});
+  if(window.TC_MAP?.setType) window.TC_MAP.setType(nextType);
+}
+async function initMap(){
+  const node=document.getElementById('map');
+  if(!node)return;
+  if(!window.TC_MAP){
+    node.innerHTML='<div class="map-provider-error"><b>Mapa alternativo</b><span>O módulo do mapa não carregou. Recarregue a página.</span></div>';
+    return;
+  }
+  try{
+    window.TC_MAP.init();
+    // Sincroniza a camada escolhida (Mapa/Satélite/Híbrido) entre as duas telas que
+    // mostram o mapa (Monitoramento inicial e Localização do menu): ambas partilham
+    // state.mapType, por isso o mapa abre sempre na mesma camada em que foi deixado.
+    if(window.TC_MAP.setType && state.mapType) window.TC_MAP.setType(state.mapType);
+    requestAnimationFrame(()=>{ try{ window.TC_MAP.refresh?.(); }catch(_){} });
+    setTimeout(()=>{ try{ window.TC_MAP.refresh?.(); window.TC_MAP.setType?.(state.mapType); }catch(_){} },220);
+    const d=state.devices[0]||{};
+    const saved=state.lastLocation;
+    const lat=Number(saved?.lat ?? d?.last_lat), lng=Number(saved?.lng ?? d?.last_lng);
+    if(Number.isFinite(lat)&&Number.isFinite(lng)){
+      const accuracy=Number(saved?.accuracy ?? d?.accuracy_m)||60;
+      state.lastLocation={lat,lng,accuracy};
+      window.TC_MAP.setLocation(lat,lng,accuracy,false);
+    }
+  }catch(err){
+    node.innerHTML='<div class="map-provider-error"><b>Mapa alternativo</b><span>'+esc(err?.message||'Não foi possível carregar o mapa.')+'</span></div>';
+  }
+}
+function initActivityTerminalAutoScroll(){if(window.__tcActivityTerminalTimer){clearInterval(window.__tcActivityTerminalTimer);window.__tcActivityTerminalTimer=null}if(!state.authenticated||state.page!=='activity')return;const el=document.querySelector('.activity-terminal');if(!el||el.scrollHeight<=el.clientHeight)return;let dir=1;window.__tcActivityTerminalTimer=setInterval(()=>{const max=Math.max(0,el.scrollHeight-el.clientHeight);if(max<=0)return;if(el.scrollTop>=max-1)dir=-1;if(el.scrollTop<=1)dir=1;el.scrollTop+=dir*0.75},40)}
+async function captureSignalInsert(requestId,kind,payload){if(!window.TC_DB?.enabled||!window.TC_DB.client)return;await window.TC_DB.client.from('capture_signals').insert({request_id:requestId,sender_role:'guardian',kind,payload});}
+let tcCapturePeer=null,tcCaptureRequestId=null,tcCapturePoll=null;
+// Ondas de som em TEMPO REAL: liga um AnalyserNode ao áudio da Criança e anima as
+// barras conforme o volume real do microfone. Para quando a captura encerra.
+let tcMicAudioCtx=null,tcMicRaf=null,tcMicSource=null;
+const TC_MIC_BARS=7;
+function micWavesHtml(){let b='';for(let i=0;i<TC_MIC_BARS;i++)b+='<i></i>';return b}
+function startMicWaves(stream){
+  stopMicWaves();
+  try{
+    const aud=(stream.getAudioTracks?.()||[]);
+    if(!aud.length)return;
+    const Ctx=window.AudioContext||window.webkitAudioContext;
+    if(!Ctx)return;
+    tcMicAudioCtx=new Ctx();
+    tcMicSource=tcMicAudioCtx.createMediaStreamSource(stream);
+    const analyser=tcMicAudioCtx.createAnalyser();
+    analyser.fftSize=64;analyser.smoothingTimeConstant=.75;
+    tcMicSource.connect(analyser);
+    const data=new Uint8Array(analyser.frequencyBinCount);
+    const tick=()=>{
+      analyser.getByteFrequencyData(data);
+      const bars=document.querySelectorAll('.tc-glass-mic-waves i');
+      if(!bars.length){tcMicRaf=requestAnimationFrame(tick);return;}
+      const step=Math.floor(data.length/bars.length)||1;
+      bars.forEach((bar,i)=>{
+        const v=data[i*step]||0;            // 0..255
+        const h=Math.max(4,Math.round((v/255)*26)); // 4..30px
+        bar.style.height=h+'px';
+        bar.style.opacity=(0.4+Math.min(0.6,v/255)).toFixed(2);
+      });
+      tcMicRaf=requestAnimationFrame(tick);
+    };
+    if(tcMicAudioCtx.state==='suspended')tcMicAudioCtx.resume().catch(()=>{});
+    tick();
+  }catch(_){}
+}
+function stopMicWaves(){
+  try{if(tcMicRaf)cancelAnimationFrame(tcMicRaf);tcMicRaf=null;if(tcMicSource)tcMicSource.disconnect();tcMicSource=null;if(tcMicAudioCtx&&tcMicAudioCtx.state!=='closed')tcMicAudioCtx.close();}catch(_){}tcMicAudioCtx=null;
+}
+window.startMicWaves=startMicWaves;window.stopMicWaves=stopMicWaves;
+function showRemoteCapture(stream,requestId){const old=document.getElementById('tc-screen-preview');if(old)old.remove();const hasAudio=(stream.getAudioTracks?.()||[]).length>0;const micBadge=hasAudio?('<div class="tc-glass-mic" aria-label="Áudio conectado"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3"/></svg><span class="tc-glass-mic-waves">'+micWavesHtml()+'</span></div>'):'';const glass=document.querySelector('.screen-glass');if(glass){glass.innerHTML='<video class="tc-camera-glass-video" autoplay playsinline muted></video><div class="screen-glass-live"><span></span> AO VIVO</div>'+micBadge;const gv=glass.querySelector('video');gv.srcObject=stream;gv.play().catch(()=>{});glass.dataset.live='1';glass.setAttribute('aria-label','Câmera da Criança ao vivo');if(hasAudio)startMicWaves(stream);}const v=document.createElement('video');v.autoplay=true;v.playsInline=true;v.muted=false;v.volume=1;v.srcObject=stream;const wrap=document.createElement('div');wrap.id='tc-screen-preview';wrap.className='tc-screen-preview';wrap.innerHTML='<div class="tc-screen-preview-head"><b>Câmera autorizada da Criança</b><span class="tc-live-audio">🔊 ÁUDIO AO VIVO</span><button type="button" class="btn small" id="tc-enable-audio">🔊 Ativar som</button><button type="button" class="btn small" id="tc-stop-screen">Encerrar</button></div><div class="tc-audio-live-note">Som do microfone autorizado pela Criança</div>';wrap.appendChild(v);document.body.appendChild(wrap);const audioTracks=stream.getAudioTracks?.()||[];audioTracks.forEach(t=>t.enabled=true);const playAudio=()=>{v.muted=false;v.volume=1;return v.play().catch(()=>{})};playAudio();document.getElementById('tc-enable-audio').onclick=async()=>{await playAudio();document.getElementById('tc-enable-audio').textContent='🔊 Som ativo'};initScreenPanelGestures();document.getElementById('tc-stop-screen').onclick=()=>endRemoteCapture(requestId);}
+function showRemoteAudio(stream,requestId){const old=document.getElementById('tc-audio-only-panel');if(old)old.remove();
+  // Microfone animado dentro da tela de vidro: áudio conectado, sem vídeo.
+  const glass=document.querySelector('.screen-glass');if(glass){glass.innerHTML='<div class="tc-glass-audio"><div class="tc-glass-mic big" aria-label="Áudio ao vivo"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3"/></svg><span class="tc-glass-mic-waves">'+micWavesHtml()+'</span></div><span class="screen-glass-live"><span></span> ÁUDIO AO VIVO</span></div>';glass.dataset.live='1';glass.setAttribute('aria-label','Áudio da Criança ao vivo');startMicWaves(stream);}const audio=document.createElement('audio');audio.id='tc-remote-audio';audio.autoplay=true;audio.controls=true;audio.volume=1;audio.srcObject=stream;const wrap=document.createElement('div');wrap.id='tc-audio-only-panel';wrap.className='tc-audio-only-panel';wrap.innerHTML='<div class="tc-audio-only-head"><b>🎙️ ÁUDIO DA CRIANÇA</b><span class="tc-live-audio">● AO VIVO</span></div><p>Microfone autorizado pela Criança. Nenhuma câmera está sendo transmitida.</p>';wrap.appendChild(audio);const btn=document.createElement('button');btn.className='btn primary';btn.textContent='🔊 Ativar áudio';btn.onclick=()=>audio.play().catch(()=>{});wrap.appendChild(btn);const stop=document.createElement('button');stop.className='btn';stop.textContent='Encerrar';stop.onclick=()=>endRemoteCapture(requestId);wrap.appendChild(stop);document.body.appendChild(wrap);audio.play().catch(()=>{});}
+async function endRemoteCapture(requestId){stopMicWaves();stopCaptureSearch();try{if(tcCapturePeer){tcCapturePeer.close();tcCapturePeer=null}await window.TC_DB.client.rpc('end_capture',{p_request_id:requestId});await captureSignalInsert(requestId,'bye',{reason:'guardian-ended'});}catch(e){}const wrap=document.getElementById('tc-screen-preview');if(wrap)wrap.remove();const glass=document.querySelector('.screen-glass');if(glass){glass.innerHTML='<div class="screen-glass-sheen"></div><span class="screen-glass-dot"></span><span class="screen-glass-label">CÂMERA · TOCAR PARA VISUALIZAR</span>';glass.dataset.live='0';glass.removeAttribute('aria-label');}await addEvent('CÂMERA DA CRIANÇA','Sessão de captura encerrada pelo Guardian',{status:'FINALIZADO',source:'Guardian'});}
+async function startGuardianPeer(requestId){if(!window.TC_DB?.enabled||!window.TC_DB.client)throw new Error('Supabase não configurado.');tcCaptureRequestId=requestId;const {data:requestInfo}=await window.TC_DB.client.from('capture_requests').select('kind').eq('id',requestId).maybeSingle();const isAudioOnly=requestInfo?.kind==='AUDIO_ONLY';tcCapturePeer=new RTCPeerConnection(window.TC_RTC||{});tcCapturePeer.ontrack=e=>{const stream=e.streams?.[0]||new MediaStream([e.track]);if(isAudioOnly)showRemoteAudio(stream,requestId);else showRemoteCapture(stream,requestId)};tcCapturePeer.onicecandidate=e=>{if(e.candidate)captureSignalInsert(requestId,'ice',e.candidate.toJSON())};if(window.__tcCaptureSignalChannel)window.TC_DB.client.removeChannel(window.__tcCaptureSignalChannel);window.__tcCaptureSignalChannel=window.TC_DB.client.channel('tc-capture-signal-g-'+requestId).on('postgres_changes',{event:'INSERT',schema:'public',table:'capture_signals',filter:'request_id=eq.'+requestId},async payload=>{const sig=payload.new;if(sig.sender_role!=='child')return;try{if(sig.kind==='offer'){if(!tcCapturePeer.currentRemoteDescription){await tcCapturePeer.setRemoteDescription(sig.payload);const ans=await tcCapturePeer.createAnswer();await tcCapturePeer.setLocalDescription(ans);await captureSignalInsert(requestId,'answer',ans)}}else if(sig.kind==='ice'&&sig.payload){await tcCapturePeer.addIceCandidate(sig.payload)}}catch(e){console.warn('Capture signaling:',e)}}).subscribe();const {data:signals}=await window.TC_DB.client.from('capture_signals').select('*').eq('request_id',requestId).eq('sender_role','child').order('created_at',{ascending:true});for(const sig of (signals||[])){try{if(sig.kind==='offer'&&!tcCapturePeer.currentRemoteDescription){await tcCapturePeer.setRemoteDescription(sig.payload);const ans=await tcCapturePeer.createAnswer();await tcCapturePeer.setLocalDescription(ans);await captureSignalInsert(requestId,'answer',ans)}else if(sig.kind==='ice'&&sig.payload){await tcCapturePeer.addIceCandidate(sig.payload)}}catch(e){}}}
+// Terminal da captura: regista o estado de cada função (câmera/áudio/projeção) com
+// nome do dispositivo, localização real, horas e data — ponto 4.
+function captureInfo(){const d=state.devices[0]||{};const online=isDeviceOnline(d);const loc=(online&&d.last_lat!=null&&d.last_lng!=null)?`${Number(d.last_lat).toFixed(5)}, ${Number(d.last_lng).toFixed(5)}`:'sem localização';return {name:d.device_name||'Child',loc,online}}
+function pushCaptureTerminal(fn,connected,extra=''){const info=captureInfo();const now=new Date();const date=now.toLocaleDateString('pt-PT');const time=now.toLocaleTimeString('pt-PT');const estado=connected?'CONECTADO':'NAO_CONECTADO';const detail=`${fn} · ${connected?'CONECTADO':'NÃO CONECTADO'} · ${info.name} · ${info.online?'ONLINE':'OFFLINE'} · 📍 ${info.loc} · ${date} ${time}${extra?' · '+extra:''}`;addEvent('CAPTURA',detail,{status:connected?'CONECTADO':'NAO_CONECTADO',source:'Captura',contact:info.name,child_name:info.name})}
+// Mecanismo "procurando conexão" partilhado pelos 3 botões (câmera/áudio/projeção).
+// Marca o botão, mostra pulsos de procura e regista no terminal até haver resposta.
+function startCaptureSearch(kind,label){
+  state.capturePending=kind;
+  if(window.__tcSearchTerminalTimer)clearInterval(window.__tcSearchTerminalTimer);
+  let dots=0;
+  const tick=()=>{dots=(dots%3)+1;const ev=normalizeEvent({type:'CONEXAO',detail:'Procurando conexão'+'.'.repeat(dots)+' ('+label+')',status:'PROCURANDO',source:'Captura'});state.events.unshift(ev);state.events=state.events.slice(0,200);if(state.page==='screen')render();};
+  tick();
+  window.__tcSearchTerminalTimer=setInterval(tick,1800);
+  // Tempo-limite de procura (45s) — evita ficar a "procurar" para sempre.
+  if(window.__tcSearchTimeout)clearTimeout(window.__tcSearchTimeout);
+  window.__tcSearchTimeout=setTimeout(()=>{ if(state.capturePending===kind){ addEvent('CONEXAO','Nenhuma resposta do dispositivo ('+label+'). Tente novamente.',{status:'SEM_RESPOSTA',source:'Captura'}); stopCaptureSearch(); } },45000);
+}
+function stopCaptureSearch(){
+  state.capturePending=null;
+  if(window.__tcSearchTerminalTimer){clearInterval(window.__tcSearchTerminalTimer);window.__tcSearchTerminalTimer=null;}
+  if(window.__tcSearchTimeout){clearTimeout(window.__tcSearchTimeout);window.__tcSearchTimeout=null;}
+  if(state.page==='screen')render();
+}
+window.startCaptureSearch=startCaptureSearch;window.stopCaptureSearch=stopCaptureSearch;
+async function requestScreenCapture(){const d=state.devices[0];if(!d?.child_id){await addEvent('CÂMERA DA CRIANÇA','Nenhuma Criança vinculada para solicitar captura',{status:'INDISPONÍVEL',source:'Guardian'});return}startCaptureSearch('camera','Câmera');if(!window.TC_DB?.enabled||!window.TC_DB.client){await addEvent('CÂMERA DA CRIANÇA','Serviço de captura não configurado',{status:'INDISPONÍVEL',source:'Guardian'});return}try{const {data,error}=await window.TC_DB.client.rpc('request_capture',{p_child_id:d.child_id,p_device_id:d.id,p_kind:'CAMERA_VIDEO'});if(error)throw error;tcCaptureRequestId=data;await addEvent('CÂMERA DA CRIANÇA','Pedido enviado para aprovação no aplicativo Minha Segurança.',{status:'PENDENTE',source:'Guardian'});const channel=window.TC_DB.client.channel('tc-capture-guardian-'+data).on('postgres_changes',{event:'UPDATE',schema:'public',table:'capture_requests',filter:'id=eq.'+data},async payload=>{const r=payload.new;if(r.status==='ACCEPTED'){await addEvent('CÂMERA DA CRIANÇA','Criança aceitou a solicitação. Iniciando sessão de vídeo autorizada.',{status:'AUTORIZADO',source:'Guardian'});stopCaptureSearch();pushCaptureTerminal('CÂMERA',true);await startGuardianPeer(data)}else if(r.status==='DECLINED'){await addEvent('CÂMERA DA CRIANÇA','Criança recusou a solicitação.',{status:'RECUSADO',source:'Guardian'});stopCaptureSearch();pushCaptureTerminal('CÂMERA',false,'recusado')}else if(r.status==='ENDED'){await endRemoteCapture(data)}}).subscribe();window.__tcCaptureChannel=channel;}catch(e){await addEvent('CÂMERA DA CRIANÇA','Não foi possível solicitar captura: '+(e?.message||'erro'),{status:'ERRO',source:'Guardian'})}}
+async function requestAudioOnly(){const d=state.devices[0];if(!d?.child_id){await addEvent('ÁUDIO DA CRIANÇA','Nenhuma Criança vinculada para solicitar áudio',{status:'INDISPONÍVEL',source:'Guardian'});return}startCaptureSearch('audio','Áudio');if(!window.TC_DB?.enabled||!window.TC_DB.client){await addEvent('ÁUDIO DA CRIANÇA','Serviço de áudio não configurado',{status:'INDISPONÍVEL',source:'Guardian'});return}try{const {data,error}=await window.TC_DB.client.rpc('request_capture',{p_child_id:d.child_id,p_device_id:d.id,p_kind:'AUDIO_ONLY'});if(error)throw error;tcCaptureRequestId=data;await addEvent('ÁUDIO DA CRIANÇA','Pedido de áudio enviado para aprovação no aplicativo Minha Segurança.',{status:'PENDENTE',source:'Guardian'});const channel=window.TC_DB.client.channel('tc-audio-guardian-'+data).on('postgres_changes',{event:'UPDATE',schema:'public',table:'capture_requests',filter:'id=eq.'+data},async payload=>{const r=payload.new;if(r.status==='ACCEPTED'){await addEvent('ÁUDIO DA CRIANÇA','Criança aceitou. Iniciando áudio autorizado.',{status:'AUTORIZADO',source:'Guardian'});stopCaptureSearch();pushCaptureTerminal('ÁUDIO',true);await startGuardianPeer(data)}else if(r.status==='DECLINED'){await addEvent('ÁUDIO DA CRIANÇA','Criança recusou a solicitação.',{status:'RECUSADO',source:'Guardian'});stopCaptureSearch();pushCaptureTerminal('ÁUDIO',false,'recusado')}else if(r.status==='ENDED'){await endRemoteCapture(data)}}).subscribe();window.__tcAudioChannel=channel;}catch(e){await addEvent('ÁUDIO DA CRIANÇA','Não foi possível solicitar áudio: '+(e?.message||'erro'),{status:'ERRO',source:'Guardian'})}}
+async function requestScreenProjection(){const d=state.devices[0];if(!d?.child_id){await addEvent('PROJEÇÃO DE TELA','Nenhuma Criança vinculada para solicitar projeção',{status:'INDISPONÍVEL',source:'Guardian'});return}startCaptureSearch('screen','Projeção');if(!window.TC_DB?.enabled||!window.TC_DB.client){await addEvent('PROJEÇÃO DE TELA','Serviço de projeção não configurado',{status:'INDISPONÍVEL',source:'Guardian'});return}try{const {data,error}=await window.TC_DB.client.rpc('request_capture',{p_child_id:d.child_id,p_device_id:d.id,p_kind:'SCREEN_VIDEO'});if(error)throw error;tcCaptureRequestId=data;await addEvent('PROJEÇÃO DE TELA','Pedido enviado para aprovação no aplicativo Minha Segurança.',{status:'PENDENTE',source:'Guardian'});const channel=window.TC_DB.client.channel('tc-screen-guardian-'+data).on('postgres_changes',{event:'UPDATE',schema:'public',table:'capture_requests',filter:'id=eq.'+data},async payload=>{const r=payload.new;if(r.status==='ACCEPTED'){await addEvent('PROJEÇÃO DE TELA','Criança aceitou a projeção. Iniciando sessão autorizada.',{status:'AUTORIZADO',source:'Guardian'});stopCaptureSearch();pushCaptureTerminal('PROJEÇÃO',true);await startGuardianPeer(data)}else if(r.status==='DECLINED'){await addEvent('PROJEÇÃO DE TELA','Criança recusou a projeção.',{status:'RECUSADO',source:'Guardian'});stopCaptureSearch();pushCaptureTerminal('PROJEÇÃO',false,'recusado')}else if(r.status==='ENDED'){await endRemoteCapture(data)}}).subscribe();window.__tcCaptureChannel=channel;}catch(e){await addEvent('PROJEÇÃO DE TELA','Não foi possível solicitar projeção: '+(e?.message||'erro'),{status:'ERRO',source:'Guardian'})}}
+
+async function openScreenCapture(){const old=document.getElementById('tc-screen-preview');if(old){await endRemoteCapture(tcCaptureRequestId);return}await requestScreenCapture()}
+function initLocationTerminalAutoScroll(){if(window.__tcLocationTerminalTimer){clearInterval(window.__tcLocationTerminalTimer);window.__tcLocationTerminalTimer=null}if(!state.authenticated||state.page!=='map')return;const el=document.querySelector('.location-code-terminal');if(!el||el.scrollHeight<=el.clientHeight)return;let dir=1;window.__tcLocationTerminalTimer=setInterval(()=>{const max=Math.max(0,el.scrollHeight-el.clientHeight);if(max<=0)return;if(el.scrollTop>=max-1)dir=-1;if(el.scrollTop<=1)dir=1;el.scrollTop+=dir*.75},40)}
+
+function initScreenPanelGestures(){
+  const targets=[document.querySelector('.screen-glass'),document.getElementById('tc-screen-preview')].filter(Boolean);
+  targets.forEach(el=>{
+    if(el.dataset.gestureReady==='1')return;
+    el.dataset.gestureReady='1';
+    let scale=Number(el.dataset.scale||1), x=Number(el.dataset.x||0), y=Number(el.dataset.y||0);
+    let startX=0,startY=0,startDist=0,startScale=scale,moved=false,dragging=false;
+    const apply=()=>{el.style.transform=`translate3d(${x}px,${y}px,0) scale(${scale})`;el.style.transformOrigin='center center'};
+    const dist=(a,b)=>Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
+    const mid=(a,b)=>({x:(a.clientX+b.clientX)/2,y:(a.clientY+b.clientY)/2});
+    el.addEventListener('touchstart',e=>{
+      if(!e.touches.length)return;
+      e.stopPropagation();
+      moved=false; dragging=e.touches.length===1;
+      if(e.touches.length===1){startX=e.touches[0].clientX-x;startY=e.touches[0].clientY-y}
+      else {startDist=dist(e.touches[0],e.touches[1]);startScale=scale}
+    },{passive:false});
+    el.addEventListener('touchmove',e=>{
+      if(!e.touches.length)return;
+      e.preventDefault();e.stopPropagation();moved=true;
+      if(e.touches.length===1 && dragging){x=e.touches[0].clientX-startX;y=e.touches[0].clientY-startY;apply()}
+      else if(e.touches.length>=2){const d=dist(e.touches[0],e.touches[1]);scale=Math.min(3.2,Math.max(.55,startScale*(d/Math.max(1,startDist))));apply()}
+    },{passive:false});
+    el.addEventListener('touchend',e=>{if(moved){el.dataset.dragged='1';setTimeout(()=>delete el.dataset.dragged,180)};dragging=false},{passive:false});
+    el.addEventListener('dblclick',e=>{e.preventDefault();scale=1;x=0;y=0;apply()});
+    apply();
+  });
+}
+
+function initAutoTerminalScroll(){if(window.__tcAutoTerminalTimer){clearInterval(window.__tcAutoTerminalTimer);window.__tcAutoTerminalTimer=null}if(!state.authenticated||!['overview','messages','calls','screen'].includes(state.page))return;const els=document.querySelectorAll('.auto-terminal');if(!els.length)return;let dir=1;window.__tcAutoTerminalTimer=setInterval(()=>els.forEach(el=>{const max=Math.max(0,el.scrollHeight-el.clientHeight);if(max<=0)return;if(el.scrollTop>=max-1)dir=-1;if(el.scrollTop<=1)dir=1;el.scrollTop+=dir*.75}),40)}
+function render(){syncDeviceName();
+  // Bloqueio por expiração do plano (30 dias): mostra o pagamento e não deixa usar.
+  if(state.authenticated&&!isSuperAdmin()&&isPlanExpired()){enforcePlan();}
+  // Guarda a posição de scroll para não "saltar para cima" ao re-renderizar (ex.: ao
+  // tocar em "Atualizar aplicativo", que faz render enquanto verifica).
+  const __samePage=(window.__tcLastRenderedPage===state.page);
+  window.__tcLastRenderedPage=state.page;
+  const __prevMain=document.querySelector('.main');
+  const __scrollMain=(__samePage&&__prevMain)?__prevMain.scrollTop:0;
+  const __scrollWin=__samePage?(window.scrollY||document.documentElement.scrollTop||0):0;
+  if(window.__tcActivityTerminalTimer){clearInterval(window.__tcActivityTerminalTimer);window.__tcActivityTerminalTimer=null}if(window.__tcAutoTerminalTimer){clearInterval(window.__tcAutoTerminalTimer);window.__tcAutoTerminalTimer=null}if(window.__tcLocationTerminalTimer){clearInterval(window.__tcLocationTerminalTimer);window.__tcLocationTerminalTimer=null}document.getElementById('app').innerHTML=state.authenticated?appShell():authView();
+  // Restaura o scroll (apenas quando continua na mesma página).
+  if(__scrollMain||__scrollWin){const nm=document.querySelector('.main');if(nm&&__scrollMain)nm.scrollTop=__scrollMain;if(__scrollWin)window.scrollTo(0,__scrollWin);}
+  if(state.authenticated&&(state.page==='overview'||state.page==='map'))setTimeout(initMap,50);if(state.authenticated&&state.page==='devices'&&state.pairCode)setTimeout(initPairQR,50);if(state.authenticated&&state.page==='activity')setTimeout(initActivityTerminalAutoScroll,80);if(state.authenticated&&state.page==='map')setTimeout(initLocationTerminalAutoScroll,80);if(state.authenticated&&['overview','messages','calls','screen'].includes(state.page))setTimeout(initAutoTerminalScroll,80);if(state.authenticated&&state.page==='screen')setTimeout(initScreenPanelGestures,90)}
+window.addEvent=addEvent;window.verifyPermission=verifyPermission;window.requestScreenCapture=requestScreenCapture;window.requestAudioOnly=requestAudioOnly;window.openScreenCapture=openScreenCapture;window.toggleMenu=toggleMenu;window.closeMenu=closeMenu;window.shareInvite=shareInvite;window.copyInvite=copyInvite;window.shareWhatsApp=shareWhatsApp;window.shareEmail=shareEmail;window.shareSMS=shareSMS;window.checkForUpdates=checkForUpdates;window.updateAppNow=updateAppNow;window.toggleAutoUpdates=toggleAutoUpdates;window.openRelease=openRelease;window.go=go;window.setMap=setMap;window.login=login;window.signup=signup;window.google=google;window.logout=logout;window.recoverPassword=recoverPassword;window.updateRecoveredPassword=updateRecoveredPassword;window.createPairing=createPairing;window.copyPairCode=copyPairCode;window.refreshLocationTerminalUI=refreshLocationTerminalUI;window.refreshApplication=refreshApplication;window.refreshMonitoring=refreshMonitoring;window.pushMapTerminal=pushMapTerminal;
+window.addEventListener('storage',e=>{if(e.key==='tc_events'){try{const v=JSON.parse(e.newValue||'[]');state.events=Array.isArray(v)?v:[];render()}catch(_){}}});
+// Atualizações de permissões vindas do Android (APK): reflete o novo estado real.
+function applyNativePermissionStatus(st){if(!st)return;if(!state.permissionChecks)state.permissionChecks={};const mapBack={location:'Localização',notifications:'Notificações',microphone:'Microfone',camera:'Câmera',sms:'SMS / mensagens',screen:'Captura de tela'};Object.keys(mapBack).forEach(k=>{if(k in st){state.permissionChecks[mapBack[k]]={status:st[k]?'ATIVA':'PENDENTE',detail:st[k]?'Permissão concedida no Android.':'Permissão ainda não concedida no Android.'}}});if(state.page==='permissions')render()}
+window.addEventListener('tc-native-permissions',e=>applyNativePermissionStatus(e.detail));
+window.addEventListener('tc-native-permissions-updated',()=>{try{const raw=window.TCNativePermissions?.getStatus?.();if(raw)applyNativePermissionStatus(typeof raw==='string'?JSON.parse(raw):raw)}catch(_){}});
+if(!Array.isArray(state.notifications))state.notifications=[];
+if(!state.events.length){state.events=[{id:'boot',type:'SYSTEM',detail:'Guardian iniciado · pronto para vincular Child',at:new Date().toLocaleString('pt-PT'),status:'ATIVO',source:'Guardian'},{id:'pair',type:'PAIRING',detail:'Aguardando vínculo Guardian ↔ Child',at:new Date().toLocaleString('pt-PT'),status:'PENDENTE',source:'Supabase'}];save()}
+window.addEventListener('tc-pwa-install-ready',()=>{const e=document.getElementById('pwa-install-status');if(e)e.textContent='Pronto para instalar pelo Chrome.';});window.addEventListener('tc-pwa-installed',()=>{const e=document.getElementById('pwa-install-status');if(e)e.textContent='T Connect foi instalado neste dispositivo.';});window.addEventListener('tc-native-update',e=>{const d=e.detail||{};if(d.message){state.update.error=d.message;render();}});async function autoUpdateIfNeeded(){
+  if(!state.authenticated || !state.update.auto || !navigator.onLine || state.update.checking) return;
+  try{
+    const release=await fetchReleaseManifest();
+    if(!release?.version)return;
+    state.update.latest=release;
+    const current=(window.TCNativeUpdater?.getCurrentVersion?.()||window.TC_APP_VERSION).replace(/^v/i,'');
+    const newer=String(release.version).localeCompare(String(current),undefined,{numeric:true,sensitivity:'base'})>0;
+    if(newer){
+      localStorage.setItem('tc_auto_update_target',String(release.version));
+      if(window.TCNativeUpdater && release.apk_url){
+        state.update.error='Nova versão encontrada. A preparar a atualização…';
+        render();
+        await updateAppNow();
+      }else if('serviceWorker' in navigator){
+        const reg=await navigator.serviceWorker.getRegistration('../');
+        if(reg){await tcTimeout(reg.update(),8000); if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});}
+      }
+    }
+  }catch(err){console.warn('Atualização automática:',err?.message||err)}
+}
+boot().then(()=>{
+  if(state.authenticated){
+    showPreparationThenContinue();
+    if(state.update.auto){checkForUpdates(true);setTimeout(autoUpdateIfNeeded,800);}
+  }
+  const autoUpdateCheck=()=>{if(state.authenticated&&state.update.auto&&navigator.onLine)autoUpdateIfNeeded()};
+  window.addEventListener('online',autoUpdateCheck);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')autoUpdateCheck()});
+  if(state.update.auto){setInterval(autoUpdateCheck,5*60*1000);}
+  // Reavalia o estado online/offline periodicamente: se o heartbeat ficar velho,
+  // o cartão passa a "Offline" sozinho, sem precisar de carregar em Atualizar.
+  // Reavalia online/offline periodicamente, mas só re-renderiza se o estado mudou de
+  // facto — evitar reconstruir o DOM à toa (que causava um "piscar" da tela).
+  let __lastOnline=null;
+  setInterval(()=>{ if(!state.authenticated||document.visibilityState==='hidden')return; if(!['overview','status','map'].includes(state.page))return; const on=isDeviceOnline(state.devices[0]); if(on!==__lastOnline){__lastOnline=on;render();} },30000);
+  // Verifica a expiração do plano a cada minuto: se expirar durante o uso, bloqueia já.
+  setInterval(()=>{ if(state.authenticated&&!isSuperAdmin()&&isPlanExpired()){enforcePlan();} },60000);
+});

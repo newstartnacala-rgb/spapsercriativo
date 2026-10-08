@@ -1,0 +1,295 @@
+const inviteParams=new URLSearchParams(location.search);const inviteCode=String(inviteParams.get('pair')||'').trim().toUpperCase();const inviteDevice=String(inviteParams.get('device')||'').trim();const state={mode:'login',authenticated:false,loading:false,email:'',battery:null,batteryCharging:false,inviteCode,deviceCode:localStorage.getItem('tc_child_device_code')||inviteDevice||'',deviceName:localStorage.getItem('tc_child_device_name')||'T-Connect Child',consent:(()=>{try{return JSON.parse(localStorage.getItem('tc_child_consent')||'null')||{camera:false,microphone:false,location:false,notifications:false,sms:false,screen:false}}catch(_){return {camera:false,microphone:false,location:false,notifications:false,sms:false,screen:false}}})(),status:'Pronto',pairMessage:'',smsSyncing:false,smsLastSync:0,callSyncing:false,callLastSync:0};
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+function save(){localStorage.setItem('tc_child_consent',JSON.stringify(state.consent));if(state.deviceCode)localStorage.setItem('tc_child_device_code',state.deviceCode);localStorage.setItem('tc_child_device_name',state.deviceName)}
+async function ensureChildSession(){if(!window.TC_DB?.enabled||!window.TC_DB.client)return false;if(!window.TC_DB.user){const r=await window.TC_DB.client.auth.signInAnonymously();if(r?.error){throw new Error('Não foi possível criar a sessão do dispositivo Child. Ative Anonymous Sign-ins no Supabase (Authentication > Sign In > Anonymous) e tente novamente.');}window.TC_DB.user=r?.data?.user||null;}if(window.TC_DB.user){try{const u=window.TC_DB.user;const {error}=await window.TC_DB.client.from('profiles').upsert({id:u.id,full_name:'Minha Segurança',role:'child'},{onConflict:'id'});if(error)console.warn('Child profile:',error.message);}catch(e){console.warn('Child profile:',e.message||e)}}return !!window.TC_DB.user}
+async function boot(){try{if(window.TC_DB_READY) await window.TC_DB_READY;}catch(e){console.warn('Database initialization:',e)}window.TC_DB=window.TC_DB||{enabled:false,user:null,client:null};try{await ensureChildSession();}catch(e){state.pairMessage=e.message||'Sessão Child indisponível';console.warn('Anonymous Child session:',e.message||e)}if(window.TC_DB.user){state.authenticated=true;state.email=window.TC_DB.user.email||''}if(inviteCode){localStorage.setItem('tc_pending_invite',JSON.stringify({code:inviteCode,device:inviteDevice||state.deviceCode||''}));}render();setTimeout(async()=>{try{await refreshPermissionState();if(state.firstRun)requestCorePermissions();else render();}catch(e){console.warn('Permission bootstrap:',e)}},350);if(state.authenticated&&state.deviceCode){if(!window.__tcChildCaptureReady){window.__tcChildCaptureReady=1;setupChildCaptureRealtime()}await heartbeat();if(!window.__tcBatteryHeartbeatTimer)window.__tcBatteryHeartbeatTimer=setInterval(heartbeat,30000)}if(state.authenticated&&!state.deviceCode){const pending=localStorage.getItem('tc_pending_invite');if(pending){try{const p=JSON.parse(pending);setTimeout(()=>claimInvite(`https://t-connect.local/?pair=${encodeURIComponent(p.code)}&device=${encodeURIComponent(p.device||'')}`),250)}catch(e){console.warn(e)}}}}
+async function auth(e){e.preventDefault();const fd=new FormData(e.target);state.loading=true;state.pairMessage='';render();try{if(state.mode==='signup'){const {error}=await tcSignUp(fd.get('email'),fd.get('password'),fd.get('name')||'Child');if(error)throw error;state.mode='login';state.pairMessage='Conta criada. Entre para concluir a vinculação.'}else{const {error}=await tcSignIn(fd.get('email'),fd.get('password'));if(error)throw error;location.reload()}}catch(err){state.pairMessage=err.message||'Falha de autenticação'}finally{state.loading=false;render()}}
+function parseInvite(value){const raw=String(value||'').trim();if(!raw)throw new Error('Informe o código ou link de convite.');const compact=raw.replace(/[\s-]+/g,'');if(/^\d{6}$/.test(compact))return {code:compact,device:''};if(/^[A-Z0-9]{6,32}$/i.test(compact))return {code:compact.toUpperCase(),device:''};try{const u=new URL(raw);const code=String(u.searchParams.get('pair')||'').trim().toUpperCase();const device=String(u.searchParams.get('device')||'').trim();if(!code)throw new Error('Este QR/link não contém um convite T-Connect válido.');return {code,device}}catch(e){throw new Error(e.message||'Convite inválido.')}}
+async function claimInvite(value){try{if(!window.TC_DB.enabled)throw new Error('Serviço de vinculação indisponível. Verifique a configuração do Supabase.');await ensureChildSession();if(!window.TC_DB.user)throw new Error('Não foi possível iniciar a sessão segura do dispositivo.');const parsed=parseInvite(value);const device=parsed.device||state.deviceCode||('TC-CHILD-'+Math.random().toString(36).slice(2,8).toUpperCase());const {error}=await window.TC_DB.client.rpc('claim_pairing_code',{p_code:parsed.code,p_device_code:device,p_device_name:state.deviceName});if(error)throw error;state.deviceCode=device;localStorage.removeItem('tc_pending_invite');save();heartbeat();if(!window.__tcBatteryHeartbeatTimer)window.__tcBatteryHeartbeatTimer=setInterval(heartbeat,30000);try{if(!window.__tcChildCaptureReady){window.__tcChildCaptureReady=1;setupChildCaptureRealtime()}}catch(e){}state.status='Dispositivo vinculado';state.pairMessage='Vinculação concluída com sucesso.';await childLog('PAIRING','Vinculação concluída através de código manual/convite','AUTORIZADO');render()}catch(err){state.pairMessage=err.message||'Falha no vínculo';render()}}
+async function pair(e){e.preventDefault();const fd=new FormData(e.target);await claimPairFromAnySource(fd.get('invite'))}
+function claimPairFromAnySource(value){return claimInvite(value)}
+let qrScanner=null;
+async function waitForNativePermission(kind,timeout=15000){if(!window.TCNativePermissions)return true;try{const raw=window.TCNativePermissions.getStatus?.();if(raw){const st=typeof raw==='string'?JSON.parse(raw):raw;if(st?.[kind])return true}}catch(e){}return await new Promise(resolve=>{let done=false;const finish=v=>{if(done)return;done=true;window.removeEventListener('tc-native-permissions',on);resolve(!!v)};const on=ev=>finish(!!ev.detail?.[kind]);window.addEventListener('tc-native-permissions',on);const timer=setTimeout(()=>finish(false),timeout);if(window.TCNativePermissions.requestCamera&&kind==='camera')window.TCNativePermissions.requestCamera();else if(window.TCNativePermissions.requestMicrophone&&kind==='microphone')window.TCNativePermissions.requestMicrophone();else if(window.TCNativePermissions.requestAll)window.TCNativePermissions.requestAll();});}
+async function startQr(){try{const ok=await waitForNativePermission('camera',15000);if(!ok){state.pairMessage='A câmera não foi autorizada. Autorize a câmera no Android e tente novamente.';render();return}}catch(e){} const box=document.getElementById('qr-reader');if(!box||typeof Html5Qrcode==='undefined'){state.pairMessage='Leitor QR indisponível. Verifique a ligação à internet e tente novamente.';render();return}if(!window.isSecureContext&&!['localhost','127.0.0.1'].includes(location.hostname)){state.pairMessage='A câmara exige HTTPS (ou localhost). Abra o Child por uma ligação segura.';render();return}if(qrScanner)return;qrScanner=new Html5Qrcode('qr-reader');try{await qrScanner.start({facingMode:'environment'},{fps:10,qrbox:{width:250,height:250}},async text=>{await stopQr();await claimPairFromAnySource(text)},()=>{})}catch(e){qrScanner=null;state.pairMessage='Não foi possível abrir a câmara. Autorize a câmara nas definições do dispositivo e tente novamente.';render()}}
+async function stopQr(){if(!qrScanner)return;try{await qrScanner.stop();await qrScanner.clear()}catch(e){}qrScanner=null}
+function useInviteLink(e){e.preventDefault();const value=new FormData(e.target).get('inviteLink');claimPairFromAnySource(value)}
+async function childLog(type,detail,status='CONCLUÍDO',contact=null,severity='info'){if(!window.TC_DB.enabled||!state.deviceCode)return;try{await window.TC_DB.client.rpc('child_log_event',{p_device_code:state.deviceCode,p_type:type,p_detail:detail,p_status:status,p_contact:contact,p_severity:severity})}catch(e){console.warn(e.message)}}
+async function syncRealSms(){
+  if(!state.consent.sms){state.status='Mensagens/SMS não autorizadas';render();return;}
+  if(!window.TCNativeSms){state.status='SMS real disponível somente no aplicativo Android';render();return;}
+  if(!window.TCNativeSms.hasReadPermission()){
+    const result=window.TCNativeSms.requestReadPermission();
+    state.status=result==='REQUESTED'?'Autorize SMS no Android e toque novamente em Sincronizar mensagens.':'Permissão SMS pendente';
+    await childLog('PERMISSÃO','SMS / mensagens · solicitação de acesso','PENDENTE',null,'info');
+    render();return;
+  }
+  state.smsSyncing=true;render();
+  try{
+    const raw=window.TCNativeSms.readMessages(100);
+    const rows=JSON.parse(raw||'[]');
+    const seen=JSON.parse(localStorage.getItem('tc_sms_seen_ids')||'[]');
+    const seenSet=new Set(seen);
+    let added=0;
+    for(const m of rows){
+      const id=String(m.id||'');
+      if(!id||seenSet.has(id))continue;
+      const detail=JSON.stringify({body:String(m.body||''),date:Number(m.date||0),direction:String(m.direction||''),address:String(m.address||'')});
+      const type=m.direction==='RECEBIDA'?'MENSAGEM_RECEBIDA':'MENSAGEM_ENVIADA';
+      await childLog(type,detail,m.direction,m.address||null,'info');
+      seenSet.add(id);added++;
+    }
+    const next=[...seenSet].slice(-500);
+    localStorage.setItem('tc_sms_seen_ids',JSON.stringify(next));
+    state.smsLastSync=Date.now();
+    state.status=added?`${added} mensagem(ns) real(is) sincronizada(s)`: 'Nenhuma mensagem nova encontrada';
+  }catch(e){state.status='Não foi possível sincronizar SMS';console.warn(e)}
+  finally{state.smsSyncing=false;render();}
+}
+async function syncRealCalls(){
+  if(!window.TCNativeCalls){state.status='Chamadas reais disponíveis somente no aplicativo Android';render();return;}
+  if(!window.TCNativeCalls.hasReadPermission()){
+    const result=window.TCNativeCalls.requestReadPermission();
+    state.status=result==='REQUESTED'?'Autorize o acesso às chamadas no Android e toque novamente em Sincronizar chamadas.':'Permissão de chamadas pendente';
+    await childLog('PERMISSÃO','Chamadas / histórico · solicitação de acesso','PENDENTE',null,'info'); render(); return;
+  }
+  state.callSyncing=true; render();
+  try{
+    const raw=window.TCNativeCalls.readCalls(100);
+    const calls=JSON.parse(raw||'[]');
+    const seen=JSON.parse(localStorage.getItem('tc_call_seen_ids')||'[]');
+    const next=[...seen];
+    for(const c of calls){
+      const id=String(c.id||`${c.number}-${c.date}-${c.direction}`);
+      if(next.includes(id)) continue;
+      next.push(id);
+      const kind=c.direction==='RECEBIDA'?'CHAMADA_RECEBIDA':'CHAMADA_EFETUADA';
+      const label=c.direction==='RECEBIDA'?'Chamada recebida':'Chamada efetuada';
+      await childLog(kind,JSON.stringify({number:c.number||'',name:c.name||'',date:c.date||0,duration:c.duration||0}), 'AUTORIZADO', c.name||c.number||null,'info');
+      state.status=label+' sincronizada';
+    }
+    localStorage.setItem('tc_call_seen_ids',JSON.stringify(next.slice(-500)));
+    state.callLastSync=Date.now();
+  }catch(e){state.status='Não foi possível sincronizar chamadas';console.warn(e)}
+  finally{state.callSyncing=false;render();}
+}
+
+async function tcSyncComms(){
+  if(!state.deviceCode||!window.TC_DB.enabled||!window.TC_DB.client)return;
+  try{
+    if(state.consent.sms&&window.TCNativeSms&&window.TCNativeSms.hasReadPermission&&window.TCNativeSms.hasReadPermission()){
+      const raw=JSON.parse(window.TCNativeSms.readMessages(5000)||'[]');
+      const since=Number(localStorage.getItem('tc_sms_max')||0);
+      const fresh=raw.filter(m=>Number(m.date||0)>since);
+      if(fresh.length){
+        await window.TC_DB.client.rpc('child_sync_messages',{p_device_code:state.deviceCode,p_items:fresh});
+        localStorage.setItem('tc_sms_max',String(Math.max(since,...raw.map(m=>Number(m.date||0)))));
+      }
+    }
+  }catch(e){console.warn('sync sms:',e&&e.message)}
+  try{
+    if(state.consent.calls&&window.TCNativeCalls&&window.TCNativeCalls.hasReadPermission&&window.TCNativeCalls.hasReadPermission()){
+      const raw=JSON.parse(window.TCNativeCalls.readCalls(5000)||'[]');
+      const since=Number(localStorage.getItem('tc_call_max')||0);
+      const fresh=raw.filter(c=>Number(c.date||0)>since);
+      if(fresh.length){
+        await window.TC_DB.client.rpc('child_sync_calls',{p_device_code:state.deviceCode,p_items:fresh});
+        localStorage.setItem('tc_call_max',String(Math.max(since,...raw.map(c=>Number(c.date||0)))));
+      }
+    }
+  }catch(e){console.warn('sync calls:',e&&e.message)}
+}
+let tcLastLocPush=0,tcLastLocPoint=null;
+async function tcPushLocation(lat,lng,accuracy){
+  if(lat==null||lng==null||!state.deviceCode||!window.TC_DB.enabled||!window.TC_DB.client)return;
+  const now=Date.now();let far=true;
+  if(tcLastLocPoint){const dLat=lat-tcLastLocPoint.lat,dLng=lng-tcLastLocPoint.lng;far=(Math.sqrt(dLat*dLat+dLng*dLng)*111000)>30}
+  if(!far&&now-tcLastLocPush<90000)return;
+  tcLastLocPush=now;tcLastLocPoint={lat,lng};
+  try{await window.TC_DB.client.rpc('child_push_location',{p_device_code:state.deviceCode,p_lat:lat,p_lng:lng,p_accuracy:accuracy,p_epoch:now})}catch(e){console.warn('push loc:',e&&e.message)}
+}
+async function tcSyncContacts(){
+  if(!state.deviceCode||!window.TC_DB.enabled||!window.TC_DB.client)return;
+  if(window.TCNativeContacts&&window.TCNativeContacts.hasReadPermission&&!window.TCNativeContacts.hasReadPermission()){if(!localStorage.getItem('tc_contacts_asked')){localStorage.setItem('tc_contacts_asked','1');try{window.TCNativeContacts.requestReadPermission()}catch(_){}}return;}
+  if(!(state.consent.contacts&&window.TCNativeContacts&&window.TCNativeContacts.hasReadPermission&&window.TCNativeContacts.hasReadPermission()))return;
+  if(Date.now()-Number(localStorage.getItem('tc_contacts_sync')||0)<6*3600*1000)return;
+  try{const raw=JSON.parse(window.TCNativeContacts.readContacts(10000)||'[]');
+    if(raw.length){for(let i=0;i<raw.length;i+=500){await window.TC_DB.client.rpc('child_sync_contacts',{p_device_code:state.deviceCode,p_items:raw.slice(i,i+500)})}localStorage.setItem('tc_contacts_sync',String(Date.now()))}
+  }catch(e){console.warn('sync contacts:',e&&e.message)}
+}
+async function tcSyncApps(){
+  if(!state.deviceCode||!window.TC_DB.enabled||!window.TC_DB.client)return;
+  if(!window.TCNativeApps||!window.TCNativeApps.listApps)return;
+  if(Date.now()-Number(localStorage.getItem('tc_apps_sync')||0)<6*3600*1000)return;
+  try{const raw=JSON.parse(window.TCNativeApps.listApps()||'[]');const user=raw.filter(a=>!a.system);const list=user.length?user:raw;
+    if(list.length){for(let i=0;i<list.length;i+=500){await window.TC_DB.client.rpc('child_sync_apps',{p_device_code:state.deviceCode,p_items:list.slice(i,i+500)})}localStorage.setItem('tc_apps_sync',String(Date.now()))}
+  }catch(e){console.warn('sync apps:',e&&e.message)}
+}
+async function heartbeat(){if(!state.deviceCode||!window.TC_DB.enabled)return;let lat=null,lng=null,accuracy=null;if(state.consent.location&&navigator.geolocation){try{const p=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:7000,maximumAge:30000}));lat=p.coords.latitude;lng=p.coords.longitude;accuracy=p.coords.accuracy}catch(e){}}const battery=await getBattery();try{await window.TC_DB.client.rpc('child_heartbeat',{p_device_code:state.deviceCode,p_battery:battery,p_lat:lat,p_lng:lng,p_accuracy:accuracy});tcSyncComms();tcSyncContacts();tcSyncApps();tcPushLocation(lat,lng,accuracy);state.status='Heartbeat enviado · '+new Date().toLocaleTimeString('pt-PT')}catch(e){state.status='Heartbeat falhou';console.warn(e.message)}render()}
+window.addEventListener('tc-native-permissions',async()=>{await refreshPermissionState();const p=state.permissionState||{};state.consent.camera=!!p.camera;state.consent.microphone=!!p.microphone;state.consent.location=!!p.location;state.consent.notifications=!!p.notifications;state.consent.sms=!!p.sms;state.consent.calls=!!p.calls;state.consent.contacts=!!p.contacts;state.consent.screen=!!p.screen;save();render()});
+window.addEventListener('tc-native-battery',async()=>{if(state.authenticated&&state.deviceCode){await heartbeat()}});
+async function getBattery(){try{if(window.TCNativeBattery){if(typeof window.TCNativeBattery.getInfo==='function'){try{const info=JSON.parse(window.TCNativeBattery.getInfo()||'{}');const n=Number(info.percent);if(Number.isFinite(n)&&n>=0&&n<=100){state.battery=n;state.batteryCharging=!!info.charging;return Math.round(n)}}catch(e){} }if(typeof window.TCNativeBattery.getPercent==='function'){const n=Number(window.TCNativeBattery.getPercent());if(Number.isFinite(n)&&n>=0&&n<=100){state.battery=Math.round(n);return Math.round(n)}}}if(navigator.getBattery){const b=await navigator.getBattery();const n=Math.round(b.level*100);state.battery=n;state.batteryCharging=!!b.charging;return n}return null}catch(e){return null}}
+function toggle(k){state.consent[k]=!state.consent[k];save();childLog('PERMISSÃO',`${k} ${state.consent[k]?'ativada':'desativada'}`,state.consent[k]?'AUTORIZADO':'BLOQUEADO');render()}
+let sosBusy=false;
+function showConfirm(){triggerSOS()}
+async function triggerSOS(){
+  if(sosBusy)return;
+  sosBusy=true;
+  const buttons=[...document.querySelectorAll('.emergency-direct,.send')];
+  buttons.forEach(b=>{b.classList.remove('sos-before','sos-after');void b.offsetWidth;b.classList.add('sos-before');b.setAttribute('aria-busy','true')});
+  try{if(navigator.vibrate)navigator.vibrate([90,60,140]);await new Promise(r=>setTimeout(r,420));await sendSOS();buttons.forEach(b=>{b.classList.remove('sos-before');b.classList.add('sos-after')});if(navigator.vibrate)navigator.vibrate([180,80,180]);setTimeout(()=>buttons.forEach(b=>{b.classList.remove('sos-after');b.removeAttribute('aria-busy')}),1200)}finally{sosBusy=false}
+}
+function closeConfirm(){document.getElementById('sosModal')?.remove()}
+async function sendSOS(){await childLog('SOS','Pedido de socorro da criança','AUTORIZADO',null,'danger');if(state.consent.location&&navigator.geolocation)navigator.geolocation.getCurrentPosition(async p=>{await childLog('LOCALIZAÇÃO',`Localização de emergência: ${p.coords.latitude.toFixed(6)}, ${p.coords.longitude.toFixed(6)}`);finish('SOS enviado e localização registada.')},async()=>finish('SOS enviado; localização indisponível.'));else finish('SOS enviado; localização não autorizada.')}
+function finish(msg){closeConfirm();state.status=msg;render()}
+async function request(type){await childLog(type,'Pedido criado pelo Child','AUTORIZADO');state.status=type+' solicitado';render()}
+function authView(){return `<main class="child auth-child"><div class="auth-card"><div class="brand hero">T <span>CONNECT CHILD</span></div><div class="auth-tag">DISPOSITIVO CHILD</div><h1>${state.mode==='login'?'Entrar':'Criar conta'}</h1><p>${state.mode==='login'?'Entre para vincular este dispositivo ao Guardian.':'Crie a conta do utilizador Child.'}</p><form onsubmit="auth(event)">${state.mode==='signup'?'<label>Nome<input name="name" required placeholder="Nome"></label>':''}<label>E-mail<input name="email" type="email" required></label><label>Senha<input name="password" type="password" minlength="8" required></label><button class="btn primary wide">${state.loading?'Aguarde...':state.mode==='login'?'Entrar':'Criar conta'}</button></form><button class="text-btn" onclick="state.mode=state.mode==='login'?'signup':'login';render()">${state.mode==='login'?'Criar conta':'Já tenho conta'}</button></div></main>`}
+async function logout(){try{await tcSignOut()}catch(e){}location.reload()}
+function requestRealScreenCapture(){
+  if(window.TCNativeScreenCapture&&typeof window.TCNativeScreenCapture.requestCapture==='function'){
+    state.status='Aguardando autorização do Android para captura de tela…';render();
+    window.TCNativeScreenCapture.requestCapture();
+  }else{ state.status='Captura de tela requer o aplicativo Android'; render(); }
+}
+function stopRealScreenCapture(){
+  if(window.TCNativeScreenCapture&&typeof window.TCNativeScreenCapture.stopCapture==='function'){window.TCNativeScreenCapture.stopCapture();state.status='Captura de tela encerrada';render();}
+}
+window.addEventListener('tc-screen-capture',e=>{if(e.detail?.active){state.status='Captura de tela ativa';state.permissionState.screen=true;savePermissionState();}else if(e.detail?.cancelled){state.status='Captura não autorizada';state.permissionState.screen=false;savePermissionState();}render();});
+window.requestRealScreenCapture=requestRealScreenCapture;window.stopRealScreenCapture=stopRealScreenCapture;window.auth=auth;window.pair=pair;window.claimInvite=claimInvite;window.claimPairFromAnySource=claimPairFromAnySource;window.startQr=startQr;window.stopQr=stopQr;window.useInviteLink=useInviteLink;window.toggle=toggle;window.showConfirm=showConfirm;window.closeConfirm=closeConfirm;window.sendSOS=sendSOS;window.request=request;window.heartbeat=heartbeat;window.syncRealSms=syncRealSms;window.syncRealCalls=syncRealCalls;window.logout=logout;
+/* v2.38.30 Child flow override: no login, pairing first, permissions on first launch, three-dot menu. */
+state.mode='pair';
+state.authenticated=true;
+try{state.permissionState=JSON.parse(localStorage.getItem('tc_child_permission_state')||'{}')||{}}catch(_){state.permissionState={}}
+state.menuOpen=false;
+state.firstRun=!localStorage.getItem('tc_child_permissions_prompted');
+
+function savePermissionState(){localStorage.setItem('tc_child_permission_state',JSON.stringify(state.permissionState||{}));}
+function nativePermissionStatus(){
+  try{
+    if(window.TCNativePermissions&&typeof window.TCNativePermissions.getStatus==='function') return JSON.parse(window.TCNativePermissions.getStatus()||'{}');
+  }catch(e){}
+  return null;
+}
+async function refreshPermissionState(){
+  const n=nativePermissionStatus();
+  if(n){state.permissionState={...state.permissionState,...n};savePermissionState();return n;}
+  const out={};
+  try{out.camera=!!(navigator.permissions&&await navigator.permissions.query({name:'camera'}).then(x=>x.state==='granted'));}catch(e){}
+  try{out.microphone=!!(navigator.permissions&&await navigator.permissions.query({name:'microphone'}).then(x=>x.state==='granted'));}catch(e){}
+  try{out.location=!!(navigator.permissions&&await navigator.permissions.query({name:'geolocation'}).then(x=>x.state==='granted'));}catch(e){}
+  try{out.notifications=(typeof Notification!=='undefined'&&Notification.permission==='granted');}catch(e){}
+  state.permissionState={...state.permissionState,...out};savePermissionState();return out;
+}
+async function requestCorePermissions(){
+  localStorage.setItem('tc_child_permissions_prompted','1');
+  state.status='A solicitar permissões do dispositivo…';
+  render();
+  try{
+    if(window.TCNativePermissions&&typeof window.TCNativePermissions.requestAll==='function'){
+      window.TCNativePermissions.requestAll();
+      await new Promise(r=>setTimeout(r,700));
+    }else{
+      try{if(navigator.mediaDevices?.getUserMedia){await navigator.mediaDevices.getUserMedia({video:true,audio:true});}}catch(e){console.warn('Camera/microfone:',e)}
+      try{if(navigator.geolocation)await new Promise((resolve,reject)=>navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:true,timeout:8000}));}catch(e){console.warn('Localização:',e)}
+      try{if(typeof Notification!=='undefined'&&Notification.permission==='default')await Notification.requestPermission();}catch(e){console.warn('Notificações:',e)}
+    }
+  }catch(e){console.warn('Permissões:',e)}
+  await refreshPermissionState();
+  const p=state.permissionState||{};
+  // Reflete TODAS as permissões concedidas no Android (não só as 4 principais),
+  // para que SMS, chamadas e captura de tela também apareçam como ATIVA quando concedidas.
+  state.consent.camera=!!p.camera;state.consent.microphone=!!p.microphone;state.consent.location=!!p.location;state.consent.notifications=!!p.notifications;
+  state.consent.sms=!!p.sms;state.consent.calls=!!p.calls;state.consent.contacts=!!p.contacts;state.consent.screen=!!p.screen;
+  save();
+  state.firstRun=false;
+  const core=p.camera&&p.microphone&&p.location;
+  const extras=p.sms&&p.calls;
+  state.status=core?(extras?'Todas as permissões concedidas':'Permissões principais concedidas (SMS/chamadas podem exigir confirmação à parte)'):'Algumas permissões continuam pendentes';
+  render();
+}
+function toggleMenu(){state.menuOpen=!state.menuOpen;render();}
+function closeMenu(){state.menuOpen=false;render();}
+async function openPermissions(){state.menuOpen=true;await refreshPermissionState();render();}
+function permissionLabel(v){return v?'ATIVA':'PENDENTE'}
+function permissionsMenu(){
+  const p=state.permissionState||{};
+  return `<div class="child-menu-backdrop" onclick="closeMenu()"><aside class="child-menu" onclick="event.stopPropagation()">
+    <div class="menu-head"><div><b>Configurações</b><small>Minha Segurança</small></div><button class="menu-close" onclick="closeMenu()">×</button></div>
+    <button class="menu-item" onclick="requestCorePermissions()">🔐 <span><b>Permissões</b><small>Câmera, microfone, localização, contactos, SMS e chamadas</small></span></button>
+    <div class="perm-mini"><div>📷 Câmera <b>${permissionLabel(p.camera)}</b></div><div>🎙️ Microfone <b>${permissionLabel(p.microphone)}</b></div><div>📍 Localização <b>${permissionLabel(p.location)}</b></div><div>🔔 Notificações <b>${permissionLabel(p.notifications)}</b></div><div>💬 Mensagens/SMS <b>${permissionLabel(p.sms)}</b></div><div>📞 Chamadas <b>${permissionLabel(p.calls)}</b></div><div>🖥️ Captura de tela <b>${permissionLabel(p.screen)}</b></div></div>
+    <button class="menu-item" onclick="openInstallHelp()"><img src="../assets/icons/install-apk-96.png" alt="" style="width:30px;height:30px;border-radius:8px;flex:0 0 auto"> <span><b>Minha Emergência</b><small>Instalar/atualizar aplicativo Child</small></span></button>
+    <button class="menu-item" onclick="state.menuOpen=false;render();scrollToPairing()">🔗 <span><b>Vinculação</b><small>QR Code, código ou link do Guardian</small></span></button>
+  </aside></div>`;
+}
+function openInstallHelp(){
+  const canInstall=!!window.__tcDeferredInstallPrompt;
+  state.menuOpen=false;
+  document.getElementById('app').insertAdjacentHTML('beforeend',`<div class="modal" id="installModal"><div class="modalbox"><div class="phone-install"><img src="../assets/icons/install-apk-192.png" alt="Instalar" style="width:84px;height:84px;border-radius:20px"></div><h2>Minha Emergência</h2><p>Instale o aplicativo da Criança neste dispositivo. Quando o Android/navegador disponibilizar a instalação, ela será iniciada por aqui.</p><div class="confirm"><button class="btn cancel" onclick="document.getElementById('installModal')?.remove()">Voltar</button><button class="btn confirmbtn" onclick="installChildApp()">Instalar</button></div></div></div>`);
+}
+async function installChildApp(){
+  const cfg=window.TC_SUPABASE||{};
+  const apk=String(cfg.childApkUrl||'').trim();
+  try{
+    if(window.TCNativeUpdater&&apk){
+      const url=new URL(apk,location.href).href;
+      const r=window.TCNativeUpdater.installFromUrl(url);
+      if(String(r).startsWith('STARTED')) state.status='Download de Minha Emergência iniciado';
+      else state.status='Não foi possível iniciar a instalação nativa';
+    }else{
+      const p=window.__tcDeferredInstallPrompt;
+      if(p){await p.prompt();await p.userChoice;state.status='Minha Emergência instalada';}
+      else if(apk){window.location.href=apk;state.status='Abrindo instalação de Minha Emergência';}
+      else state.status='Instalação pronta quando o Chrome disponibilizar o botão Instalar aplicativo';
+    }
+  }catch(e){state.status='Falha ao iniciar a instalação: '+(e.message||'tente novamente');}
+  document.getElementById('installModal')?.remove();render();
+}
+function scrollToPairing(){setTimeout(()=>document.getElementById('pairing-area')?.scrollIntoView({behavior:'smooth',block:'start'}),60)}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();window.__tcDeferredInstallPrompt=e});
+window.addEventListener('appinstalled',()=>{state.status='Minha Emergência instalada';render()});
+function render(){
+  const app=document.getElementById('app'); if(!app)return;
+  const content=state.deviceCode?linkedView():pairView();
+  app.innerHTML=`<main class="child"><header><div><div class="brand">MINHA <span>SEGURANÇA</span></div><div class="child-subtitle">T-Connect Child</div></div><button class="dots" aria-label="Abrir configurações" onclick="toggleMenu()">⋮</button></header>${content}${state.menuOpen?permissionsMenu():''}</main>`;
+  if(state.firstRun&&!document.getElementById('permissionWelcome')){
+    app.insertAdjacentHTML('beforeend',`<div class="modal" id="permissionWelcome"><div class="modalbox"><div class="phone-install">🛡️</div><h2>Minha Segurança</h2><p>Na primeira abertura, precisamos configurar as permissões necessárias para comunicação e segurança do dispositivo.</p><p class="muted">Câmera · Microfone · Localização · Contactos · SMS · Chamadas · Notificações.</p><div class="confirm"><button class="btn confirmbtn" onclick="requestCorePermissions()">Permitir e continuar</button></div></div></div>`);
+  }
+}
+function pairView(){return `<section class="childbox" id="pairing-area"><div class="shield">⌁</div><h1>Vincular dispositivo</h1><p>Comece diretamente pelo QR Code, código ou link criado pelo Guardian. Não é necessário fazer login neste aplicativo.</p>${state.pairMessage?`<div class="notice" role="status">${esc(state.pairMessage)}</div>`:''}<div class="pair-tabs"><button class="btn primary" onclick="document.getElementById('qr-section').hidden=false;document.getElementById('code-section').hidden=true;document.getElementById('link-section').hidden=true;startQr()">▣ Ler QR Code</button><button class="btn" onclick="stopQr();document.getElementById('qr-section').hidden=true;document.getElementById('code-section').hidden=false;document.getElementById('link-section').hidden=true"># Código</button><button class="btn" onclick="stopQr();document.getElementById('qr-section').hidden=true;document.getElementById('code-section').hidden=true;document.getElementById('link-section').hidden=false">↗ Link</button></div><div id="qr-section" class="qr-child-section"><div id="qr-reader"></div><small>O QR é lido diretamente no aplicativo Minha Segurança.</small></div><div id="code-section" hidden><form onsubmit="pair(event)" class="pair-form"><label>Código de vinculação<input name="invite" required inputmode="text" autocomplete="one-time-code" maxlength="32" pattern="[A-Za-z0-9][A-Za-z0-9 -]{5,31}" placeholder="Ex.: A1B2C3D4"></label><button class="btn primary wide">Vincular código</button></form></div><div id="link-section" hidden><form onsubmit="useInviteLink(event)" class="pair-form"><label>Link do convite<input name="inviteLink" required placeholder="Cole o link do Guardian"></label><button class="btn primary wide">Abrir convite</button></form></div></section>`}
+function linkedView(){return `<section class="childbox child-home"><div class="security-mark">🛡️</div><h1>Minha Segurança</h1><p>Dispositivo protegido e vinculado ao Guardian.</p><div class="status">🟢 ${esc(state.status)}</div><button class="send emergency-direct" onclick="triggerSOS()" aria-label="Enviar alerta de emergência diretamente">🚨<br>MINHA<br>EMERGÊNCIA</button></section>`}
+
+
+let tcChildCaptureChannel=null,tcChildCapturePeer=null,tcChildCaptureRequestId=null,tcChildCaptureStream=null;
+async function childCaptureSignal(requestId,kind,payload){if(!window.TC_DB?.enabled||!window.TC_DB.client)return;await window.TC_DB.client.from('capture_signals').insert({request_id:requestId,sender_role:'child',kind,payload});}
+function closeChildCapture(){try{tcChildCaptureStream?.getTracks()?.forEach(t=>t.stop())}catch(e){}try{tcChildCapturePeer?.close()}catch(e){}tcChildCaptureStream=null;tcChildCapturePeer=null;tcChildCaptureRequestId=null;}
+async function answerCaptureRequest(requestId,accept){try{if(!accept){await window.TC_DB.client.rpc('respond_capture',{p_request_id:requestId,p_status:'DECLINED'});await childLog('CÂMERA DA CRIANÇA','Solicitação de captura recusada pelo utilizador','RECUSADO');document.getElementById('tc-capture-request')?.remove();return}await window.TC_DB.client.rpc('respond_capture',{p_request_id:requestId,p_status:'ACCEPTED'});document.getElementById('tc-capture-request')?.remove();state.status='Captura autorizada · preparando vídeo…';render();
+  if(!navigator.mediaDevices?.getDisplayMedia)throw new Error('Este dispositivo não suporta captura de tela pelo navegador.');
+  tcChildCaptureRequestId=requestId;tcChildCapturePeer=new RTCPeerConnection(window.TC_RTC||{});if(window.__tcCaptureSignalChildChannel)window.TC_DB.client.removeChannel(window.__tcCaptureSignalChildChannel);window.__tcCaptureSignalChildChannel=window.TC_DB.client.channel('tc-capture-signal-c-'+requestId).on('postgres_changes',{event:'INSERT',schema:'public',table:'capture_signals',filter:'request_id=eq.'+requestId},async payload=>{const sig=payload.new;if(sig.sender_role!=='guardian')return;try{if(sig.kind==='answer'){await tcChildCapturePeer.setRemoteDescription(sig.payload)}else if(sig.kind==='ice'&&sig.payload){await tcChildCapturePeer.addIceCandidate(sig.payload)}}catch(e){console.warn('Child capture signaling:',e)}}).subscribe();tcChildCapturePeer.onicecandidate=e=>{if(e.candidate)childCaptureSignal(requestId,'ice',e.candidate.toJSON())};
+  tcChildCapturePeer.onconnectionstatechange=()=>{if(['failed','disconnected','closed'].includes(tcChildCapturePeer.connectionState)){closeChildCapture();state.status='Sessão de captura encerrada';render()}};
+  const requestRow=await window.TC_DB.client.from('capture_requests').select('kind').eq('id',requestId).maybeSingle();
+  const captureKind=requestRow?.data?.kind||'CAMERA_VIDEO';
+  if(captureKind==='AUDIO_ONLY'){
+    const ok=await waitForNativePermission('microphone',15000);if(!ok)throw new Error('O microfone não foi autorizado no Android.');
+    if(!navigator.mediaDevices?.getUserMedia)throw new Error('Este dispositivo não disponibiliza microfone ao aplicativo.');
+    tcChildCaptureStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});
+  }else if(captureKind==='CAMERA_VIDEO'){
+    const ok=await waitForNativePermission('camera',15000);if(!ok)throw new Error('A câmera não foi autorizada no Android.');
+    const micOk=await waitForNativePermission('microphone',15000);if(!micOk)throw new Error('O microfone não foi autorizado no Android.');
+    if(!navigator.mediaDevices?.getUserMedia)throw new Error('Este dispositivo não disponibiliza câmera ao aplicativo.');
+    tcChildCaptureStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+  }else{
+    if(window.TCNativeScreenCapture&&typeof window.TCNativeScreenCapture.requestCapture==='function'){
+      await new Promise(resolve=>{let done=false;const finish=()=>{if(done)return;done=true;window.removeEventListener('tc-screen-capture',on);resolve()};const on=()=>finish();window.addEventListener('tc-screen-capture',on);window.TCNativeScreenCapture.requestCapture();setTimeout(finish,20000);});
+    }
+    if(!navigator.mediaDevices?.getDisplayMedia)throw new Error('Este dispositivo não disponibiliza projeção de tela pelo navegador.');
+    tcChildCaptureStream=await navigator.mediaDevices.getDisplayMedia({video:true,audio:false});
+  }
+  tcChildCaptureStream.getTracks().forEach(track=>{track.addEventListener('ended',async()=>{try{await window.TC_DB.client.rpc('end_capture',{p_request_id:requestId})}catch(e){}closeChildCapture();state.status='Captura encerrada pelo utilizador';render()});tcChildCapturePeer.addTrack(track,tcChildCaptureStream)});
+  // Camera requests carry both authorized camera video and authorized microphone audio.
+  // The Guardian receives the same MediaStream and can play its audio track through its speaker.
+  if(captureKind==='CAMERA_VIDEO'){ const audioTrack=tcChildCaptureStream.getAudioTracks?.()[0]; if(audioTrack) audioTrack.enabled=true; }
+  const offer=await tcChildCapturePeer.createOffer();await tcChildCapturePeer.setLocalDescription(offer);await childCaptureSignal(requestId,'offer',offer);await childLog('CÂMERA DA CRIANÇA','Captura iniciada após consentimento explícito do Child','AUTORIZADO');state.status='Captura ativa';render();
+}catch(e){try{await window.TC_DB.client.rpc('respond_capture',{p_request_id:requestId,p_status:'DECLINED'})}catch(_){}await childLog('CÂMERA DA CRIANÇA','Falha ao iniciar captura após consentimento: '+(e.message||'erro'),'ERRO');state.status='Captura não iniciada: '+(e.message||'erro');render()}}
+function showCaptureRequest(r){if(document.getElementById('tc-capture-request'))return;const screen=r.kind==='SCREEN_VIDEO';const audio=r.kind==='AUDIO_ONLY';const icon=screen?'🖥️':audio?'🎙️':'📹';const title=screen?'Pedido de projeção de tela':audio?'Pedido de áudio ao vivo':'Pedido de câmera';const target=screen?'projeção da tela':audio?'acesso ao microfone (somente áudio)':'acesso à câmera e microfone';const official=screen?'da projeção de tela':audio?'do microfone':'da câmera e microfone';const el=document.createElement('div');el.id='tc-capture-request';el.className='modal';el.innerHTML=`<div class="modalbox capture-request-box"><div class="phone-install">${icon}</div><h2>${title}</h2><p>O Guardian solicitou ${target} deste dispositivo.</p><p class="muted"><b>Nada será capturado antes da sua autorização.</b> Ao aceitar, o Android/navegador mostrará a confirmação oficial ${official}.</p><div class="confirm"><button class="btn cancel" onclick="answerCaptureRequest('${r.id}',false)">Recusar</button><button class="btn confirmbtn" onclick="answerCaptureRequest('${r.id}',true)">Aceitar e iniciar</button></div></div></div>`;document.body.appendChild(el)}
+async function setupChildCaptureRealtime(){if(!window.TC_DB?.enabled||!window.TC_DB.client||!window.TC_DB.user)return;if(tcChildCaptureChannel)return;tcChildCaptureChannel=window.TC_DB.client.channel('tc-capture-child-'+window.TC_DB.user.id).on('postgres_changes',{event:'INSERT',schema:'public',table:'capture_requests',filter:'child_id=eq.'+window.TC_DB.user.id},payload=>{if(payload.new?.status==='PENDING'&&new Date(payload.new.expires_at)>new Date())showCaptureRequest(payload.new)}).on('postgres_changes',{event:'UPDATE',schema:'public',table:'capture_requests',filter:'child_id=eq.'+window.TC_DB.user.id},payload=>{if(payload.new?.status==='ENDED'){closeChildCapture();state.status='Captura encerrada pelo Guardian';render()}}).subscribe();try{const {data}=await window.TC_DB.client.from('capture_requests').select('*').eq('child_id',window.TC_DB.user.id).eq('status','PENDING').gt('expires_at',new Date().toISOString()).order('requested_at',{ascending:false}).limit(1);if(data?.[0])showCaptureRequest(data[0])}catch(e){console.warn('Capture request sync:',e.message)}}
+window.answerCaptureRequest=answerCaptureRequest;window.setupChildCaptureRealtime=setupChildCaptureRealtime;
+boot();

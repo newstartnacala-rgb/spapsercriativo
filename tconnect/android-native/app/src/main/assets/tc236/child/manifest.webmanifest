@@ -1,0 +1,37 @@
+{
+  "name": "Minha Emergência — T-Connect Child",
+  "short_name": "Minha Emergência",
+  "id": "/child/",
+  "description": "Aplicativo Child do T-Connect para segurança e emergência.",
+  "lang": "pt-MZ",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone"
+  ],
+  "prefer_related_applications": false,
+  "orientation": "portrait",
+  "background_color": "#06101b",
+  "theme_color": "#06101b",
+  "categories": [
+    "safety",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "../assets/icons/minha-emergencia-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "../assets/icons/minha-emergencia-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

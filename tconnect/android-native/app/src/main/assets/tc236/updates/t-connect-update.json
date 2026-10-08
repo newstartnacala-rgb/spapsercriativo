@@ -1,0 +1,20 @@
+{
+  "version": "2.39.5",
+  "date": "2026-10-03",
+  "released_at": "2026-10-03T12:00:00+02:00",
+  "title": "Ícones distintos e dois APKs (Guardian e Child)",
+  "description": "Novos ícones (SOS da Criança e instalação) e separação do Android em dois aplicativos independentes.",
+  "changes": [
+    "Novo ícone da Criança: botão SOS vermelho, distinto do Guardian.",
+    "Novo ícone de instalação (verde) no menu e no modal da Criança.",
+    "Android dividido em dois APKs: Guardian e Minha Emergência.",
+    "Os dois aplicativos podem ser instalados ao mesmo tempo."
+  ],
+  "releaseNotes": [
+    "Launcher com ícone próprio por aplicativo (SOS / escudo-T azul).",
+    "Corrigido o build.gradle.kts (bloco dependencies fora de android{})."
+  ],
+  "changelog": [
+    "Ver CHANGELOG-v2.39.5.md"
+  ]
+}

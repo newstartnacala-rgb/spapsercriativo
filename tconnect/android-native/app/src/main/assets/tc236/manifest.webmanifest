@@ -1,0 +1,38 @@
+{
+  "name": "T-Connect — Segurança em Tempo Real",
+  "short_name": "T-Connect",
+  "id": "/t-connect/",
+  "description": "T Connect — plataforma Web instalável para Guardian e Child.",
+  "lang": "pt-MZ",
+  "dir": "ltr",
+  "start_url": "/guardian/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone"
+  ],
+  "prefer_related_applications": false,
+  "orientation": "portrait",
+  "background_color": "#06101b",
+  "theme_color": "#06101b",
+  "categories": [
+    "utilities",
+    "lifestyle"
+  ],
+  "icons": [
+    {
+      "src": "assets/icons/tconnect-logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icons/tconnect-logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "version": "2.39.5"
+}
