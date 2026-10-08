@@ -74,25 +74,37 @@ alter table public.pairing_codes enable row level security;
 alter table public.activity_events enable row level security;
 
 drop policy if exists "profiles own" on public.profiles;
+drop policy if exists "profiles own" on public.profiles;
 create policy "profiles own" on public.profiles for select using (auth.uid() = id);
+drop policy if exists "profiles insert own" on public.profiles;
 create policy "profiles insert own" on public.profiles for insert with check (auth.uid() = id);
+drop policy if exists "profiles update own" on public.profiles;
 create policy "profiles update own" on public.profiles for update using (auth.uid() = id);
 
 drop policy if exists "devices own" on public.devices;
+drop policy if exists "devices guardian own" on public.devices;
 create policy "devices guardian own" on public.devices for select using (auth.uid() = owner_id);
+drop policy if exists "devices child own" on public.devices;
 create policy "devices child own" on public.devices for select using (auth.uid() = child_id);
+drop policy if exists "devices guardian write" on public.devices;
 create policy "devices guardian write" on public.devices for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
 
 drop policy if exists "guardian child own" on public.guardian_children;
+drop policy if exists "guardian child own" on public.guardian_children;
 create policy "guardian child own" on public.guardian_children for select using (auth.uid() = guardian_id or auth.uid() = child_id);
+drop policy if exists "guardian child guardian write" on public.guardian_children;
 create policy "guardian child guardian write" on public.guardian_children for all using (auth.uid() = guardian_id) with check (auth.uid() = guardian_id);
 
 drop policy if exists "pairing guardian read" on public.pairing_codes;
+drop policy if exists "pairing guardian read" on public.pairing_codes;
 create policy "pairing guardian read" on public.pairing_codes for select using (auth.uid() = guardian_id);
+drop policy if exists "pairing guardian insert" on public.pairing_codes;
 create policy "pairing guardian insert" on public.pairing_codes for insert with check (auth.uid() = guardian_id);
 
 drop policy if exists "events guardian read" on public.activity_events;
+drop policy if exists "events guardian read" on public.activity_events;
 create policy "events guardian read" on public.activity_events for select using (auth.uid() = guardian_id);
+drop policy if exists "events guardian insert" on public.activity_events;
 create policy "events guardian insert" on public.activity_events for insert with check (auth.uid() = guardian_id);
 
 create or replace function public.handle_new_user()
@@ -105,6 +117,7 @@ begin
 end;
 $$;
 
+drop trigger if exists on_auth_user_created on auth.users;
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created after insert on auth.users for each row execute procedure public.handle_new_user();
 
@@ -177,8 +190,8 @@ $$;
 
 grant execute on function public.child_log_event(text,text,text,text,text,text) to authenticated;
 
-alter publication supabase_realtime add table public.activity_events;
-alter publication supabase_realtime add table public.devices;
+do $$ begin alter publication supabase_realtime add table public.activity_events; exception when duplicate_object then null; when undefined_table then null; end $$;
+do $$ begin alter publication supabase_realtime add table public.devices; exception when duplicate_object then null; when undefined_table then null; end $$;
 
 
 -- T-Connect software releases / update manifest
@@ -195,6 +208,7 @@ create table if not exists public.app_releases (
   created_at timestamptz not null default now()
 );
 alter table public.app_releases enable row level security;
+drop policy if exists "Public can read published releases" on public.app_releases;
 drop policy if exists "Public can read published releases" on public.app_releases;
 create policy "Public can read published releases" on public.app_releases for select using (is_published = true);
 
@@ -218,11 +232,15 @@ create index if not exists capture_requests_child_idx on public.capture_requests
 create index if not exists capture_requests_guardian_idx on public.capture_requests(guardian_id,status,requested_at desc);
 alter table public.capture_requests enable row level security;
 drop policy if exists "capture guardian read" on public.capture_requests;
+drop policy if exists "capture guardian read" on public.capture_requests;
 create policy "capture guardian read" on public.capture_requests for select using (auth.uid()=guardian_id);
+drop policy if exists "capture guardian insert" on public.capture_requests;
 drop policy if exists "capture guardian insert" on public.capture_requests;
 create policy "capture guardian insert" on public.capture_requests for insert with check (auth.uid()=guardian_id);
 drop policy if exists "capture child read" on public.capture_requests;
+drop policy if exists "capture child read" on public.capture_requests;
 create policy "capture child read" on public.capture_requests for select using (auth.uid()=child_id);
+drop policy if exists "capture child update" on public.capture_requests;
 drop policy if exists "capture child update" on public.capture_requests;
 create policy "capture child update" on public.capture_requests for update using (auth.uid()=child_id) with check (auth.uid()=child_id);
 
@@ -237,7 +255,9 @@ create table if not exists public.capture_signals (
 create index if not exists capture_signals_request_idx on public.capture_signals(request_id,created_at);
 alter table public.capture_signals enable row level security;
 drop policy if exists "capture signals guardian" on public.capture_signals;
+drop policy if exists "capture signals guardian" on public.capture_signals;
 create policy "capture signals guardian" on public.capture_signals for all using (exists(select 1 from public.capture_requests r where r.id=request_id and r.guardian_id=auth.uid())) with check (exists(select 1 from public.capture_requests r where r.id=request_id and r.guardian_id=auth.uid()));
+drop policy if exists "capture signals child" on public.capture_signals;
 drop policy if exists "capture signals child" on public.capture_signals;
 create policy "capture signals child" on public.capture_signals for all using (exists(select 1 from public.capture_requests r where r.id=request_id and r.child_id=auth.uid())) with check (exists(select 1 from public.capture_requests r where r.id=request_id and r.child_id=auth.uid()));
 
@@ -269,8 +289,8 @@ begin
 end; $$;
 grant execute on function public.end_capture(uuid) to authenticated;
 
-alter publication supabase_realtime add table public.capture_requests;
-alter publication supabase_realtime add table public.capture_signals;
+do $$ begin alter publication supabase_realtime add table public.capture_requests; exception when duplicate_object then null; when undefined_table then null; end $$;
+do $$ begin alter publication supabase_realtime add table public.capture_signals; exception when duplicate_object then null; when undefined_table then null; end $$;
 
 -- ===================== 2/4 · mensagens + chamadas =====================
 -- ============================================================
@@ -316,9 +336,11 @@ alter table public.messages enable row level security;
 alter table public.calls enable row level security;
 
 drop policy if exists messages_guardian_select on public.messages;
+drop policy if exists messages_guardian_select on public.messages;
 create policy messages_guardian_select on public.messages
   for select to authenticated using (guardian_id = auth.uid());
 
+drop policy if exists calls_guardian_select on public.calls;
 drop policy if exists calls_guardian_select on public.calls;
 create policy calls_guardian_select on public.calls
   for select to authenticated using (guardian_id = auth.uid());
@@ -425,9 +447,12 @@ alter table public.apps enable row level security;
 alter table public.location_history enable row level security;
 
 drop policy if exists contacts_guardian_select on public.contacts;
+drop policy if exists contacts_guardian_select on public.contacts;
 create policy contacts_guardian_select on public.contacts for select to authenticated using (guardian_id = auth.uid());
 drop policy if exists apps_guardian_select on public.apps;
+drop policy if exists apps_guardian_select on public.apps;
 create policy apps_guardian_select on public.apps for select to authenticated using (guardian_id = auth.uid());
+drop policy if exists loc_hist_guardian_select on public.location_history;
 drop policy if exists loc_hist_guardian_select on public.location_history;
 create policy loc_hist_guardian_select on public.location_history for select to authenticated using (guardian_id = auth.uid());
 
