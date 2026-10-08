@@ -118,7 +118,7 @@
     if(scifi){ scifi.classList.remove('tc-locked'); scifi.classList.add('tc-scanning','tc-detected'); const st=scifi.querySelector('.tc-scifi-status span'); if(st) st.textContent='ALVO DETETADO · A APROXIMAR'; }
     positionReticle(); try{ tcDetectAlert(); }catch(_){} setTimeout(function(){ try{ tcApproachTone(); }catch(_){} },260);
     // vista ampla primeiro, depois zoom lento de ~9s até à rua
-    try{ map.setView([lat,lng], Math.min(8, map.getZoom()), { animate:true, duration:0.8 }); }catch(_){}
+    try{ map.setView([lat,lng], 12, { animate:true, duration:0.6 }); }catch(_){}
     setTimeout(function(){ try{ map.flyTo([lat,lng], 18, { animate:true, duration:9 }); }catch(_){} positionReticle(); }, 900);
     setTimeout(function(){ tcAcquiring=false; tcAcquired=true; if(scifi) scifi.classList.remove('tc-detected'); try{ positionReticle(); scifiLock(); }catch(_){} try{ map.invalidateSize(false); }catch(_){} }, 10200);
   }
@@ -133,16 +133,15 @@
   function tcGlassInfo(){ const d=window.TC_DEVICE_INFO||{}; const lat=lastKnownLocation?lastKnownLocation.lat:null, lng=lastKnownLocation?lastKnownLocation.lng:null; const now=new Date();
     return { name:(window.TC_DEVICE_NAME||d.name||'Child'), coords:(lat!=null&&lng!=null)?(Number(lat).toFixed(6)+'°, '+Number(lng).toFixed(6)+'°'):'—', addr: areaName || 'a localizar endereço…', acc:(lastKnownLocation&&lastKnownLocation.accuracy?Math.round(lastKnownLocation.accuracy)+' m':'—'), bat:(d.battery!=null&&d.battery!==''?d.battery+'%':'—'), st:(d.status?(d.status==='online'?'ONLINE':String(d.status).toUpperCase()):'ONLINE'), upd: now.toLocaleTimeString('pt-PT') }; }
   function openGlassPanel(){ if(!mapContainer) return; let p=mapContainer.querySelector('.tc-glass-panel'); const info=tcGlassInfo();
-    if(!p){ p=document.createElement('div'); p.className='tc-glass-panel'; p.innerHTML='<div class="tc-glass-head"><span class="tc-glass-dot"></span><b>ALVO LOCALIZADO</b><button class="tc-glass-close" aria-label="Fechar">×</button></div><div class="tc-glass-name" data-k="name"></div><div class="tc-glass-rows"><div class="tc-glass-row"><span>COORDENADAS</span><b data-k="coords"></b></div><div class="tc-glass-row"><span>LOCAL / RUA</span><b data-k="addr"></b></div><div class="tc-glass-row"><span>PRECISÃO</span><b data-k="acc"></b></div><div class="tc-glass-row"><span>BATERIA</span><b data-k="bat"></b></div><div class="tc-glass-row"><span>ESTADO</span><b data-k="st"></b></div><div class="tc-glass-row"><span>ATUALIZADO</span><b data-k="upd"></b></div></div><div class="tc-glass-foot"><span class="tc-glass-live">● LIVE</span><span>TC::TARGET-LOCK</span></div>';
+    if(!p){ p=document.createElement('div'); p.className='tc-glass-panel'; p.innerHTML='<div class="tc-glass-head"><span class="tc-glass-dot"></span><b data-k="name">ALVO</b><button class="tc-glass-close" aria-label="Fechar">×</button></div><div class="tc-glass-body"><div class="tc-g-line"><span>COORDENADAS</span><b data-k="coords"></b></div><div class="tc-g-line"><span>LOCAL / RUA</span><b data-k="addr"></b></div><div class="tc-g-mini"><div><span>BAT</span><b data-k="bat"></b></div><div><span>PREC</span><b data-k="acc"></b></div><div><span>EST</span><b data-k="st"></b></div></div></div>';
       mapContainer.appendChild(p); p.querySelector('.tc-glass-close').addEventListener('click',function(){ p.classList.remove('open'); try{updateLeader();}catch(_){} });
       requestAnimationFrame(function(){ p.classList.add('open'); }); try{ tcCinematicOpen(); }catch(_){}
       tcTypeInto(p.querySelector('[data-k=name]'), info.name);
-      setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=coords]'), info.coords); },160);
-      setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=addr]'), info.addr); },360);
-      setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=acc]'), info.acc); },560);
-      setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=bat]'), info.bat); },700);
-      setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=st]'), info.st); },820);
-      setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=upd]'), info.upd); },940);
+      setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=coords]'), info.coords); },140);
+      setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=addr]'), info.addr); },320);
+      setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=bat]'), info.bat); },500);
+      setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=acc]'), info.acc); },620);
+      setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=st]'), info.st); },740);
     } else { if(!p.classList.contains('open')){ p.classList.add('open'); try{ tcCinematicOpen(); }catch(_){} } updateGlassPanel(); } }
   function updateGlassPanel(){ if(!mapContainer) return; const p=mapContainer.querySelector('.tc-glass-panel'); if(!p||!p.classList.contains('open')) return; const info=tcGlassInfo();
     tcTypeInto(p.querySelector('[data-k=coords]'), info.coords); tcTypeInto(p.querySelector('[data-k=addr]'), info.addr);
