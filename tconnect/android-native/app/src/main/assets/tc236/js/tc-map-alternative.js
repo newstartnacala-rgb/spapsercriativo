@@ -139,7 +139,7 @@
     let deck=scifi.querySelector('.tc-photo-deck'); if(deck) deck.parentNode.removeChild(deck);
     const lat=lastKnownLocation.lat, lng=lastKnownLocation.lng;
     // Plano A = MENOS zoom (área toda, marcada) · Plano B = MAIS zoom (aproximação). Esri é fiável até z17.
-    const shots=[ {cls:'mid', z:14, big:16, mark:true, tag:'PLANO A · ÁREA', sub:'VISTA GERAL'}, {cls:'right', z:17, big:17, mark:false, tag:'PLANO B · APROX.', sub:'ZOOM MÁXIMO'} ];
+    const shots=[ {cls:'mid', z:14, big:16, mark:true, tag:'PLANO A · ÁREA', sub:'VISTA GERAL'}, {cls:'right', z:17, big:18, mark:false, tag:'PLANO B · APROX.', sub:'ZOOM MÁXIMO'} ];
     deck=document.createElement('div'); deck.className='tc-photo-deck';
     shots.forEach(function(s){ const fig=document.createElement('figure'); fig.className='tc-photo-frame '+s.cls; fig.setAttribute('role','button'); fig.setAttribute('tabindex','0'); fig.setAttribute('aria-label','Ver '+s.tag);
       fig.innerHTML='<span class="holo-beam"></span><span class="holo-base"></span><div class="pf-inner"><div class="pf-tiles"></div><div class="pf-scan"></div>'+(s.mark?'<span class="pf-mark"></span>':'')+'<span class="pf-corner tl"></span><span class="pf-corner tr"></span><span class="pf-corner bl"></span><span class="pf-corner br"></span><div class="pf-cap"><b>'+s.tag+'</b><span>'+s.sub+'</span></div></div>';
@@ -417,11 +417,18 @@
         if (!tcAcquired && !tcAcquiring) {
           tcAcquire(lat, lng); // sequência: ponto vermelho + rotação + zoom de ~10s + linha + espelho
         } else if (!tcAcquiring) {
-          // atualização silenciosa (já travado): segue o alvo sem repetir o show
+          // Já adquirido: segue o alvo sem repetir o show de ~10s. Mas se a página
+          // do Guardian foi re-renderizada, o HUD é novo e perdeu o ponto/painéis —
+          // nesse caso repinta (trava) de imediato, sem a cinemática.
           const center = map.getCenter();
           const movedFar = center && map.distance(center, pos) > 60;
           if (movedFar) map.panTo(pos, { animate: true, duration: 0.6 });
-          try { positionReticle(); updateGrid(); updateGlassPanel(); } catch (_) {}
+          const scifi = mapContainer && mapContainer.querySelector('.tc-scifi-hud');
+          const lostHud = scifi && (!scifi.classList.contains('tc-locked') || !mapContainer.querySelector('.tc-glass-panel'));
+          try {
+            if (lostHud) { try { map.setView(pos, Math.max(map.getZoom()||0, 16), { animate:false }); } catch(_){} positionReticle(); scifiLock(); }
+            else { positionReticle(); updateGrid(); updateGlassPanel(); }
+          } catch (_) {}
         }
         if (marker && typeof marker.bringToFront === "function") setTimeout(() => marker.bringToFront(), 1200);
         setTimeout(() => { if (map) map.invalidateSize(false); }, 120);
