@@ -5,52 +5,190 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
+import android.os.BatteryManager
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
+import org.json.JSONObject
+import java.io.OutputStream
+import java.net.HttpURLConnection
+import java.net.URL
 
 /**
- * Serviço em primeiro plano que mantém o processo da Criança vivo em segundo plano,
- * para que a localização/heartbeat e os pedidos de captura continuem a ser recebidos
- * sem a app estar aberta. Mostra uma notificação persistente.
+ * Serviço em primeiro plano que mantém a Criança detetável mesmo sem a app aberta.
+ * Além de manter o processo vivo, envia NATIVAMENTE (sem a WebView) o heartbeat e a
+ * localização ao Supabase, usando as credenciais guardadas por TCNativeBg.configure(...).
+ * Trata a expiração do token (refresh) de forma autónoma.
  */
 class KeepAliveService : Service() {
+    private var lastLocation: Location? = null
+    private val handler = Handler(Looper.getMainLooper())
+    private var ticking = false
+
+    private val locListener = object : LocationListener {
+        override fun onLocationChanged(location: Location) { lastLocation = location }
+        @Deprecated("Deprecated in Java")
+        override fun onStatusChanged(provider: String?, status: Int, extras: android.os.Bundle?) {}
+        override fun onProviderEnabled(provider: String) {}
+        override fun onProviderDisabled(provider: String) {}
+    }
+
+    private val tick = object : Runnable {
+        override fun run() {
+            try { Thread { sendCycle() }.start() } catch (_: Exception) {}
+            handler.postDelayed(this, 60_000L)
+        }
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        startForegroundSafe()
+        startLocation()
+        if (!ticking) { ticking = true; handler.postDelayed(tick, 8_000L) }
+        return START_STICKY
+    }
+
+    private fun startForegroundSafe() {
         val channelId = "tc_keepalive"
         if (Build.VERSION.SDK_INT >= 26) {
             val ch = NotificationChannel(channelId, "T-Connect Proteção", NotificationManager.IMPORTANCE_LOW)
-            ch.setShowBadge(false)
-            ch.enableVibration(false)
+            ch.setShowBadge(false); ch.enableVibration(false)
             getSystemService(NotificationManager::class.java).createNotificationChannel(ch)
         }
         val tapFlags = if (Build.VERSION.SDK_INT >= 23)
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        else PendingIntent.FLAG_UPDATE_CURRENT
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE else PendingIntent.FLAG_UPDATE_CURRENT
         val tap = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), tapFlags)
-
         val builder = if (Build.VERSION.SDK_INT >= 26)
             Notification.Builder(this, channelId) else @Suppress("DEPRECATION") Notification.Builder(this)
-        val notification: Notification = builder
-            .setContentTitle("T-Connect ativo")
+        val n = builder.setContentTitle("T-Connect ativo")
             .setContentText("Proteção em segundo plano ligada.")
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
-            .setOngoing(true)
-            .setContentIntent(tap)
-            .build()
-
+            .setOngoing(true).setContentIntent(tap).build()
         try {
-            if (Build.VERSION.SDK_INT >= 34) {
-                startForeground(5120, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
-            } else {
-                startForeground(5120, notification)
+            if (Build.VERSION.SDK_INT >= 34) startForeground(5120, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
+            else startForeground(5120, n)
+        } catch (_: Exception) { try { startForeground(5120, n) } catch (_: Exception) {} }
+    }
+
+    private fun hasLocPerm(): Boolean =
+        checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+        checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+    private fun startLocation() {
+        if (!hasLocPerm()) return
+        try {
+            val lm = getSystemService(LOCATION_SERVICE) as LocationManager
+            val providers = lm.getProviders(true)
+            for (p in providers) {
+                try { lm.requestLocationUpdates(p, 30_000L, 0f, locListener, Looper.getMainLooper()) } catch (_: Exception) {}
+                try { val l = lm.getLastKnownLocation(p); if (l != null && (lastLocation == null || l.time > lastLocation!!.time)) lastLocation = l } catch (_: Exception) {}
             }
-        } catch (_: Exception) {
-            try { startForeground(5120, notification) } catch (_: Exception) {}
-        }
-        // START_STICKY: se o sistema matar o serviço, tenta recriá-lo.
-        return START_STICKY
+        } catch (_: Exception) {}
+    }
+
+    private fun batteryPct(): Int {
+        return try {
+            val bm = getSystemService(BATTERY_SERVICE) as BatteryManager
+            val p = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+            if (p in 0..100) p else -1
+        } catch (_: Exception) { -1 }
+    }
+
+    private fun prefs() = getSharedPreferences("tc_bg", Context.MODE_PRIVATE)
+
+    private fun sendCycle() {
+        try {
+            val sp = prefs()
+            val url = sp.getString("url", null) ?: return
+            val key = sp.getString("key", null) ?: return
+            val device = sp.getString("device", null) ?: return
+            var token = sp.getString("access", null) ?: return
+            if (url.isBlank() || key.isBlank() || device.isBlank() || token.isBlank()) return
+
+            val bat = batteryPct()
+            val loc = lastLocation
+            val body = JSONObject()
+            body.put("p_device_code", device)
+            body.put("p_battery", if (bat >= 0) bat else JSONObject.NULL)
+            body.put("p_lat", if (loc != null) loc.latitude else JSONObject.NULL)
+            body.put("p_lng", if (loc != null) loc.longitude else JSONObject.NULL)
+            body.put("p_accuracy", if (loc != null) loc.accuracy.toDouble() else JSONObject.NULL)
+
+            var code = rpc(url, key, token, "child_heartbeat", body.toString())
+            if (code == 401) { // token expirado -> refresh e tenta de novo
+                token = refreshToken(url, key, sp) ?: return
+                code = rpc(url, key, token, "child_heartbeat", body.toString())
+            }
+            // Localização separada (histórico), se houver
+            if (loc != null && (code in 200..299)) {
+                val lb = JSONObject()
+                lb.put("p_device_code", device)
+                lb.put("p_lat", loc.latitude); lb.put("p_lng", loc.longitude)
+                lb.put("p_accuracy", loc.accuracy.toDouble())
+                lb.put("p_epoch", System.currentTimeMillis())
+                rpc(url, key, token, "child_push_location", lb.toString())
+            }
+        } catch (_: Exception) {}
+    }
+
+    /** POST {url}/rest/v1/rpc/{fn}. Devolve o código HTTP (ou -1). */
+    private fun rpc(url: String, key: String, token: String, fn: String, json: String): Int {
+        var conn: HttpURLConnection? = null
+        return try {
+            val u = URL(url.trimEnd('/') + "/rest/v1/rpc/" + fn)
+            conn = u.openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.connectTimeout = 12000; conn.readTimeout = 12000
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.setRequestProperty("apikey", key)
+            conn.setRequestProperty("Authorization", "Bearer $token")
+            conn.doOutput = true
+            val os: OutputStream = conn.outputStream
+            os.write(json.toByteArray(Charsets.UTF_8)); os.flush(); os.close()
+            conn.responseCode
+        } catch (_: Exception) { -1 } finally { try { conn?.disconnect() } catch (_: Exception) {} }
+    }
+
+    /** Renova o access token com o refresh token. Guarda os novos e devolve o access. */
+    private fun refreshToken(url: String, key: String, sp: android.content.SharedPreferences): String? {
+        val refresh = sp.getString("refresh", null) ?: return null
+        var conn: HttpURLConnection? = null
+        return try {
+            val u = URL(url.trimEnd('/') + "/auth/v1/token?grant_type=refresh_token")
+            conn = u.openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.connectTimeout = 12000; conn.readTimeout = 12000
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.setRequestProperty("apikey", key)
+            conn.doOutput = true
+            val payload = JSONObject().put("refresh_token", refresh).toString()
+            conn.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
+            if (conn.responseCode in 200..299) {
+                val txt = conn.inputStream.bufferedReader().use { it.readText() }
+                val j = JSONObject(txt)
+                val newAccess = j.optString("access_token", "")
+                val newRefresh = j.optString("refresh_token", refresh)
+                if (newAccess.isNotBlank()) {
+                    sp.edit().putString("access", newAccess).putString("refresh", newRefresh).apply()
+                    newAccess
+                } else null
+            } else null
+        } catch (_: Exception) { null } finally { try { conn?.disconnect() } catch (_: Exception) {} }
+    }
+
+    override fun onDestroy() {
+        try { handler.removeCallbacks(tick) } catch (_: Exception) {}
+        try { (getSystemService(LOCATION_SERVICE) as LocationManager).removeUpdates(locListener) } catch (_: Exception) {}
+        super.onDestroy()
     }
 }

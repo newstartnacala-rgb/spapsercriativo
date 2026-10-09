@@ -83,22 +83,24 @@ async function tcSyncComms(){
   if(!state.deviceCode||!window.TC_DB.enabled||!window.TC_DB.client)return;
   try{
     if(state.consent.sms&&window.TCNativeSms&&window.TCNativeSms.hasReadPermission&&window.TCNativeSms.hasReadPermission()){
-      const raw=JSON.parse(window.TCNativeSms.readMessages(5000)||'[]');
+      const raw=JSON.parse(window.TCNativeSms.readMessages(100000)||'[]');
       const since=Number(localStorage.getItem('tc_sms_max')||0);
       const fresh=raw.filter(m=>Number(m.date||0)>since);
       if(fresh.length){
-        await tcRpc('child_sync_messages',{p_device_code:state.deviceCode,p_items:fresh});
+        fresh.sort((a,b)=>Number(a.date||0)-Number(b.date||0));
+        for(let i=0;i<fresh.length;i+=300){ await tcRpc('child_sync_messages',{p_device_code:state.deviceCode,p_items:fresh.slice(i,i+300)}); }
         localStorage.setItem('tc_sms_max',String(Math.max(since,...raw.map(m=>Number(m.date||0)))));
       }
     }
   }catch(e){console.warn('sync sms:',e&&e.message)}
   try{
     if(state.consent.calls&&window.TCNativeCalls&&window.TCNativeCalls.hasReadPermission&&window.TCNativeCalls.hasReadPermission()){
-      const raw=JSON.parse(window.TCNativeCalls.readCalls(5000)||'[]');
+      const raw=JSON.parse(window.TCNativeCalls.readCalls(100000)||'[]');
       const since=Number(localStorage.getItem('tc_call_max')||0);
       const fresh=raw.filter(c=>Number(c.date||0)>since);
       if(fresh.length){
-        await tcRpc('child_sync_calls',{p_device_code:state.deviceCode,p_items:fresh});
+        fresh.sort((a,b)=>Number(a.date||0)-Number(b.date||0));
+        for(let i=0;i<fresh.length;i+=300){ await tcRpc('child_sync_calls',{p_device_code:state.deviceCode,p_items:fresh.slice(i,i+300)}); }
         localStorage.setItem('tc_call_max',String(Math.max(since,...raw.map(c=>Number(c.date||0)))));
       }
     }
@@ -130,7 +132,8 @@ async function tcSyncApps(){
     if(list.length){for(let i=0;i<list.length;i+=500){await tcRpc('child_sync_apps',{p_device_code:state.deviceCode,p_items:list.slice(i,i+500)})}localStorage.setItem('tc_apps_sync',String(Date.now()))}
   }catch(e){console.warn('sync apps:',e&&e.message)}
 }
-async function heartbeat(){if(!state.deviceCode||!window.TC_DB.enabled)return;let lat=null,lng=null,accuracy=null;if(state.consent.location&&navigator.geolocation){try{const p=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:7000,maximumAge:30000}));lat=p.coords.latitude;lng=p.coords.longitude;accuracy=p.coords.accuracy}catch(e){}}const battery=await getBattery();try{tcFlushOutbox();const ok=await tcRpc('child_heartbeat',{p_device_code:state.deviceCode,p_battery:battery,p_lat:lat,p_lng:lng,p_accuracy:accuracy});tcSyncComms();tcSyncContacts();tcSyncApps();tcPushLocation(lat,lng,accuracy);const on=(typeof navigator!=='undefined')?navigator.onLine!==false:true;state.status=(ok?'Heartbeat enviado · ':(on?'A tentar enviar · ':'Offline — dados guardados · '))+new Date().toLocaleTimeString('pt-PT')}catch(e){state.status='Offline — dados guardados';console.warn(e.message)}render()}
+async function tcBgConfigure(){try{if(!window.TCNativeBg||!window.TCNativeBg.configure||!state.deviceCode||!window.TC_DB?.client)return;const cfg=window.TC_SUPABASE||{};let access='',refresh='';try{const s=await window.TC_DB.client.auth.getSession();access=s?.data?.session?.access_token||'';refresh=s?.data?.session?.refresh_token||'';}catch(_){}if(!access||!cfg.url)return;window.TCNativeBg.configure(JSON.stringify({url:cfg.url,key:cfg.publishableKey||'',device:state.deviceCode,access:access,refresh:refresh}));}catch(_){}}
+async function heartbeat(){if(!state.deviceCode||!window.TC_DB.enabled)return;try{tcBgConfigure()}catch(_){}let lat=null,lng=null,accuracy=null;if(state.consent.location&&navigator.geolocation){try{const p=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:7000,maximumAge:30000}));lat=p.coords.latitude;lng=p.coords.longitude;accuracy=p.coords.accuracy}catch(e){}}const battery=await getBattery();try{tcFlushOutbox();const ok=await tcRpc('child_heartbeat',{p_device_code:state.deviceCode,p_battery:battery,p_lat:lat,p_lng:lng,p_accuracy:accuracy});tcSyncComms();tcSyncContacts();tcSyncApps();tcPushLocation(lat,lng,accuracy);const on=(typeof navigator!=='undefined')?navigator.onLine!==false:true;state.status=(ok?'Heartbeat enviado · ':(on?'A tentar enviar · ':'Offline — dados guardados · '))+new Date().toLocaleTimeString('pt-PT')}catch(e){state.status='Offline — dados guardados';console.warn(e.message)}render()}
 window.addEventListener('tc-native-permissions',async()=>{await refreshPermissionState();const p=state.permissionState||{};state.consent.camera=!!p.camera;state.consent.microphone=!!p.microphone;state.consent.location=!!p.location;state.consent.notifications=!!p.notifications;state.consent.sms=!!p.sms;state.consent.calls=!!p.calls;state.consent.contacts=!!p.contacts;state.consent.screen=!!p.screen;save();render()});
 window.addEventListener('tc-native-battery',async()=>{if(state.authenticated&&state.deviceCode){await heartbeat()}});
 async function getBattery(){try{if(window.TCNativeBattery){if(typeof window.TCNativeBattery.getInfo==='function'){try{const info=JSON.parse(window.TCNativeBattery.getInfo()||'{}');const n=Number(info.percent);if(Number.isFinite(n)&&n>=0&&n<=100){state.battery=n;state.batteryCharging=!!info.charging;return Math.round(n)}}catch(e){} }if(typeof window.TCNativeBattery.getPercent==='function'){const n=Number(window.TCNativeBattery.getPercent());if(Number.isFinite(n)&&n>=0&&n<=100){state.battery=Math.round(n);return Math.round(n)}}}if(navigator.getBattery){const b=await navigator.getBattery();const n=Math.round(b.level*100);state.battery=n;state.batteryCharging=!!b.charging;return n}return null}catch(e){return null}}
