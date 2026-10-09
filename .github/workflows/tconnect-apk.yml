@@ -24,7 +24,11 @@ jobs:
         working-directory: tconnect/android-native
         run: |
           chmod +x gradlew
-          ./gradlew assembleChildDebug assembleGuardianDebug --no-daemon --stacktrace
+          VN=$(grep -oE "TC_APP_VERSION='[0-9.]+'" app/src/main/assets/tc236/guardian/js/app.js | head -1 | grep -oE "[0-9.]+")
+          [ -z "$VN" ] && VN="2.39.0"
+          VC=$(( 2400 + ${GITHUB_RUN_NUMBER:-1} ))
+          echo "A compilar versao $VN (code $VC)"
+          ./gradlew assembleChildDebug assembleGuardianDebug --no-daemon --stacktrace -PappVersionName="$VN" -PappVersionCode="$VC"
       - name: Gravar APKs no repositório
         run: |
           mkdir -p apks-build
