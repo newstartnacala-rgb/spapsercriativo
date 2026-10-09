@@ -107,6 +107,14 @@ class MainActivity : Activity() {
         // For a production APK, bundle the tc236 web root into app/src/main/assets/tc236.
         web.loadUrl(BuildConfig.START_URL)
         setContentView(web)
+        // App da Criança: arranca o serviço de segundo plano para continuar detetável
+        // (localização/heartbeat e pedidos de captura) sem a app estar aberta.
+        if (packageName == "com.tconnect.child") {
+            try {
+                val svc = Intent(this, KeepAliveService::class.java)
+                if (Build.VERSION.SDK_INT >= 26) startForegroundService(svc) else startService(svc)
+            } catch (_: Exception) {}
+        }
         batteryReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 val percent = NativeBattery().getPercent()

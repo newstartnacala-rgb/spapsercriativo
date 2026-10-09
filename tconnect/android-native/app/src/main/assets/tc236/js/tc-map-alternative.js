@@ -425,9 +425,13 @@
           // Já adquirido: segue o alvo sem repetir o show de ~10s. Mas se a página
           // do Guardian foi re-renderizada, o HUD é novo e perdeu o ponto/painéis —
           // nesse caso repinta (trava) de imediato, sem a cinemática.
-          const center = map.getCenter();
-          const movedFar = center && map.distance(center, pos) > 60;
-          if (movedFar) map.panTo(pos, { animate: true, duration: 0.6 });
+          // Mapa estável: só recentra quando o alvo sai da área visível (evita o mapa
+          // a "descontrolar" a cada pequena oscilação do GPS). O ponto exato segue sozinho.
+          try {
+            const ll = window.L.latLng(pos);
+            const inside = map.getBounds && map.getBounds().pad(-0.28).contains(ll);
+            if (!inside) map.panTo(pos, { animate: true, duration: 0.6 });
+          } catch(_) {}
           const scifi = mapContainer && mapContainer.querySelector('.tc-scifi-hud');
           const lostHud = scifi && (!scifi.classList.contains('tc-locked') || !mapContainer.querySelector('.tc-glass-panel'));
           try {
