@@ -28,6 +28,9 @@ jobs:
           [ -z "$VN" ] && VN="2.39.0"
           VC=$(( 2400 + ${GITHUB_RUN_NUMBER:-1} ))
           echo "A compilar versao $VN (code $VC)"
+          # Mantem o manifesto de atualizacoes sincronizado com a versao do build (nunca fica preso numa versao antiga)
+          MAN="app/src/main/assets/tc236/updates/t-connect-update.json"
+          [ -f "$MAN" ] && sed -i -E 's/"version"[[:space:]]*:[[:space:]]*"[0-9.]+"/"version": "'"$VN"'"/' "$MAN" && echo "manifesto -> $VN"
           ./gradlew assembleChildDebug assembleGuardianDebug --no-daemon --stacktrace -PappVersionName="$VN" -PappVersionCode="$VC"
       - name: Gravar APKs no repositório
         run: |
