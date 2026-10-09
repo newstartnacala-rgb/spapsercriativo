@@ -271,12 +271,14 @@ async function answerCaptureRequest(requestId,accept){try{if(!accept){await wind
   if(captureKind==='AUDIO_ONLY'){
     const ok=await waitForNativePermission('microphone',15000);if(!ok)throw new Error('O microfone não foi autorizado no Android.');
     if(!navigator.mediaDevices?.getUserMedia)throw new Error('Este dispositivo não disponibiliza microfone ao aplicativo.');
-    tcChildCaptureStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});
+    try{tcChildCaptureStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false})}
+    catch(e1){await new Promise(r=>setTimeout(r,600));try{tcChildCaptureStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false})}catch(e2){throw new Error('O microfone não pôde ser iniciado — pode estar a ser usado por outra app (chamada, gravador) ou pelo próprio Guardian no mesmo telemóvel. Feche essas apps/teste com 2 telemóveis e tente de novo.')}}
   }else if(captureKind==='CAMERA_VIDEO'){
     const ok=await waitForNativePermission('camera',15000);if(!ok)throw new Error('A câmera não foi autorizada no Android.');
-    const micOk=await waitForNativePermission('microphone',15000);if(!micOk)throw new Error('O microfone não foi autorizado no Android.');
+    await waitForNativePermission('microphone',15000);
     if(!navigator.mediaDevices?.getUserMedia)throw new Error('Este dispositivo não disponibiliza câmera ao aplicativo.');
-    tcChildCaptureStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+    try{tcChildCaptureStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}})}
+    catch(e1){try{tcChildCaptureStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false})}catch(e2){tcChildCaptureStream=await navigator.mediaDevices.getUserMedia({video:true,audio:false})}}
   }else{
     if(window.TCNativeScreenCapture&&typeof window.TCNativeScreenCapture.requestCapture==='function'){
       await new Promise(resolve=>{let done=false;const finish=()=>{if(done)return;done=true;window.removeEventListener('tc-screen-capture',on);resolve()};const on=()=>finish();window.addEventListener('tc-screen-capture',on);window.TCNativeScreenCapture.requestCapture();setTimeout(finish,20000);});
