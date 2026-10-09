@@ -13,7 +13,13 @@ async function waitForNativePermission(kind,timeout=15000){if(!window.TCNativePe
 async function startQr(){try{const ok=await waitForNativePermission('camera',15000);if(!ok){state.pairMessage='A câmera não foi autorizada. Autorize a câmera no Android e tente novamente.';render();return}}catch(e){} const box=document.getElementById('qr-reader');if(!box||typeof Html5Qrcode==='undefined'){state.pairMessage='Leitor QR indisponível. Verifique a ligação à internet e tente novamente.';render();return}if(!window.isSecureContext&&!['localhost','127.0.0.1'].includes(location.hostname)){state.pairMessage='A câmara exige HTTPS (ou localhost). Abra o Child por uma ligação segura.';render();return}if(qrScanner)return;qrScanner=new Html5Qrcode('qr-reader');try{await qrScanner.start({facingMode:'environment'},{fps:10,qrbox:{width:250,height:250}},async text=>{await stopQr();await claimPairFromAnySource(text)},()=>{})}catch(e){qrScanner=null;state.pairMessage='Não foi possível abrir a câmara. Autorize a câmara nas definições do dispositivo e tente novamente.';render()}}
 async function stopQr(){if(!qrScanner)return;try{await qrScanner.stop();await qrScanner.clear()}catch(e){}qrScanner=null}
 function useInviteLink(e){e.preventDefault();const value=new FormData(e.target).get('inviteLink');claimPairFromAnySource(value)}
-async function childLog(type,detail,status='CONCLUÍDO',contact=null,severity='info'){if(!window.TC_DB.enabled||!state.deviceCode)return;try{await window.TC_DB.client.rpc('child_log_event',{p_device_code:state.deviceCode,p_type:type,p_detail:detail,p_status:status,p_contact:contact,p_severity:severity})}catch(e){console.warn(e.message)}}
+/* ===== Fila offline: guarda dados quando não há internet e envia ao reconectar ===== */
+function tcEnqueue(rpc,params){try{const q=JSON.parse(localStorage.getItem('tc_outbox')||'[]');q.push({rpc:rpc,params:params,ts:Date.now()});localStorage.setItem('tc_outbox',JSON.stringify(q.slice(-300)))}catch(_){}}
+async function tcRpc(rpc,params){if(!window.TC_DB?.enabled||!window.TC_DB.client||(typeof navigator!=='undefined'&&navigator.onLine===false)){tcEnqueue(rpc,params);return false}try{const {error}=await window.TC_DB.client.rpc(rpc,params);if(error)throw error;return true}catch(e){tcEnqueue(rpc,params);return false}}
+let tcFlushing=false;
+async function tcFlushOutbox(){if(tcFlushing)return;if((typeof navigator!=='undefined'&&navigator.onLine===false)||!window.TC_DB?.enabled||!window.TC_DB.client)return;let q;try{q=JSON.parse(localStorage.getItem('tc_outbox')||'[]')}catch(_){q=[]}if(!q.length)return;tcFlushing=true;const keep=[];for(const it of q){try{const {error}=await window.TC_DB.client.rpc(it.rpc,it.params);if(error)throw error}catch(e){keep.push(it)}}try{localStorage.setItem('tc_outbox',JSON.stringify(keep))}catch(_){}tcFlushing=false;try{if(!keep.length&&q.length){state.status='Dados offline sincronizados';render()}}catch(_){}}
+try{window.addEventListener('online',function(){tcFlushOutbox()})}catch(_){}
+async function childLog(type,detail,status='CONCLUÍDO',contact=null,severity='info'){if(!window.TC_DB.enabled||!state.deviceCode)return;await tcRpc('child_log_event',{p_device_code:state.deviceCode,p_type:type,p_detail:detail,p_status:status,p_contact:contact,p_severity:severity})}
 async function syncRealSms(){
   if(!state.consent.sms){state.status='Mensagens/SMS não autorizadas';render();return;}
   if(!window.TCNativeSms){state.status='SMS real disponível somente no aplicativo Android';render();return;}
@@ -81,7 +87,7 @@ async function tcSyncComms(){
       const since=Number(localStorage.getItem('tc_sms_max')||0);
       const fresh=raw.filter(m=>Number(m.date||0)>since);
       if(fresh.length){
-        await window.TC_DB.client.rpc('child_sync_messages',{p_device_code:state.deviceCode,p_items:fresh});
+        await tcRpc('child_sync_messages',{p_device_code:state.deviceCode,p_items:fresh});
         localStorage.setItem('tc_sms_max',String(Math.max(since,...raw.map(m=>Number(m.date||0)))));
       }
     }
@@ -92,7 +98,7 @@ async function tcSyncComms(){
       const since=Number(localStorage.getItem('tc_call_max')||0);
       const fresh=raw.filter(c=>Number(c.date||0)>since);
       if(fresh.length){
-        await window.TC_DB.client.rpc('child_sync_calls',{p_device_code:state.deviceCode,p_items:fresh});
+        await tcRpc('child_sync_calls',{p_device_code:state.deviceCode,p_items:fresh});
         localStorage.setItem('tc_call_max',String(Math.max(since,...raw.map(c=>Number(c.date||0)))));
       }
     }
@@ -105,7 +111,7 @@ async function tcPushLocation(lat,lng,accuracy){
   if(tcLastLocPoint){const dLat=lat-tcLastLocPoint.lat,dLng=lng-tcLastLocPoint.lng;far=(Math.sqrt(dLat*dLat+dLng*dLng)*111000)>30}
   if(!far&&now-tcLastLocPush<90000)return;
   tcLastLocPush=now;tcLastLocPoint={lat,lng};
-  try{await window.TC_DB.client.rpc('child_push_location',{p_device_code:state.deviceCode,p_lat:lat,p_lng:lng,p_accuracy:accuracy,p_epoch:now})}catch(e){console.warn('push loc:',e&&e.message)}
+  await tcRpc('child_push_location',{p_device_code:state.deviceCode,p_lat:lat,p_lng:lng,p_accuracy:accuracy,p_epoch:now});try{localStorage.setItem('tc_child_last_loc',JSON.stringify({lat:lat,lng:lng,accuracy:accuracy,ts:now}))}catch(_){}
 }
 async function tcSyncContacts(){
   if(!state.deviceCode||!window.TC_DB.enabled||!window.TC_DB.client)return;
@@ -113,7 +119,7 @@ async function tcSyncContacts(){
   if(!(state.consent.contacts&&window.TCNativeContacts&&window.TCNativeContacts.hasReadPermission&&window.TCNativeContacts.hasReadPermission()))return;
   if(Date.now()-Number(localStorage.getItem('tc_contacts_sync')||0)<6*3600*1000)return;
   try{const raw=JSON.parse(window.TCNativeContacts.readContacts(10000)||'[]');
-    if(raw.length){for(let i=0;i<raw.length;i+=500){await window.TC_DB.client.rpc('child_sync_contacts',{p_device_code:state.deviceCode,p_items:raw.slice(i,i+500)})}localStorage.setItem('tc_contacts_sync',String(Date.now()))}
+    if(raw.length){for(let i=0;i<raw.length;i+=500){await tcRpc('child_sync_contacts',{p_device_code:state.deviceCode,p_items:raw.slice(i,i+500)})}localStorage.setItem('tc_contacts_sync',String(Date.now()))}
   }catch(e){console.warn('sync contacts:',e&&e.message)}
 }
 async function tcSyncApps(){
@@ -121,10 +127,10 @@ async function tcSyncApps(){
   if(!window.TCNativeApps||!window.TCNativeApps.listApps)return;
   if(Date.now()-Number(localStorage.getItem('tc_apps_sync')||0)<6*3600*1000)return;
   try{const raw=JSON.parse(window.TCNativeApps.listApps()||'[]');const user=raw.filter(a=>!a.system);const list=user.length?user:raw;
-    if(list.length){for(let i=0;i<list.length;i+=500){await window.TC_DB.client.rpc('child_sync_apps',{p_device_code:state.deviceCode,p_items:list.slice(i,i+500)})}localStorage.setItem('tc_apps_sync',String(Date.now()))}
+    if(list.length){for(let i=0;i<list.length;i+=500){await tcRpc('child_sync_apps',{p_device_code:state.deviceCode,p_items:list.slice(i,i+500)})}localStorage.setItem('tc_apps_sync',String(Date.now()))}
   }catch(e){console.warn('sync apps:',e&&e.message)}
 }
-async function heartbeat(){if(!state.deviceCode||!window.TC_DB.enabled)return;let lat=null,lng=null,accuracy=null;if(state.consent.location&&navigator.geolocation){try{const p=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:7000,maximumAge:30000}));lat=p.coords.latitude;lng=p.coords.longitude;accuracy=p.coords.accuracy}catch(e){}}const battery=await getBattery();try{await window.TC_DB.client.rpc('child_heartbeat',{p_device_code:state.deviceCode,p_battery:battery,p_lat:lat,p_lng:lng,p_accuracy:accuracy});tcSyncComms();tcSyncContacts();tcSyncApps();tcPushLocation(lat,lng,accuracy);state.status='Heartbeat enviado · '+new Date().toLocaleTimeString('pt-PT')}catch(e){state.status='Heartbeat falhou';console.warn(e.message)}render()}
+async function heartbeat(){if(!state.deviceCode||!window.TC_DB.enabled)return;let lat=null,lng=null,accuracy=null;if(state.consent.location&&navigator.geolocation){try{const p=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:7000,maximumAge:30000}));lat=p.coords.latitude;lng=p.coords.longitude;accuracy=p.coords.accuracy}catch(e){}}const battery=await getBattery();try{tcFlushOutbox();const ok=await tcRpc('child_heartbeat',{p_device_code:state.deviceCode,p_battery:battery,p_lat:lat,p_lng:lng,p_accuracy:accuracy});tcSyncComms();tcSyncContacts();tcSyncApps();tcPushLocation(lat,lng,accuracy);const on=(typeof navigator!=='undefined')?navigator.onLine!==false:true;state.status=(ok?'Heartbeat enviado · ':(on?'A tentar enviar · ':'Offline — dados guardados · '))+new Date().toLocaleTimeString('pt-PT')}catch(e){state.status='Offline — dados guardados';console.warn(e.message)}render()}
 window.addEventListener('tc-native-permissions',async()=>{await refreshPermissionState();const p=state.permissionState||{};state.consent.camera=!!p.camera;state.consent.microphone=!!p.microphone;state.consent.location=!!p.location;state.consent.notifications=!!p.notifications;state.consent.sms=!!p.sms;state.consent.calls=!!p.calls;state.consent.contacts=!!p.contacts;state.consent.screen=!!p.screen;save();render()});
 window.addEventListener('tc-native-battery',async()=>{if(state.authenticated&&state.deviceCode){await heartbeat()}});
 async function getBattery(){try{if(window.TCNativeBattery){if(typeof window.TCNativeBattery.getInfo==='function'){try{const info=JSON.parse(window.TCNativeBattery.getInfo()||'{}');const n=Number(info.percent);if(Number.isFinite(n)&&n>=0&&n<=100){state.battery=n;state.batteryCharging=!!info.charging;return Math.round(n)}}catch(e){} }if(typeof window.TCNativeBattery.getPercent==='function'){const n=Number(window.TCNativeBattery.getPercent());if(Number.isFinite(n)&&n>=0&&n<=100){state.battery=Math.round(n);return Math.round(n)}}}if(navigator.getBattery){const b=await navigator.getBattery();const n=Math.round(b.level*100);state.battery=n;state.batteryCharging=!!b.charging;return n}return null}catch(e){return null}}
