@@ -1182,3 +1182,45 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Ari
 .tc-screen-preview-video{flex:1 1 auto;width:100%;height:auto;min-height:0;object-fit:contain;background:#02070c;display:block}
 .btn.small.danger{border-color:rgba(255,90,90,.6)!important;color:#ffb3b3!important;background:rgba(40,8,10,.5)!important}
 @media(max-width:520px){.tc-screen-preview{inset:4vh 3vw 4vh!important}.tc-screen-preview-head{height:auto;padding:8px 10px;flex-wrap:wrap}.tc-sp-actions{width:100%;margin-left:0}.tc-sp-actions .btn{flex:1}}
+/* ===== v2.39.22 · guia "Sobre o T-Connect" ===== */
+.tc-about-overlay{position:fixed;inset:0;z-index:99998;display:grid;place-items:center;padding:16px;background:rgba(2,8,14,.72);backdrop-filter:blur(6px)}
+.tc-about-box{width:min(760px,96vw);max-height:92vh;display:flex;flex-direction:column;border:1px solid rgba(56,189,248,.3);border-radius:22px;overflow:hidden;background:linear-gradient(180deg,#0a1b2b,#061019);box-shadow:0 30px 90px #000b}
+.tc-about-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid rgba(46,154,192,.3);background:linear-gradient(180deg,rgba(10,28,45,.98),rgba(6,16,26,.96))}
+.tc-about-brand{display:flex;align-items:center;gap:12px}
+.tc-about-brand img{width:44px;height:44px;border-radius:12px;object-fit:cover}
+.tc-about-brand b{font-size:16px;letter-spacing:1px;color:#eaf6ff;display:block}
+.tc-about-brand small{color:#55d9ff;font-size:11px;letter-spacing:1px}
+.tc-about-close{background:transparent;border:0;color:#9beaf7;font-size:26px;line-height:1;cursor:pointer;padding:0 6px}
+.tc-about-body{padding:18px;overflow:auto}
+.tc-about-ver{display:inline-block;font:800 10px/1 'Courier New',monospace;letter-spacing:1px;color:#8df7c0;background:rgba(5,30,20,.5);border:1px solid #1e6b45;padding:5px 9px;border-radius:999px;margin-bottom:10px}
+.tc-about-body h2{font-size:21px;margin:6px 0 8px;color:#eaf6ff}
+.tc-about-body h3{font-size:15px;margin:22px 0 10px;color:#aef0ff;border-left:3px solid #22d3ee;padding-left:10px}
+.tc-about-body p{color:#b6cad8;line-height:1.6;margin:0 0 8px;font-size:14px}
+.tc-about-shots{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-items:start}
+.tc-ab-phone{position:relative;border:2px solid #1e4058;border-radius:18px;background:#02070c;padding:8px 6px 10px;box-shadow:0 10px 30px #0008}
+.tc-ab-notch{width:38%;height:6px;background:#1e4058;border-radius:999px;margin:2px auto 6px}
+.tc-ab-screen{aspect-ratio:150/240;border-radius:10px;overflow:hidden;background:#02070c}
+.tc-ab-demo{display:flex;flex-direction:column;gap:6px}
+.tc-ab-cap{text-align:center;font-size:11px;color:#7fb0c6;margin-top:-4px}
+@media(max-width:560px){.tc-about-shots{grid-template-columns:repeat(3,1fr);gap:6px}.tc-ab-cap{font-size:9px}}
+.tc-about-feats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:560px){.tc-about-feats{grid-template-columns:1fr}}
+.tc-about-feat{display:flex;gap:10px;align-items:flex-start;background:rgba(8,24,38,.5);border:1px solid rgba(34,211,238,.16);border-radius:12px;padding:10px}
+.tc-ab-ic{font-size:20px;flex:0 0 auto}
+.tc-about-feat b{color:#dff6ff;font-size:13.5px;display:block;margin-bottom:2px}
+.tc-about-feat p{font-size:12px;margin:0;color:#9db4c4}
+.tc-about-steps{display:flex;flex-direction:column;gap:8px}
+.tc-about-step{display:flex;gap:12px;align-items:flex-start;padding:4px 0}
+.tc-ab-num{flex:0 0 auto;width:30px;height:30px;display:grid;place-items:center;border-radius:50%;background:linear-gradient(135deg,#0ea5e9,#1677ff);color:#fff;font-weight:800}
+.tc-about-step b{color:#eaf6ff;font-size:14px;display:block}
+.tc-about-step p{font-size:12.5px;margin:2px 0 0}
+.tc-about-pc{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:560px){.tc-about-pc{grid-template-columns:1fr}}
+.tc-about-pros,.tc-about-cons{border-radius:12px;padding:12px 12px 12px 14px}
+.tc-about-pros{background:rgba(5,30,20,.4);border:1px solid #1e6b45}
+.tc-about-cons{background:rgba(40,24,6,.35);border:1px solid #6b571e}
+.tc-about-pros b{color:#8df7c0}.tc-about-cons b{color:#ffd98a}
+.tc-about-pc ul{margin:8px 0 0;padding-left:18px}
+.tc-about-pc li{color:#c3d4e0;font-size:12.5px;line-height:1.5;margin-bottom:4px}
+.tc-about-note{margin:18px 0;background:rgba(6,22,34,.6);border:1px solid rgba(34,211,238,.25);border-radius:12px;padding:12px;color:#b6cad8;font-size:13px;line-height:1.55}
+.tc-about-body .btn.wide{width:100%;margin-top:4px}
