@@ -216,7 +216,6 @@ function permissionsMenu(){
     <div class="menu-head"><div><b>Configurações</b><small>Minha Segurança</small></div><button class="menu-close" onclick="closeMenu()">×</button></div>
     <button class="menu-item" onclick="requestCorePermissions()">🔐 <span><b>Permissões</b><small>Câmera, microfone, localização, contactos, SMS e chamadas</small></span></button>
     <div class="perm-mini"><div>📷 Câmera <b>${permissionLabel(p.camera)}</b></div><div>🎙️ Microfone <b>${permissionLabel(p.microphone)}</b></div><div>📍 Localização <b>${permissionLabel(p.location)}</b></div><div>🔔 Notificações <b>${permissionLabel(p.notifications)}</b></div><div>💬 Mensagens/SMS <b>${permissionLabel(p.sms)}</b></div><div>📞 Chamadas <b>${permissionLabel(p.calls)}</b></div><div>🖥️ Captura de tela <b>${permissionLabel(p.screen)}</b></div></div>
-    <button class="menu-item" onclick="openInstallHelp()"><img src="../assets/icons/install-apk-96.png" alt="" style="width:30px;height:30px;border-radius:8px;flex:0 0 auto"> <span><b>Minha Emergência</b><small>Instalar/atualizar aplicativo Child</small></span></button>
     <button class="menu-item" onclick="state.menuOpen=false;render();scrollToPairing()">🔗 <span><b>Vinculação</b><small>QR Code, código ou link do Guardian</small></span></button>
   </aside></div>`;
 }
@@ -267,7 +266,7 @@ async function answerCaptureRequest(requestId,accept){try{if(!accept){await wind
   tcChildCaptureRequestId=requestId;tcChildCapturePeer=new RTCPeerConnection(window.TC_RTC||{});if(window.__tcCaptureSignalChildChannel)window.TC_DB.client.removeChannel(window.__tcCaptureSignalChildChannel);window.__tcCaptureSignalChildChannel=window.TC_DB.client.channel('tc-capture-signal-c-'+requestId).on('postgres_changes',{event:'INSERT',schema:'public',table:'capture_signals',filter:'request_id=eq.'+requestId},async payload=>{const sig=payload.new;if(sig.sender_role!=='guardian')return;try{if(sig.kind==='answer'){await tcChildCapturePeer.setRemoteDescription(sig.payload)}else if(sig.kind==='ice'&&sig.payload){await tcChildCapturePeer.addIceCandidate(sig.payload)}else if(sig.kind==='cmd'&&sig.payload&&sig.payload.action==='switch-camera'){switchChildCamera()}}catch(e){console.warn('Child capture signaling:',e)}}).subscribe();
   if(window.__tcChildSigPoll)clearInterval(window.__tcChildSigPoll);window.__tcChildSigSeen={};window.__tcChildSigPoll=setInterval(async function(){try{if(!tcChildCapturePeer){clearInterval(window.__tcChildSigPoll);return}const {data}=await window.TC_DB.client.from('capture_signals').select('*').eq('request_id',requestId).eq('sender_role','guardian').order('created_at',{ascending:true});for(const sig of (data||[])){if(window.__tcChildSigSeen[sig.id])continue;window.__tcChildSigSeen[sig.id]=1;try{if(sig.kind==='answer'){if(!tcChildCapturePeer.currentRemoteDescription)await tcChildCapturePeer.setRemoteDescription(sig.payload)}else if(sig.kind==='ice'&&sig.payload){await tcChildCapturePeer.addIceCandidate(sig.payload)}else if(sig.kind==='cmd'&&sig.payload&&sig.payload.action==='switch-camera'){switchChildCamera()}}catch(_){}}}catch(_){}} ,1500);
   tcChildCapturePeer.onicecandidate=e=>{if(e.candidate)childCaptureSignal(requestId,'ice',e.candidate.toJSON())};
-  tcChildCapturePeer.onconnectionstatechange=()=>{if(['failed','disconnected','closed'].includes(tcChildCapturePeer.connectionState)){closeChildCapture();state.status='Sessão de captura encerrada';render()}};
+  tcChildCapturePeer.onconnectionstatechange=()=>{const st=tcChildCapturePeer&&tcChildCapturePeer.connectionState;if(st==='failed'||st==='closed'){closeChildCapture();state.status='Sessão de captura encerrada';render()}};
   const requestRow=await window.TC_DB.client.from('capture_requests').select('kind').eq('id',requestId).maybeSingle();
   const captureKind=requestRow?.data?.kind||'CAMERA_VIDEO';
   if(captureKind==='AUDIO_ONLY'){
@@ -289,7 +288,7 @@ async function answerCaptureRequest(requestId,accept){try{if(!accept){await wind
     if(!navigator.mediaDevices?.getDisplayMedia)throw new Error('A projeção de tela ainda não está disponível neste dispositivo. Use Câmera ou Áudio.');
     tcChildCaptureStream=await navigator.mediaDevices.getDisplayMedia({video:true,audio:false});
   }
-  tcChildCaptureStream.getTracks().forEach(track=>{track.addEventListener('ended',async()=>{try{await window.TC_DB.client.rpc('end_capture',{p_request_id:requestId})}catch(e){}closeChildCapture();state.status='Captura encerrada pelo utilizador';render()});tcChildCapturePeer.addTrack(track,tcChildCaptureStream)});
+  tcChildCaptureStream.getTracks().forEach(track=>{tcChildCapturePeer.addTrack(track,tcChildCaptureStream)});
   // Camera requests carry both authorized camera video and authorized microphone audio.
   // The Guardian receives the same MediaStream and can play its audio track through its speaker.
   if(captureKind==='CAMERA_VIDEO'){ const audioTrack=tcChildCaptureStream.getAudioTracks?.()[0]; if(audioTrack) audioTrack.enabled=true; }

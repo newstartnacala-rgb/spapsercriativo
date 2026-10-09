@@ -1169,3 +1169,7 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Ari
 .tc-glass-btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .tc-glass-btn.danger{border-color:rgba(255,90,90,.6);color:#ffb3b3;background:rgba(40,8,10,.6)}
 @media(max-width:430px){.tc-glass-btn{width:42px;height:42px}}
+/* ===== v2.39.18 · tela de vidro maior na página de captura ===== */
+.screen-capture-page .screen-glass{width:min(100%,980px)!important;aspect-ratio:4/3!important;max-height:72vh!important;margin:4px auto 10px!important}
+@media(max-width:520px){.screen-capture-page .screen-glass{aspect-ratio:3/4!important;max-height:66vh!important}}
+.comm-seq-num{display:block;font-size:10px;color:#6f9fb4;margin-top:1px;font-family:'Courier New',monospace}
