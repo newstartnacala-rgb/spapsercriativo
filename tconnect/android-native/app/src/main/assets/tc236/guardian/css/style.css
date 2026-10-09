@@ -1173,3 +1173,12 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Ari
 .screen-capture-page .screen-glass{width:min(100%,980px)!important;aspect-ratio:4/3!important;max-height:72vh!important;margin:4px auto 10px!important}
 @media(max-width:520px){.screen-capture-page .screen-glass{aspect-ratio:3/4!important;max-height:66vh!important}}
 .comm-seq-num{display:block;font-size:10px;color:#6f9fb4;margin-top:1px;font-family:'Courier New',monospace}
+/* ===== v2.39.20 · painel da câmera (restaurado) bem ajustado ===== */
+.tc-screen-preview{inset:6vh 4vw 6vh!important}
+.tc-screen-preview-head{display:flex;align-items:center;gap:10px;height:52px;padding:0 14px;background:linear-gradient(180deg,rgba(8,24,38,.98),rgba(5,16,27,.96));border-bottom:1px solid rgba(46,154,192,.4);flex:0 0 auto}
+.tc-screen-preview-head b{font-size:14px;color:#dff6ff}
+.tc-screen-preview-head .tc-live-audio{font:800 10px/1 'Courier New',monospace;letter-spacing:1px;color:#8df7c0;background:rgba(5,30,20,.6);border:1px solid #1e6b45;padding:5px 8px;border-radius:999px}
+.tc-sp-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.tc-screen-preview-video{flex:1 1 auto;width:100%;height:auto;min-height:0;object-fit:contain;background:#02070c;display:block}
+.btn.small.danger{border-color:rgba(255,90,90,.6)!important;color:#ffb3b3!important;background:rgba(40,8,10,.5)!important}
+@media(max-width:520px){.tc-screen-preview{inset:4vh 3vw 4vh!important}.tc-screen-preview-head{height:auto;padding:8px 10px;flex-wrap:wrap}.tc-sp-actions{width:100%;margin-left:0}.tc-sp-actions .btn{flex:1}}
