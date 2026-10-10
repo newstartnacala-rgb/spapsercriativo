@@ -1,0 +1,44 @@
+name: T-Connect Site (Pages)
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'tconnect/**'
+      - 'apks-build/**'
+      - '.github/workflows/tconnect-pages.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: tconnect-pages
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.dep.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Montar site
+        run: |
+          TC=tconnect/android-native/app/src/main/assets/tc236
+          rm -rf _site && mkdir -p _site/downloads
+          # App web completa (Guardian/Child, assets, updates, sw)
+          cp -r "$TC"/. _site/
+          # Página de downloads como raiz do site (substitui o seletor simples)
+          cp tconnect/site/index.html _site/index.html
+          # APKs e guia para descarregar do próprio site (se já existirem no repo)
+          [ -f apks-build/TConnect-Guardian.apk ] && cp apks-build/TConnect-Guardian.apk _site/downloads/ || echo "sem APK Guardian ainda"
+          [ -f apks-build/TConnect-MinhaEmergencia.apk ] && cp apks-build/TConnect-MinhaEmergencia.apk _site/downloads/ || echo "sem APK Shield ainda"
+          cp tconnect/site/downloads/T-Connect-Guia-Instalacao.pdf _site/downloads/ 2>/dev/null || true
+          touch _site/.nojekyll
+          ls -la _site _site/downloads
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: dep
+        uses: actions/deploy-pages@v4

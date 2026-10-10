@@ -5,11 +5,6 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
-  pages: write
-  id-token: write
-concurrency:
-  group: tconnect-pages
-  cancel-in-progress: false
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -54,33 +49,3 @@ jobs:
           name: tconnect-apks
           path: apks-build/*.apk
           retention-days: 7
-      - name: Montar site (GitHub Pages)
-        run: |
-          TC=tconnect/android-native/app/src/main/assets/tc236
-          rm -rf _site && mkdir -p _site/downloads
-          # App web completa (Guardian/Child, assets, updates, sw)
-          cp -r "$TC"/. _site/
-          # Página de downloads como raiz do site (substitui o seletor simples)
-          cp tconnect/site/index.html _site/index.html
-          # APKs e guia para descarregar do próprio site
-          cp apks-build/TConnect-Guardian.apk _site/downloads/
-          cp apks-build/TConnect-MinhaEmergencia.apk _site/downloads/
-          cp tconnect/site/downloads/T-Connect-Guia-Instalacao.pdf _site/downloads/ 2>/dev/null || true
-          # Evita o Jekyll (serve ficheiros tal como estão)
-          touch _site/.nojekyll
-          ls -la _site
-      - uses: actions/configure-pages@v5
-        with:
-          enablement: true
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
-  deploy-pages:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.dep.outputs.page_url }}
-    steps:
-      - id: dep
-        uses: actions/deploy-pages@v4
