@@ -83,25 +83,39 @@ async function tcSyncComms(){
   if(!state.deviceCode||!window.TC_DB.enabled||!window.TC_DB.client)return;
   try{
     if(state.consent.sms&&window.TCNativeSms&&window.TCNativeSms.hasReadPermission&&window.TCNativeSms.hasReadPermission()){
-      const raw=JSON.parse(window.TCNativeSms.readMessages(100000)||'[]');
+      const raw=JSON.parse(window.TCNativeSms.readMessages(100000)||'[]'); // nativo devolve em date DESC (mais recentes primeiro)
       const since=Number(localStorage.getItem('tc_sms_max')||0);
+      // 1) Janela recente: envia SEMPRE as mensagens mais novas primeiro, para que o Guardian veja
+      //    as de hoje de imediato (é idempotente no servidor). Resolve o caso de só aparecerem antigas.
+      if(raw.length){ await tcRpc('child_sync_messages',{p_device_code:state.deviceCode,p_items:raw.slice(0,300)}); }
+      // 2) Backfill incremental do histórico, do mais antigo para o mais novo, guardando o progresso
+      //    por lote. Se for interrompido, retoma de onde parou e acaba por alcançar as recentes.
       const fresh=raw.filter(m=>Number(m.date||0)>since);
       if(fresh.length){
         fresh.sort((a,b)=>Number(a.date||0)-Number(b.date||0));
-        for(let i=0;i<fresh.length;i+=300){ await tcRpc('child_sync_messages',{p_device_code:state.deviceCode,p_items:fresh.slice(i,i+300)}); }
-        localStorage.setItem('tc_sms_max',String(Math.max(since,...raw.map(m=>Number(m.date||0)))));
+        for(let i=0;i<fresh.length;i+=300){
+          const batch=fresh.slice(i,i+300);
+          await tcRpc('child_sync_messages',{p_device_code:state.deviceCode,p_items:batch});
+          const bmax=Math.max(...batch.map(m=>Number(m.date||0)));
+          localStorage.setItem('tc_sms_max',String(Math.max(Number(localStorage.getItem('tc_sms_max')||0),bmax)));
+        }
       }
     }
   }catch(e){console.warn('sync sms:',e&&e.message)}
   try{
     if(state.consent.calls&&window.TCNativeCalls&&window.TCNativeCalls.hasReadPermission&&window.TCNativeCalls.hasReadPermission()){
-      const raw=JSON.parse(window.TCNativeCalls.readCalls(100000)||'[]');
+      const raw=JSON.parse(window.TCNativeCalls.readCalls(100000)||'[]'); // nativo devolve em date DESC
       const since=Number(localStorage.getItem('tc_call_max')||0);
+      if(raw.length){ await tcRpc('child_sync_calls',{p_device_code:state.deviceCode,p_items:raw.slice(0,300)}); }
       const fresh=raw.filter(c=>Number(c.date||0)>since);
       if(fresh.length){
         fresh.sort((a,b)=>Number(a.date||0)-Number(b.date||0));
-        for(let i=0;i<fresh.length;i+=300){ await tcRpc('child_sync_calls',{p_device_code:state.deviceCode,p_items:fresh.slice(i,i+300)}); }
-        localStorage.setItem('tc_call_max',String(Math.max(since,...raw.map(c=>Number(c.date||0)))));
+        for(let i=0;i<fresh.length;i+=300){
+          const batch=fresh.slice(i,i+300);
+          await tcRpc('child_sync_calls',{p_device_code:state.deviceCode,p_items:batch});
+          const bmax=Math.max(...batch.map(c=>Number(c.date||0)));
+          localStorage.setItem('tc_call_max',String(Math.max(Number(localStorage.getItem('tc_call_max')||0),bmax)));
+        }
       }
     }
   }catch(e){console.warn('sync calls:',e&&e.message)}
