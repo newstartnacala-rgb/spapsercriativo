@@ -20,7 +20,7 @@
   function tcUpdateMovement(lat,lng){ const now=Date.now(); const cur={lat:Number(lat),lng:Number(lng),t:now}; if(tcPrevLoc){ const d=tcHaversine(tcPrevLoc,cur); const dt=Math.max(1,(now-tcPrevLoc.t)/1000); const spd=d/dt; const ad=window.TC_MAP_ADDRESS||{}; const area=ad.bairro||ad.distrito||ad.cidade||''; if(d<6){ tcMovementStr='Parado'+(area?' · '+area:''); } else { const dir=tcCompassPt(tcBearing(tcPrevLoc,cur)); const verb=spd>2.2?'Em movimento para':'A caminhar para'; tcMovementStr=verb+' '+dir+(area?' · '+area:''); } if(d>=6) tcPrevLoc=cur; } else { tcPrevLoc=cur; tcMovementStr=''; } }
   let mapContainer = null;
   let hasLiveLocation = false;
-  let roadLayer, satelliteLayer, hybridLabels, fallbackRoadLayer;
+  let roadLayer, satelliteLayer, hybridLabels, fallbackRoadLayer, labelsLayer, transportLayer;
   let initToken = 0;
   let useFallbackRoad = false;
   const _termLast = {};
@@ -101,7 +101,7 @@
     try { if (map) map.remove(); } catch (e) {}
     try { if (pulseMarker) map.removeLayer(pulseMarker); } catch (e) {}
     map = null; marker = null; accuracyCircle = null; pulseMarker = null; roadLayer = null;
-    satelliteLayer = null; hybridLabels = null; fallbackRoadLayer = null; mapContainer = null;
+    satelliteLayer = null; hybridLabels = null; fallbackRoadLayer = null; labelsLayer = null; transportLayer = null; mapContainer = null;
     initToken++;
   }
 
@@ -266,6 +266,14 @@
     hybridLabels = window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxNativeZoom: 19, maxZoom: 19, errorTileUrl: BLANK_TILE0, updateWhenZooming: false, updateWhenIdle: true, keepBuffer: 3, opacity: .34, attribution: '&copy; OpenStreetMap contributors'
     });
+    // Rótulos reais (nomes de locais/cidades/bairros) e nomes de ruas, transparentes,
+    // por cima do satélite — como o modo híbrido do Google Maps.
+    labelsLayer = window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+      maxNativeZoom: 17, maxZoom: 19, errorTileUrl: BLANK_TILE, updateWhenZooming: false, updateWhenIdle: true, keepBuffer: 3, pane: 'overlayPane', attribution: '&copy; Esri'
+    });
+    transportLayer = window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
+      maxNativeZoom: 17, maxZoom: 19, errorTileUrl: BLANK_TILE, updateWhenZooming: false, updateWhenIdle: true, keepBuffer: 3, pane: 'overlayPane', attribution: '&copy; Esri'
+    });
     fallbackRoadLayer = window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
       maxNativeZoom: 17, maxZoom: 19, errorTileUrl: BLANK_TILE0, updateWhenZooming: false, updateWhenIdle: true, keepBuffer: 3, attribution: '&copy; Esri'
     });
@@ -362,9 +370,9 @@
 
   function updateLayers() {
     if (!map || !roadLayer || !satelliteLayer || !hybridLabels) return;
-    [roadLayer, fallbackRoadLayer, satelliteLayer, hybridLabels].forEach(layer => { if (layer && map.hasLayer(layer)) map.removeLayer(layer); });
-    if (currentType === 'satellite') satelliteLayer.addTo(map);
-    else if (currentType === 'hybrid') { satelliteLayer.addTo(map); hybridLabels.addTo(map); }
+    [roadLayer, fallbackRoadLayer, satelliteLayer, hybridLabels, labelsLayer, transportLayer].forEach(layer => { if (layer && map.hasLayer(layer)) map.removeLayer(layer); });
+    if (currentType === 'satellite') { satelliteLayer.addTo(map); if(transportLayer) transportLayer.addTo(map); if(labelsLayer) labelsLayer.addTo(map); }
+    else if (currentType === 'hybrid') { satelliteLayer.addTo(map); if(transportLayer) transportLayer.addTo(map); if(labelsLayer) labelsLayer.addTo(map); }
     else { (useFallbackRoad && fallbackRoadLayer ? fallbackRoadLayer : roadLayer).addTo(map); }
     restoreLastKnownLocation();
     updateGrid();
