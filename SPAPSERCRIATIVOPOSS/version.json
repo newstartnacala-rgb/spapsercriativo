@@ -1,1 +1,1 @@
-{ "versao": "2.9.122", "data": "2026-10-11", "novidades": "Modo Moderno: 3 TEMAS a escolher na barra lateral (gaveta) — Branco, Escuro e Verde. Clicas na bolinha da cor e o visual muda na hora; fica guardado por maquina." }
+{ "versao": "2.9.123", "data": "2026-10-15", "novidades": "IMAGENS a aparecer em todo o lado: na grelha da loja (classica e moderna), no RASTREIO do monitor, e no INVENTARIO. Tocar numa imagem abre-a em grande para confirmar. CORRIGIDO: o monitor nao estava a trazer a coluna imagem na consulta — por isso nunca apareciam no rastreio/inventario." }

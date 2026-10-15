@@ -1860,11 +1860,13 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
       const card = document.createElement('div');
       card.className = 'produto-card';
       card.tabIndex = 0;
-      // Sem imagem no card = grelha instantânea (offline e online).
-      // A imagem aparece no carrinho, para o vendedor confirmar o produto.
+      // Mostra a IMAGEM real do produto (se já carregou). Tocar na imagem abre-a em grande.
+      const visual = prod.imagem
+        ? `<img src="${prod.imagem}" class="produto-foto" onclick="event.stopPropagation(); abrirImagemGrande('${String(prod.imagem).replace(/'/g,"\\'")}')" style="width:100%;height:92px;object-fit:contain;background:#f8fafc;border-radius:10px;cursor:zoom-in;" onerror="this.outerHTML='<div class=produto-emoji>🛒</div>'">`
+        : `<div class="produto-emoji">${'🛒'}</div>`;
       card.innerHTML = `
         ${selo}
-        <div class="produto-emoji">${'🛒'}</div>
+        ${visual}
         <div class="produto-nome">${prod.nome}</div>
         ${prod.codigo ? `<div class="produto-codigo">📎 ${prod.codigo}</div>` : ''}
         ${prod.codbarras ? `<div class="produto-codigo" style="font-size:10px;color:#94a3b8;">${prod.codbarras}</div>` : ''}
@@ -5361,7 +5363,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.122';
+  const VERSAO_ATUAL = '2.9.123';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -5813,7 +5815,7 @@ body.modo2.m2-verde #m2-cart .m2-total-box { background:#dcfce7; }
     });
     if (!lista.length){ el.innerHTML = '<div style="color:#94a3b8;padding:30px;grid-column:1/-1;text-align:center;">Nenhum produto.</div>'; return; }
     el.innerHTML = lista.map(function(p){
-      var img = p.imagem ? '<img class="m2-img" src="'+p.imagem+'" onerror="this.outerHTML=\'<div class=m2-img>🛒</div>\'">' : '<div class="m2-img">🛒</div>';
+      var img = p.imagem ? '<img class="m2-img" src="'+p.imagem+'" onclick="event.stopPropagation(); abrirImagemGrande(this.src)" style="cursor:zoom-in;" onerror="this.outerHTML=\'<div class=m2-img>🛒</div>\'">' : '<div class="m2-img">🛒</div>';
       var kg = (p.unidade==='kg') ? ' <small>/kg</small>' : '';
       var nomeJS = (p.nome||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');
       return '<div class="m2-card">'+img+

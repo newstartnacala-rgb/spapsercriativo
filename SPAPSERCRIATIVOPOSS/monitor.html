@@ -1202,7 +1202,7 @@ async function carregarTudo() {
     // Modo geral: busca vendas e produtos de TODAS as lojas
     const [r1, r2, r3] = await Promise.all([
       supabaseClient.from('vendas').select('*, venda_itens(*)').order('criado_em', {ascending:false}),
-      supabaseClient.from('produtos').select('id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em').order('nome'),
+      supabaseClient.from('produtos').select('id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em,imagem,unidade').order('nome'),
       supabaseClient.from('membros_loja').select('*, lojas(nome)')
     ]);
     todasVendas = r1.data || [];
@@ -1212,7 +1212,7 @@ async function carregarTudo() {
     // Modo loja específica
     const [r1, r2, r3] = await Promise.all([
       supabaseClient.from('vendas').select('*, venda_itens(*)').eq('loja_id', lojaId).order('criado_em', {ascending:false}),
-      supabaseClient.from('produtos').select('id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em').eq('loja_id', lojaId).order('nome'),
+      supabaseClient.from('produtos').select('id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em,imagem,unidade').eq('loja_id', lojaId).order('nome'),
       supabaseClient.from('membros_loja').select('*, lojas(nome)').eq('loja_id', lojaId)
     ]);
     todasVendas = r1.data || [];
@@ -2603,6 +2603,7 @@ async function montarRastreio(id) {
   const dtf = d => new Date(d).toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
   res.innerHTML = `
     <div style="background:#f8fafc;border-radius:12px;padding:14px;margin-bottom:12px;">
+      ${p.imagem ? `<img src="${p.imagem}" onclick="abrirImagemGrande('${String(p.imagem).replace(/'/g,"\\'")}')" style="width:100%;max-height:160px;object-fit:contain;background:#fff;border-radius:10px;margin-bottom:10px;cursor:zoom-in;" onerror="this.style.display='none'">` : ''}
       <div style="font-size:16px;font-weight:bold;">${p.nome}</div>
       <div style="font-size:12px;color:#64748b;margin-top:2px;">${p.categoria||''}${p.subcategoria?' › '+p.subcategoria:''} · Código ${p.codigo||'—'}</div>
       <div style="display:flex;gap:16px;margin-top:10px;flex-wrap:wrap;">
@@ -3512,9 +3513,12 @@ function renderInventario() {
       const pc = parseFloat(p.preco_compra) || 0;
       return `
       <div style="display:grid;grid-template-columns:1fr 62px 62px;align-items:center;padding:10px 12px;border-bottom:1px solid #f1f5f9;gap:6px;">
-        <div>
-          <div style="font-size:13px;font-weight:600;">${p.nome}</div>
-          <div style="font-size:10.5px;color:#94a3b8;">custo ${money(pc)} · venda ${money(p.preco)}</div>
+        <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+          ${p.imagem ? `<img src="${p.imagem}" onclick="abrirImagemGrande('${String(p.imagem).replace(/'/g,"\\'")}')" style="width:40px;height:40px;object-fit:cover;border-radius:7px;flex-shrink:0;cursor:zoom-in;" onerror="this.style.display='none'">` : '<div style="width:40px;height:40px;border-radius:7px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🛒</div>'}
+          <div style="min-width:0;">
+            <div style="font-size:13px;font-weight:600;">${p.nome}</div>
+            <div style="font-size:10.5px;color:#94a3b8;">custo ${money(pc)} · venda ${money(p.preco)}</div>
+          </div>
         </div>
         <div style="text-align:center;font-size:14px;font-weight:bold;color:#64748b;">${st}</div>
         <div>
@@ -3994,7 +3998,7 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.122';
+const MONITOR_VERSAO = '2.9.123';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
