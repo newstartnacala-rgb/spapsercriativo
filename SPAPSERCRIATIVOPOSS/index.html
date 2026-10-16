@@ -1452,20 +1452,33 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     }
 
     // Carga LEVE: sem a coluna 'imagem' (base64 pesado) para não estourar o tempo limite
-    let { data: produtosData, error: produtosError } = await supabaseClient
-      .from('produtos')
-      .select('id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em,unidade')
-      .eq('loja_id', sessaoAtual.lojaId)
-      .order('criado_em', { ascending: true });
+    // Carrega TODOS os produtos por PÁGINAS (o Supabase devolve no máx. 1000 por pedido).
+    // Sem isto, lojas com muitos produtos perdiam os mais recentes (ex: os cadastrados a kg).
+    async function _carregarTodosProdutos(comUnidade) {
+      const cols = comUnidade
+        ? 'id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em,unidade'
+        : 'id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em';
+      const TAM = 1000;
+      let pagina = 0, todos = [];
+      while (true) {
+        const { data, error } = await supabaseClient
+          .from('produtos').select(cols)
+          .eq('loja_id', sessaoAtual.lojaId)
+          .order('criado_em', { ascending: true })
+          .range(pagina * TAM, pagina * TAM + TAM - 1);
+        if (error) return { data: null, error };
+        todos = todos.concat(data || []);
+        if (!data || data.length < TAM) break;   // última página
+        pagina++;
+        if (pagina > 50) break;                   // trava de segurança (50 mil produtos)
+      }
+      return { data: todos, error: null };
+    }
 
-    // Se falhou (ex: loja sem a coluna 'unidade' ainda), tenta SEM essa coluna —
-    // assim os produtos carregam sempre, mesmo que o SQL do kg ainda não tenha sido corrido.
+    let { data: produtosData, error: produtosError } = await _carregarTodosProdutos(true);
+    // Se falhou (ex: coluna 'unidade' ainda não existe), tenta sem essa coluna.
     if (produtosError) {
-      const _r = await supabaseClient
-        .from('produtos')
-        .select('id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em')
-        .eq('loja_id', sessaoAtual.lojaId)
-        .order('criado_em', { ascending: true });
+      const _r = await _carregarTodosProdutos(false);
       if (!_r.error) { produtosData = _r.data; produtosError = null; }
     }
 
@@ -1548,25 +1561,39 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     } catch(e) {}
   }
 
-  async function carregarImagensEmSegundoPlano() {
-    if (!navigator.onLine || !produtos.length) return;
-    const LOTE = 20;
-    for (let i = 0; i < produtos.length; i += LOTE) {
-      const ids = produtos.slice(i, i + LOTE).map(p => p.id);
+  // Produtos a que já tentámos ir buscar a imagem (evita repetir e evita loops)
+  const _imgTentadas = new Set();
+
+  // Vai buscar as imagens de uma LISTA de produtos (os que aparecem no ecrã têm prioridade).
+  // É robusto: se um lote falhar, CONTINUA para o próximo (não pára tudo). Lotes pequenos.
+  async function carregarImagensDe(lista) {
+    if (!navigator.onLine) return;
+    const faltam = (lista || []).filter(p => p && p.id && !p.imagem && !_imgTentadas.has(p.id));
+    if (!faltam.length) return;
+    faltam.forEach(p => _imgTentadas.add(p.id));
+    const ids = faltam.map(p => p.id);
+    const LOTE = 8;
+    for (let i = 0; i < ids.length; i += LOTE) {
+      const lote = ids.slice(i, i + LOTE);
       try {
-        const { data } = await supabaseClient
-          .from('produtos').select('id,imagem').in('id', ids);
+        const { data } = await supabaseClient.from('produtos').select('id,imagem').in('id', lote);
         if (data) {
+          let mudou = false;
           data.forEach(row => {
             const p = produtos.find(x => x.id === row.id);
-            if (p && row.imagem) p.imagem = row.imagem;
+            if (p && row.imagem) { p.imagem = row.imagem; mudou = true; }
           });
+          if (mudou) { try { renderProdutos(); } catch(e){} try { renderCarrinho(); } catch(e){} try { if (buscaResultadosDiv && buscaResultadosDiv.classList.contains('ativo')) renderBuscaResultados(); } catch(e){} }
         }
-      } catch(e) { break; }
-      renderProdutos(); // atualiza a grelha à medida que as imagens chegam
-      await new Promise(r => setTimeout(r, 300)); // respira entre lotes
+      } catch(e) { /* um lote falhou — CONTINUA para o próximo */ }
+      await new Promise(r => setTimeout(r, 120));
     }
-    // NÃO guarda as imagens no cache — o cache fica sempre leve para abrir offline
+  }
+
+  // Carga geral em 2º plano (todos os produtos), também robusta.
+  async function carregarImagensEmSegundoPlano() {
+    if (!navigator.onLine || !produtos.length) return;
+    await carregarImagensDe(produtos);
   }
 
   // O Supabase usa nomes de coluna (id, loja_id...); o resto do código já está
@@ -1839,6 +1866,8 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     lista.forEach(prod => {
       grelha.appendChild(criarCardProduto(prod));
     });
+    // Carrega as imagens dos produtos que estão a aparecer agora (prioridade ao visível)
+    try { carregarImagensDe(lista); } catch(e){}
   }
 
   // Constrói o cartão visual de um produto (extraído para ser reutilizado também na tela
@@ -2391,6 +2420,7 @@ async function scannerFechar() {
       const cb = (p.codbarras||'').toLowerCase();
       return nome.includes(termo) || cod.includes(termo) || cb.includes(termo);
     }).slice(0, 8);
+    try { carregarImagensDe(buscaListaAtual); } catch(e){}
     renderBuscaResultados();
   });
 
@@ -5363,7 +5393,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.123';
+  const VERSAO_ATUAL = '2.9.127';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.

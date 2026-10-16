@@ -18,6 +18,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
     --cor-principal: #1a1a1a;
@@ -348,7 +349,10 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
   <!-- ===== ABA GESTÃO ===== -->
   <div id="pag-gestao" class="pagina">
-    <div class="store-header"><h2>Store Management</h2></div>
+    <div class="store-header" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <h2>Store Management</h2>
+      <button id="btn-personalizar-gestao" onclick="togglePersonalizarGestao()" style="background:#eff6ff;color:#1a56a0;border:1px solid #bfdbfe;border-radius:9px;padding:8px 14px;font-weight:bold;font-size:13px;cursor:pointer;white-space:nowrap;">✏️ Personalizar</button>
+    </div>
 
     <div class="grade-gestao">
       <div class="card-gestao" onclick="abrirSubPainel('painel-relatorios')">
@@ -1218,6 +1222,25 @@ async function carregarTudo() {
     todasVendas = r1.data || [];
     todosProdutos = r2.data || [];
     todosMemb = r3.data || [];
+  }
+
+  // O Supabase devolve no máx. 1000 produtos por pedido. Se bateu no limite,
+  // vai buscar as páginas seguintes (senão lojas com muitos produtos perdiam os mais recentes).
+  if (todosProdutos.length >= 1000) {
+    try {
+      const cols = 'id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em,imagem,unidade';
+      let pagina = 1;
+      while (true) {
+        let q = supabaseClient.from('produtos').select(cols).order('nome').range(pagina*1000, pagina*1000+999);
+        if (!(isSuperAdmin && modoGeral)) q = supabaseClient.from('produtos').select(cols).eq('loja_id', lojaId).order('nome').range(pagina*1000, pagina*1000+999);
+        const { data, error } = await q;
+        if (error || !data || !data.length) break;
+        todosProdutos = todosProdutos.concat(data);
+        if (data.length < 1000) break;
+        pagina++;
+        if (pagina > 50) break;
+      }
+    } catch(e) {}
   }
 
   aplicarDiaHome();
@@ -3522,9 +3545,10 @@ function renderInventario() {
         </div>
         <div style="text-align:center;font-size:14px;font-weight:bold;color:#64748b;">${st}</div>
         <div>
-          <input type="number" id="inv-${p.id}" placeholder="—" min="0"
+          <input type="text" inputmode="none" readonly id="inv-${p.id}" placeholder="—"
+            onclick="abrirTecladoInv('${p.id}', '${(p.nome||'').replace(/'/g,"\\'")}', '${String(p.imagem||'').replace(/'/g,"\\'")}')"
             onchange="guardarContagemEquipa('${p.id}', '${(p.nome||'').replace(/'/g,"\\'")}', this.value)"
-            style="width:100%;padding:8px 4px;border:2px solid #e2e8f0;border-radius:8px;font-size:14px;text-align:center;font-weight:bold;">
+            style="width:100%;padding:8px 4px;border:2px solid #e2e8f0;border-radius:8px;font-size:14px;text-align:center;font-weight:bold;cursor:pointer;background:#f8fafc;">
           <div id="inv-total-${p.id}" style="display:none;font-size:10px;color:#1e40af;text-align:center;margin-top:3px;font-weight:bold;line-height:1.15;"></div>
         </div>
       </div>`;
@@ -3998,7 +4022,7 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.123';
+const MONITOR_VERSAO = '2.9.127';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -5324,9 +5348,13 @@ function mostrarAlarmeEmergencia(a){
       n.onclick = () => { try { window.focus(); } catch(e){} n.close(); };
     }
   } catch(e){}
+  // POP-UP em baixo, do lado esquerdo (não ocupa o ecrã todo)
   const div=document.createElement('div'); div.id='alarme-emerg';
-  div.style.cssText='position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;text-align:center;padding:24px;animation:piscaEmerg .7s infinite;';
-  div.innerHTML='<div style="font-size:70px;">&#128680;</div><h1 style="margin:8px 0;font-size:30px;">EMERGENCIA NA LOJA!</h1><p style="font-size:16px;">'+((a.vendedor||'Balconista'))+' pediu ajuda &middot; '+new Date(a.criado_em).toLocaleTimeString('pt-PT')+'</p><button onclick="dispensarAlarme(\''+a.id+'\')" style="margin-top:22px;padding:16px 30px;background:white;color:#dc2626;border:none;border-radius:12px;font-size:16px;font-weight:bold;cursor:pointer;">&#10003; Vi o alerta (parar alarme)</button>';
+  div.style.cssText='position:fixed;left:16px;bottom:16px;z-index:99999;width:320px;max-width:90vw;border-radius:14px;overflow:hidden;color:white;box-shadow:0 10px 40px rgba(0,0,0,.45);animation:piscaEmerg .7s infinite;';
+  div.innerHTML='<div style="padding:16px 18px;">'
+    +'<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:34px;">&#128680;</span><div><div style="font-weight:bold;font-size:17px;line-height:1.1;">EMERGÊNCIA NA LOJA!</div><div style="font-size:12.5px;opacity:.95;margin-top:2px;">'+((a.vendedor||'Balconista'))+' pediu ajuda &middot; '+new Date(a.criado_em).toLocaleTimeString('pt-PT')+'</div></div></div>'
+    +'<button onclick="dispensarAlarme(\''+a.id+'\')" style="margin-top:12px;width:100%;padding:11px;background:white;color:#dc2626;border:none;border-radius:10px;font-size:14px;font-weight:bold;cursor:pointer;">&#10003; Vi o alerta (parar alarme)</button>'
+    +'</div>';
   document.body.appendChild(div);
 }
 async function dispensarAlarme(id){
@@ -5343,6 +5371,190 @@ setInterval(verificarEmergencias, 12000);
 setTimeout(verificarEmergencias, 4000);
 try { if ('Notification' in window && Notification.permission === 'default') { setTimeout(() => { try { Notification.requestPermission(); } catch(e){} }, 6000); } } catch(e){}
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) verificarEmergencias(); });
+</script>
+
+<!-- ===== PERSONALIZAR CARTÕES (reordenar + ocultar) ===== -->
+<style>
+.grade-gestao.editando .card-gestao { outline:2px dashed #93c5fd; position:relative; }
+.card-gestao .cg-ocultar { display:none; position:absolute; top:4px; right:4px; width:26px; height:26px; border-radius:50%; background:#dc2626; color:#fff; border:none; font-size:14px; cursor:pointer; z-index:5; align-items:center; justify-content:center; line-height:1; }
+.grade-gestao.editando .card-gestao .cg-ocultar { display:flex; }
+.card-gestao.cg-oculto { display:none; }
+.grade-gestao.editando .card-gestao.cg-oculto { display:flex; opacity:.45; }
+.grade-gestao.editando .card-gestao.cg-oculto .cg-ocultar { background:#16a34a; }
+.cg-arrasto { opacity:.5; }
+</style>
+<script>
+(function(){
+  function slug(txt){ return (txt||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'x'; }
+  function chaveLoja(){ try { return 'pdv_gestao_cfg_' + (typeof lojaId!=='undefined'&&lojaId?lojaId:'geral'); } catch(e){ return 'pdv_gestao_cfg_geral'; } }
+  function lerCfg(){ try { return JSON.parse(localStorage.getItem(chaveLoja())||'{}'); } catch(e){ return {}; } }
+  function guardarCfg(cfg){ try { localStorage.setItem(chaveLoja(), JSON.stringify(cfg)); } catch(e){} }
+
+  function prepararCards(){
+    var grade = document.querySelector('.grade-gestao'); if (!grade) return;
+    var cards = Array.prototype.slice.call(grade.querySelectorAll('.card-gestao'));
+    cards.forEach(function(c){
+      if (!c.dataset.cid){
+        var nomeEl = c.querySelector('.card-gestao-nome');
+        c.dataset.cid = slug(nomeEl?nomeEl.textContent:'');
+      }
+      if (!c.querySelector('.cg-ocultar')){
+        var b = document.createElement('button');
+        b.className = 'cg-ocultar'; b.type='button'; b.textContent='✕';
+        b.onclick = function(ev){ ev.stopPropagation(); alternarOculto(c); };
+        c.appendChild(b);
+      }
+    });
+    aplicarCfg();
+  }
+  function aplicarCfg(){
+    var grade = document.querySelector('.grade-gestao'); if (!grade) return;
+    var cfg = lerCfg();
+    // ordem
+    if (cfg.ordem && cfg.ordem.length){
+      cfg.ordem.forEach(function(cid){
+        var el = grade.querySelector('.card-gestao[data-cid="'+cid+'"]');
+        if (el) grade.appendChild(el);
+      });
+    }
+    // ocultos
+    var ocultos = cfg.ocultos || [];
+    grade.querySelectorAll('.card-gestao').forEach(function(c){
+      if (ocultos.indexOf(c.dataset.cid) >= 0) c.classList.add('cg-oculto');
+      else c.classList.remove('cg-oculto');
+    });
+  }
+  function alternarOculto(card){
+    var cfg = lerCfg(); cfg.ocultos = cfg.ocultos || [];
+    var cid = card.dataset.cid;
+    var i = cfg.ocultos.indexOf(cid);
+    if (i>=0){ cfg.ocultos.splice(i,1); card.classList.remove('cg-oculto'); }
+    else { cfg.ocultos.push(cid); card.classList.add('cg-oculto'); }
+    guardarCfg(cfg);
+  }
+  var _sortable = null, _editando = false;
+  window.togglePersonalizarGestao = function(){
+    var grade = document.querySelector('.grade-gestao'); if (!grade) return;
+    prepararCards();
+    _editando = !_editando;
+    var btn = document.getElementById('btn-personalizar-gestao');
+    if (_editando){
+      grade.classList.add('editando');
+      if (btn){ btn.textContent='✅ Concluir'; btn.style.background='#dcfce7'; btn.style.color='#166534'; btn.style.borderColor='#86efac'; }
+      try {
+        if (window.Sortable && !_sortable){
+          _sortable = Sortable.create(grade, {
+            animation:150, ghostClass:'cg-arrasto', delay:120, delayOnTouchOnly:true,
+            onEnd: function(){
+              var cfg = lerCfg();
+              cfg.ordem = Array.prototype.slice.call(grade.querySelectorAll('.card-gestao')).map(function(c){ return c.dataset.cid; });
+              guardarCfg(cfg);
+            }
+          });
+        }
+      } catch(e){}
+    } else {
+      grade.classList.remove('editando');
+      if (btn){ btn.textContent='✏️ Personalizar'; btn.style.background='#eff6ff'; btn.style.color='#1a56a0'; btn.style.borderColor='#bfdbfe'; }
+      aplicarCfg();
+    }
+  };
+  // Aplicar a configuração guardada assim que a página estiver pronta
+  function arranque(){ try { prepararCards(); } catch(e){} }
+  if (document.readyState === 'complete' || document.readyState === 'interactive') setTimeout(arranque, 800);
+  else document.addEventListener('DOMContentLoaded', function(){ setTimeout(arranque, 800); });
+})();
+</script>
+
+<!-- ===== TECLADO/CALCULADORA DO INVENTÁRIO ===== -->
+<style>
+#modal-inv-calc { display:none; position:fixed; inset:0; z-index:5000; background:rgba(0,0,0,.55); align-items:flex-end; justify-content:center; }
+#modal-inv-calc.ativo { display:flex; }
+#modal-inv-calc .ic-box { background:#fff; width:100%; max-width:440px; border-radius:18px 18px 0 0; padding:16px; box-sizing:border-box; }
+#modal-inv-calc .ic-top { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+#modal-inv-calc .ic-top img { width:46px; height:46px; border-radius:9px; object-fit:cover; }
+#modal-inv-calc .ic-nome { font-weight:bold; font-size:15px; color:#0f172a; flex:1; }
+#modal-inv-calc .ic-fechar { background:#f1f5f9; border:none; border-radius:9px; width:36px; height:36px; font-size:16px; cursor:pointer; }
+#modal-inv-calc .ic-display { background:#0f172a; color:#fff; border-radius:12px; padding:14px 16px; text-align:right; font-size:26px; font-weight:bold; min-height:34px; margin-bottom:6px; word-break:break-all; }
+#modal-inv-calc .ic-sub { text-align:right; color:#16a34a; font-size:13px; font-weight:bold; min-height:18px; margin-bottom:10px; }
+#modal-inv-calc .ic-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+#modal-inv-calc .ic-grid button { padding:16px 0; border:none; border-radius:12px; font-size:20px; font-weight:bold; cursor:pointer; background:#f1f5f9; color:#0f172a; }
+#modal-inv-calc .ic-grid button.op { background:#e0e7ff; color:#3730a3; }
+#modal-inv-calc .ic-grid button.limpar { background:#fee2e2; color:#b91c1c; }
+#modal-inv-calc .ic-grid button.ok { background:#16a34a; color:#fff; grid-column:span 2; }
+#modal-inv-calc .ic-grid button:active { transform:scale(.96); }
+</style>
+<div id="modal-inv-calc">
+  <div class="ic-box">
+    <div class="ic-top">
+      <img id="ic-img" src="" style="display:none;">
+      <div class="ic-nome" id="ic-nome">Produto</div>
+      <button class="ic-fechar" onclick="fecharTecladoInv()">✕</button>
+    </div>
+    <div class="ic-display" id="ic-display">0</div>
+    <div class="ic-sub" id="ic-sub"></div>
+    <div class="ic-grid">
+      <button onclick="icTecla('7')">7</button><button onclick="icTecla('8')">8</button><button onclick="icTecla('9')">9</button><button class="op" onclick="icTecla('*')">×</button>
+      <button onclick="icTecla('4')">4</button><button onclick="icTecla('5')">5</button><button onclick="icTecla('6')">6</button><button class="op" onclick="icTecla('-')">−</button>
+      <button onclick="icTecla('1')">1</button><button onclick="icTecla('2')">2</button><button onclick="icTecla('3')">3</button><button class="op" onclick="icTecla('+')">+</button>
+      <button onclick="icTecla('0')">0</button><button onclick="icTecla('.')">.</button><button class="limpar" onclick="icApagar()">⌫</button><button class="limpar" onclick="icLimpar()">C</button>
+      <button class="op" onclick="icIgual()" style="grid-column:span 2;">= calcular</button>
+      <button class="ok" onclick="icGuardar()">✅ Guardar</button>
+    </div>
+  </div>
+</div>
+<script>
+  var _icId = null, _icNome = '', _icExpr = '';
+  function abrirTecladoInv(id, nome, imagem) {
+    _icId = id; _icNome = nome || 'Produto';
+    var inp = document.getElementById('inv-' + id);
+    _icExpr = (inp && inp.value) ? String(inp.value).replace(/[^0-9.]/g,'') : '';
+    document.getElementById('ic-nome').textContent = _icNome;
+    var img = document.getElementById('ic-img');
+    if (imagem) { img.src = imagem; img.style.display = 'block'; } else { img.style.display = 'none'; }
+    icRender();
+    document.getElementById('modal-inv-calc').classList.add('ativo');
+  }
+  function fecharTecladoInv() { document.getElementById('modal-inv-calc').classList.remove('ativo'); }
+  function icRender() {
+    var d = document.getElementById('ic-display');
+    d.textContent = _icExpr ? _icExpr.replace(/\*/g,'×') : '0';
+    var r = icCalcular();
+    document.getElementById('ic-sub').textContent = (r !== null && /[+\-*]/.test(_icExpr)) ? ('= ' + r) : '';
+  }
+  function icTecla(t) {
+    // não deixar dois operadores seguidos
+    if (/[+\-*]/.test(t) && /[+\-*]$/.test(_icExpr)) { _icExpr = _icExpr.slice(0,-1) + t; }
+    else if (/[+\-*]/.test(t) && _icExpr === '') { /* não começa com operador */ }
+    else { _icExpr += t; }
+    icRender();
+  }
+  function icApagar() { _icExpr = _icExpr.slice(0,-1); icRender(); }
+  function icLimpar() { _icExpr = ''; icRender(); }
+  function icCalcular() {
+    if (!_icExpr) return null;
+    var s = _icExpr.replace(/[^0-9.+\-*]/g,'');
+    if (/[+\-*]$/.test(s)) s = s.slice(0,-1);
+    if (!s) return null;
+    try {
+      // avaliação segura: só números e + - *
+      var val = Function('"use strict";return (' + s + ')')();
+      if (typeof val !== 'number' || !isFinite(val)) return null;
+      return Math.round(val * 1000) / 1000;
+    } catch(e) { return null; }
+  }
+  function icIgual() {
+    var r = icCalcular();
+    if (r !== null) { _icExpr = String(r); icRender(); }
+  }
+  function icGuardar() {
+    var r = icCalcular();
+    if (r === null) { fecharTecladoInv(); return; }
+    var inp = document.getElementById('inv-' + _icId);
+    if (inp) { inp.value = r; }
+    try { guardarContagemEquipa(_icId, _icNome, String(r)); } catch(e){}
+    fecharTecladoInv();
+  }
 </script>
 
 </body>
