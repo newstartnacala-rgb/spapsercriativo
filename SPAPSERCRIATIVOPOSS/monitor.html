@@ -1583,14 +1583,8 @@ function verVendasDoDia(iso) {
 // ===== VENDAS HISTÓRICO =====
 let vendasDesbloqueadas = false;
 function filtrarVendas(periodo, btn) {
-  // "Todas" pede código (só últimas vendas ficam visíveis sem código)
-  if ((periodo === 'todas' || periodo === 'mes' || periodo === 'semana') && !vendasDesbloqueadas) {
-    const cod = prompt('🔒 Para ver o histórico completo, digita o código de acesso:');
-    if (cod === null) return;
-    const codigoCorreto = lojaCodigoRelatorios || '02102';
-    if (cod !== codigoCorreto) { mostrarNotif('❌ Código incorreto.', true); return; }
-    vendasDesbloqueadas = true;
-  }
+  // Sem código — é o próprio dono no monitor dele; vê semana/mês/todas livremente.
+  vendasDesbloqueadas = true;
   filtroVendasAtivo = periodo;
   calendarioAberto = false;
   document.getElementById('calendario-vendas').style.display = 'none';
@@ -1986,6 +1980,7 @@ async function carregarAcessosGerente() {
         let botoes = '';
         if (est !== 'activo') botoes += `<button onclick="aprovarGerente('${a.user_id}')" style="padding:8px 12px;background:#16a34a;border:none;border-radius:8px;color:white;font-size:12px;font-weight:bold;cursor:pointer;">Activar</button>`;
         if (est !== 'cancelado') botoes += `<button onclick="cancelarGerenteAcesso('${a.user_id}')" style="padding:8px 12px;background:#dc2626;border:none;border-radius:8px;color:white;font-size:12px;font-weight:bold;cursor:pointer;">Cancelar</button>`;
+        else botoes += `<button onclick="eliminarGerenteAcesso('${a.id}')" style="padding:8px 12px;background:#64748b;border:none;border-radius:8px;color:white;font-size:12px;font-weight:bold;cursor:pointer;">🗑 Excluir</button>`;
         return `<div style="display:flex;align-items:center;gap:10px;background:white;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:6px;">
           <div style="width:32px;height:32px;border-radius:50%;background:#dbeafe;color:#1e40af;font-weight:bold;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${ini}</div>
           <div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:600;">${esc(a.nome||'Sem nome')}</div>
@@ -2013,6 +2008,17 @@ async function cancelarGerenteAcesso(uid) {
     const { error } = await supabaseClient.rpc('cancelar_gerente', { p_user: uid, p_loja: lojaId });
     if (error) { alert('Erro ao cancelar: ' + error.message); return; }
     try { mostrarNotif('🚫 Acesso cancelado'); } catch(e) {}
+    carregarAcessosGerente();
+  } catch(e) { alert('Erro: ' + (e.message||e)); }
+}
+
+async function eliminarGerenteAcesso(id) {
+  if (!id) return;
+  if (!confirm('Excluir este registo de vez? Some da lista. (Só funciona para já cancelados.)')) return;
+  try {
+    const { error } = await supabaseClient.from('gerente_acessos').delete().eq('id', id).eq('loja_id', lojaId);
+    if (error) { alert('Não deu para excluir: ' + error.message + '\n(Pode ser preciso uma permissão no Supabase.)'); return; }
+    try { mostrarNotif('🗑 Registo excluído'); } catch(e){}
     carregarAcessosGerente();
   } catch(e) { alert('Erro: ' + (e.message||e)); }
 }
@@ -2122,6 +2128,27 @@ async function salvarNovoProduto() {
 
   if (!nome || isNaN(preco)) { msg.textContent = '❌ Preenche nome e preço de venda.'; msg.style.color='#dc2626'; return; }
 
+  // AVISO DE CÓDIGO DUPLICADO: se já existe um produto com este código/código de barras nesta loja,
+  // mostra qual é e pede confirmação (evita lançar o mesmo produto duas vezes).
+  if (codigo) {
+    try {
+      const { data: jaExiste } = await supabaseClient.from('produtos')
+        .select('nome,preco,codigo,codbarras')
+        .eq('loja_id', lojaId)
+        .or('codigo.eq.' + codigo + ',codbarras.eq.' + codigo)
+        .limit(1);
+      if (jaExiste && jaExiste.length) {
+        const ex = jaExiste[0];
+        const ok = confirm('⚠️ JÁ EXISTE um produto com o código "' + codigo + '":\n\n'
+          + '📦 ' + (ex.nome||'(sem nome)') + '\n'
+          + '💰 MT ' + (parseFloat(ex.preco)||0).toFixed(2) + '\n\n'
+          + 'Queres mesmo gravar OUTRO produto com o mesmo código?\n'
+          + '(OK = gravar na mesma · Cancelar = voltar para corrigir)');
+        if (!ok) { msg.textContent = 'Verifica o código — já existe "' + (ex.nome||'') + '".'; msg.style.color='#d97706'; return; }
+      }
+    } catch(e) { /* se a verificação falhar, continua o save normal */ }
+  }
+
   const _unEl = document.getElementById('np-unidade');
   const unidade = (_unEl && _unEl.value) || 'un';
   const dados = { loja_id: lojaId, nome, preco, preco_compra: precoCompra || null, stock, codigo, categoria, subcategoria, imagem, unidade };
@@ -2129,7 +2156,16 @@ async function salvarNovoProduto() {
   msg.textContent = '⏳ A guardar "'+nome+'"...'; msg.style.color='#d97706';
 
   try {
-    const { error } = await supabaseClient.from('produtos').insert(dados);
+    let { error } = await supabaseClient.from('produtos').insert(dados);
+    // GRAVAÇÃO ROBUSTA: se falhou E tinha imagem, tenta gravar SEM imagem (a imagem pode ser o problema).
+    if (error && dados.imagem) {
+      const semImg = Object.assign({}, dados, { imagem: null });
+      const r2 = await supabaseClient.from('produtos').insert(semImg);
+      if (!r2.error) {
+        error = null;
+        try { mostrarNotif('⚠️ Produto guardado, mas a imagem falhou. Edita o produto e tenta a foto de novo.', true); } catch(e){}
+      } else { error = r2.error; }
+    }
     if (error) throw error;
 
     // Guardado com sucesso — limpa e mostra na lista com o stock
@@ -4022,7 +4058,7 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.127';
+const MONITOR_VERSAO = '2.9.128';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -5350,7 +5386,7 @@ function mostrarAlarmeEmergencia(a){
   } catch(e){}
   // POP-UP em baixo, do lado esquerdo (não ocupa o ecrã todo)
   const div=document.createElement('div'); div.id='alarme-emerg';
-  div.style.cssText='position:fixed;left:16px;bottom:16px;z-index:99999;width:320px;max-width:90vw;border-radius:14px;overflow:hidden;color:white;box-shadow:0 10px 40px rgba(0,0,0,.45);animation:piscaEmerg .7s infinite;';
+  div.style.cssText='position:fixed;left:16px;top:16px;z-index:99999;width:320px;max-width:90vw;border-radius:14px;overflow:hidden;color:white;box-shadow:0 10px 40px rgba(0,0,0,.45);animation:piscaEmerg .7s infinite;';
   div.innerHTML='<div style="padding:16px 18px;">'
     +'<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:34px;">&#128680;</span><div><div style="font-weight:bold;font-size:17px;line-height:1.1;">EMERGÊNCIA NA LOJA!</div><div style="font-size:12.5px;opacity:.95;margin-top:2px;">'+((a.vendedor||'Balconista'))+' pediu ajuda &middot; '+new Date(a.criado_em).toLocaleTimeString('pt-PT')+'</div></div></div>'
     +'<button onclick="dispensarAlarme(\''+a.id+'\')" style="margin-top:12px;width:100%;padding:11px;background:white;color:#dc2626;border:none;border-radius:10px;font-size:14px;font-weight:bold;cursor:pointer;">&#10003; Vi o alerta (parar alarme)</button>'

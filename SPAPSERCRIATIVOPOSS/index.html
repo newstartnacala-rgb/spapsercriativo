@@ -5393,7 +5393,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.127';
+  const VERSAO_ATUAL = '2.9.128';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -5803,7 +5803,24 @@ body.modo2.m2-verde #m2-cart .m2-total-box { background:#dcfce7; }
 <script>
   var _m2Busca = '', _m2Cat = 'Todos';
   function _modoGuardado() { try { return localStorage.getItem('pdv_modo'); } catch(e) { return null; } }
-  function definirModo(m) { try { localStorage.setItem('pdv_modo', m); } catch(e){} document.getElementById('escolher-modo').classList.remove('ativo'); aplicarModoVisual(); }
+  // Só estes emails (admin/dev) podem usar o Modo Moderno enquanto está em desenvolvimento.
+  const _ADMINS_MODO2 = ['joaomassuvir@gmail.com','newstartnacala@gmail.com'];
+  function _ehAdminModo2(){
+    try { const e = (sessaoAtual && sessaoAtual.user && sessaoAtual.user.email || '').toLowerCase(); return _ADMINS_MODO2.indexOf(e) >= 0; } catch(err){ return false; }
+  }
+  function definirModo(m) {
+    // Modo Moderno só para admin. Outros: aviso "em desenvolvimento" e abre o Clássico.
+    if (m === '2' && !_ehAdminModo2()) {
+      try { localStorage.setItem('pdv_modo', '1'); } catch(e){}
+      document.getElementById('escolher-modo').classList.remove('ativo');
+      alert('🚧 Modo Moderno em desenvolvimento.\n\nEm breve! Por agora vais continuar no Modo Clássico.');
+      aplicarModoVisual();
+      return;
+    }
+    try { localStorage.setItem('pdv_modo', m); } catch(e){}
+    document.getElementById('escolher-modo').classList.remove('ativo');
+    aplicarModoVisual();
+  }
   function mudarModoDesign() { try{fecharMenu();}catch(e){} document.getElementById('escolher-modo').classList.add('ativo'); }
   function m2Nav(secao, el) {
     if (el) { document.querySelectorAll('#m2-sidebar .m2-nav').forEach(n=>n.classList.remove('ativo')); el.classList.add('ativo'); }
@@ -5942,6 +5959,8 @@ body.modo2.m2-verde #m2-cart .m2-total-box { background:#dcfce7; }
   function renderModo2(){ renderM2Topo(); renderM2Nav(); renderM2Chips(); renderM2Grid(); renderM2Cart(); aplicarTemaM2(); }
 
   function aplicarModoVisual(){
+    // Se por algum motivo ficou em modo 2 mas não é admin, volta ao clássico.
+    if (_modoGuardado()==='2' && !_ehAdminModo2()){ try { localStorage.setItem('pdv_modo','1'); } catch(e){} document.body.classList.remove('modo2'); return; }
     if (_modoGuardado()==='2'){ document.body.classList.add('modo2'); renderModo2(); }
     else { document.body.classList.remove('modo2'); }
   }
