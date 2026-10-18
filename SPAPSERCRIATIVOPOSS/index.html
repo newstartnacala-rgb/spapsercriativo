@@ -772,10 +772,13 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     </div>
 
     <div class="form-grupo">
-      <label>Produto (opcional — preenche o código automaticamente)</label>
-      <select id="bc-produto-select" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;" onchange="bcEscolherProduto()">
-        <option value="">-- Escrever código à mão --</option>
-      </select>
+      <label>🔎 Procurar o produto (escreve o nome ou o código)</label>
+      <input type="text" id="bc-produto-busca" placeholder="Ex: Honey Bee, Omo, arroz..." autocomplete="off" oninput="bcFiltrarProdutos()"
+        style="width:100%;padding:11px;border:1.5px solid #c7d2fe;border-radius:9px;font-size:14px;box-sizing:border-box;">
+      <div id="bc-produto-resultados" style="max-height:200px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:9px;margin-top:6px;display:none;"></div>
+      <div id="bc-produto-escolhido" style="display:none;margin-top:8px;padding:10px 12px;background:#f0fdf4;border:1px solid #86efac;border-radius:9px;font-size:13px;color:#166534;"></div>
+      <!-- Seletor antigo mantido escondido para compatibilidade -->
+      <select id="bc-produto-select" style="display:none;" onchange="bcEscolherProduto()"><option value="">--</option></select>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 80px;gap:10px;">
@@ -2108,7 +2111,7 @@ async function scannerFechar() {
         selecionarResultadoBusca(achado);
         mostrarNotif('Adicionado ao carrinho: ' + achado.nome);
       } else {
-        mostrarNotif('Codigo ' + codigo + ' - ve os resultados da pesquisa.', true);
+        _avisoCodigoInexistente(codigo);
       }
     });
   }
@@ -2157,13 +2160,30 @@ async function scannerFechar() {
       if (campo) campo.value = '';
       return;
     }
-    // Não encontrou exacto: mostra o código na pesquisa e filtra (o balconista escolhe).
+    // Não encontrou: avisa CLARAMENTE que o código não existe na loja, mostrando o código
+    // para o balconista confirmar/registar o produto.
     if (campo) {
       campo.value = code;
-      try { campo.focus(); } catch (e) {}
       try { campo.dispatchEvent(new Event('input')); } catch (e) {}
     }
-    try { mostrarNotif('🔎 Código ' + code + ' — vê os resultados da pesquisa.', true); } catch (e) {}
+    _avisoCodigoInexistente(code);
+  }
+  // Banner vermelho bem visível quando o código escaneado não pertence a nenhum produto.
+  function _avisoCodigoInexistente(code) {
+    try { if (navigator.vibrate) navigator.vibrate([120, 60, 120]); } catch (e) {}
+    const old = document.getElementById('aviso-cod-inexistente'); if (old) old.remove();
+    const ov = document.createElement('div');
+    ov.id = 'aviso-cod-inexistente';
+    ov.style.cssText = 'position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:99999;background:#dc2626;color:#fff;padding:16px 20px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,0.35);text-align:center;max-width:92%;width:420px;';
+    ov.innerHTML = '<div style="font-size:30px;line-height:1;margin-bottom:6px;">⛔</div>'
+      + '<div style="font-size:16px;font-weight:bold;margin-bottom:4px;">Código não existe na loja</div>'
+      + '<div style="font-size:13px;opacity:0.95;margin-bottom:6px;">Este código não é de nenhum produto cadastrado:</div>'
+      + '<div style="font-size:20px;font-weight:bold;letter-spacing:1px;background:rgba(255,255,255,0.18);border-radius:8px;padding:8px 10px;margin-bottom:10px;word-break:break-all;">' + code + '</div>'
+      + '<div style="font-size:12px;opacity:0.9;">Confirma o código ou cadastra o produto primeiro.</div>'
+      + '<button onclick="var e=document.getElementById(\'aviso-cod-inexistente\');if(e)e.remove();" style="margin-top:12px;background:#fff;color:#dc2626;border:none;border-radius:9px;padding:9px 22px;font-weight:bold;font-size:14px;cursor:pointer;">OK</button>';
+    document.body.appendChild(ov);
+    try { mostrarNotif('⛔ Código ' + code + ' não existe na loja.', true); } catch (e) {}
+    setTimeout(function () { const e = document.getElementById('aviso-cod-inexistente'); if (e) e.remove(); }, 6000);
   }
   let _scanBuf = '', _scanLast = 0, _scanRapidos = 0;
   document.addEventListener('keydown', function(e) {
@@ -2519,11 +2539,17 @@ async function scannerFechar() {
   async function descontarPreco(i) {
     const item = carrinho[i]; if (!item) return;
     // Busca o estado mais fresco (o dono pode ter acabado de ligar/desligar os descontos).
-    try { await _refrescarPerfilLoja(); } catch(e) {}
+    // Tenta até 2 vezes, para o caso de a 1ª leitura falhar por rede fraca.
+    mostrarNotif('🔄 A verificar permissão de desconto...');
+    for (let t = 0; t < 2; t++) {
+      try { await _refrescarPerfilLoja(); } catch(e) {}
+      if (sessaoAtual && sessaoAtual.codigoDesconto) break;
+      await new Promise(r => setTimeout(r, 400));
+    }
     // Desconto é ligado/desligado pelo DONO no Monitor (sem código). Guardamos esse estado
     // na coluna codigo_desconto: qualquer valor = LIGADO; vazio = DESLIGADO.
     const permitido = !!(sessaoAtual && sessaoAtual.codigoDesconto);
-    if (!permitido) { mostrarNotif('🔒 Descontos desligados pelo dono. Peça-lhe para os ligar no Monitor → Meu Perfil.', true); return; }
+    if (!permitido) { mostrarNotif('🔒 Descontos desligados. O dono tem de ligar em Monitor → Meu Perfil → "Permitir descontos" e Guardar. Depois toca aqui outra vez.', true); return; }
     const atual = (item.precoOriginal || item.preco);
     const novoStr = prompt('Novo preço por unidade de "' + item.nome + '":\n(preço normal: MT ' + atual + ')', item.preco);
     if (novoStr === null) return;
@@ -3181,10 +3207,11 @@ async function scannerFechar() {
   // logótipo, rodapé do recibo, nomes) e atualiza a sessão + cache. Usado pelo botão ⟳
   // e antes de aplicar um desconto, para o código novo chegar sem reabrir a app.
   async function _refrescarPerfilLoja() {
-    if (!sessaoAtual || !sessaoAtual.lojaId || !navigator.onLine) return;
-    const { data: lj } = await supabaseClient.from('lojas')
+    if (!sessaoAtual || !sessaoAtual.lojaId) return;
+    // Não dependemos de navigator.onLine (dá falso em muitos tablets) — tentamos sempre.
+    const { data: lj, error } = await supabaseClient.from('lojas')
       .select('logo, recibo_rodape, endereco, nome, nome_empresa, telefone, codigo_desconto').eq('id', sessaoAtual.lojaId).maybeSingle();
-    if (!lj) return;
+    if (error || !lj) return;
     sessaoAtual.codigoDesconto = lj.codigo_desconto || null;
     sessaoAtual.reciboRodape = lj.recibo_rodape || null;
     sessaoAtual.logo = lj.logo || null;
@@ -3194,6 +3221,13 @@ async function scannerFechar() {
     if (lj.telefone != null) sessaoAtual.telefone = lj.telefone;
     try { localStorage.setItem('pdv_cache_sessao', JSON.stringify(sessaoAtual)); } catch(e) {}
   }
+
+  // Mantém o estado dos descontos (e logo/rodapé) sempre fresco, sem ninguém tocar:
+  // de 45 em 45s vai buscar ao servidor. Assim, quando o dono liga/desliga os descontos,
+  // a loja apanha isso sozinha em menos de 1 minuto.
+  setInterval(function () {
+    if (sessaoAtual && sessaoAtual.lojaId) { _refrescarPerfilLoja().catch(function(){}); }
+  }, 45000);
 
   async function atualizarLojaManual() {
     const btn = document.getElementById('btn-sync');
@@ -3928,18 +3962,57 @@ async function scannerFechar() {
 
   /* ===== IMPRESSORA DE ETIQUETAS ===== */
   function abrirModalEtiquetadora() {
-    // Preenche o seletor com os produtos da loja
-    const sel = document.getElementById('bc-produto-select');
-    sel.innerHTML = '<option value="">-- Escrever código à mão --</option>' +
-      produtos.map(p => `<option value="${p.id}">${p.nome}${p.codbarras ? ' (tem código)' : ''}</option>`).join('');
     document.getElementById('bc-codigo').value = '';
     document.getElementById('bc-qtd').value = 1;
     document.getElementById('bc-nome-produto').textContent = '';
     document.getElementById('bc-preco-produto').textContent = '';
     document.getElementById('bc-preview-wrap').style.display = 'none';
+    bcProdutoAtual = null;
+    const busca = document.getElementById('bc-produto-busca'); if (busca) busca.value = '';
+    const res = document.getElementById('bc-produto-resultados'); if (res) { res.style.display = 'none'; res.innerHTML = ''; }
+    const esc = document.getElementById('bc-produto-escolhido'); if (esc) { esc.style.display = 'none'; esc.innerHTML = ''; }
     selosLista = [];
     bcRenderLista();
     document.getElementById('modal-etiquetadora').classList.add('ativo');
+  }
+
+  // Filtra os produtos da loja pela pesquisa (nome ou código) e mostra uma lista clicável.
+  function bcFiltrarProdutos() {
+    const termo = (document.getElementById('bc-produto-busca').value || '').trim().toLowerCase();
+    const res = document.getElementById('bc-produto-resultados');
+    if (!termo) { res.style.display = 'none'; res.innerHTML = ''; return; }
+    const achados = (produtos || []).filter(p =>
+      (p.nome || '').toLowerCase().includes(termo) ||
+      (p.codigo || '').toLowerCase().includes(termo) ||
+      (p.codbarras || '').toLowerCase().includes(termo)
+    ).slice(0, 30);
+    if (!achados.length) {
+      res.innerHTML = '<div style="padding:12px;color:#b91c1c;font-size:13px;text-align:center;">❌ Nenhum produto com "' + termo + '". Só podes imprimir selos de produtos que existem na loja.</div>';
+      res.style.display = 'block';
+      return;
+    }
+    res.innerHTML = achados.map(p => {
+      const cod = p.codbarras || p.codigo || '';
+      return '<div onclick="bcEscolherProdutoId(\'' + p.id + '\')" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #f1f5f9;cursor:pointer;">'
+        + '<div style="min-width:0;"><div style="font-weight:600;color:#1a202c;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + p.nome + '</div>'
+        + '<div style="font-size:11px;color:#94a3b8;">' + (cod ? ('📶 ' + cod) : 'sem código — vai gerar um') + '</div></div>'
+        + '<span style="font-size:13px;font-weight:bold;color:#e05c00;white-space:nowrap;">MT ' + (parseFloat(p.preco)||0).toFixed(2) + '</span></div>';
+    }).join('');
+    res.style.display = 'block';
+  }
+
+  // Escolhe um produto da lista: preenche o código e mostra qual foi escolhido.
+  function bcEscolherProdutoId(id) {
+    bcProdutoAtual = (produtos || []).find(p => p.id === id) || null;
+    if (!bcProdutoAtual) return;
+    const cod = bcProdutoAtual.codbarras || bcProdutoAtual.codigo || bcGerarNumero();
+    document.getElementById('bc-codigo').value = cod;
+    const esc = document.getElementById('bc-produto-escolhido');
+    esc.innerHTML = '✅ Produto: <b>' + bcProdutoAtual.nome + '</b> — MT ' + (parseFloat(bcProdutoAtual.preco)||0).toFixed(2) + ' · código <b>' + cod + '</b>';
+    esc.style.display = 'block';
+    const res = document.getElementById('bc-produto-resultados'); res.style.display = 'none'; res.innerHTML = '';
+    document.getElementById('bc-produto-busca').value = bcProdutoAtual.nome;
+    bcGerar();
   }
 
   let bcProdutoAtual = null;
@@ -3968,7 +4041,16 @@ async function scannerFechar() {
   async function bcAdicionarLista() {
     const codigo = document.getElementById('bc-codigo').value.trim();
     const qtd = Math.max(1, parseInt(document.getElementById('bc-qtd').value) || 1);
-    if (!codigo) { mostrarNotif('❌ Escreve ou gera um código primeiro.', true); return; }
+    if (!codigo) { mostrarNotif('❌ Procura e escolhe um produto primeiro.', true); return; }
+    // REGRA: só imprimir selos de produtos QUE EXISTEM na loja.
+    if (!bcProdutoAtual) {
+      const existe = (produtos || []).find(p => _codigoBate(p.codbarras, codigo) || _codigoBate(p.codigo, codigo));
+      if (existe) { bcProdutoAtual = existe; }
+      else {
+        mostrarNotif('❌ Esse código não é de nenhum produto da loja. Usa a pesquisa e escolhe um produto cadastrado.', true);
+        return;
+      }
+    }
     // Se o produto ainda não tinha código de barras, grava-o
     if (bcProdutoAtual && !bcProdutoAtual.codbarras) {
       try { await supabaseClient.from('produtos').update({ codbarras: codigo }).eq('id', bcProdutoAtual.id); bcProdutoAtual.codbarras = codigo; } catch(e) {}
@@ -3982,11 +4064,12 @@ async function scannerFechar() {
     bcRenderLista();
     mostrarNotif('✅ Adicionado. Já tens ' + selosLista.length + ' produto(s) na lista.');
     // Limpa os campos para escolher o próximo produto
-    document.getElementById('bc-produto-select').value = '';
     document.getElementById('bc-codigo').value = '';
     document.getElementById('bc-qtd').value = 1;
     bcProdutoAtual = null;
     document.getElementById('bc-preview-wrap').style.display = 'none';
+    const busca = document.getElementById('bc-produto-busca'); if (busca) busca.value = '';
+    const esc = document.getElementById('bc-produto-escolhido'); if (esc) { esc.style.display = 'none'; esc.innerHTML = ''; }
   }
 
   function bcEscolherProduto() {
@@ -4074,7 +4157,13 @@ async function scannerFechar() {
     if (!itens.length) {
       const codigo = document.getElementById('bc-codigo').value.trim();
       const qtd = Math.max(1, parseInt(document.getElementById('bc-qtd').value) || 1);
-      if (!codigo) { mostrarNotif('❌ Escreve/gera um código, ou adiciona produtos à lista primeiro.', true); return; }
+      if (!codigo) { mostrarNotif('❌ Procura e escolhe um produto da loja primeiro.', true); return; }
+      // REGRA: só imprimir selos de produtos QUE EXISTEM na loja.
+      if (!bcProdutoAtual) {
+        const existe = (produtos || []).find(p => _codigoBate(p.codbarras, codigo) || _codigoBate(p.codigo, codigo));
+        if (existe) { bcProdutoAtual = existe; }
+        else { mostrarNotif('❌ Esse código não é de nenhum produto da loja. Usa a pesquisa e escolhe um produto cadastrado.', true); return; }
+      }
       if (bcProdutoAtual && !bcProdutoAtual.codbarras) {
         await supabaseClient.from('produtos').update({ codbarras: codigo }).eq('id', bcProdutoAtual.id);
         bcProdutoAtual.codbarras = codigo;
@@ -5612,7 +5701,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.139';
+  const VERSAO_ATUAL = '2.9.141';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
