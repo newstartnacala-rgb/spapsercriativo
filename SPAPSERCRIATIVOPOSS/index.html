@@ -793,14 +793,25 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
     <div class="form-grupo">
       <label>Tamanho do selo (impressora de etiquetas)</label>
-      <select id="bc-tamanho" onchange="bcGerar()" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
-        <option value="20x30">Etiqueta pequena 20 × 30 mm (com cola)</option>
-        <option value="25x15">Etiqueta pequena 25 × 15 mm (com cola)</option>
-        <option value="30x20">Etiqueta 30 × 20 mm (com cola)</option>
+      <select id="bc-tamanho" onchange="bcTamanhoMudou()" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
+        <option value="custom" selected>✏️ Personalizado — escreve o tamanho exacto</option>
+        <option value="50x40">Etiqueta 50 × 40 mm</option>
+        <option value="40x30">Etiqueta 40 × 30 mm</option>
         <option value="35x25">Etiqueta 35 × 25 mm (com cola)</option>
-        <option value="40x30" selected>Etiqueta 40 × 30 mm (a maior)</option>
+        <option value="30x20">Etiqueta 30 × 20 mm (com cola)</option>
+        <option value="25x15">Etiqueta pequena 25 × 15 mm (com cola)</option>
+        <option value="20x30">Etiqueta pequena 20 × 30 mm (com cola)</option>
         <option value="a4">Folha A4 (impressora normal)</option>
       </select>
+      <div id="bc-custom-wrap" style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+        <input type="number" id="bc-w" value="50" min="10" max="150" step="1" oninput="bcGerar()" style="width:70px;padding:9px;border:1px solid #ddd;border-radius:8px;font-size:14px;text-align:center;">
+        <span style="color:#64748b;font-weight:bold;">×</span>
+        <input type="number" id="bc-h" value="40" min="10" max="150" step="1" oninput="bcGerar()" style="width:70px;padding:9px;border:1px solid #ddd;border-radius:8px;font-size:14px;text-align:center;">
+        <span style="color:#64748b;font-size:13px;">mm (largura × altura)</span>
+      </div>
+      <div style="font-size:11px;color:#b45309;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:8px 10px;margin-top:8px;line-height:1.45;">
+        ⚠️ <b>Tem de ser IGUAL ao papel do driver.</b> No teu caso o driver está em <b>50 × 40 mm</b> (USER). Põe aqui <b>50 × 40</b> também — assim não há espaços entre os selos.
+      </div>
     </div>
 
     <div class="form-grupo">
@@ -3897,6 +3908,36 @@ async function scannerFechar() {
     bcGerar();
   }
 
+  // Mostra/esconde os campos de tamanho personalizado
+  function bcTamanhoMudou() {
+    const t = document.getElementById('bc-tamanho').value;
+    const wrap = document.getElementById('bc-custom-wrap');
+    if (wrap) wrap.style.display = (t === 'custom') ? 'flex' : 'none';
+    bcGerar();
+  }
+
+  // Devolve as dimensões do selo conforme a escolha (preset, personalizado ou A4)
+  function bcDims() {
+    const t = document.getElementById('bc-tamanho').value;
+    const presets = {
+      '20x30': { w: 20, h: 30 }, '25x15': { w: 25, h: 15 }, '30x20': { w: 30, h: 20 },
+      '35x25': { w: 35, h: 25 }, '40x30': { w: 40, h: 30 }, '50x40': { w: 50, h: 40 }
+    };
+    if (t === 'a4') return { w: 0, h: 0, nomeFs: '11px', precoFs: '12px', bcH: 50, bcW: 2, bcFs: 14 };
+    let w, h;
+    if (t === 'custom') {
+      w = parseInt((document.getElementById('bc-w') || {}).value) || 50;
+      h = parseInt((document.getElementById('bc-h') || {}).value) || 40;
+    } else { const p = presets[t] || presets['40x30']; w = p.w; h = p.h; }
+    // Tamanhos de letra e código de barras proporcionais à altura do selo
+    const nomeFs = Math.max(5, Math.round(h * 0.20)) + 'px';
+    const precoFs = Math.max(6, Math.round(h * 0.24)) + 'px';
+    const bcH = Math.max(10, Math.round(h * 0.60));
+    const bcW = w >= 40 ? 1.3 : (w >= 30 ? 1.1 : 0.9);
+    const bcFs = Math.max(5, Math.round(h * 0.16));
+    return { w, h, nomeFs, precoFs, bcH, bcW, bcFs };
+  }
+
   function bcGerar() {
     const codigo = document.getElementById('bc-codigo').value.trim();
     const wrap = document.getElementById('bc-preview-wrap');
@@ -3938,8 +3979,8 @@ async function scannerFechar() {
 
     // Se há impressora de ETIQUETAS definida (USB direto) e não é A4, envia direto por USB (TSPL).
     if (tamanho !== 'a4' && _impGuardada('etiqueta')) {
-      const dimKg = { '20x30':[20,30], '25x15':[25,15], '30x20':[30,20], '35x25':[35,25], '40x30':[40,30], '58-rolo':[54,30] };
-      const dm = dimKg[tamanho] || [40,30];
+      const _dd = bcDims();
+      const dm = [_dd.w || 40, _dd.h || 30];
       let todas = [];
       itens.forEach(it => {
         const precoLimpo = String(it.preco || '').replace(/MT\s*/i,'').trim();
@@ -3957,16 +3998,8 @@ async function scannerFechar() {
       mostrarNotif('⚠️ USB falhou — a abrir a janela normal.', true);
     }
 
-    // Dimensões de cada selo por tamanho escolhido (largura x altura em mm)
-    const dims = {
-      '20x30': { w: 20, h: 30, nomeFs: '5px', precoFs: '6px', bcH: 18, bcW: 0.9, bcFs: 5 },
-      '25x15': { w: 25, h: 15, nomeFs: '5px', precoFs: '6px', bcH: 11, bcW: 0.9, bcFs: 5 },
-      '30x20': { w: 30, h: 20, nomeFs: '6px', precoFs: '7px', bcH: 14, bcW: 1.1, bcFs: 6 },
-      '35x25': { w: 35, h: 25, nomeFs: '7px', precoFs: '8px', bcH: 20, bcW: 1.2, bcFs: 7 },
-      '40x30': { w: 40, h: 30, nomeFs: '8px', precoFs: '9px', bcH: 28, bcW: 1.4, bcFs: 8 },
-      'a4':    { w: 0,  h: 0,  nomeFs: '11px', precoFs: '12px', bcH: 50, bcW: 2,   bcFs: 14 }
-    };
-    const d = dims[tamanho] || dims['40x30'];
+    // Dimensões de cada selo (preset, personalizado ou A4) — iguais às do preview
+    const d = bcDims();
 
     // Regenera o código de barras no tamanho adequado ao selo
     function svgPara(codigoSel, hMm, wLine, fs) {
@@ -5467,7 +5500,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.135';
+  const VERSAO_ATUAL = '2.9.136';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
