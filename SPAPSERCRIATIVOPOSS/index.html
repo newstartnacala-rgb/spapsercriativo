@@ -4081,9 +4081,11 @@ async function scannerFechar() {
       const _pageRule = (_modoFolha === 'continuo')
         ? `@page { size: ${d.w}mm auto; margin: 0; }`
         : `@page { size: ${d.w}mm ${d.h}mm; margin: 0; }`;
-      const _seloBreak = (_modoFolha === 'continuo')
-        ? 'break-inside: avoid; page-break-inside: avoid;'
-        : 'page-break-after: always; break-after: page;';
+      // IMPORTANTE: nunca forçar "page-break-after" — com o selo do tamanho exacto da
+      // página, a quebra forçada cria uma PÁGINA EM BRANCO entre cada selo (o problema
+      // dos selos em branco alternados). Deixamos a paginação natural: cada selo tem a
+      // altura da página, por isso cai um por página sozinho, sem brancos.
+      const _seloBreak = 'break-inside: avoid; page-break-inside: avoid;';
       win.document.write(`<html><head><title>Selos</title>
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <style>
@@ -5500,7 +5502,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.136';
+  const VERSAO_ATUAL = '2.9.137';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
