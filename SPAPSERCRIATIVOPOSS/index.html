@@ -803,6 +803,16 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
       </select>
     </div>
 
+    <div class="form-grupo">
+      <label>↻ Rodar etiqueta (se sair de lado, experimenta 90°)</label>
+      <select id="bc-rodar" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
+        <option value="0">Normal (0°)</option>
+        <option value="90">Rodar 90°</option>
+        <option value="180">Rodar 180°</option>
+        <option value="270">Rodar 270°</option>
+      </select>
+    </div>
+
     <!-- Preview do código de barras -->
     <div id="bc-preview-wrap" style="display:none;text-align:center;margin-bottom:14px;">
       <div style="font-size:12px;color:#64748b;margin-bottom:8px;font-weight:bold;">Pré-visualização do selo:</div>
@@ -1450,6 +1460,16 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
         return;
       }
     }
+
+    // ABERTURA INSTANTÂNEA: se há cópia local, mostra JÁ todos os produtos (sem esperar a internet).
+    // A seguir atualiza em segundo plano a partir do servidor.
+    try {
+      const temCache = localStorage.getItem('pdv_cache_produtos_' + sessaoAtual.lojaId);
+      if (temCache && (!produtos || !produtos.length)) {
+        carregarDoCacheLocal();
+        try { renderCategorias(); renderProdutos(); renderMaisVendidos(); renderCarrinho(); } catch(e){}
+      }
+    } catch(e){}
 
     // Carga LEVE: sem a coluna 'imagem' (base64 pesado) para não estourar o tempo limite
     // Carrega TODOS os produtos por PÁGINAS (o Supabase devolve no máx. 1000 por pedido).
@@ -3893,15 +3913,19 @@ async function scannerFechar() {
       return holder.innerHTML;
     }
 
+    // Rotação escolhida pelo utilizador (0/90/180/270) — resolve etiquetas que saem de lado
+    const _bcRotEl = document.getElementById('bc-rodar');
+    const _bcRot = _bcRotEl ? (parseInt(_bcRotEl.value) || 0) : 0;
+
     let selos = '';
     itens.forEach(function(it) {
       const svgSelo = svgPara(it.codigo, d.bcH, d.bcW, d.bcFs);
       for (let i = 0; i < it.qtd; i++) {
-        selos += `<div class="selo">
+        selos += `<div class="selo"><div class="selo-in">
           ${it.nome ? '<div class="s-nome">'+it.nome+'</div>' : ''}
           ${it.preco ? '<div class="s-preco">'+it.preco+'</div>' : ''}
           <div class="s-bc">${svgSelo}</div>
-        </div>`;
+        </div></div>`;
       }
     });
 
@@ -3962,11 +3986,18 @@ async function scannerFechar() {
         #barra-imprimir button { background:white; color:#1a56a0; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; font-size:15px; cursor:pointer; }
         .selo {
           width:${d.w}mm; height:${d.h}mm;
-          display:flex; flex-direction:column; align-items:center; justify-content:center;
-          text-align:center; padding:1mm; overflow:hidden;
+          display:flex; align-items:center; justify-content:center;
+          overflow:hidden;
           page-break-after: always; break-after: page;
         }
         .selo:last-child { page-break-after: auto; break-after: auto; }
+        .selo-in {
+          display:flex; flex-direction:column; align-items:center; justify-content:center;
+          text-align:center; padding:1mm; overflow:hidden; box-sizing:border-box;
+          width:${(_bcRot===90||_bcRot===270)? d.h : d.w}mm;
+          height:${(_bcRot===90||_bcRot===270)? d.w : d.h}mm;
+          transform: rotate(${_bcRot}deg);
+        }
         .s-nome { font-size:${d.nomeFs}; font-weight:bold; line-height:1.1; margin-bottom:0.5mm; width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .s-preco { font-size:${d.precoFs}; font-weight:bold; color:#000; margin-bottom:0.5mm; }
         .s-bc svg { max-width:100%; height:auto; }
@@ -5393,7 +5424,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.128';
+  const VERSAO_ATUAL = '2.9.130';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
