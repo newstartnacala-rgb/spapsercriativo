@@ -1701,7 +1701,9 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
       const ae = document.activeElement;
       const emProduto = ae && ae.classList && ae.classList.contains('produto-card');
       const emCategoria = ae && ae.classList && (ae.classList.contains('cat-btn') || ae.classList.contains('subcat-btn'));
-      if (modalPag && modalPag.classList.contains('ativo')) { e.preventDefault(); confirmarPagamento(); }
+      // Com o pagamento ABERTO: quem confirma é o captador do pagamento (com guarda anti-duplo).
+      // Aqui só evitamos que o Enter faça outra coisa.
+      if (modalPag && modalPag.classList.contains('ativo')) { e.preventDefault(); }
       else if (ae !== campoBusca && !emProduto && !emCategoria && !dentroDeModal) { e.preventDefault(); if (carrinho && carrinho.length) abrirPagamento(); }
     }
   });
@@ -2038,48 +2040,89 @@ async function scannerFechar() {
     scannerAbrir('busca-scanner-area', 'busca-reader', function(codigo) {
       const campo = document.getElementById('campo-busca');
       if (campo) { campo.value = codigo; campo.focus(); campo.dispatchEvent(new Event('input')); }
-      const achados = produtos.filter(p =>
-        (p.codbarras||'').toLowerCase() === (codigo||'').toLowerCase() ||
-        (p.codigo||'').toLowerCase() === (codigo||'').toLowerCase());
-      if (achados.length === 1) {
-        selecionarResultadoBusca(achados[0]);
-        mostrarNotif('Adicionado ao carrinho: ' + achados[0].nome);
-      } else if (achados.length === 0) {
+      const achado = _acharPorCodigo(codigo);
+      if (achado) {
+        selecionarResultadoBusca(achado);
+        mostrarNotif('Adicionado ao carrinho: ' + achado.nome);
+      } else {
         mostrarNotif('Codigo ' + codigo + ' - ve os resultados da pesquisa.', true);
       }
     });
   }
 
 
-  // ===== CAPTADOR GLOBAL DO LEITOR USB (funciona sem clicar na caixa) =====
-  // O leitor "escreve" o código muito rápido e dá Enter. Captamos essa leitura
-  // em qualquer sítio da tela e adicionamos o produto ao carrinho.
-  let _scanBuf = '', _scanLast = 0;
+  // ===== COMPARAÇÃO DE CÓDIGOS TOLERANTE AO DÍGITO EAN-13 =====
+  // Quando geramos um código de 12 dígitos, a impressora em EAN-13 acrescenta
+  // o 13.º dígito (verificação). O scanner lê 13, mas na BD está guardado 12.
+  // Esta função faz o código bater certo mesmo com essa diferença.
+  function _ean13Check(d12) {
+    let s = 0;
+    for (let i = 0; i < 12; i++) s += (+d12[i]) * (i % 2 ? 3 : 1);
+    return String((10 - (s % 10)) % 10);
+  }
+  function _codigoBate(guardado, lido) {
+    if (!guardado || !lido) return false;
+    const a = String(guardado).toLowerCase().trim();
+    const b = String(lido).toLowerCase().trim();
+    if (a === b) return true;
+    const da = a.replace(/\D/g, ''), db = b.replace(/\D/g, '');
+    if (da && da === db) return true;
+    // 12 guardado vs 13 lido (com dígito de verificação) e vice-versa
+    if (da.length === 12 && db.length === 13 && (db === da + _ean13Check(da) || db.startsWith(da))) return true;
+    if (db.length === 12 && da.length === 13 && (da === db + _ean13Check(db) || da.startsWith(db))) return true;
+    return false;
+  }
+  function _acharPorCodigo(lido) {
+    return (produtos || []).find(p => _codigoBate(p.codbarras, lido) || _codigoBate(p.codigo, lido)) || null;
+  }
+
+  // ===== CAPTADOR GLOBAL DO LEITOR USB (ÚNICO — funciona sem clicar na caixa) =====
+  // O leitor "escreve" o código muito depressa e termina com Enter. Captamos isso
+  // em qualquer sítio da tela. Se encontrar o produto, adiciona ao carrinho; se não
+  // encontrar exacto, escreve o código na PESQUISA e filtra, para o balconista ver e tocar.
+  function _ehCampoDados(ae) {
+    return ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT') && ae.id !== 'campo-busca';
+  }
+  function _processarScan(code) {
+    code = (code || '').trim();
+    if (code.length < 3) return;
+    const campo = document.getElementById('campo-busca');
+    const achado = _acharPorCodigo(code);
+    if (achado) {
+      try { selecionarResultadoBusca(achado); } catch (err) { try { adicionarAoCarrinho(achado); } catch (e2) { try { cliqueNoProduto(achado); } catch (e3) {} } }
+      try { mostrarNotif('🔊 ' + achado.nome + ' adicionado'); } catch (e) {}
+      if (campo) campo.value = '';
+      return;
+    }
+    // Não encontrou exacto: mostra o código na pesquisa e filtra (o balconista escolhe).
+    if (campo) {
+      campo.value = code;
+      try { campo.focus(); } catch (e) {}
+      try { campo.dispatchEvent(new Event('input')); } catch (e) {}
+    }
+    try { mostrarNotif('🔎 Código ' + code + ' — vê os resultados da pesquisa.', true); } catch (e) {}
+  }
+  let _scanBuf = '', _scanLast = 0, _scanRapidos = 0;
   document.addEventListener('keydown', function(e) {
     const ae = document.activeElement;
-    // Se o utilizador está a escrever num campo de dados (nome, preço, etc.), não mexe —
-    // só captamos quando nada está focado OU quando está na caixa de pesquisa.
-    const emCampoDados = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT') && ae.id !== 'campo-busca';
+    if (_ehCampoDados(ae)) return;            // a escrever noutro campo (nome, preço…) => não mexe
     const agora = Date.now();
-    if (agora - _scanLast > 120) _scanBuf = '';   // teclas lentas (manual) => reinicia
+    const dt = agora - _scanLast;
     _scanLast = agora;
     if (e.key === 'Enter') {
-      const code = _scanBuf; _scanBuf = '';
-      if (!emCampoDados && code.length >= 4) {
-        const alvo = code.toLowerCase();
-        const achados = (produtos||[]).filter(p =>
-          (p.codbarras||'').toLowerCase() === alvo || (p.codigo||'').toLowerCase() === alvo);
-        if (achados.length >= 1) {
-          e.preventDefault(); e.stopPropagation();
-          try { selecionarResultadoBusca(achados[0]); } catch(err) { try { cliqueNoProduto(achados[0]); } catch(e2){} }
-          try { mostrarNotif('🔊 ' + achados[0].nome + ' adicionado'); } catch(e3){}
-          const campo = document.getElementById('campo-busca'); if (campo) campo.value = '';
-          return;
-        }
+      const code = _scanBuf, rapidos = _scanRapidos;
+      _scanBuf = ''; _scanRapidos = 0;
+      // É um scanner se tem >=3 caracteres e a maioria chegou muito depressa.
+      if (code.length >= 3 && rapidos >= Math.max(2, code.length - 2)) {
+        e.preventDefault(); e.stopPropagation();
+        _processarScan(code);
       }
       return;
     }
-    if (!emCampoDados && e.key.length === 1) { _scanBuf += e.key; }
+    if (e.key && e.key.length === 1) {
+      if (dt < 60) { _scanBuf += e.key; _scanRapidos++; }   // teclas rápidas = scanner
+      else { _scanBuf = e.key; _scanRapidos = 0; }          // pausa = recomeça (digitação humana)
+    }
   }, true);
 
   // ===== LARGURA DO RECIBO (58mm / 80mm) =====
@@ -2489,6 +2532,10 @@ async function scannerFechar() {
   }
 
   function _marcarOverlay() { document.body.classList.add('overlay-aberto'); }
+  // Estado do ecrã de pagamento:
+  // _pagAbertoEm  -> momento em que abriu (para o Enter que abriu NÃO confirmar logo)
+  // _pagRecebidoVirgem -> true até a 1ª tecla; a 1ª tecla substitui o total pré-preenchido
+  let _pagAbertoEm = 0, _pagRecebidoVirgem = false, _aConfirmarVenda = false;
   function abrirPagamento() {
     document.body.classList.add('overlay-aberto');
     if(carrinho.length===0){mostrarNotif('❌ Carrinho vazio!',true);return;}
@@ -2497,6 +2544,8 @@ async function scannerFechar() {
     document.getElementById('pag-total-resumo').textContent='MT '+total.toFixed(2);
     document.getElementById('pag-subtotal-resumo').textContent='MT '+total.toFixed(2);
     document.getElementById('pag-recebido').value = total.toFixed(2);
+    _pagAbertoEm = Date.now();
+    _pagRecebidoVirgem = true;   // 1ª tecla apaga o total e começa a escrever o recebido
 
     // Preenche resumo dos itens na coluna direita
     const resumoDiv = document.getElementById('pag-resumo-itens');
@@ -2545,8 +2594,9 @@ async function scannerFechar() {
     if (k === '.' || k === ',') { ev.preventDefault(); tecladoPag('.'); return; }
     // Apagar
     if (k === 'Backspace' || k === 'Delete') { ev.preventDefault(); tecladoPagApagar(); return; }
-    // Enter = Confirmar Venda
-    if (k === 'Enter') { ev.preventDefault(); confirmarPagamento(); return; }
+    // Enter = Confirmar Venda — mas ignora o Enter que ACABOU de abrir este ecrã
+    // (primeiro Enter abre o pagamento; só o Enter seguinte confirma).
+    if (k === 'Enter') { ev.preventDefault(); if (Date.now() - _pagAbertoEm > 400) confirmarPagamento(); return; }
     // Escape = Fechar
     if (k === 'Escape') { ev.preventDefault(); fecharPagamento(); return; }
     // Teclas de nota rápida (opcional): F1..F4 = 50/100/200/500
@@ -2558,6 +2608,8 @@ async function scannerFechar() {
 
   function tecladoPag(d) {
     const campo = document.getElementById('pag-recebido');
+    // 1ª tecla depois de abrir: apaga o total pré-preenchido e começa de novo
+    if (_pagRecebidoVirgem) { campo.value = ''; _pagRecebidoVirgem = false; }
     let v = campo.value || '';
     if (d === '.' && v.includes('.')) return; // já tem ponto
     if (v === '0' && d !== '.') v = '';
@@ -2566,6 +2618,7 @@ async function scannerFechar() {
   }
   function tecladoPagApagar() {
     const campo = document.getElementById('pag-recebido');
+    _pagRecebidoVirgem = false;
     campo.value = (campo.value || '').slice(0, -1);
     calcularTroco();
   }
@@ -2576,6 +2629,7 @@ async function scannerFechar() {
   // Notas rápidas: SOMA ao valor recebido (cliente entrega notas)
   function notaRapida(valor) {
     // O cliente deu esta nota — define o valor recebido e calcula o troco na hora
+    _pagRecebidoVirgem = false;
     document.getElementById('pag-recebido').value = valor.toString();
     calcularTroco();
   }
@@ -2767,6 +2821,9 @@ async function scannerFechar() {
   }
 
   async function confirmarPagamento() {
+   if (_aConfirmarVenda) return;            // já está a processar — ignora toques/Enter repetidos
+   _aConfirmarVenda = true;
+   setTimeout(function(){ _aConfirmarVenda = false; }, 1500);
    try {
     if (!carrinho || carrinho.length === 0) { mostrarNotif('❌ Carrinho vazio.', true); return; }
     if (!sessaoAtual || !sessaoAtual.lojaId) { mostrarNotif('❌ Sessão inválida. Recarrega a página.', true); return; }
@@ -3818,9 +3875,11 @@ async function scannerFechar() {
   }
 
   function bcGerarNumero() {
-    // Código numérico de 12 dígitos (EAN-13 calcula o 13º sozinho)
+    // Código EAN-13 completo (12 dígitos + 1 de verificação) para que o que
+    // a impressora imprime seja EXACTAMENTE o que o scanner lê e o que fica guardado.
     let n = '2'; // prefixo 2 = uso interno da loja
     for (let i = 0; i < 11; i++) n += Math.floor(Math.random() * 10);
+    try { n += _ean13Check(n); } catch (e) {}
     return n;
   }
 
@@ -3970,27 +4029,27 @@ async function scannerFechar() {
       win.document.close();
       return;
     } else {
-      // Impressora de etiquetas: cada selo é UMA página do tamanho exacto do rolo.
-      // No Android reforçamos com html/body do tamanho da etiqueta + botão manual.
+      // Impressora de etiquetas: ROLO CONTÍNUO — os selos saem colados, um a seguir
+      // ao outro (sem páginas separadas). Isto evita que o Windows alimente etiquetas
+      // em branco entre cada selo. O sensor de intervalo da impressora alinha cada etiqueta.
       win.document.write(`<html><head><title>Selos</title>
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <style>
-        @page { size: ${d.w}mm ${d.h}mm; margin: 0; }
+        @page { size: ${d.w}mm auto; margin: 0; }
         @media print {
           html, body { width:${d.w}mm; margin:0 !important; padding:0 !important; }
           #barra-imprimir { display:none !important; }
         }
         * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        html, body { margin:0; padding:0; font-family: Arial, sans-serif; background:white; }
+        html, body { margin:0; padding:0; font-family: Arial, sans-serif; background:white; width:${d.w}mm; }
         #barra-imprimir { position:sticky; top:0; background:#1a56a0; color:white; padding:12px; text-align:center; }
         #barra-imprimir button { background:white; color:#1a56a0; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; font-size:15px; cursor:pointer; }
         .selo {
           width:${d.w}mm; height:${d.h}mm;
           display:flex; align-items:center; justify-content:center;
           overflow:hidden;
-          page-break-after: always; break-after: page;
+          break-inside: avoid; page-break-inside: avoid;
         }
-        .selo:last-child { page-break-after: auto; break-after: auto; }
         .selo-in {
           display:flex; flex-direction:column; align-items:center; justify-content:center;
           text-align:center; padding:1mm; overflow:hidden; box-sizing:border-box;
@@ -4155,45 +4214,9 @@ async function scannerFechar() {
   function fecharSobreSistema() {
     document.getElementById('modal-sobre-sistema').classList.remove('ativo');
   }
-  /* ===== SCANNER FÍSICO (USB/Bluetooth) — funciona sem focar a pesquisa =====
-     O scanner digita os caracteres muito depressa e termina com Enter.
-     Este leitor global apanha isso em qualquer sítio do ecrã, deixando o
-     teclado do tablet livre para a pesquisa manual. */
-  let scanBuffer = '';
-  let scanUltimaTecla = 0;
-
-  document.addEventListener('keydown', (e) => {
-    // Ignora quando um modal de código/quantidade está aberto
-    const alvo = e.target;
-    const emCampoTexto = alvo && (alvo.tagName === 'INPUT' || alvo.tagName === 'TEXTAREA');
-    const agora = Date.now();
-    const rapido = (agora - scanUltimaTecla) < 45; // scanner digita <45ms entre teclas
-
-    if (e.key === 'Enter') {
-      if (scanBuffer.length >= 4 && rapido) {
-        // É um código de barras do scanner
-        const codigo = scanBuffer;
-        scanBuffer = '';
-        const p = produtos.find(x => (x.codbarras||'') === codigo) ||
-                  produtos.find(x => (x.codigo||'') === codigo);
-        if (p) {
-          e.preventDefault();
-          cliqueNoProduto(p);
-          mostrarNotif('📶 ' + p.nome + ' adicionado (scanner)');
-          // Se o scanner digitou dentro da pesquisa, limpa-a
-          if (emCampoTexto && alvo.id === 'busca-produto') { alvo.value = ''; if (typeof filtrarProdutos==='function') filtrarProdutos(); }
-        }
-      }
-      scanBuffer = '';
-      return;
-    }
-
-    if (e.key.length === 1) {
-      if (rapido) scanBuffer += e.key;
-      else scanBuffer = e.key; // recomeça: digitação humana é lenta
-      scanUltimaTecla = agora;
-    }
-  }, true);
+  /* ===== SCANNER FÍSICO — unificado acima (_processarScan) =====
+     Este segundo captador foi removido porque competia com o captador global
+     e fazia perder dígitos. Agora há um único leitor em _processarScan. */
 
   /* ===== Código de vendedor ===== */
   let _resolverVendedor = null;
@@ -5424,7 +5447,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.130';
+  const VERSAO_ATUAL = '2.9.134';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.

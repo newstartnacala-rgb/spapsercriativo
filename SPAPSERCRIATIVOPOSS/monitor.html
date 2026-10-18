@@ -423,6 +423,10 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
         <div class="card-gestao-icon" style="background:#f5f3ff">👥</div>
         <div class="card-gestao-nome">Gerentes</div>
       </div>
+      <div class="card-gestao" onclick="abrirRastreioGerente()">
+        <div class="card-gestao-icon" style="background:#eef2ff">📋</div>
+        <div class="card-gestao-nome">Rastreio do Gerente</div>
+      </div>
       <div class="card-gestao" onclick="atualizarMonitor(this)">
         <div class="card-gestao-icon" style="background:#eff6ff">↻</div>
         <div class="card-gestao-nome">Atualizar Dados</div>
@@ -836,6 +840,33 @@ let todasLojas = [];
 
 const SUPER_ADMIN_EMAIL = 'joaomassuvir@gmail.com';
 
+// ===== RASTREIO: regista no servidor tudo o que o gerente/dono faz =====
+let _uidCache = null;
+async function _meuUid() {
+  if (_uidCache) return _uidCache;
+  try { const s = (await supabaseClient.auth.getSession()).data.session; _uidCache = (s && s.user) ? s.user.id : null; } catch (e) {}
+  return _uidCache;
+}
+function quemFez() {
+  if (modoGerente) return (window._gerenteNome || localStorage.getItem('inv_contador_nome') || 'Gerente');
+  return (window._donoNome || nomeLoja || 'Dono');
+}
+async function registarAtividade(acao, detalhe, extra) {
+  try {
+    if (!lojaId) return;
+    const uid = await _meuUid();
+    await supabaseClient.from('atividade_log').insert({
+      loja_id: lojaId,
+      user_id: uid,
+      quem: quemFez(),
+      por_gerente: !!modoGerente,
+      acao: acao,
+      detalhe: (detalhe != null ? String(detalhe) : null),
+      extra: extra || null
+    });
+  } catch (e) { /* nunca bloqueia a ação principal */ }
+}
+
 // INICIALIZAÇÃO
 let modoGeral = true; // true = todas as lojas, false = loja específica
 
@@ -949,7 +980,9 @@ async function iniciar() {
     modoGerente = (membros[0].papel === 'gerente');
     if (modoGerente) {
       // Já foi APROVADO pelo dono (tem membros_loja). Sem código: o controlo é a aprovação.
-      window._gerenteNome = (localStorage.getItem('inv_contador_nome') || 'Gerente');
+      window._gerenteNome = (membros[0].nome_exibicao || localStorage.getItem('inv_contador_nome') || 'Gerente');
+    } else {
+      window._donoNome = (membros[0].nome_exibicao || 'Dono');
     }
     nomeLoja = (membros[0].lojas && membros[0].lojas.nome) || 'Minha Loja';
     lojaPlano = (membros[0].lojas && membros[0].lojas.plano) || '';
@@ -1853,6 +1886,15 @@ async function salvarEdicaoProduto(id, tinhaImg) {
   if (Math.abs((parseFloat(dados.preco)||0) - precoAntigo) > 0.001) {
     try { await supabaseClient.from('produto_precos').insert({ produto_id: id, loja_id: lojaId, preco_antigo: precoAntigo, preco_novo: parseFloat(dados.preco)||0 }); } catch(e) {}
   }
+  // Rastreio: descreve o que mudou
+  try {
+    const mud = [];
+    if ((p.nome||'') !== dados.nome) mud.push('nome: "'+(p.nome||'')+'" → "'+dados.nome+'"');
+    if (Math.abs(precoAntigo - (parseFloat(dados.preco)||0)) > 0.001) mud.push('preço: MT '+precoAntigo+' → MT '+(parseFloat(dados.preco)||0));
+    if ((parseInt(p.stock)||0) !== (parseInt(dados.stock)||0)) mud.push('stock: '+(parseInt(p.stock)||0)+' → '+(parseInt(dados.stock)||0));
+    if ((p.categoria||'') !== (dados.categoria||'')) mud.push('categoria: '+(p.categoria||'—')+' → '+(dados.categoria||'—'));
+    registarAtividade('Editou produto', dados.nome + (mud.length ? ' ('+mud.join('; ')+')' : ''));
+  } catch(e) {}
   Object.assign(p, dados);
   renderProdutosSubPainel();
   mostrarNotif('✅ "' + dados.nome + '" atualizado! O PDV vê ao sincronizar (⟳).');
@@ -1892,8 +1934,10 @@ async function confirmarMudarCategoria(id, novaCat) {
   const { error } = await supabaseClient.from('produtos').update({ categoria: novaCat }).eq('id', id);
   (function(){var _o=document.getElementById('overlay-mudar-cat');if(_o)_o.remove();})();
   if (error) { mostrarNotif('❌ Erro: ' + error.message, true); return; }
+  const _catAnt = p.categoria || '—';
   p.categoria = novaCat;
   renderProdutosSubPainel();
+  registarAtividade('Mudou categoria', p.nome + ': ' + _catAnt + ' → ' + novaCat);
   mostrarNotif('✅ "' + p.nome + '" movido para ' + novaCat + '. O PDV vê ao sincronizar (⟳).');
 }
 
@@ -1916,8 +1960,10 @@ async function editarPrecoProduto(id) {
   const { error } = await supabaseClient.from('produtos')
     .update({ preco: pv, preco_compra: pc || null }).eq('id', id);
   if (error) { mostrarNotif('❌ Erro: ' + error.message, true); return; }
+  const _precoAnt = parseFloat(p.preco) || 0;
   p.preco = pv; p.preco_compra = pc;
   renderProdutosSubPainel();
+  if (Math.abs(_precoAnt - pv) > 0.001) registarAtividade('Editou preço', p.nome + ': MT ' + _precoAnt + ' → MT ' + pv);
   mostrarNotif('✅ Preço de "' + p.nome + '" atualizado para MT ' + pv.toFixed(2) + '. O PDV vê o novo preço ao sincronizar.');
 }
 
@@ -2176,6 +2222,7 @@ async function salvarNovoProduto() {
     imagemBase64 = null;
     msg.textContent = '✅ "'+nome+'" guardado com stock '+stock+'!'; msg.style.color='#16a34a';
     setTimeout(() => { if (msg) msg.textContent = ''; }, 2500);
+    registarAtividade('Cadastrou produto', nome + ' — stock ' + stock + ', venda MT ' + preco + (precoCompra? (', compra MT ' + precoCompra):''));
     await carregarTudo();       // recarrega a lista real do servidor
     renderProdutosSubPainel();
   } catch (e) {
@@ -2924,6 +2971,7 @@ async function registarPerda() {
   } else {
     mostrarNotif('📉 ' + okCount + ' perda(s) enviada(s) para a loja. O stock só baixa quando o balconista confirmar.');
   }
+  if (okCount > 0) registarAtividade('Registou perda', okCount + ' produto(s): ' + perdaItens.map(x => x.nome + ' ×' + (parseInt(x.qtd)||1)).join(', '));
   perdaItens = [];
   perdaRenderLista();
   carregarPerdasMonitor();
@@ -3213,6 +3261,7 @@ async function enviarDespacho() {
   if (error) { mostrarNotif('❌ Erro ao enviar: ' + error.message, true); return; }
 
   mostrarNotif('✅ Despacho enviado! O stock entra quando o balconista confirmar.');
+  registarAtividade('Enviou despacho', itens.length + ' produto(s): ' + itens.map(i => i.nome + ' ×' + (i.enviado||0)).join(', '));
   despachoItens = [];
   despRenderLista();
   carregarHistoricoDespachos();
@@ -3555,6 +3604,10 @@ function renderInventario() {
       📌 Conta as unidades físicas de cada produto e escreve o número na coluna "Contei". O sistema calcula perdas/quebras automaticamente. Deixa em branco os que não contaste.
       <span onclick="document.getElementById('inv-aviso-1').style.display='none'" style="position:absolute;top:8px;right:10px;cursor:pointer;font-size:16px;color:#166534;font-weight:bold;">✕</span>
     </div>
+    <label style="display:flex;align-items:flex-start;gap:9px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:11px 12px;margin-bottom:14px;cursor:pointer;">
+      <input type="checkbox" id="inv-contagem-completa" style="width:18px;height:18px;margin-top:1px;flex-shrink:0;">
+      <span style="font-size:12.5px;color:#9a3412;line-height:1.4;"><b>Contagem completa (contei a loja toda)</b><br>Os produtos que deixar <b>em branco</b> ficam a <b>0</b> (esgotados) e contam como perda. Só liga isto quando contaste mesmo tudo.</span>
+    </label>
     <div style="display:flex;gap:8px;margin-bottom:12px;">
       <input type="text" id="inv-busca" placeholder="🔎 Pesquisar produto ou escanear código..." autocomplete="off"
         oninput="filtrarInventario()" onkeydown="invBuscaEnter(event)"
@@ -3741,9 +3794,11 @@ async function verificarInventario() {
   } catch(e) {}
   window._sobraPendenteInv = sobraPendente;
 
+  const _completa = !!(document.getElementById('inv-contagem-completa') && document.getElementById('inv-contagem-completa').checked);
   const difs = [];
   let custoSistema = 0, vendaSistema = 0;
   let custoContado = 0, vendaContado = 0;
+  let custoDifFalta = 0;   // valor a CUSTO do que falta
   let contados = 0;
 
   for (const p of todosProdutos) {
@@ -3762,16 +3817,22 @@ async function verificarInventario() {
       if (input && input.value !== '') contado = parseInt(input.value) || 0;
     }
     if (contado === null) {
-      // Não contado: assume o valor do sistema para a comparação
-      custoContado += st * pc;
-      vendaContado += st * pv;
-      continue;
+      // Contagem completa: o que ficou em branco está ESGOTADO (fica a 0).
+      if (_completa) {
+        contado = 0;
+      } else {
+        // Contagem parcial: não contado => assume o valor do sistema.
+        custoContado += st * pc;
+        vendaContado += st * pv;
+        continue;
+      }
     }
     contados++;
     custoContado += contado * pc;
     vendaContado += contado * pv;
     const dif = contado - st;
-    if (dif !== 0) difs.push({ nome: p.nome, sistema: st, contado, dif, pv });
+    if (dif < 0) custoDifFalta += Math.abs(dif) * pc;
+    if (dif !== 0) difs.push({ nome: p.nome, sistema: st, contado, dif, pv, pc });
   }
 
   const div = document.getElementById('inv-verificacao-resultado');
@@ -3786,7 +3847,10 @@ async function verificarInventario() {
   const difVendaValor = vendaContado - vendaSistema;
 
   let html = '<div style="background:white;border:2px solid #e2e8f0;border-radius:12px;padding:16px;">';
-  html += '<div style="font-weight:bold;font-size:15px;margin-bottom:12px;color:#0891b2;">🔍 Resultado da verificação</div>';
+  html += '<div style="font-weight:bold;font-size:15px;margin-bottom:12px;color:#0891b2;">🔍 Resultado da verificação' + (_completa ? ' <span style="font-size:11px;color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:2px 7px;">contagem completa</span>' : '') + '</div>';
+  if (custoDifFalta > 0) {
+    html += '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:12px;margin-bottom:12px;font-size:13px;color:#b91c1c;">💸 <b>Falta em stock: ' + money(custoDifFalta) + '</b> <span style="font-size:12px;">(dinheiro de compra das unidades em falta — o que a loja perdeu)</span></div>';
+  }
   const sobra = window._sobraPendenteInv || 0;
   if (sobra > 0) {
     html += '<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:12px;margin-bottom:12px;font-size:13px;color:#92400e;">💰 <b>Sobra de caixa pendente: MT ' + sobra.toFixed(2) + '</b><br><span style="font-size:12px;">Este valor vem da auditoria — corresponde a vendas feitas sem passar no sistema. Justifica produtos que apareçam <b>a mais</b> no físico.</span></div>';
@@ -3806,10 +3870,11 @@ async function verificarInventario() {
     difs.sort((a,b) => Math.abs(b.dif) - Math.abs(a.dif));  // maiores erros primeiro
     difs.forEach(d => {
       const cor = d.dif < 0 ? '#dc2626' : '#f59e0b';
-      const txt = d.dif < 0 ? 'faltam ' + Math.abs(d.dif) : 'sobram ' + d.dif;
+      const valor = Math.abs(d.dif) * (d.pc || 0);
+      const txt = (d.dif < 0 ? 'faltam ' + Math.abs(d.dif) : 'sobram ' + d.dif) + (valor > 0 ? '<br><span style="font-size:11px;">' + money(valor) + '</span>' : '');
       html += '<div style="display:flex;justify-content:space-between;align-items:center;background:' + cor + '11;border:1px solid ' + cor + '55;border-radius:8px;padding:10px 12px;margin-bottom:6px;font-size:13px;">'
         + '<div><b>' + d.nome + '</b><br><span style="font-size:11px;color:#64748b;">Sistema: ' + d.sistema + ' · Contei: ' + d.contado + '</span></div>'
-        + '<span style="font-weight:bold;color:' + cor + ';">' + txt + '</span></div>';
+        + '<span style="font-weight:bold;color:' + cor + ';text-align:right;">' + txt + '</span></div>';
     });
   }
   html += '<div style="font-size:12px;color:#64748b;margin-top:10px;text-align:center;">Confere no físico. Se estiver correto, clica em "Confirmar e Guardar".</div>';
@@ -3817,6 +3882,80 @@ async function verificarInventario() {
 
   div.innerHTML = html;
   document.getElementById('btn-guardar-inventario').style.display = 'block';
+}
+
+// ===== RASTREIO DO GERENTE — o dono vê tudo o que foi feito na loja =====
+let _rastreioFiltro = 'todos';   // 'todos' | 'gerente'
+async function abrirRastreioGerente() {
+  let ov = document.getElementById('overlay-rastreio-ger'); if (ov) ov.remove();
+  ov = document.createElement('div');
+  ov.id = 'overlay-rastreio-ger';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow:auto;';
+  ov.innerHTML = `<div style="background:white;border-radius:16px;max-width:620px;width:100%;padding:20px;margin-top:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <h2 style="margin:0;font-size:19px;">📋 Rastreio do Gerente</h2>
+      <button onclick="document.getElementById('overlay-rastreio-ger').remove()" style="background:#f1f5f9;border:none;border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:16px;">✕</button>
+    </div>
+    <div style="font-size:12.5px;color:#64748b;margin-bottom:12px;">Tudo o que foi feito na loja (cadastros, edições, preços, perdas, despachos, inventários) — com quem fez e quando.</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button id="rg-f-todos" onclick="rastreioSetFiltro('todos')" style="flex:1;padding:9px;border:1.5px solid #1a56a0;background:#eff6ff;color:#1a56a0;border-radius:9px;font-weight:bold;cursor:pointer;font-size:13px;">Todos</button>
+      <button id="rg-f-gerente" onclick="rastreioSetFiltro('gerente')" style="flex:1;padding:9px;border:1.5px solid #e2e8f0;background:white;color:#475569;border-radius:9px;font-weight:bold;cursor:pointer;font-size:13px;">Só gerentes</button>
+    </div>
+    <div id="rg-lista"><div style="text-align:center;color:#94a3b8;padding:20px;">A carregar...</div></div>
+  </div>`;
+  ov.onclick = e => { if (e.target === ov) ov.remove(); };
+  document.body.appendChild(ov);
+  carregarRastreioGerente();
+}
+function rastreioSetFiltro(f) {
+  _rastreioFiltro = f;
+  const bt = document.getElementById('rg-f-todos'), bg = document.getElementById('rg-f-gerente');
+  if (bt && bg) {
+    const on = 'border:1.5px solid #1a56a0;background:#eff6ff;color:#1a56a0;';
+    const off = 'border:1.5px solid #e2e8f0;background:white;color:#475569;';
+    bt.style.cssText = 'flex:1;padding:9px;border-radius:9px;font-weight:bold;cursor:pointer;font-size:13px;' + (f==='todos'?on:off);
+    bg.style.cssText = 'flex:1;padding:9px;border-radius:9px;font-weight:bold;cursor:pointer;font-size:13px;' + (f==='gerente'?on:off);
+  }
+  carregarRastreioGerente();
+}
+async function carregarRastreioGerente() {
+  const div = document.getElementById('rg-lista');
+  if (!div) return;
+  try {
+    let q = supabaseClient.from('atividade_log').select('*').eq('loja_id', lojaId).order('criado_em', { ascending: false }).limit(200);
+    if (_rastreioFiltro === 'gerente') q = q.eq('por_gerente', true);
+    const { data, error } = await q;
+    if (error) { div.innerHTML = '<div style="color:#94a3b8;font-size:13px;">Corre o SQL <b>atualizacao-rastreio-gerente.sql</b> no Supabase para ativar esta aba.</div>'; return; }
+    if (!data || !data.length) { div.innerHTML = '<div style="color:#cbd5e1;font-size:14px;text-align:center;padding:24px;">Ainda não há registos.' + (_rastreioFiltro==='gerente'?' (nenhum gerente agiu ainda)':'') + '</div>'; return; }
+    const iconDe = a => {
+      a = (a||'').toLowerCase();
+      if (a.includes('cadastrou')) return '📦';
+      if (a.includes('editou')) return '✏️';
+      if (a.includes('perda')) return '📉';
+      if (a.includes('despacho')) return '🚚';
+      if (a.includes('inventário') || a.includes('inventario')) return '🔢';
+      if (a.includes('categoria')) return '🏷️';
+      if (a.includes('apagou') || a.includes('eliminou')) return '🗑️';
+      return '•';
+    };
+    div.innerHTML = data.map(r => {
+      const dt = new Date(r.criado_em).toLocaleString('pt-PT', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
+      const tag = r.por_gerente
+        ? '<span style="background:#fff7ed;color:#c2410c;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:bold;white-space:nowrap;">👤 Gerente</span>'
+        : '<span style="background:#eff6ff;color:#1a56a0;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:bold;white-space:nowrap;">👑 Dono</span>';
+      const esc = s => (s==null?'':String(s)).replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return `<div style="border:1px solid #e2e8f0;border-radius:10px;padding:11px 12px;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <div style="font-weight:bold;font-size:13.5px;color:#0f172a;">${iconDe(r.acao)} ${esc(r.acao)}</div>
+          ${tag}
+        </div>
+        ${r.detalhe ? `<div style="font-size:12.5px;color:#475569;margin-top:4px;">${esc(r.detalhe)}</div>` : ''}
+        <div style="font-size:11px;color:#94a3b8;margin-top:5px;">${esc(r.quem || '—')} · ${dt}</div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    div.innerHTML = '<div style="color:#94a3b8;font-size:13px;">Erro: ' + (e.message || e) + '</div>';
+  }
 }
 
 async function verHistoricoInventarios() {
@@ -3858,6 +3997,7 @@ async function guardarInventario() {
   const btn = document.getElementById('btn-guardar-inventario');
   btn.disabled = true; btn.textContent = 'A guardar...';
 
+  const _completa = !!(document.getElementById('inv-contagem-completa') && document.getElementById('inv-contagem-completa').checked);
   const detalhe = [];
   let itensContados = 0, itensDif = 0;
   let perdaQuebra = 0;        // valor a custo das unidades em falta
@@ -3879,7 +4019,11 @@ async function guardarInventario() {
       const input = document.getElementById('inv-' + p.id);
       if (input && input.value !== '') contado = parseInt(input.value) || 0;
     }
-    if (contado === null) continue;
+    // Contagem completa: o que ficou em branco está ESGOTADO (fica a 0).
+    if (contado === null) {
+      if (_completa) contado = 0;
+      else continue;
+    }
     itensContados++;
     const dif = contado - st;
 
@@ -3908,6 +4052,9 @@ async function guardarInventario() {
     itens_com_diferenca: itensDif,
     detalhe: detalhe
   });
+
+  const _perdaLiq = perdaQuebra - sobraValor;
+  registarAtividade('Fez inventário' + (_completa ? ' (completo)' : ''), itensContados + ' contados, ' + itensDif + ' com diferença · perda ' + money(_perdaLiq > 0 ? _perdaLiq : 0));
 
   btn.disabled = false; btn.textContent = '✅ Guardar Inventário';
 
@@ -4058,7 +4205,7 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.130';
+const MONITOR_VERSAO = '2.9.134';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
