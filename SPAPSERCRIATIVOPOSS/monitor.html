@@ -4205,7 +4205,7 @@ async function instalarAppMonitor() {
 }
 
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.138';
+const MONITOR_VERSAO = '2.9.139';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -4639,7 +4639,7 @@ async function abrirMeuPerfil() {
       document.getElementById('perfil-in-endereco').value = data.endereco || '';
       var _ca = document.getElementById('perfil-in-codigo'); if (_ca) _ca.value = data.codigo_agente || '';
       var _pg = document.getElementById('perfil-in-pingerente'); if (_pg) _pg.value = data.pin_gerente || '0000';
-      var _cd = document.getElementById('perfil-in-codigodesc'); if (_cd) _cd.value = data.codigo_desconto || '';
+      var _cd = document.getElementById('perfil-in-descontos'); if (_cd) _cd.checked = !!(data.codigo_desconto && String(data.codigo_desconto).trim());
       var _rp = document.getElementById('perfil-in-rodape'); if (_rp) _rp.value = data.recibo_rodape || '';
       _perfilLogoBase64 = null;
       var _lp = document.getElementById('perfil-logo-preview');
@@ -4712,7 +4712,7 @@ async function guardarDadosPerfil() {
     endereco: document.getElementById('perfil-in-endereco').value.trim(),
     codigo_agente: document.getElementById('perfil-in-codigo').value.trim(),
     pin_gerente: (document.getElementById('perfil-in-pingerente').value.trim() || '0000'),
-    codigo_desconto: (document.getElementById('perfil-in-codigodesc').value.trim() || null),
+    codigo_desconto: (document.getElementById('perfil-in-descontos') && document.getElementById('perfil-in-descontos').checked) ? 'ATIVO' : null,
     recibo_rodape: document.getElementById('perfil-in-rodape').value.trim()
   };
   if (_perfilLogoBase64 !== null) dados.logo = _perfilLogoBase64 || null;
@@ -5407,9 +5407,12 @@ async function carregarContagensEquipa() {
       <input type="text" id="perfil-in-pingerente" placeholder="0000" style="width:100%;padding:11px;border:1.5px solid #fdba74;border-radius:9px;font-size:15px;margin:5px 0 4px;box-sizing:border-box;">
       <div style="font-size:11px;color:#64748b;margin:0 0 14px;">Pedido a quem abre o link do monitor extra. Só tu podes mudar aqui.</div>
 
-      <label style="font-size:13px;color:#64748b;font-weight:600;">🏷️ Código de Desconto (para o balconista descontar)</label>
-      <input type="text" id="perfil-in-codigodesc" placeholder="ex: 5050" style="width:100%;padding:11px;border:1.5px solid #86efac;border-radius:9px;font-size:15px;margin:5px 0 4px;box-sizing:border-box;">
-      <div style="font-size:11px;color:#64748b;margin:0 0 14px;">Na loja, o balconista clica no preço de um produto do carrinho e, com este código, pode baixar o preço para o cliente. Deixa vazio para não permitir descontos.</div>
+      <label style="font-size:13px;color:#64748b;font-weight:600;">🏷️ Descontos do balconista</label>
+      <label style="display:flex;align-items:center;gap:10px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:9px;padding:12px;margin:5px 0 4px;cursor:pointer;">
+        <input type="checkbox" id="perfil-in-descontos" style="width:20px;height:20px;flex-shrink:0;">
+        <span style="font-size:14px;color:#166534;font-weight:bold;">Permitir que o balconista faça descontos</span>
+      </label>
+      <div style="font-size:11px;color:#64748b;margin:0 0 14px;">Quando LIGADO, o balconista pode clicar no preço de um produto do carrinho e baixá-lo. Quando DESLIGADO, não consegue descontar. Só tu controlas isto — a loja atualiza ao clicar em ⟳.</div>
 
       <button onclick="guardarDadosPerfil()" style="width:100%;padding:12px;background:#16a34a;border:none;border-radius:10px;color:white;font-weight:bold;cursor:pointer;">💾 Guardar dados</button>
     </div>

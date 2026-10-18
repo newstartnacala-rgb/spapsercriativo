@@ -827,8 +827,8 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     <div class="form-grupo">
       <label>📄 Modo da folha (se saírem separadas, troca aqui)</label>
       <select id="bc-modo-folha" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
-        <option value="pagina" selected>Etiqueta a etiqueta (RECOMENDADO)</option>
-        <option value="continuo">Rolo contínuo (selos colados)</option>
+        <option value="continuo" selected>Rolo contínuo — selos colados (RECOMENDADO)</option>
+        <option value="pagina">Etiqueta a etiqueta (1 selo = 1 página)</option>
       </select>
       <div style="font-size:11px;color:#64748b;margin-top:6px;line-height:1.4;">⚠️ O mais importante: na janela do Windows escolhe a <b>impressora de etiquetas</b> e o <b>Tamanho do papel = o do teu selo</b> (ex.: 40×30mm) com <b>Margens = Nenhuma</b>. É isto que evita os espaços em branco.</div>
     </div>
@@ -2518,14 +2518,12 @@ async function scannerFechar() {
 
   async function descontarPreco(i) {
     const item = carrinho[i]; if (!item) return;
-    // Tenta buscar o código mais fresco do servidor (o dono pode tê-lo acabado de definir).
+    // Busca o estado mais fresco (o dono pode ter acabado de ligar/desligar os descontos).
     try { await _refrescarPerfilLoja(); } catch(e) {}
-    const codigo = (sessaoAtual && sessaoAtual.codigoDesconto);
-    if (!codigo) { mostrarNotif('O dono ainda não definiu um código de desconto. Peça-lhe para o definir em Meu Perfil e clique em ⟳ para atualizar.', true); return; }
-    const inserido = prompt('🏷️ DESCONTO em "' + item.nome + '"\n\nEscreve o código de desconto (pede ao dono):');
-    if (inserido === null) return;
-    // Comparação tolerante a maiúsculas/minúsculas e espaços
-    if (inserido.trim().toLowerCase() !== String(codigo).trim().toLowerCase()) { mostrarNotif('❌ Código de desconto errado.', true); return; }
+    // Desconto é ligado/desligado pelo DONO no Monitor (sem código). Guardamos esse estado
+    // na coluna codigo_desconto: qualquer valor = LIGADO; vazio = DESLIGADO.
+    const permitido = !!(sessaoAtual && sessaoAtual.codigoDesconto);
+    if (!permitido) { mostrarNotif('🔒 Descontos desligados pelo dono. Peça-lhe para os ligar no Monitor → Meu Perfil.', true); return; }
     const atual = (item.precoOriginal || item.preco);
     const novoStr = prompt('Novo preço por unidade de "' + item.nome + '":\n(preço normal: MT ' + atual + ')', item.preco);
     if (novoStr === null) return;
@@ -4198,7 +4196,7 @@ async function scannerFechar() {
       // "selo em branco" alternado: se o selo tivesse a altura EXACTA da página, qualquer
       // arredondamento de 0,1mm faz transbordar e o navegador cria uma página vazia a
       // seguir. Com 2mm de folga, cada selo cabe à vontade e sai um por etiqueta, colados.
-      const _seloH = (_modoFolha === 'continuo') ? d.h : Math.max(8, d.h - 2);
+      const _seloH = (_modoFolha === 'continuo') ? d.h : Math.max(8, d.h - 3);
       win.document.write(`<html><head><title>Selos</title>
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <style>
@@ -5614,7 +5612,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.138';
+  const VERSAO_ATUAL = '2.9.139';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
