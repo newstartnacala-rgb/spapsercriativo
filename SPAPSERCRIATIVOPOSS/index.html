@@ -813,6 +813,15 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
       </select>
     </div>
 
+    <div class="form-grupo">
+      <label>📄 Modo da folha (se saírem separadas, troca aqui)</label>
+      <select id="bc-modo-folha" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
+        <option value="pagina" selected>Etiqueta a etiqueta (cada selo = 1 etiqueta)</option>
+        <option value="continuo">Rolo contínuo (selos colados)</option>
+      </select>
+      <div style="font-size:11px;color:#64748b;margin-top:6px;line-height:1.4;">⚠️ O mais importante: na janela do Windows escolhe a <b>impressora de etiquetas</b> e o <b>Tamanho do papel = o do teu selo</b> (ex.: 40×30mm) com <b>Margens = Nenhuma</b>. É isto que evita os espaços em branco.</div>
+    </div>
+
     <!-- Preview do código de barras -->
     <div id="bc-preview-wrap" style="display:none;text-align:center;margin-bottom:14px;">
       <div style="font-size:12px;color:#64748b;margin-bottom:8px;font-weight:bold;">Pré-visualização do selo:</div>
@@ -3975,6 +3984,9 @@ async function scannerFechar() {
     // Rotação escolhida pelo utilizador (0/90/180/270) — resolve etiquetas que saem de lado
     const _bcRotEl = document.getElementById('bc-rodar');
     const _bcRot = _bcRotEl ? (parseInt(_bcRotEl.value) || 0) : 0;
+    // Modo da folha: 'pagina' (cada selo = 1 etiqueta) ou 'continuo' (rolo colado)
+    const _mfEl = document.getElementById('bc-modo-folha');
+    const _modoFolha = (_mfEl && _mfEl.value) ? _mfEl.value : 'pagina';
 
     let selos = '';
     itens.forEach(function(it) {
@@ -4029,13 +4041,20 @@ async function scannerFechar() {
       win.document.close();
       return;
     } else {
-      // Impressora de etiquetas: ROLO CONTÍNUO — os selos saem colados, um a seguir
-      // ao outro (sem páginas separadas). Isto evita que o Windows alimente etiquetas
-      // em branco entre cada selo. O sensor de intervalo da impressora alinha cada etiqueta.
+      // Impressora de etiquetas. Dois modos:
+      //  - 'pagina':  cada selo é UMA página do tamanho exacto (@page W×H). O driver
+      //               (com o papel definido para o tamanho do selo) alinha cada etiqueta.
+      //  - 'continuo': uma tira só (@page W×auto), os selos saem colados.
+      const _pageRule = (_modoFolha === 'continuo')
+        ? `@page { size: ${d.w}mm auto; margin: 0; }`
+        : `@page { size: ${d.w}mm ${d.h}mm; margin: 0; }`;
+      const _seloBreak = (_modoFolha === 'continuo')
+        ? 'break-inside: avoid; page-break-inside: avoid;'
+        : 'page-break-after: always; break-after: page;';
       win.document.write(`<html><head><title>Selos</title>
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <style>
-        @page { size: ${d.w}mm auto; margin: 0; }
+        ${_pageRule}
         @media print {
           html, body { width:${d.w}mm; margin:0 !important; padding:0 !important; }
           #barra-imprimir { display:none !important; }
@@ -4048,8 +4067,9 @@ async function scannerFechar() {
           width:${d.w}mm; height:${d.h}mm;
           display:flex; align-items:center; justify-content:center;
           overflow:hidden;
-          break-inside: avoid; page-break-inside: avoid;
+          ${_seloBreak}
         }
+        .selo:last-child { page-break-after: auto; break-after: auto; }
         .selo-in {
           display:flex; flex-direction:column; align-items:center; justify-content:center;
           text-align:center; padding:1mm; overflow:hidden; box-sizing:border-box;
@@ -4064,7 +4084,7 @@ async function scannerFechar() {
       <div id="barra-imprimir" style="background:#7c3aed !important;">
         🏷️ ISTO É UM SELO / ETIQUETA (${d.w}×${d.h}mm) &nbsp;
         <button onclick="window.print()">🖨️ Imprimir agora</button>
-        <div style="font-size:12px;margin-top:6px;opacity:0.95;font-weight:bold;">⚠️ Na janela do Windows, escolhe a impressora de ETIQUETAS (não a de recibos) e o tamanho ${d.w}×${d.h}mm (não "Letter/A4").</div>
+        <div style="font-size:12px;margin-top:6px;opacity:0.95;font-weight:bold;">⚠️ Na janela do Windows: impressora de ETIQUETAS · Tamanho do papel = ${d.w}×${d.h}mm (não "Letter/A4") · Margens = Nenhuma.</div>
       </div>
       ${selos}
       <script>window.onload=function(){ setTimeout(function(){ window.print(); }, 500); }<\/script>
@@ -5447,7 +5467,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.134';
+  const VERSAO_ATUAL = '2.9.135';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
