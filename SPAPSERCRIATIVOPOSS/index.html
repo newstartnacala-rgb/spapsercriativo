@@ -827,7 +827,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     <div class="form-grupo">
       <label>📄 Modo da folha (se saírem separadas, troca aqui)</label>
       <select id="bc-modo-folha" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
-        <option value="pagina" selected>Etiqueta a etiqueta (cada selo = 1 etiqueta)</option>
+        <option value="pagina" selected>Etiqueta a etiqueta (RECOMENDADO)</option>
         <option value="continuo">Rolo contínuo (selos colados)</option>
       </select>
       <div style="font-size:11px;color:#64748b;margin-top:6px;line-height:1.4;">⚠️ O mais importante: na janela do Windows escolhe a <b>impressora de etiquetas</b> e o <b>Tamanho do papel = o do teu selo</b> (ex.: 40×30mm) com <b>Margens = Nenhuma</b>. É isto que evita os espaços em branco.</div>
@@ -1132,6 +1132,49 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     <div class="modal-botoes">
       <button class="btn-modal-cancelar" onclick="fecharModalQuantidade()">Cancelar</button>
       <button class="btn-modal-salvar" onclick="confirmarQuantidade()">✅ Aplicar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== VENDA POR KG: escreve o PREÇO, o peso calcula-se (ou vice-versa) ===== -->
+<div class="modal-fundo" id="modal-kg">
+  <div class="modal">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;padding:14px;background:#f7f9fc;border-radius:12px;">
+      <div id="kg-img" style="width:72px;height:72px;border-radius:10px;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#eee;font-size:34px;border:1px solid #e2e8f0;">⚖️</div>
+      <div style="min-width:0;flex:1;">
+        <div id="kg-nome" style="font-size:16px;font-weight:bold;color:#1a202c;margin-bottom:4px;">Produto</div>
+        <div id="kg-preco-kg" style="font-size:13px;color:#16a34a;font-weight:bold;">MT 0,00 / kg</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button type="button" id="kg-modo-preco" onclick="kgSetModo('preco')" style="flex:1;padding:11px;border:2px solid #1a56a0;background:#eff6ff;color:#1a56a0;border-radius:10px;font-weight:bold;cursor:pointer;font-size:14px;">💵 Por preço</button>
+      <button type="button" id="kg-modo-peso" onclick="kgSetModo('peso')" style="flex:1;padding:11px;border:2px solid #e2e8f0;background:white;color:#475569;border-radius:10px;font-weight:bold;cursor:pointer;font-size:14px;">⚖️ Por peso</button>
+    </div>
+
+    <div style="background:white;border:2px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:12px;text-align:center;">
+      <div id="kg-label-principal" style="font-size:12px;color:#64748b;font-weight:bold;margin-bottom:2px;">PREÇO (MT) que o cliente quer</div>
+      <div id="kg-display" style="font-size:34px;font-weight:bold;color:#dc2626;min-height:40px;">0</div>
+      <div id="kg-conversao" style="font-size:15px;color:#16a34a;font-weight:bold;margin-top:4px;">≈ 0 g</div>
+    </div>
+
+    <div class="teclado-numerico">
+      <button onclick="kgTecla('1')">1</button>
+      <button onclick="kgTecla('2')">2</button>
+      <button onclick="kgTecla('3')">3</button>
+      <button onclick="kgTecla('4')">4</button>
+      <button onclick="kgTecla('5')">5</button>
+      <button onclick="kgTecla('6')">6</button>
+      <button onclick="kgTecla('7')">7</button>
+      <button onclick="kgTecla('8')">8</button>
+      <button onclick="kgTecla('9')">9</button>
+      <button class="tecla-apagar" onclick="kgApagar()">⌫</button>
+      <button onclick="kgTecla('0')">0</button>
+      <button onclick="kgTecla('.')">.</button>
+    </div>
+    <div class="modal-botoes">
+      <button class="btn-modal-cancelar" onclick="document.getElementById('modal-kg').classList.remove('ativo')">Cancelar</button>
+      <button class="btn-modal-salvar" onclick="kgConfirmar()">✅ Adicionar</button>
     </div>
   </div>
 </div>
@@ -2287,16 +2330,9 @@ async function scannerFechar() {
   // carrinho. Para definir uma quantidade exata, o vendedor usa o botão ✏️ dentro do
   // próprio carrinho — isso evita ambiguidade entre "clique simples" e "clique para editar".
   function cliqueNoProduto(prod) {
-    // Produto vendido por KG: 1º clique mete 1 kg (preço de 1kg). Clicar no peso edita.
+    // Produto vendido por KG: abre logo o teclado para escrever o PREÇO (ou o peso).
     if ((prod.unidade || 'un') === 'kg') {
-      const ex = carrinho.find(i => i.nome === prod.nome);
-      if (!ex) {
-        carrinho.push({...prod, qtd: 1});
-        renderCarrinho(); renderProdutos();
-        mostrarNotif('🛒 ' + prod.nome + ' — 1 kg (MT ' + ((parseFloat(prod.preco)||0)).toFixed(2) + '). Clica no peso para mudar p/ gramas.');
-      } else {
-        pedirPesoKg(prod);
-      }
+      pedirPesoKg(prod);
       return;
     }
     // 1º clique: adiciona +1. 2º clique (já no carrinho): abre o teclado para digitar a quantidade.
@@ -2320,17 +2356,67 @@ async function scannerFechar() {
     pedirPesoKg(prod);
   }
 
+  // ===== ECRÃ DE VENDA POR KG (preço ↔ peso) =====
+  let _kgProd = null, _kgModo = 'preco', _kgBuf = '';
   function pedirPesoKg(prod) {
-    const ex = carrinho.find(i => i.nome === prod.nome);
+    _kgProd = prod;
+    _kgModo = 'preco';
+    _kgBuf = '';
     const precoKg = parseFloat(prod.preco) || 0;
-    const str = prompt('⚖️ ' + prod.nome + '\nPreço: MT ' + precoKg.toFixed(2) + ' / kg\n\nEscreve o peso:\n• 20 ou 10 → quilos\n• 1.5 → um quilo e meio\n• 0.5 → meio quilo\n• 500g → gramas', ex ? ex.qtd : '');
-    if (str === null) return;
-    const peso = _parsePesoKg(str);
-    if (isNaN(peso) || peso <= 0) { mostrarNotif('Peso inválido. Ex: 20, 1.5, 0.5 ou 500g', true); return; }
-    if (ex) ex.qtd = peso; else carrinho.push({...prod, qtd: peso});
+    document.getElementById('kg-nome').textContent = prod.nome;
+    document.getElementById('kg-preco-kg').textContent = 'MT ' + precoKg.toFixed(2) + ' / kg';
+    const imgWrap = document.getElementById('kg-img');
+    if (prod.imagem) imgWrap.innerHTML = '<img src="' + prod.imagem + '" style="width:100%;height:100%;object-fit:cover;">';
+    else imgWrap.innerHTML = '⚖️';
+    kgSetModo('preco');
+    document.getElementById('modal-kg').classList.add('ativo');
+  }
+  function kgSetModo(modo) {
+    _kgModo = modo; _kgBuf = '';
+    const bp = document.getElementById('kg-modo-preco'), bw = document.getElementById('kg-modo-peso');
+    const on = 'border:2px solid #1a56a0;background:#eff6ff;color:#1a56a0;';
+    const off = 'border:2px solid #e2e8f0;background:white;color:#475569;';
+    bp.style.cssText = 'flex:1;padding:11px;border-radius:10px;font-weight:bold;cursor:pointer;font-size:14px;' + (modo==='preco'?on:off);
+    bw.style.cssText = 'flex:1;padding:11px;border-radius:10px;font-weight:bold;cursor:pointer;font-size:14px;' + (modo==='peso'?on:off);
+    document.getElementById('kg-label-principal').textContent = (modo==='preco') ? 'PREÇO (MT) que o cliente quer' : 'PESO (kg) — ex: 1.5 ou 0.5';
+    kgAtualizar();
+  }
+  function kgTecla(d) {
+    if (d === '.' && _kgBuf.includes('.')) return;
+    if (_kgBuf === '0' && d !== '.') _kgBuf = '';
+    _kgBuf += d;
+    kgAtualizar();
+  }
+  function kgApagar() { _kgBuf = _kgBuf.slice(0, -1); kgAtualizar(); }
+  function kgAtualizar() {
+    const precoKg = parseFloat(_kgProd && _kgProd.preco) || 0;
+    const val = parseFloat(_kgBuf) || 0;
+    const disp = document.getElementById('kg-display');
+    const conv = document.getElementById('kg-conversao');
+    disp.textContent = _kgBuf === '' ? '0' : _kgBuf;
+    if (_kgModo === 'preco') {
+      disp.style.color = '#dc2626';
+      const peso = precoKg > 0 ? (val / precoKg) : 0;
+      conv.textContent = '≈ ' + (peso < 1 ? (Math.round(peso*1000) + ' g') : (peso.toFixed(3).replace(/\.?0+$/,'') + ' kg'));
+    } else {
+      disp.style.color = '#1a56a0';
+      conv.textContent = '= MT ' + (val * precoKg).toFixed(2);
+    }
+  }
+  function kgConfirmar() {
+    const precoKg = parseFloat(_kgProd && _kgProd.preco) || 0;
+    const val = parseFloat(_kgBuf) || 0;
+    if (val <= 0) { mostrarNotif('Escreve um valor.', true); return; }
+    let peso;
+    if (_kgModo === 'preco') { peso = precoKg > 0 ? (val / precoKg) : 0; }
+    else { peso = val; }
+    if (peso <= 0) { mostrarNotif('Valor inválido.', true); return; }
+    const ex = carrinho.find(i => i.nome === _kgProd.nome);
+    if (ex) ex.qtd = peso; else carrinho.push({..._kgProd, qtd: peso});
     renderCarrinho(); renderProdutos();
-    const mostra = peso < 1 ? (Math.round(peso*1000) + ' g') : (peso + ' kg');
-    mostrarNotif('🛒 ' + prod.nome + ' — ' + mostra + ' (MT ' + (peso*precoKg).toFixed(2) + ')');
+    document.getElementById('modal-kg').classList.remove('ativo');
+    const mostra = peso < 1 ? (Math.round(peso*1000) + ' g') : (peso.toFixed(3).replace(/\.?0+$/,'') + ' kg');
+    mostrarNotif('🛒 ' + _kgProd.nome + ' — ' + mostra + ' (MT ' + (peso*precoKg).toFixed(2) + ')');
   }
 
   function adicionarAoCarrinho(prod) {
@@ -2430,13 +2516,16 @@ async function scannerFechar() {
     renderCarrinho(); renderProdutos();
   }
 
-  function descontarPreco(i) {
+  async function descontarPreco(i) {
     const item = carrinho[i]; if (!item) return;
+    // Tenta buscar o código mais fresco do servidor (o dono pode tê-lo acabado de definir).
+    try { await _refrescarPerfilLoja(); } catch(e) {}
     const codigo = (sessaoAtual && sessaoAtual.codigoDesconto);
-    if (!codigo) { mostrarNotif('O dono ainda não definiu um código de desconto (Meu Perfil).', true); return; }
+    if (!codigo) { mostrarNotif('O dono ainda não definiu um código de desconto. Peça-lhe para o definir em Meu Perfil e clique em ⟳ para atualizar.', true); return; }
     const inserido = prompt('🏷️ DESCONTO em "' + item.nome + '"\n\nEscreve o código de desconto (pede ao dono):');
     if (inserido === null) return;
-    if (inserido.trim() !== String(codigo).trim()) { mostrarNotif('❌ Código de desconto errado.', true); return; }
+    // Comparação tolerante a maiúsculas/minúsculas e espaços
+    if (inserido.trim().toLowerCase() !== String(codigo).trim().toLowerCase()) { mostrarNotif('❌ Código de desconto errado.', true); return; }
     const atual = (item.precoOriginal || item.preco);
     const novoStr = prompt('Novo preço por unidade de "' + item.nome + '":\n(preço normal: MT ' + atual + ')', item.preco);
     if (novoStr === null) return;
@@ -3090,12 +3179,31 @@ async function scannerFechar() {
   }
 
   // Botão da barra: só atualiza os produtos da loja (rápido, sem ficar preso)
+  // Re-busca do servidor o que o DONO pode ter mudado há pouco (código de desconto,
+  // logótipo, rodapé do recibo, nomes) e atualiza a sessão + cache. Usado pelo botão ⟳
+  // e antes de aplicar um desconto, para o código novo chegar sem reabrir a app.
+  async function _refrescarPerfilLoja() {
+    if (!sessaoAtual || !sessaoAtual.lojaId || !navigator.onLine) return;
+    const { data: lj } = await supabaseClient.from('lojas')
+      .select('logo, recibo_rodape, endereco, nome, nome_empresa, telefone, codigo_desconto').eq('id', sessaoAtual.lojaId).maybeSingle();
+    if (!lj) return;
+    sessaoAtual.codigoDesconto = lj.codigo_desconto || null;
+    sessaoAtual.reciboRodape = lj.recibo_rodape || null;
+    sessaoAtual.logo = lj.logo || null;
+    if (lj.endereco != null) sessaoAtual.endereco = lj.endereco;
+    if (lj.nome) sessaoAtual.nomeLoja = lj.nome;
+    if (lj.nome_empresa != null) sessaoAtual.nomeEmpresa = lj.nome_empresa;
+    if (lj.telefone != null) sessaoAtual.telefone = lj.telefone;
+    try { localStorage.setItem('pdv_cache_sessao', JSON.stringify(sessaoAtual)); } catch(e) {}
+  }
+
   async function atualizarLojaManual() {
     const btn = document.getElementById('btn-sync');
     if (!navigator.onLine) { mostrarNotif('📵 Sem internet. Liga a rede para atualizar os produtos.', true); return; }
     if (btn) btn.classList.add('a-girar');
     mostrarNotif('🔄 A atualizar a loja...');
     try {
+      await _refrescarPerfilLoja();
       await carregarDadosDaLoja();
       garantirCategoriaComProdutos();
       renderCategorias(); renderProdutos(); renderMaisVendidos();
@@ -4086,6 +4194,11 @@ async function scannerFechar() {
       // dos selos em branco alternados). Deixamos a paginação natural: cada selo tem a
       // altura da página, por isso cai um por página sozinho, sem brancos.
       const _seloBreak = 'break-inside: avoid; page-break-inside: avoid;';
+      // Em modo PÁGINA, o selo é 2mm MAIS BAIXO que a página. Isto é o que elimina o
+      // "selo em branco" alternado: se o selo tivesse a altura EXACTA da página, qualquer
+      // arredondamento de 0,1mm faz transbordar e o navegador cria uma página vazia a
+      // seguir. Com 2mm de folga, cada selo cabe à vontade e sai um por etiqueta, colados.
+      const _seloH = (_modoFolha === 'continuo') ? d.h : Math.max(8, d.h - 2);
       win.document.write(`<html><head><title>Selos</title>
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <style>
@@ -4099,17 +4212,16 @@ async function scannerFechar() {
         #barra-imprimir { position:sticky; top:0; background:#1a56a0; color:white; padding:12px; text-align:center; }
         #barra-imprimir button { background:white; color:#1a56a0; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; font-size:15px; cursor:pointer; }
         .selo {
-          width:${d.w}mm; height:${d.h}mm;
+          width:${d.w}mm; height:${_seloH}mm;
           display:flex; align-items:center; justify-content:center;
           overflow:hidden;
           ${_seloBreak}
         }
-        .selo:last-child { page-break-after: auto; break-after: auto; }
         .selo-in {
           display:flex; flex-direction:column; align-items:center; justify-content:center;
-          text-align:center; padding:1mm; overflow:hidden; box-sizing:border-box;
-          width:${(_bcRot===90||_bcRot===270)? d.h : d.w}mm;
-          height:${(_bcRot===90||_bcRot===270)? d.w : d.h}mm;
+          text-align:center; padding:0.5mm; overflow:hidden; box-sizing:border-box;
+          width:${(_bcRot===90||_bcRot===270)? _seloH : d.w}mm;
+          height:${(_bcRot===90||_bcRot===270)? d.w : _seloH}mm;
           transform: rotate(${_bcRot}deg);
         }
         .s-nome { font-size:${d.nomeFs}; font-weight:bold; line-height:1.1; margin-bottom:0.5mm; width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -5502,7 +5614,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.137';
+  const VERSAO_ATUAL = '2.9.138';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
