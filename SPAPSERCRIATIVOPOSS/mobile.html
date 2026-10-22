@@ -9,6 +9,7 @@
 <link rel="manifest" href="manifest-mobile.json">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 <style>
   :root{
     --verde:#16a34a; --verde2:#15803d; --laranja:#ea580c; --fundo:#f0fdf4;
@@ -99,6 +100,10 @@
   .toast.erro{background:var(--vermelho);}
   .toast.ok{background:var(--verde);}
 
+  .menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .menu-grid .mi{background:#f0fdf4;border:1px solid var(--borda);border-radius:14px;padding:16px 10px;text-align:center;}
+  .menu-grid .mi:active{transform:scale(.97);}
+  .menu-grid .mi .e{font-size:28px;} .menu-grid .mi .t{font-size:12px;font-weight:700;margin-top:6px;}
   #scanner-area{display:none;background:#000;border-radius:14px;overflow:hidden;margin-bottom:12px;}
   .carregar{position:fixed;inset:0;background:var(--fundo);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;z-index:3000;color:var(--suave);}
   .spin{width:40px;height:40px;border:4px solid #e2e8f0;border-top-color:var(--verde);border-radius:50%;animation:g 1s linear infinite;}
@@ -241,32 +246,61 @@
   <div class="folha">
     <div class="cab"><h3>☰ Menu</h3><button onclick="fecharFolha('folha-menu')">✕</button></div>
     <div class="conteudo">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div onclick="reimprimirRecibo()" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:16px 10px;text-align:center;">
-          <div style="font-size:28px;">🧾</div><div style="font-size:12px;font-weight:700;margin-top:6px;">Reimprimir recibo</div></div>
-        <div onclick="abrirRetornar()" style="background:#fef2f2;border:1px solid #fecaca;border-radius:14px;padding:16px 10px;text-align:center;">
-          <div style="font-size:28px;">↩️</div><div style="font-size:12px;font-weight:700;margin-top:6px;">Retornar (devolver)</div></div>
-        <div onclick="infoImpressora()" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;padding:16px 10px;text-align:center;">
-          <div style="font-size:28px;">🖨️</div><div style="font-size:12px;font-weight:700;margin-top:6px;">Impressora & Scanner</div></div>
-        <div onclick="suporte()" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:16px 10px;text-align:center;">
-          <div style="font-size:28px;">💬</div><div style="font-size:12px;font-weight:700;margin-top:6px;">Suporte</div></div>
-        <div onclick="sobre()" style="background:#f8fafc;border:1px solid var(--borda);border-radius:14px;padding:16px 10px;text-align:center;">
-          <div style="font-size:28px;">ℹ️</div><div style="font-size:12px;font-weight:700;margin-top:6px;">Sobre o sistema</div></div>
-        <div onclick="sairBanca()" style="background:#fef2f2;border:1px solid #fecaca;border-radius:14px;padding:16px 10px;text-align:center;">
-          <div style="font-size:28px;">🚪</div><div style="font-size:12px;font-weight:700;margin-top:6px;">Sair</div></div>
+      <div class="menu-grid">
+        <div class="mi" onclick="reimprimirRecibo()"><div class="e">🧾</div><div class="t">Recibo de venda</div></div>
+        <div class="mi" onclick="abrirRetornar()"><div class="e">↩️</div><div class="t">Devolver produto</div></div>
+        <div class="mi" onclick="abrirPerda()"><div class="e">📉</div><div class="t">Perda</div></div>
+        <div class="mi" onclick="abrirBarcodeLoja()"><div class="e">🏷️</div><div class="t">Criar código de barras</div></div>
+        <div class="mi" onclick="infoImpressora()"><div class="e">🖨️</div><div class="t">Impressora & Scanner</div></div>
+        <div class="mi" onclick="idioma()"><div class="e">🌐</div><div class="t">Idioma</div></div>
+        <div class="mi" onclick="appCompleta()"><div class="e">🧰</div><div class="t">App completa (+ funções)</div></div>
+        <div class="mi" onclick="suporte()"><div class="e">💬</div><div class="t">Suporte</div></div>
+        <div class="mi" onclick="sobre()"><div class="e">ℹ️</div><div class="t">Sobre o sistema</div></div>
+        <div class="mi" onclick="sairBanca()" style="background:#fef2f2;"><div class="e">🚪</div><div class="t">Sair</div></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ======== FOLHA: RETORNAR ======== -->
+<!-- ======== FOLHA: RETORNAR (devolver produto) ======== -->
 <div class="folha-fundo" id="folha-retornar">
   <div class="folha">
-    <div class="cab"><h3>↩️ Retornar venda</h3><button onclick="fecharFolha('folha-retornar')">✕</button></div>
+    <div class="cab"><h3>↩️ Devolver produto</h3><button onclick="fecharFolha('folha-retornar')">✕</button></div>
     <div class="conteudo">
-      <div style="font-size:12px;color:var(--suave);margin-bottom:10px;">Toca numa venda de hoje para devolver. O stock volta e o total do dia é corrigido.</div>
-      <div id="retornar-lista"></div>
+      <div style="font-size:12px;color:var(--suave);margin-bottom:10px;">O cliente trouxe um produto de volta? Procura-o, diz a quantidade, e o stock volta a entrar. Serve para qualquer produto, mesmo vendido há dias.</div>
+      <div class="campo"><label>🔎 Qual produto foi devolvido?</label><input id="ret-busca" type="text" placeholder="Nome do produto…" oninput="retFiltrar()" autocomplete="off"></div>
+      <div id="ret-result"></div>
     </div>
+  </div>
+</div>
+
+<!-- ======== FOLHA: PERDA ======== -->
+<div class="folha-fundo" id="folha-perda">
+  <div class="folha">
+    <div class="cab"><h3>📉 Registar perda</h3><button onclick="fecharFolha('folha-perda')">✕</button></div>
+    <div class="conteudo">
+      <div style="font-size:12px;color:var(--suave);margin-bottom:10px;">Produto que partiu, estragou ou expirou. O stock baixa e fica registado para o dono ver.</div>
+      <div class="campo"><label>🔎 Qual produto?</label><input id="pd-busca" type="text" placeholder="Nome do produto…" oninput="pdFiltrar()" autocomplete="off"></div>
+      <div id="pd-result"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ======== FOLHA: CRIAR CÓDIGO DE BARRAS ======== -->
+<div class="folha-fundo" id="folha-barcode">
+  <div class="folha">
+    <div class="cab"><h3>🏷️ Criar código de barras</h3><button onclick="fecharFolha('folha-barcode')">✕</button></div>
+    <div class="conteudo">
+      <div style="font-size:12px;color:var(--suave);margin-bottom:8px;">Escolhe um produto. Gera-se o código, imprimes e colas no produto para depois escanear.</div>
+      <div class="campo"><label>🔎 Procurar produto</label><input id="bcl-busca" type="text" placeholder="Nome…" oninput="bclFiltrar()" autocomplete="off"></div>
+      <div id="bcl-result" style="max-height:170px;overflow-y:auto;border:1px solid var(--borda);border-radius:10px;display:none;"></div>
+      <div id="bcl-selo" style="display:none;text-align:center;margin-top:12px;">
+        <div id="bcl-nome" style="font-weight:700;font-size:14px;"></div>
+        <div id="bcl-preco" style="font-weight:800;color:var(--laranja);margin-bottom:6px;"></div>
+        <svg id="bcl-svg" style="max-width:100%;"></svg>
+      </div>
+    </div>
+    <div class="rodape"><button class="btn" id="bcl-print" style="display:none;" onclick="bclImprimir()">🖨️ Imprimir selo</button></div>
   </div>
 </div>
 
@@ -689,53 +723,124 @@ function infoImpressora(){
   alert('🖨️ Impressora & Scanner\n\n• O recibo imprime pela janela do telemóvel/Windows (botão Imprimir no recibo).\n• Para ler códigos, usa o botão 📷 na barra de pesquisa (câmara) ou um leitor USB.\n\nDica: numa impressora térmica, no Windows escolhe o tamanho de papel 58mm e Margens = Nenhuma.');
 }
 function suporte(){ fecharFolha('folha-menu'); window.open('https://wa.me/258866577722?text=' + encodeURIComponent('Olá, preciso de ajuda com a minha banca (Mobile POSS).'), '_blank'); }
-function sobre(){ fecharFolha('folha-menu'); alert('ℹ️ Mobile POSS — Banca\nSpap-Sercriativo\n\nLoja: ' + (sessao?sessao.nomeLoja:'') + '\nVersão 2.9.145'); }
+function sobre(){ fecharFolha('folha-menu'); alert('ℹ️ Mobile POSS — Banca\nSpap-Sercriativo\n\nLoja: ' + (sessao?sessao.nomeLoja:'') + '\nVersão 2.9.146'); }
+function idioma(){ fecharFolha('folha-menu'); alert('🌐 Idioma\n\nA banca está em Português. Mais idiomas em breve.'); }
+function appCompleta(){ if(confirm('Abrir a app completa (todas as funções: etiquetas, despacho, emergência, planos…)?\n\nÉ a mesma conta e os mesmos dados. Para voltar à banca, abre o endereço /banca.')) location.href='index.html'; }
 async function sairBanca(){ if(!confirm('Terminar sessão?')) return; try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='login.html'; }
 
-// ===================== RETORNAR (devolver venda) =====================
-async function abrirRetornar(){
-  fecharFolha('folha-menu');
-  abrirFolha('folha-retornar');
-  const div = document.getElementById('retornar-lista');
-  div.innerHTML = '<div class="vazio">A carregar…</div>';
-  const hoje = new Date(); hoje.setHours(0,0,0,0);
-  let vendas=[];
-  try{
-    const { data } = await supabaseClient.from('vendas')
-      .select('id,numero_do_dia,total,criado_em,metodo, venda_itens(produto_nome,qtd,preco_unitario)')
-      .eq('loja_id',sessao.lojaId).gte('criado_em',hoje.toISOString())
-      .order('criado_em',{ascending:false}).limit(100);
-    vendas=(data||[]).filter(v=>(parseFloat(v.total)||0) > 0 && v.metodo!=='Retorno');
-  }catch(e){}
-  window._retVendas = vendas;
-  if(!vendas.length){ div.innerHTML='<div class="vazio">Sem vendas de hoje para devolver.</div>'; return; }
-  div.innerHTML = vendas.map((v,idx)=>{
-    const dt=new Date(v.criado_em).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});
-    return `<div class="item" onclick="confirmarRetorno(${idx})">
-      <div class="in"><div class="nn">Venda nº ${v.numero_do_dia||'-'} · ${dt}</div>
-      <div class="pp">${(v.venda_itens||[]).map(i=>esc(i.produto_nome)+' ×'+i.qtd).join(', ')}</div></div>
-      <div style="font-weight:800;">${fmt(v.total)}</div></div>`;
-  }).join('');
+// ===== PERDA =====
+function abrirPerda(){ fecharFolha('folha-menu'); const b=document.getElementById('pd-busca'); if(b)b.value=''; const r=document.getElementById('pd-result'); if(r)r.innerHTML=''; abrirFolha('folha-perda'); }
+function pdFiltrar(){
+  const termo=(document.getElementById('pd-busca').value||'').trim().toLowerCase();
+  const res=document.getElementById('pd-result');
+  if(!termo){ res.innerHTML=''; return; }
+  const achados=produtos.filter(p=>(p.nome||'').toLowerCase().includes(termo)).slice(0,30);
+  if(!achados.length){ res.innerHTML='<div class="vazio">Nenhum produto.</div>'; return; }
+  res.innerHTML=achados.map(p=>`<div class="item" onclick="pdRegistar('${p.id}')">
+    <div class="in"><div class="nn">${esc(p.nome)}</div><div class="pp">stock ${parseInt(p.stock)||0}</div></div>
+    <div style="color:#dc2626;font-weight:800;font-size:22px;">📉</div></div>`).join('');
 }
-async function confirmarRetorno(idx){
-  const v = (window._retVendas||[])[idx]; if(!v) return;
-  if(!confirm('Devolver a venda nº ' + (v.numero_do_dia||'') + ' (' + fmt(v.total) + ')?\nO stock volta e o total do dia baixa.')) return;
+async function pdRegistar(id){
+  const p=produtos.find(x=>x.id===id); if(!p) return;
+  const qStr=prompt('📉 Perda de "'+p.nome+'"\nQuantas unidades?','1');
+  if(qStr===null) return;
+  const q=parseInt(qStr); if(isNaN(q)||q<=0){ toast('Quantidade inválida','erro'); return; }
+  const motivo=prompt('Motivo (opcional): partiu, expirou, estragou…','')||null;
   try{
-    // repõe o stock de cada item (por nome)
-    for (const it of (v.venda_itens||[])){
-      const p = produtos.find(x=>(x.nome||'').toLowerCase()===(it.produto_nome||'').toLowerCase());
-      if(p){ try{ await supabaseClient.rpc('repor_stock',{p_id:p.id,p_qtd:parseInt(it.qtd)||0}); }catch(e){} p.stock=(parseInt(p.stock)||0)+(parseInt(it.qtd)||0); }
-    }
-    // regista um retorno (venda negativa) para o total do dia ficar certo
+    try{ await supabaseClient.rpc('baixar_stock',{p_id:id,p_qtd:q}); }catch(e){}
+    p.stock=(parseInt(p.stock)||0)-q;
+    try{ await supabaseClient.from('perdas').insert({ loja_id:sessao.lojaId, produto_id:id, produto_nome:p.nome, quantidade:q, motivo:motivo, feito_por:sessao.vendedor, estado:'confirmado' }); }catch(e){}
+    renderProdutos();
+    fecharFolha('folha-perda');
+    toast('📉 Perda registada: '+q+'x '+p.nome,'ok');
+  }catch(e){ toast('Erro: '+(e.message||e),'erro'); }
+}
+
+// ===== CRIAR CÓDIGO DE BARRAS (loja) =====
+function _bcCheck(d12){ let s=0; for(let i=0;i<12;i++) s+=(+d12[i])*(i%2?3:1); return String((10-(s%10))%10); }
+function _bcGerarNum(){ let n='2'; for(let i=0;i<11;i++) n+=Math.floor(Math.random()*10); return n+_bcCheck(n); }
+let bclProd=null;
+function abrirBarcodeLoja(){
+  fecharFolha('folha-menu'); bclProd=null;
+  document.getElementById('bcl-busca').value='';
+  document.getElementById('bcl-result').style.display='none'; document.getElementById('bcl-result').innerHTML='';
+  document.getElementById('bcl-selo').style.display='none'; document.getElementById('bcl-print').style.display='none';
+  abrirFolha('folha-barcode');
+}
+function bclFiltrar(){
+  const termo=(document.getElementById('bcl-busca').value||'').trim().toLowerCase();
+  const res=document.getElementById('bcl-result');
+  if(!termo){ res.style.display='none'; res.innerHTML=''; return; }
+  const achados=produtos.filter(p=>(p.nome||'').toLowerCase().includes(termo)).slice(0,30);
+  if(!achados.length){ res.innerHTML='<div style="padding:12px;color:#dc2626;font-size:13px;text-align:center;">Nenhum produto da loja com esse nome.</div>'; res.style.display='block'; return; }
+  res.innerHTML=achados.map(p=>`<div onclick="bclEscolher('${p.id}')" style="padding:10px 12px;border-bottom:1px solid #f1f5f9;"><b style="font-size:13px;">${esc(p.nome)}</b> <span style="color:#94a3b8;font-size:11px;">${fmt(p.preco)}</span></div>`).join('');
+  res.style.display='block';
+}
+async function bclEscolher(id){
+  const p=produtos.find(x=>x.id===id); if(!p) return; bclProd=p;
+  let cod=p.codbarras;
+  if(!cod){ cod=_bcGerarNum(); try{ await supabaseClient.from('produtos').update({codbarras:cod}).eq('id',id); p.codbarras=cod; }catch(e){} }
+  bclProd.codigo=cod;
+  document.getElementById('bcl-result').style.display='none';
+  document.getElementById('bcl-busca').value=p.nome;
+  document.getElementById('bcl-nome').textContent=p.nome;
+  document.getElementById('bcl-preco').textContent=fmt(p.preco);
+  try{ JsBarcode('#bcl-svg', cod, { format:/^\d{12,13}$/.test(cod)?'EAN13':'CODE128', width:2, height:60, fontSize:14, margin:4, displayValue:true }); }
+  catch(e){ try{ JsBarcode('#bcl-svg', cod, { format:'CODE128', width:2, height:60, fontSize:14, margin:4, displayValue:true }); }catch(e2){} }
+  document.getElementById('bcl-selo').style.display='block';
+  document.getElementById('bcl-print').style.display='block';
+}
+function bclImprimir(){
+  if(!bclProd) return;
+  const svg=document.getElementById('bcl-svg').outerHTML;
+  const w=window.open('','_blank');
+  w.document.write(`<html><head><title>Selo</title><style>@page{size:50mm 40mm;margin:0}body{width:50mm;margin:0;font-family:Arial;text-align:center;}
+  .selo{width:50mm;height:38mm;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;}
+  .n{font-size:11px;font-weight:bold;}.p{font-size:13px;font-weight:bold;}svg{max-width:46mm;}</style></head><body>
+  <div class="selo"><div class="n">${esc(bclProd.nome)}</div><div class="p">${fmt(bclProd.preco)}</div>${svg}</div>
+  <script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>`);
+  w.document.close();
+}
+
+// ===================== RETORNAR (devolver um PRODUTO) =====================
+function abrirRetornar(){
+  fecharFolha('folha-menu');
+  const b=document.getElementById('ret-busca'); if(b) b.value='';
+  const r=document.getElementById('ret-result'); if(r) r.innerHTML='';
+  abrirFolha('folha-retornar');
+}
+function retFiltrar(){
+  const termo=(document.getElementById('ret-busca').value||'').trim().toLowerCase();
+  const res=document.getElementById('ret-result');
+  if(!termo){ res.innerHTML=''; return; }
+  const achados=produtos.filter(p=>(p.nome||'').toLowerCase().includes(termo)||(p.codbarras||'').toLowerCase().includes(termo)).slice(0,30);
+  if(!achados.length){ res.innerHTML='<div class="vazio">Nenhum produto com esse nome.</div>'; return; }
+  res.innerHTML=achados.map(p=>`<div class="item" onclick="retDevolver('${p.id}')">
+    <div class="in"><div class="nn">${esc(p.nome)}</div><div class="pp"><b>${fmt(p.preco)}</b> · stock ${parseInt(p.stock)||0}</div></div>
+    <div style="color:#16a34a;font-weight:800;font-size:22px;">↩️</div></div>`).join('');
+}
+async function retDevolver(id){
+  const p=produtos.find(x=>x.id===id); if(!p) return;
+  const qStr=prompt('↩️ Devolver "'+p.nome+'"\n\nQuantas unidades voltaram?', '1');
+  if(qStr===null) return;
+  const q=parseInt(qStr); if(isNaN(q)||q<=0){ toast('Quantidade inválida','erro'); return; }
+  const rStr=prompt('💵 Quanto dinheiro foi devolvido ao cliente?\n(Normal: '+fmt((parseFloat(p.preco)||0)*q)+'. Enter para aceitar)', ((parseFloat(p.preco)||0)*q).toFixed(2));
+  if(rStr===null) return;
+  const reembolso=parseFloat(String(rStr).replace(',','.'))||0;
+  try{
+    try{ await supabaseClient.rpc('repor_stock',{p_id:id,p_qtd:q}); }catch(e){}
+    p.stock=(parseInt(p.stock)||0)+q;
+    // regista a devolução como venda negativa, para o total do dia/relatório ficar certo
+    const devId = (crypto.randomUUID?crypto.randomUUID():'r-'+Date.now()+'-'+Math.random().toString(36).slice(2,8));
     await supabaseClient.from('vendas').insert({
-      id: (crypto.randomUUID?crypto.randomUUID():'r-'+Date.now()+'-'+Math.random().toString(36).slice(2,8)),
-      loja_id: sessao.lojaId, numero_do_dia: (v.numero_do_dia||0),
-      metodo: 'Retorno', total: -(parseFloat(v.total)||0), recebido: 0, troco: 0,
+      id: devId, loja_id: sessao.lojaId, numero_do_dia: 0,
+      metodo: 'Devolução', total: -(reembolso), recebido: 0, troco: 0,
       vendedor_user_id: sessao.userId, vendedor_codigo: sessao.vendedor, criado_em: new Date().toISOString()
     });
+    try{ await supabaseClient.from('venda_itens').insert({ venda_id: devId, loja_id: sessao.lojaId, produto_nome: p.nome + ' (devolução)', qtd: q, preco_unitario: -(reembolso/q) }); }catch(e){}
     renderProdutos();
     fecharFolha('folha-retornar');
-    toast('✅ Venda devolvida','ok');
+    toast('✅ '+q+'x '+p.nome+' devolvido(s). Stock reposto.','ok');
   }catch(e){ toast('Erro: '+(e.message||e),'erro'); }
 }
 
