@@ -114,7 +114,17 @@
   (async () => {
     try {
       const { data } = await supabaseClient.auth.getSession();
-      if (data && data.session) { window.location.href = destinoAposLogin(); return; }
+      if (data && data.session) {
+        // Se há destino específico guardado, respeita-o. Senão, bancas vão para o Mobile POSS.
+        if (!localStorage.getItem('pdv_login_destino')) {
+          try {
+            const { data: mb } = await supabaseClient.from('membros_loja')
+              .select('lojas(tipo_loja)').eq('user_id', data.session.user.id).limit(1);
+            if (mb && mb[0] && mb[0].lojas && mb[0].lojas.tipo_loja === 'banca') { window.location.href = '/banca'; return; }
+          } catch(e) {}
+        }
+        window.location.href = destinoAposLogin(); return;
+      }
     } catch(e) {}
     // Sem sessão do SDK mas offline com PDV já usado antes: mostra botão de entrada offline
     if (!navigator.onLine && localStorage.getItem('pdv_cache_sessao')) {
@@ -165,13 +175,14 @@
     btn.textContent = 'A verificar conta...';
     const { data: membros } = await supabaseClient
       .from('membros_loja')
-      .select('loja_id, lojas(estado, nome)')
+      .select('loja_id, lojas(estado, nome, tipo_loja)')
       .eq('user_id', data.user.id)
       .limit(1);
 
     if (membros && membros.length > 0) {
       const estadoLoja = membros[0].lojas && membros[0].lojas.estado;
       const nomeLoja = (membros[0].lojas && membros[0].lojas.nome) || 'a tua loja';
+      const tipoLoja = (membros[0].lojas && membros[0].lojas.tipo_loja) || '';
 
       if (estadoLoja === 'pendente' || estadoLoja === 'pendente_pagamento') {
         // Loja pendente de confirmação
@@ -185,6 +196,12 @@
         await supabaseClient.auth.signOut();
         mostrarErro('🚫 A tua loja foi suspensa. Contacta o suporte: +258 86 657 7722');
         btn.disabled = false; btn.textContent = 'ENTRAR';
+        return;
+      }
+
+      // Banca → vai para a app Mobile POSS (a não ser que haja um destino específico guardado)
+      if (tipoLoja === 'banca' && !localStorage.getItem('pdv_login_destino')) {
+        window.location.href = '/banca';
         return;
       }
     }

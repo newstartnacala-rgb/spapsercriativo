@@ -1,14 +1,17 @@
-const CACHE_NAME = 'spap-pdv-v215';
+const CACHE_NAME = 'spap-pdv-v218';
 const FICHEIROS = [
   '/',
   '/index.html',
   '/login.html',
   '/registo.html',
   '/monitor.html',
+  '/mobile.html',
+  '/mobile-monitor.html',
   '/planos.html',
   '/supabase-config.js',
   '/sw.js',
   '/manifest.json',
+  '/manifest-mobile.json',
   '/logo.png',
   '/icon-192.png',
   '/icon-512.png',

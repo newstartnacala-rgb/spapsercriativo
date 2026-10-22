@@ -1,6 +1,10 @@
 {
   "rewrites": [
     { "source": "/monitor", "destination": "/monitor.html" },
+    { "source": "/mobile", "destination": "/mobile.html" },
+    { "source": "/mobile-monitor", "destination": "/mobile-monitor.html" },
+    { "source": "/banca", "destination": "/mobile.html" },
+    { "source": "/banca/monitor", "destination": "/mobile-monitor.html" },
     { "source": "/login", "destination": "/login.html" },
     { "source": "/registo", "destination": "/registo.html" },
     { "source": "/reset-senha", "destination": "/reset-senha.html" },
