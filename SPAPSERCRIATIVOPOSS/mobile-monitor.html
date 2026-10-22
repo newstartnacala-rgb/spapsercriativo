@@ -9,6 +9,7 @@
 <link rel="manifest" href="manifest-mobile.json">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <style>
   :root{ --azul:#15803d; --azul2:#166534; --verde:#16a34a; --laranja:#ea580c; --fundo:#f0fdf4;
     --cartao:#fff; --texto:#0f172a; --suave:#64748b; --borda:#d7eadd; --vermelho:#dc2626; }
@@ -156,21 +157,16 @@
       <div class="menu-grid">
         <div class="mi" onclick="mRelatorio()"><div class="e">📈</div><div class="t">Relatório</div></div>
         <div class="mi" onclick="mRastreioProduto()"><div class="e">🔎</div><div class="t">Rastreio de Produto</div></div>
-        <div class="mi" onclick="mStockCritico()"><div class="e">⚠️</div><div class="t">Stock Crítico</div></div>
         <div class="mi" onclick="mProducts()"><div class="e">📦</div><div class="t">Produtos</div></div>
         <div class="mi" onclick="abrirAddProduto()"><div class="e">➕</div><div class="t">Adicionar produto</div></div>
         <div class="mi" onclick="mCategorias()"><div class="e">🏷️</div><div class="t">Categorias</div></div>
         <div class="mi" onclick="mDespacho()"><div class="e">🚚</div><div class="t">Enviar Despacho</div></div>
         <div class="mi" onclick="mVendedores()"><div class="e">👤</div><div class="t">Vendedores / Código</div></div>
-        <div class="mi" onclick="mVisaoGeral()"><div class="e">📊</div><div class="t">Visão Geral</div></div>
         <div class="mi" onclick="mDiagnostico()"><div class="e">🔧</div><div class="t">Diagnóstico de Stock</div></div>
         <div class="mi" onclick="mAuditoria()"><div class="e">🔍</div><div class="t">Auditoria de Caixa</div></div>
-        <div class="mi" onclick="mRastreioGerente()"><div class="e">📋</div><div class="t">Rastreio do Gerente</div></div>
-        <div class="mi" onclick="abrirBarcode()"><div class="e">🏷️</div><div class="t">Criar cód. de barras</div></div>
         <div class="mi" onclick="mPerfil()"><div class="e">🪪</div><div class="t">Meu Perfil</div></div>
         <div class="mi" onclick="mBackup()"><div class="e">💾</div><div class="t">Backup / Segurança</div></div>
         <div class="mi" onclick="mInstalar()"><div class="e">📲</div><div class="t">Instalar App</div></div>
-        <div class="mi" onclick="atualizarDados()"><div class="e">↻</div><div class="t">Atualizar dados</div></div>
         <div class="mi" onclick="suporte()"><div class="e">💬</div><div class="t">Suporte</div></div>
         <div class="mi" onclick="sairBanca()" style="background:#fef2f2;"><div class="e">🚪</div><div class="t">Sair</div></div>
       </div>
@@ -195,7 +191,13 @@
       </div>
       <div class="linha2">
         <div class="campo"><label>Stock</label><input id="ap-stock" type="number" inputmode="numeric" placeholder="0"></div>
-        <div class="campo"><label>Código de barras</label><input id="ap-codigo" type="text" placeholder="opcional"></div>
+        <div class="campo"><label>Código de barras</label>
+          <div style="display:flex;gap:8px;">
+            <input id="ap-codigo" type="text" placeholder="opcional" style="flex:1;">
+            <button type="button" onclick="scanCampo('ap-codigo')" title="Ler com a câmara" style="flex-shrink:0;width:52px;border:1.5px solid var(--borda);background:#f0fdf4;border-radius:12px;font-size:22px;">📷</button>
+          </div>
+          <div id="scan-ap-codigo" style="display:none;background:#000;border-radius:12px;overflow:hidden;margin-top:8px;"></div>
+        </div>
       </div>
     </div>
     <div class="rodape"><button class="btn" id="ap-guardar" onclick="guardarAddProduto()">💾 Guardar produto</button></div>
@@ -409,7 +411,7 @@ function abrirFolha(id){ document.getElementById(id).classList.add('ativa'); }
 function fecharFolha(id){ document.getElementById(id).classList.remove('ativa'); }
 function abrirMenu(){ abrirFolha('folha-menu'); }
 function suporte(){ fecharFolha('folha-menu'); window.open('https://wa.me/258866577722?text='+encodeURIComponent('Olá, preciso de ajuda com o monitor da minha banca.'),'_blank'); }
-function sobre(){ fecharFolha('folha-menu'); alert('ℹ️ Mobile POSS — Monitor\nSpap-Sercriativo\n\nBanca: '+(sessao?sessao.nomeLoja:'')+'\nVersão 2.9.148'); }
+function sobre(){ fecharFolha('folha-menu'); alert('ℹ️ Mobile POSS — Monitor\nSpap-Sercriativo\n\nBanca: '+(sessao?sessao.nomeLoja:'')+'\nVersão 2.9.149'); }
 async function atualizarDados(){ fecharFolha('folha-menu'); toast('🔄 A atualizar…'); await carregarProdutos(); await Promise.all([carregarResumo(), carregarDescontos()]); toast('✅ Atualizado','ok'); }
 async function sairBanca(){ if(!confirm('Terminar sessão?')) return; try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='banca/login'; }
 
@@ -507,6 +509,21 @@ function bcImprimir(){
   w.document.close();
 }
 
+// ===== LEITOR DE CÓDIGO PARA PREENCHER UM CAMPO =====
+let _scanCampo=null;
+async function scanCampo(inputId){
+  const area=document.getElementById('scan-'+inputId);
+  if(_scanCampo){ await pararScanCampo(); if(_scanCampo&&_scanCampo._alvo===inputId){ _scanCampo=null; return; } }
+  area.style.display='block'; area.innerHTML='<div id="rd-'+inputId+'" style="width:100%"></div>';
+  try{
+    const s=new Html5Qrcode('rd-'+inputId); _scanCampo=s; s._alvo=inputId;
+    await s.start({facingMode:'environment'},{fps:12,qrbox:{width:240,height:140}},
+      (code)=>{ const inp=document.getElementById(inputId); if(inp){ inp.value=String(code||'').trim(); } toast('✅ Código lido','ok'); pararScanCampo().then(()=>{area.style.display='none';area.innerHTML='';}); },
+      ()=>{});
+  }catch(e){ toast('Câmara indisponível','erro'); area.style.display='none'; _scanCampo=null; }
+}
+async function pararScanCampo(){ if(_scanCampo){ try{ await _scanCampo.stop(); _scanCampo.clear(); }catch(e){} _scanCampo=null; } }
+
 // ===== INFO GENÉRICA =====
 function mostrarInfo(titulo, html, rodapeHtml){
   fecharFolha('folha-menu');
@@ -599,25 +616,46 @@ async function renomearCategoria(cat){
   }catch(e){ toast('Erro: '+(e.message||e),'erro'); }
 }
 
-// ===== ENVIAR DESPACHO (repor stock / entrada de mercadoria) =====
+// ===== ENVIAR DESPACHO (dono envia VÁRIOS produtos; balconista confirma/rejeita) =====
+let _despacho=[];
 function mDespacho(){
-  const html='<div style="font-size:13px;color:var(--suave);margin-bottom:10px;">Entrou mercadoria nova? Procura o produto e acrescenta ao stock.</div>'
-    +'<div class="campo"><input id="dsp-busca" type="text" placeholder="🔎 Procurar produto…" oninput="dspFiltrar()" style="width:100%;"></div><div id="dsp-res"></div>';
-  mostrarInfo('🚚 Enviar Despacho (repor stock)', html);
+  _despacho=[];
+  const html='<div style="font-size:13px;color:var(--suave);margin-bottom:10px;">Seleciona os produtos e as quantidades que estás a enviar à banca. No fim, envia tudo de uma vez. O balconista recebe e confirma ou rejeita.</div>'
+    +'<div class="campo"><input id="dsp-busca" type="text" placeholder="🔎 Procurar produto para adicionar…" oninput="dspFiltrar()" style="width:100%;"></div>'
+    +'<div id="dsp-res" style="max-height:170px;overflow-y:auto;"></div>'
+    +'<h4 style="margin-top:14px;">A enviar (<span id="dsp-n">0</span>)</h4><div id="dsp-lista"></div>';
+  mostrarInfo('🚚 Enviar Despacho', html, '<button class="btn" onclick="dspEnviar()">🚚 Enviar despacho</button>');
+  dspRenderLista();
 }
 function dspFiltrar(){
   const termo=(document.getElementById('dsp-busca').value||'').trim().toLowerCase();
   const res=document.getElementById('dsp-res'); if(!termo){ res.innerHTML=''; return; }
   const achados=produtos.filter(p=>(p.nome||'').toLowerCase().includes(termo)).slice(0,30);
-  res.innerHTML=achados.length? '<div class="cartao">'+achados.map(p=>'<div class="row" onclick="dspRepor(\''+p.id+'\')"><div class="in"><div class="nn">'+esc(p.nome)+'</div><div class="mt">stock '+(parseInt(p.stock)||0)+'</div></div><div class="vv" style="color:#16a34a;font-size:22px;">＋</div></div>').join('')+'</div>' : '<div class="vazio">Nenhum produto.</div>';
+  res.innerHTML=achados.length? '<div class="cartao">'+achados.map(p=>'<div class="row" onclick="dspAdd(\''+p.id+'\')"><div class="in"><div class="nn">'+esc(p.nome)+'</div><div class="mt">stock '+(parseInt(p.stock)||0)+'</div></div><div class="vv" style="color:#16a34a;font-size:22px;">＋</div></div>').join('')+'</div>' : '<div class="vazio">Nenhum produto.</div>';
 }
-async function dspRepor(id){
+function dspAdd(id){
   const p=produtos.find(x=>x.id===id); if(!p) return;
-  const qStr=prompt('🚚 Quantas unidades entraram de "'+p.nome+'"?','0'); if(qStr===null) return;
-  const q=parseInt(qStr); if(isNaN(q)||q===0){ toast('Valor inválido','erro'); return; }
-  const novo=(parseInt(p.stock)||0)+q;
-  try{ await supabaseClient.from('produtos').update({stock:novo}).eq('id',id); p.stock=novo; renderProdutos(); toast('✅ '+p.nome+': stock '+novo,'ok'); dspFiltrar(); }
-  catch(e){ toast('Erro: '+(e.message||e),'erro'); }
+  const qStr=prompt('Quantas unidades de "'+p.nome+'" vais enviar?','1'); if(qStr===null) return;
+  const q=parseInt(qStr); if(isNaN(q)||q<=0){ toast('Quantidade inválida','erro'); return; }
+  const ex=_despacho.find(x=>x.produto_id===id);
+  if(ex) ex.enviado+=q; else _despacho.push({produto_id:id, nome:p.nome, enviado:q, preco:parseFloat(p.preco)||0});
+  document.getElementById('dsp-busca').value=''; document.getElementById('dsp-res').innerHTML='';
+  dspRenderLista(); toast('Adicionado: '+p.nome,'ok');
+}
+function dspRenderLista(){
+  const d=document.getElementById('dsp-lista'); const n=document.getElementById('dsp-n');
+  if(n) n.textContent=_despacho.length;
+  if(!d) return;
+  d.innerHTML = _despacho.length? '<div class="cartao">'+_despacho.map((it,i)=>'<div class="row"><div class="in"><div class="nn">'+esc(it.nome)+'</div><div class="mt">'+it.enviado+' unidade(s)</div></div><button onclick="dspRemover('+i+')" style="background:#fef2f2;border:none;border-radius:8px;padding:8px 10px;color:#dc2626;font-weight:700;">🗑</button></div>').join('')+'</div>' : '<div class="vazio">Ainda não adicionaste produtos.</div>';
+}
+function dspRemover(i){ _despacho.splice(i,1); dspRenderLista(); }
+async function dspEnviar(){
+  if(!_despacho.length){ toast('Adiciona produtos primeiro','erro'); return; }
+  try{
+    const { error }=await supabaseClient.from('despachos').insert({ loja_id:sessao.lojaId, estado:'enviado', criado_por:'Dono', itens:_despacho });
+    if(error) throw error;
+    fecharFolha('folha-info'); toast('✅ Despacho enviado ('+_despacho.length+' produto(s)). O balconista vai confirmar.','ok'); _despacho=[];
+  }catch(e){ toast('Erro: '+(e.message||e)+' — corre o SQL dos despachos.','erro'); }
 }
 
 // ===== VENDEDORES / CÓDIGO DO BALCONISTA =====

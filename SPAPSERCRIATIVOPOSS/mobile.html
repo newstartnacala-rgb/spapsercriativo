@@ -241,9 +241,13 @@
         <div class="campo"><label>Preço de venda *</label><input id="fp-preco" type="number" inputmode="decimal" placeholder="0"></div>
         <div class="campo"><label>Preço de compra</label><input id="fp-compra" type="number" inputmode="decimal" placeholder="0"></div>
       </div>
-      <div class="linha2">
-        <div class="campo"><label>Stock (quantidade)</label><input id="fp-stock" type="number" inputmode="numeric" placeholder="0"></div>
-        <div class="campo"><label>Código de barras</label><input id="fp-codigo" type="text" placeholder="opcional"></div>
+      <div class="campo"><label>Stock (quantidade)</label><input id="fp-stock" type="number" inputmode="numeric" placeholder="0"></div>
+      <div class="campo"><label>Código de barras</label>
+        <div style="display:flex;gap:8px;">
+          <input id="fp-codigo" type="text" placeholder="opcional" style="flex:1;">
+          <button type="button" onclick="scanCampo('fp-codigo')" title="Ler com a câmara" style="flex-shrink:0;width:52px;border:1.5px solid var(--borda);background:#f0fdf4;border-radius:12px;font-size:22px;">📷</button>
+        </div>
+        <div id="scan-fp-codigo" style="display:none;background:#000;border-radius:12px;overflow:hidden;margin-top:8px;"></div>
       </div>
     </div>
     <div class="rodape" style="display:flex;gap:10px;">
@@ -312,6 +316,17 @@
   </div>
 </div>
 
+<!-- ======== FOLHA: AVISO DE DESPACHO (receber do dono) ======== -->
+<div class="folha-fundo" id="folha-despacho">
+  <div class="folha">
+    <div class="cab"><h3>🚚 Avisos de despacho</h3><button onclick="fecharFolha('folha-despacho')">✕</button></div>
+    <div class="conteudo">
+      <div style="font-size:12px;color:var(--suave);margin-bottom:10px;">O que o dono enviou para a banca. Confere e <b>confirma</b> (entra no stock) ou <b>rejeita</b> se não bater certo.</div>
+      <div id="desp-lista"><div class="vazio">A carregar…</div></div>
+    </div>
+  </div>
+</div>
+
 <!-- ======== FOLHA: ENTREGAR O DIA ======== -->
 <div class="folha-fundo" id="folha-entregar">
   <div class="folha">
@@ -370,6 +385,7 @@ let descontosLote = [];   // descontos feitos nesta venda, para registar ao conf
     };
     document.getElementById('nome-loja').textContent = sessao.nomeLoja;
     await carregarProdutos();
+    try { aplicarIdioma(idiomaAtual()); } catch(e){}
     pedirCodigoBalconista();
   } catch(e) {
     alert('Erro ao abrir: ' + (e.message || e));
@@ -744,6 +760,21 @@ function _ean(stored, lido){
   return (a.length===12 && b.length===13 && b.startsWith(a)) || (b.length===12 && a.length===13 && a.startsWith(b));
 }
 
+// ===================== LEITOR DE CÓDIGO PARA CAMPO =====================
+let _scanCampo=null;
+async function scanCampo(inputId){
+  const area=document.getElementById('scan-'+inputId);
+  if(_scanCampo){ await pararScanCampo(); area.style.display='none'; area.innerHTML=''; return; }
+  area.style.display='block'; area.innerHTML='<div id="rd-'+inputId+'" style="width:100%"></div>';
+  try{
+    const s=new Html5Qrcode('rd-'+inputId); _scanCampo=s;
+    await s.start({facingMode:'environment'},{fps:12,qrbox:{width:240,height:140}},
+      (code)=>{ const inp=document.getElementById(inputId); if(inp) inp.value=String(code||'').trim(); toast('✅ Código lido','ok'); pararScanCampo().then(()=>{area.style.display='none';area.innerHTML='';}); },
+      ()=>{});
+  }catch(e){ toast('Câmara indisponível','erro'); area.style.display='none'; _scanCampo=null; }
+}
+async function pararScanCampo(){ if(_scanCampo){ try{ await _scanCampo.stop(); _scanCampo.clear(); }catch(e){} _scanCampo=null; } }
+
 // ===================== MENU =====================
 function abrirMenu(){ abrirFolha('folha-menu'); }
 function reimprimirRecibo(){
@@ -756,19 +787,78 @@ function infoImpressora(){
   alert('🖨️ Impressora & Scanner\n\n• O recibo imprime pela janela do telemóvel/Windows (botão Imprimir no recibo).\n• Para ler códigos, usa o botão 📷 na barra de pesquisa (câmara) ou um leitor USB.\n\nDica: numa impressora térmica, no Windows escolhe o tamanho de papel 58mm e Margens = Nenhuma.');
 }
 function suporte(){ fecharFolha('folha-menu'); window.open('https://wa.me/258866577722?text=' + encodeURIComponent('Olá, preciso de ajuda com a minha banca (Mobile POSS).'), '_blank'); }
-function sobre(){ fecharFolha('folha-menu'); alert('ℹ️ Mobile POSS — Banca\nSpap-Sercriativo\n\nLoja: ' + (sessao?sessao.nomeLoja:'') + '\nVersão 2.9.148'); }
-function idioma(){ fecharFolha('folha-menu'); alert('🌐 Idioma\n\nA banca está em Português. Mais idiomas em breve.'); }
-// Aviso de despacho: avisa o dono (por WhatsApp) do que está a acabar, para ele repor.
-function avisoDespacho(){
+function sobre(){ fecharFolha('folha-menu'); alert('ℹ️ Mobile POSS — Banca\nSpap-Sercriativo\n\nLoja: ' + (sessao?sessao.nomeLoja:'') + '\nVersão 2.9.149'); }
+// ===== IDIOMA (Português / Inglês / Francês) =====
+const I18N={
+  pt:{nome:'Português',ph:'Procurar produto…',cart:'Ver carrinho ›',confirmar:'✅ Confirmar venda',pagar:'💳 Receber / Pagar',sub:'vender',t_vender:'Vender',t_prod:'Produtos'},
+  en:{nome:'English',ph:'Search product…',cart:'View cart ›',confirmar:'✅ Confirm sale',pagar:'💳 Receive / Pay',sub:'sell',t_vender:'Sell',t_prod:'Products'},
+  fr:{nome:'Français',ph:'Chercher un produit…',cart:'Voir le panier ›',confirmar:'✅ Confirmer la vente',pagar:'💳 Encaisser / Payer',sub:'vendre',t_vender:'Vendre',t_prod:'Produits'}
+};
+function aplicarIdioma(l){
+  const d=I18N[l]||I18N.pt; try{ localStorage.setItem('banca_lang',l); }catch(e){}
+  const b=document.getElementById('busca'); if(b) b.placeholder=d.ph;
+  const c=document.getElementById('btn-abrir-cart'); if(c) c.textContent=d.cart;
+  const cf=document.getElementById('btn-confirmar'); if(cf) cf.textContent=d.confirmar;
+}
+function idiomaAtual(){ try{ return localStorage.getItem('banca_lang')||'pt'; }catch(e){ return 'pt'; } }
+function idioma(){ fecharFolha('folha-menu'); mostrarEscolhaIdioma(idiomaAtual()); }
+function mostrarEscolhaIdioma(atual){
+  let ov=document.getElementById('folha-idioma'); if(ov) ov.remove();
+  ov=document.createElement('div'); ov.className='folha-fundo ativa'; ov.id='folha-idioma';
+  ov.innerHTML=`<div class="folha"><div class="cab"><h3>🌐 Idioma</h3><button onclick="document.getElementById('folha-idioma').remove()">✕</button></div>
+  <div class="conteudo"><div class="menu-grid">
+    ${['pt','en','fr'].map(l=>`<div class="mi" style="${l===atual?'border:2px solid var(--verde);':''}" onclick="escolherIdioma('${l}')"><div class="e">${l==='pt'?'🇲🇿':l==='en'?'🇬🇧':'🇫🇷'}</div><div class="t">${I18N[l].nome}${l===atual?' ✓':''}</div></div>`).join('')}
+  </div><div style="font-size:11px;color:var(--suave);text-align:center;margin-top:12px;">Português está sempre disponível. Tradução a crescer.</div></div></div>`;
+  ov.addEventListener('click',e=>{ if(e.target===ov) ov.remove(); });
+  document.body.appendChild(ov);
+}
+function escolherIdioma(l){ aplicarIdioma(l); const ov=document.getElementById('folha-idioma'); if(ov) ov.remove(); toast('🌐 '+(I18N[l]||I18N.pt).nome,'ok'); }
+// Aviso de despacho: o balconista VÊ o que o dono enviou e confirma/rejeita.
+async function avisoDespacho(){
   fecharFolha('folha-menu');
-  const baixos = (produtos||[]).filter(p=>(parseInt(p.stock)||0)<=5).sort((a,b)=>(parseInt(a.stock)||0)-(parseInt(b.stock)||0));
-  let lista = baixos.slice(0,30).map(p=>'• '+p.nome+' (stock '+(parseInt(p.stock)||0)+')').join('\n');
-  if(!lista) lista = '(sem produtos em falta de momento)';
-  const msg = '🚚 Aviso de despacho — '+sessao.nomeLoja+'\nProdutos a acabar, é preciso repor:\n\n'+lista;
-  let tel = (sessao.telefone||'').replace(/\D/g,'');
-  if (tel && tel.length<=9) tel = '258'+tel; // Moçambique
-  const url = 'https://wa.me/'+(tel||'')+'?text='+encodeURIComponent(msg);
-  window.open(url,'_blank');
+  abrirFolha('folha-despacho');
+  const div=document.getElementById('desp-lista'); div.innerHTML='<div class="vazio">A carregar…</div>';
+  let desp=[];
+  try{
+    const { data, error }=await supabaseClient.from('despachos').select('*').eq('loja_id',sessao.lojaId).eq('estado','enviado').order('criado_em',{ascending:false}).limit(50);
+    if(error) throw error;
+    desp=data||[];
+  }catch(e){ div.innerHTML='<div class="vazio">Sem ligação aos despachos (ou falta o SQL dos despachos).</div>'; return; }
+  window._despRecebidos=desp;
+  if(!desp.length){ div.innerHTML='<div class="vazio">✅ Nenhum despacho por confirmar.</div>'; return; }
+  div.innerHTML = desp.map((d,i)=>{
+    const dt=new Date(d.criado_em).toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    const itens=(d.itens||[]);
+    const tot=itens.reduce((s,it)=>s+(parseInt(it.enviado)||0),0);
+    return `<div style="border:1px solid var(--borda);border-radius:14px;padding:12px;margin-bottom:12px;">
+      <div style="font-weight:800;">Despacho · ${dt}</div>
+      <div style="font-size:12px;color:var(--suave);margin:4px 0 8px;">${itens.length} produto(s) · ${tot} unidade(s)</div>
+      <div style="max-height:160px;overflow-y:auto;">${itens.map(it=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:13px;"><span>${esc(it.nome)}</span><b>×${it.enviado}</b></div>`).join('')}</div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn" style="flex:1;background:#16a34a;" onclick="confirmarDespacho(${i})">✅ Confirmar</button>
+        <button class="btn" style="flex:1;background:#fef2f2;color:#dc2626;" onclick="rejeitarDespacho(${i})">❌ Rejeitar</button>
+      </div></div>`;
+  }).join('');
+}
+async function confirmarDespacho(i){
+  const d=(window._despRecebidos||[])[i]; if(!d) return;
+  if(!confirm('Confirmar este despacho? O stock dos produtos vai aumentar.')) return;
+  try{
+    for(const it of (d.itens||[])){
+      const q=parseInt(it.enviado)||0; if(!q) continue;
+      if(it.produto_id){ try{ await supabaseClient.rpc('repor_stock',{p_id:it.produto_id,p_qtd:q}); }catch(e){}
+        const p=produtos.find(x=>x.id===it.produto_id); if(p) p.stock=(parseInt(p.stock)||0)+q; }
+      else { const p=produtos.find(x=>(x.nome||'').toLowerCase()===(it.nome||'').toLowerCase()); if(p){ try{ await supabaseClient.rpc('repor_stock',{p_id:p.id,p_qtd:q}); }catch(e){} p.stock=(parseInt(p.stock)||0)+q; } }
+    }
+    await supabaseClient.from('despachos').update({estado:'confirmado'}).eq('id',d.id);
+    renderProdutos(); toast('✅ Despacho confirmado. Stock atualizado.','ok'); avisoDespacho();
+  }catch(e){ toast('Erro: '+(e.message||e),'erro'); }
+}
+async function rejeitarDespacho(i){
+  const d=(window._despRecebidos||[])[i]; if(!d) return;
+  if(!confirm('Rejeitar este despacho? O stock NÃO muda.')) return;
+  try{ await supabaseClient.from('despachos').update({estado:'rejeitado'}).eq('id',d.id); toast('Despacho rejeitado','ok'); avisoDespacho(); }
+  catch(e){ toast('Erro: '+(e.message||e),'erro'); }
 }
 async function sairBanca(){ if(!confirm('Terminar sessão?')) return; try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='banca/login'; }
 
