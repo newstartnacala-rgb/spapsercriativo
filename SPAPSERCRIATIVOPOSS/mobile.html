@@ -253,7 +253,6 @@
         <div class="mi" onclick="abrirBarcodeLoja()"><div class="e">🏷️</div><div class="t">Criar código de barras</div></div>
         <div class="mi" onclick="infoImpressora()"><div class="e">🖨️</div><div class="t">Impressora & Scanner</div></div>
         <div class="mi" onclick="idioma()"><div class="e">🌐</div><div class="t">Idioma</div></div>
-        <div class="mi" onclick="appCompleta()"><div class="e">🧰</div><div class="t">App completa (+ funções)</div></div>
         <div class="mi" onclick="suporte()"><div class="e">💬</div><div class="t">Suporte</div></div>
         <div class="mi" onclick="sobre()"><div class="e">ℹ️</div><div class="t">Sobre o sistema</div></div>
         <div class="mi" onclick="sairBanca()" style="background:#fef2f2;"><div class="e">🚪</div><div class="t">Sair</div></div>
@@ -340,8 +339,8 @@ let descontosLote = [];   // descontos feitos nesta venda, para registar ao conf
   let ses = null;
   try { ses = (await supabaseClient.auth.getSession()).data.session; } catch(e){}
   if (!ses) {
-    try { localStorage.setItem('pdv_login_destino', '/banca'); } catch(e){}
-    location.href = 'login.html';
+    //
+    location.href = 'banca/login';
     return;
   }
   try {
@@ -349,7 +348,7 @@ let descontosLote = [];   // descontos feitos nesta venda, para registar ao conf
       .from('membros_loja')
       .select('loja_id, papel, nome_exibicao, lojas(nome, estado, tipo_loja)')
       .eq('user_id', ses.user.id).limit(1);
-    if (!membros || !membros.length) { alert('Esta conta não tem banca associada.'); location.href='login.html'; return; }
+    if (!membros || !membros.length) { alert('Esta conta não tem banca associada.'); location.href='banca/login'; return; }
     const m = membros[0];
     sessao = {
       lojaId: m.loja_id,
@@ -723,10 +722,9 @@ function infoImpressora(){
   alert('🖨️ Impressora & Scanner\n\n• O recibo imprime pela janela do telemóvel/Windows (botão Imprimir no recibo).\n• Para ler códigos, usa o botão 📷 na barra de pesquisa (câmara) ou um leitor USB.\n\nDica: numa impressora térmica, no Windows escolhe o tamanho de papel 58mm e Margens = Nenhuma.');
 }
 function suporte(){ fecharFolha('folha-menu'); window.open('https://wa.me/258866577722?text=' + encodeURIComponent('Olá, preciso de ajuda com a minha banca (Mobile POSS).'), '_blank'); }
-function sobre(){ fecharFolha('folha-menu'); alert('ℹ️ Mobile POSS — Banca\nSpap-Sercriativo\n\nLoja: ' + (sessao?sessao.nomeLoja:'') + '\nVersão 2.9.146'); }
+function sobre(){ fecharFolha('folha-menu'); alert('ℹ️ Mobile POSS — Banca\nSpap-Sercriativo\n\nLoja: ' + (sessao?sessao.nomeLoja:'') + '\nVersão 2.9.147'); }
 function idioma(){ fecharFolha('folha-menu'); alert('🌐 Idioma\n\nA banca está em Português. Mais idiomas em breve.'); }
-function appCompleta(){ if(confirm('Abrir a app completa (todas as funções: etiquetas, despacho, emergência, planos…)?\n\nÉ a mesma conta e os mesmos dados. Para voltar à banca, abre o endereço /banca.')) location.href='index.html'; }
-async function sairBanca(){ if(!confirm('Terminar sessão?')) return; try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='login.html'; }
+async function sairBanca(){ if(!confirm('Terminar sessão?')) return; try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='banca/login'; }
 
 // ===== PERDA =====
 function abrirPerda(){ fecharFolha('folha-menu'); const b=document.getElementById('pd-busca'); if(b)b.value=''; const r=document.getElementById('pd-result'); if(r)r.innerHTML=''; abrirFolha('folha-perda'); }
@@ -877,7 +875,7 @@ async function confirmarEntrega(){
   const sobra = Math.round((dinheiro - ((window._entTotalHoje||0) - gastos))*100)/100;
   fecharFolha('folha-entregar');
   toast('✅ Entrega registada' + (sobra>0?(' · sobra '+fmt(sobra)):''), 'ok');
-  setTimeout(async()=>{ try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='login.html'; }, 1500);
+  setTimeout(async()=>{ try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='banca/login'; }, 1500);
 }
 
 // ===================== FOLHAS / TOAST =====================

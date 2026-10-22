@@ -5,6 +5,8 @@
     { "source": "/mobile-monitor", "destination": "/mobile-monitor.html" },
     { "source": "/banca", "destination": "/mobile.html" },
     { "source": "/banca/monitor", "destination": "/mobile-monitor.html" },
+    { "source": "/banca/login", "destination": "/login-banca.html" },
+    { "source": "/banca/registo", "destination": "/registo-banca.html" },
     { "source": "/login", "destination": "/login.html" },
     { "source": "/registo", "destination": "/registo.html" },
     { "source": "/reset-senha", "destination": "/reset-senha.html" },

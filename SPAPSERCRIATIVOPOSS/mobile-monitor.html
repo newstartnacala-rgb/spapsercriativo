@@ -157,13 +157,11 @@
         <div class="mi" onclick="abrirAddProduto()"><div class="e">➕</div><div class="t">Adicionar produto</div></div>
         <div class="mi" onclick="abrirBarcode()"><div class="e">🏷️</div><div class="t">Criar código de barras</div></div>
         <div class="mi" onclick="atualizarDados()"><div class="e">↻</div><div class="t">Atualizar dados</div></div>
-        <div class="mi" onclick="painelCompleto()"><div class="e">🖥️</div><div class="t">Painel completo (+ funções)</div></div>
         <div class="mi" onclick="irLoja()"><div class="e">🛒</div><div class="t">Ir à loja (vender)</div></div>
         <div class="mi" onclick="suporte()"><div class="e">💬</div><div class="t">Suporte</div></div>
         <div class="mi" onclick="sobre()"><div class="e">ℹ️</div><div class="t">Sobre o sistema</div></div>
         <div class="mi" onclick="sairBanca()" style="background:#fef2f2;"><div class="e">🚪</div><div class="t">Sair</div></div>
       </div>
-      <div style="font-size:11px;color:var(--suave);text-align:center;margin-top:12px;line-height:1.5;">O <b>Painel completo</b> tem tudo o que o dono precisa: relatórios, categorias, vendedores, métodos de pagamento, auditoria de caixa, gerentes, rastreio, perdas, despacho, backup e mais — na mesma conta.</div>
     </div>
   </div>
 </div>
@@ -219,11 +217,11 @@ let sessao=null, produtos=[], periodo='hoje', periodoDesc='hoje';
 (async function init(){
   let ses=null;
   try{ ses=(await supabaseClient.auth.getSession()).data.session; }catch(e){}
-  if(!ses){ try{localStorage.setItem('pdv_login_destino','/banca/monitor');}catch(e){} location.href='login.html'; return; }
+  if(!ses){ location.href='banca/login?to='+encodeURIComponent('banca/monitor'); return; }
   try{
     const { data:membros } = await supabaseClient.from('membros_loja')
       .select('loja_id, papel, lojas(nome)').eq('user_id', ses.user.id).limit(1);
-    if(!membros||!membros.length){ alert('Conta sem banca.'); location.href='login.html'; return; }
+    if(!membros||!membros.length){ alert('Conta sem banca.'); location.href='banca/login'; return; }
     sessao = { lojaId: membros[0].loja_id, nomeLoja:(membros[0].lojas&&membros[0].lojas.nome)||'Banca', papel:membros[0].papel };
     document.getElementById('nome-loja').textContent = sessao.nomeLoja;
     await carregarProdutos();
@@ -388,10 +386,9 @@ function abrirFolha(id){ document.getElementById(id).classList.add('ativa'); }
 function fecharFolha(id){ document.getElementById(id).classList.remove('ativa'); }
 function abrirMenu(){ abrirFolha('folha-menu'); }
 function suporte(){ fecharFolha('folha-menu'); window.open('https://wa.me/258866577722?text='+encodeURIComponent('Olá, preciso de ajuda com o monitor da minha banca.'),'_blank'); }
-function sobre(){ fecharFolha('folha-menu'); alert('ℹ️ Mobile POSS — Monitor\nSpap-Sercriativo\n\nBanca: '+(sessao?sessao.nomeLoja:'')+'\nVersão 2.9.146'); }
+function sobre(){ fecharFolha('folha-menu'); alert('ℹ️ Mobile POSS — Monitor\nSpap-Sercriativo\n\nBanca: '+(sessao?sessao.nomeLoja:'')+'\nVersão 2.9.147'); }
 async function atualizarDados(){ fecharFolha('folha-menu'); toast('🔄 A atualizar…'); await carregarProdutos(); await Promise.all([carregarResumo(), carregarDescontos()]); toast('✅ Atualizado','ok'); }
-function painelCompleto(){ if(confirm('Abrir o painel completo do dono (relatórios, categorias, vendedores, auditoria, gerentes, backup…)?\n\nÉ a mesma conta e os mesmos dados. Para voltar, abre /banca/monitor.')) location.href='monitor.html'; }
-async function sairBanca(){ if(!confirm('Terminar sessão?')) return; try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='login.html'; }
+async function sairBanca(){ if(!confirm('Terminar sessão?')) return; try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='banca/login'; }
 
 // ===== ADICIONAR PRODUTO =====
 let apImg=undefined;

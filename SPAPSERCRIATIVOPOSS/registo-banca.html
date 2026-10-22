@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#16a34a">
+<title>Banca — Criar conta</title>
+<base href="/">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;background:#f0fdf4;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .box{background:#fff;border-radius:22px;padding:28px 24px;width:100%;max-width:400px;box-shadow:0 10px 40px rgba(16,163,74,.12);}
+  .logo{text-align:center;margin-bottom:6px;}
+  .logo .ic{font-size:40px;} .logo h1{font-size:20px;color:#166534;margin-top:2px;}
+  .sub{text-align:center;font-size:13px;color:#64748b;margin:4px 0 18px;}
+  label{display:block;font-size:12px;color:#64748b;font-weight:700;margin:12px 0 5px;}
+  input{width:100%;border:1.5px solid #d7eadd;border-radius:13px;padding:14px 15px;font-size:16px;outline:none;}
+  input:focus{border-color:#16a34a;}
+  .btn{width:100%;margin-top:20px;padding:16px;background:#16a34a;color:#fff;border:none;border-radius:13px;font-size:17px;font-weight:800;}
+  .btn:disabled{background:#a7d8ba;}
+  .erro{display:none;margin-top:12px;background:#fef2f2;color:#dc2626;border-radius:10px;padding:11px 13px;font-size:13px;}
+  .ok{display:none;margin-top:12px;background:#f0fdf4;color:#166534;border-radius:10px;padding:11px 13px;font-size:13px;}
+  .rodape{text-align:center;margin-top:18px;font-size:14px;color:#64748b;}
+  .rodape a{color:#16a34a;font-weight:800;text-decoration:none;}
+  .passo{display:none;} .passo.on{display:block;}
+  .otp{display:flex;gap:8px;justify-content:center;margin-top:8px;}
+  .otp input{width:46px;height:56px;text-align:center;font-size:24px;font-weight:800;padding:0;}
+  .dica{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="logo"><div class="ic">🏪</div><h1>Criar a tua banca</h1></div>
+
+  <!-- PASSO 1: dados -->
+  <div class="passo on" id="p1">
+    <div class="sub">Só o básico. Depois escolhes o plano.</div>
+    <label>🏪 Nome da banca</label>
+    <input id="nome" type="text" placeholder="Ex: Banca do João">
+    <label>📧 Email</label>
+    <input id="email" type="email" inputmode="email" placeholder="o-teu-email@exemplo.com">
+    <label>📱 Número de telefone</label>
+    <input id="telefone" type="tel" inputmode="tel" placeholder="84 000 0000">
+    <label>🔑 Código (senha)</label>
+    <input id="senha" type="password" placeholder="mínimo 6 caracteres">
+    <label>🔁 Repetir código</label>
+    <input id="senha2" type="password" placeholder="escreve o código outra vez">
+    <button class="btn" id="btn1" onclick="criar()">Criar banca</button>
+    <div class="erro" id="erro1"></div>
+    <div class="rodape">Já tens banca? <a href="banca/login">Entrar</a></div>
+  </div>
+
+  <!-- PASSO 2: código OTP -->
+  <div class="passo" id="p2">
+    <div class="sub">Escrevemos um código de 6 dígitos para <b id="email-mostra"></b>. Escreve-o aqui.</div>
+    <div class="otp">
+      <input class="od" maxlength="1" inputmode="numeric"><input class="od" maxlength="1" inputmode="numeric"><input class="od" maxlength="1" inputmode="numeric">
+      <input class="od" maxlength="1" inputmode="numeric"><input class="od" maxlength="1" inputmode="numeric"><input class="od" maxlength="1" inputmode="numeric">
+    </div>
+    <button class="btn" id="btn2" onclick="verificar()">Confirmar código</button>
+    <div class="erro" id="erro2"></div>
+    <div class="ok" id="ok2"></div>
+    <div class="dica"><a href="#" onclick="reenviar();return false;" style="color:#16a34a;font-weight:700;text-decoration:none;">📩 Reenviar código</a></div>
+  </div>
+
+  <!-- PASSO 3: sucesso -->
+  <div class="passo" id="p3">
+    <div style="text-align:center;padding:10px 0;">
+      <div style="font-size:48px;">✅</div>
+      <h2 style="color:#166534;font-size:19px;margin:8px 0;">Banca criada!</h2>
+      <p style="color:#475569;font-size:14px;line-height:1.5;">Falta escolher o plano de pagamento. Depois de confirmado, entras direto na tua banca.</p>
+      <button class="btn" onclick="location.href='planos.html'">Escolher plano →</button>
+    </div>
+  </div>
+</div>
+
+<script src="supabase-config.js"></script>
+<script>
+let dados={};
+function erro(id,m){ const e=document.getElementById(id); e.textContent=m; e.style.display='block'; }
+function limpaErro(id){ const e=document.getElementById(id); if(e) e.style.display='none'; }
+function passo(n){ ['p1','p2','p3'].forEach((p,i)=>document.getElementById(p).classList.toggle('on',i===n-1)); }
+
+async function criar(){
+  limpaErro('erro1');
+  const nome=document.getElementById('nome').value.trim();
+  const email=document.getElementById('email').value.trim();
+  const telefone=document.getElementById('telefone').value.trim();
+  const senha=document.getElementById('senha').value;
+  const senha2=document.getElementById('senha2').value;
+  if(!nome){ erro('erro1','Escreve o nome da banca.'); return; }
+  if(!email.includes('@')){ erro('erro1','Escreve um email válido.'); return; }
+  if(senha.length<6){ erro('erro1','O código deve ter pelo menos 6 caracteres.'); return; }
+  if(senha!==senha2){ erro('erro1','Os códigos não são iguais.'); return; }
+  dados={nome,email,telefone,senha};
+  const btn=document.getElementById('btn1'); btn.disabled=true; btn.textContent='A criar…';
+  let authData,authError;
+  try{ const r=await supabaseClient.auth.signUp({email,password:senha}); authData=r.data; authError=r.error; }
+  catch(e){ authError={message:'Sem internet. Tenta de novo.'}; }
+  btn.disabled=false; btn.textContent='Criar banca';
+  if(authError){ erro('erro1', authError.message.includes('already')?'Este email já está registado. Tenta entrar.':authError.message); return; }
+  if(authData && authData.user && Array.isArray(authData.user.identities) && authData.user.identities.length===0){ erro('erro1','Este email já está registado. Tenta entrar.'); return; }
+  if(authData && authData.session){ // confirmação desligada: cria já
+    const ok=await criarBanca(authData.user.id,'erro1'); if(ok) passo(3); return;
+  }
+  document.getElementById('email-mostra').textContent=email;
+  passo(2); limparOtp();
+}
+
+const od=document.querySelectorAll('.od');
+od.forEach((c,i)=>{
+  c.addEventListener('input',()=>{ c.value=c.value.replace(/\D/g,'').slice(0,1); if(c.value&&i<od.length-1) od[i+1].focus(); if([...od].every(x=>x.value)) verificar(); });
+  c.addEventListener('keydown',e=>{ if(e.key==='Backspace'&&!c.value&&i>0) od[i-1].focus(); });
+});
+function limparOtp(){ od.forEach(c=>c.value=''); od[0].focus(); }
+
+let aVer=false;
+async function verificar(){
+  if(aVer) return; limpaErro('erro2');
+  const codigo=[...od].map(c=>c.value).join('');
+  if(codigo.length<6){ erro('erro2','Escreve os 6 dígitos.'); return; }
+  aVer=true; const btn=document.getElementById('btn2'); btn.disabled=true; btn.textContent='A verificar…';
+  const { data,error }=await supabaseClient.auth.verifyOtp({ email:dados.email, token:codigo, type:'signup' });
+  if(error){ erro('erro2', (error.message.includes('expired')||error.message.toLowerCase().includes('invalid'))?'Código errado ou expirado.':error.message); btn.disabled=false; btn.textContent='Confirmar código'; aVer=false; limparOtp(); return; }
+  btn.textContent='A criar banca…';
+  const ok=await criarBanca(data.user.id,'erro2');
+  btn.disabled=false; btn.textContent='Confirmar código'; aVer=false;
+  if(ok) passo(3);
+}
+
+async function reenviar(){
+  limpaErro('erro2');
+  const { error }=await supabaseClient.auth.resend({ type:'signup', email:dados.email });
+  const o=document.getElementById('ok2');
+  if(error){ erro('erro2', error.message.includes('rate')?'Aguarda um pouco antes de reenviar.':error.message); return; }
+  o.textContent='Novo código enviado! Vê o email (e o spam).'; o.style.display='block';
+}
+
+async function criarBanca(userId,errId){
+  const { data:lojaData, error:lojaError }=await supabaseClient.from('lojas').insert({
+    nome: dados.nome,
+    dono_user_id: userId,
+    telefone: dados.telefone,
+    email_dono: dados.email,
+    tipo_loja: 'banca',
+    plano: 'trial',
+    estado: 'pendente',
+    vendedores: ['1001']
+  }).select().single();
+  if(lojaError){ erro(errId,'Erro ao criar a banca: '+lojaError.message); return false; }
+  const { error:memErr }=await supabaseClient.from('membros_loja').insert({
+    loja_id: lojaData.id, user_id: userId, papel:'admin', nome_exibicao: dados.nome
+  });
+  if(memErr){ erro(errId,'Erro ao associar a conta: '+memErr.message); return false; }
+  return true;
+}
+</script>
+</body>
+</html>
