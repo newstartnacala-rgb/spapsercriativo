@@ -118,7 +118,7 @@
     </div>
     <div style="display:flex;gap:8px;">
       <button onclick="abrirEntregar()">📦 Dia</button>
-      <button onclick="irMonitor()">📊 Monitor</button>
+      <button onclick="abrirMenu()">☰ Menu</button>
     </div>
   </div>
   <div class="barra">
@@ -140,7 +140,6 @@
   <div class="nav">
     <a class="on"><span class="ic">🛒</span>Vender</a>
     <a onclick="mostrarTela('produtos')"><span class="ic">📦</span>Produtos</a>
-    <a onclick="irMonitor()"><span class="ic">📊</span>Monitor</a>
   </div>
 </div>
 
@@ -159,7 +158,6 @@
   <div class="nav">
     <a onclick="mostrarTela('vender')"><span class="ic">🛒</span>Vender</a>
     <a class="on"><span class="ic">📦</span>Produtos</a>
-    <a onclick="irMonitor()"><span class="ic">📊</span>Monitor</a>
   </div>
 </div>
 
@@ -234,6 +232,40 @@
     <div class="rodape" style="display:flex;gap:10px;">
       <button class="btn cinza" id="fp-apagar" style="flex:1;display:none;" onclick="apagarProduto()">🗑</button>
       <button class="btn" style="flex:2;" id="fp-guardar" onclick="guardarProduto()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======== FOLHA: MENU ======== -->
+<div class="folha-fundo" id="folha-menu">
+  <div class="folha">
+    <div class="cab"><h3>☰ Menu</h3><button onclick="fecharFolha('folha-menu')">✕</button></div>
+    <div class="conteudo">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div onclick="reimprimirRecibo()" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:16px 10px;text-align:center;">
+          <div style="font-size:28px;">🧾</div><div style="font-size:12px;font-weight:700;margin-top:6px;">Reimprimir recibo</div></div>
+        <div onclick="abrirRetornar()" style="background:#fef2f2;border:1px solid #fecaca;border-radius:14px;padding:16px 10px;text-align:center;">
+          <div style="font-size:28px;">↩️</div><div style="font-size:12px;font-weight:700;margin-top:6px;">Retornar (devolver)</div></div>
+        <div onclick="infoImpressora()" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;padding:16px 10px;text-align:center;">
+          <div style="font-size:28px;">🖨️</div><div style="font-size:12px;font-weight:700;margin-top:6px;">Impressora & Scanner</div></div>
+        <div onclick="suporte()" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:16px 10px;text-align:center;">
+          <div style="font-size:28px;">💬</div><div style="font-size:12px;font-weight:700;margin-top:6px;">Suporte</div></div>
+        <div onclick="sobre()" style="background:#f8fafc;border:1px solid var(--borda);border-radius:14px;padding:16px 10px;text-align:center;">
+          <div style="font-size:28px;">ℹ️</div><div style="font-size:12px;font-weight:700;margin-top:6px;">Sobre o sistema</div></div>
+        <div onclick="sairBanca()" style="background:#fef2f2;border:1px solid #fecaca;border-radius:14px;padding:16px 10px;text-align:center;">
+          <div style="font-size:28px;">🚪</div><div style="font-size:12px;font-weight:700;margin-top:6px;">Sair</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======== FOLHA: RETORNAR ======== -->
+<div class="folha-fundo" id="folha-retornar">
+  <div class="folha">
+    <div class="cab"><h3>↩️ Retornar venda</h3><button onclick="fecharFolha('folha-retornar')">✕</button></div>
+    <div class="conteudo">
+      <div style="font-size:12px;color:var(--suave);margin-bottom:10px;">Toca numa venda de hoje para devolver. O stock volta e o total do dia é corrigido.</div>
+      <div id="retornar-lista"></div>
     </div>
   </div>
 </div>
@@ -643,6 +675,68 @@ function _ean(stored, lido){
   if(!stored) return false;
   const a=String(stored).replace(/\D/g,''), b=String(lido).replace(/\D/g,'');
   return (a.length===12 && b.length===13 && b.startsWith(a)) || (b.length===12 && a.length===13 && a.startsWith(b));
+}
+
+// ===================== MENU =====================
+function abrirMenu(){ abrirFolha('folha-menu'); }
+function reimprimirRecibo(){
+  fecharFolha('folha-menu');
+  if (!ultimaVenda){ toast('Ainda não há venda para reimprimir','erro'); return; }
+  imprimirRecibo();
+}
+function infoImpressora(){
+  fecharFolha('folha-menu');
+  alert('🖨️ Impressora & Scanner\n\n• O recibo imprime pela janela do telemóvel/Windows (botão Imprimir no recibo).\n• Para ler códigos, usa o botão 📷 na barra de pesquisa (câmara) ou um leitor USB.\n\nDica: numa impressora térmica, no Windows escolhe o tamanho de papel 58mm e Margens = Nenhuma.');
+}
+function suporte(){ fecharFolha('folha-menu'); window.open('https://wa.me/258866577722?text=' + encodeURIComponent('Olá, preciso de ajuda com a minha banca (Mobile POSS).'), '_blank'); }
+function sobre(){ fecharFolha('folha-menu'); alert('ℹ️ Mobile POSS — Banca\nSpap-Sercriativo\n\nLoja: ' + (sessao?sessao.nomeLoja:'') + '\nVersão 2.9.145'); }
+async function sairBanca(){ if(!confirm('Terminar sessão?')) return; try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='login.html'; }
+
+// ===================== RETORNAR (devolver venda) =====================
+async function abrirRetornar(){
+  fecharFolha('folha-menu');
+  abrirFolha('folha-retornar');
+  const div = document.getElementById('retornar-lista');
+  div.innerHTML = '<div class="vazio">A carregar…</div>';
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  let vendas=[];
+  try{
+    const { data } = await supabaseClient.from('vendas')
+      .select('id,numero_do_dia,total,criado_em,metodo, venda_itens(produto_nome,qtd,preco_unitario)')
+      .eq('loja_id',sessao.lojaId).gte('criado_em',hoje.toISOString())
+      .order('criado_em',{ascending:false}).limit(100);
+    vendas=(data||[]).filter(v=>(parseFloat(v.total)||0) > 0 && v.metodo!=='Retorno');
+  }catch(e){}
+  window._retVendas = vendas;
+  if(!vendas.length){ div.innerHTML='<div class="vazio">Sem vendas de hoje para devolver.</div>'; return; }
+  div.innerHTML = vendas.map((v,idx)=>{
+    const dt=new Date(v.criado_em).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});
+    return `<div class="item" onclick="confirmarRetorno(${idx})">
+      <div class="in"><div class="nn">Venda nº ${v.numero_do_dia||'-'} · ${dt}</div>
+      <div class="pp">${(v.venda_itens||[]).map(i=>esc(i.produto_nome)+' ×'+i.qtd).join(', ')}</div></div>
+      <div style="font-weight:800;">${fmt(v.total)}</div></div>`;
+  }).join('');
+}
+async function confirmarRetorno(idx){
+  const v = (window._retVendas||[])[idx]; if(!v) return;
+  if(!confirm('Devolver a venda nº ' + (v.numero_do_dia||'') + ' (' + fmt(v.total) + ')?\nO stock volta e o total do dia baixa.')) return;
+  try{
+    // repõe o stock de cada item (por nome)
+    for (const it of (v.venda_itens||[])){
+      const p = produtos.find(x=>(x.nome||'').toLowerCase()===(it.produto_nome||'').toLowerCase());
+      if(p){ try{ await supabaseClient.rpc('repor_stock',{p_id:p.id,p_qtd:parseInt(it.qtd)||0}); }catch(e){} p.stock=(parseInt(p.stock)||0)+(parseInt(it.qtd)||0); }
+    }
+    // regista um retorno (venda negativa) para o total do dia ficar certo
+    await supabaseClient.from('vendas').insert({
+      id: (crypto.randomUUID?crypto.randomUUID():'r-'+Date.now()+'-'+Math.random().toString(36).slice(2,8)),
+      loja_id: sessao.lojaId, numero_do_dia: (v.numero_do_dia||0),
+      metodo: 'Retorno', total: -(parseFloat(v.total)||0), recebido: 0, troco: 0,
+      vendedor_user_id: sessao.userId, vendedor_codigo: sessao.vendedor, criado_em: new Date().toISOString()
+    });
+    renderProdutos();
+    fecharFolha('folha-retornar');
+    toast('✅ Venda devolvida','ok');
+  }catch(e){ toast('Erro: '+(e.message||e),'erro'); }
 }
 
 // ===================== ENTREGAR O DIA =====================

@@ -8,6 +8,7 @@
 <base href="/">
 <link rel="manifest" href="manifest-mobile.json">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 <style>
   :root{ --azul:#15803d; --azul2:#166534; --verde:#16a34a; --laranja:#ea580c; --fundo:#f0fdf4;
     --cartao:#fff; --texto:#0f172a; --suave:#64748b; --borda:#d7eadd; --vermelho:#dc2626; }
@@ -55,6 +56,22 @@
   @keyframes g{to{transform:rotate(360deg);}}
   .toast{position:fixed;left:50%;top:70px;transform:translateX(-50%);background:#0f172a;color:#fff;padding:12px 18px;border-radius:12px;font-size:14px;font-weight:600;z-index:2000;max-width:90%;text-align:center;display:none;}
   .toast.erro{background:var(--vermelho);} .toast.ok{background:var(--verde);}
+  /* folhas deslizantes */
+  .folha-fundo{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:900;display:none;align-items:flex-end;}
+  .folha-fundo.ativa{display:flex;}
+  .folha{background:var(--cartao);width:100%;max-height:92dvh;border-radius:20px 20px 0 0;display:flex;flex-direction:column;overflow:hidden;}
+  .folha .cab{padding:14px 16px;border-bottom:1px solid var(--borda);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+  .folha .cab h3{font-size:17px;}
+  .folha .cab button{background:#f1f5f9;border:none;border-radius:10px;width:36px;height:36px;font-size:17px;}
+  .folha .conteudo{overflow-y:auto;padding:14px 16px;flex:1;}
+  .folha .rodape{padding:12px 16px calc(env(safe-area-inset-bottom) + 12px);border-top:1px solid var(--borda);flex-shrink:0;}
+  .campo{margin-bottom:12px;} .campo label{display:block;font-size:12px;color:var(--suave);font-weight:700;margin-bottom:5px;}
+  .campo input,.campo select{width:100%;border:1.5px solid var(--borda);border-radius:12px;padding:13px 14px;font-size:15px;outline:none;}
+  .linha2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .btn{width:100%;border:none;border-radius:14px;padding:16px;font-size:17px;font-weight:800;color:#fff;background:var(--verde);}
+  .menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .menu-grid .mi{background:#f0fdf4;border:1px solid var(--borda);border-radius:14px;padding:16px 10px;text-align:center;}
+  .menu-grid .mi .e{font-size:28px;} .menu-grid .mi .t{font-size:12px;font-weight:700;margin-top:6px;}
 </style>
 </head>
 <body>
@@ -64,13 +81,19 @@
 <div id="tela-resumo" class="tela ativa">
   <div class="topo">
     <div><div class="nome" id="nome-loja">Banca</div><div class="sub">Monitor · resumo</div></div>
-    <button onclick="irLoja()">🛒 Vender</button>
+    <button onclick="abrirMenu()">☰ Menu</button>
   </div>
   <div class="corpo">
     <div class="periodo">
       <button id="pb-hoje" class="on" onclick="setPeriodo('hoje')">Hoje</button>
+      <button id="pb-ontem" onclick="setPeriodo('ontem')">Ontem</button>
       <button id="pb-semana" onclick="setPeriodo('semana')">Semana</button>
       <button id="pb-mes" onclick="setPeriodo('mes')">Mês</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;background:var(--cartao);border:1px solid var(--borda);border-radius:12px;padding:8px 12px;margin-bottom:14px;">
+      <span style="font-size:18px;">📅</span>
+      <span style="font-size:13px;color:var(--suave);font-weight:700;">Ver um dia:</span>
+      <input type="date" id="pb-dia" onchange="setDia(this.value)" style="flex:1;border:1px solid var(--borda);border-radius:9px;padding:8px;font-size:14px;outline:none;">
     </div>
     <div class="cards">
       <div class="stat wide"><div class="lbl">💰 Vendido no período</div><div class="val verde" id="s-vendido">MT 0,00</div></div>
@@ -89,7 +112,7 @@
 
 <!-- ===== STOCK / PRODUTOS ===== -->
 <div id="tela-produtos" class="tela">
-  <div class="topo"><div><div class="nome">Stock & Produtos</div><div class="sub">repor / preços</div></div><button onclick="irLoja()">🛒 Vender</button></div>
+  <div class="topo"><div><div class="nome">Stock & Produtos</div><div class="sub">repor / preços</div></div><button onclick="abrirMenu()">☰ Menu</button></div>
   <div class="corpo">
     <div class="cards">
       <div class="stat"><div class="lbl">📦 Produtos</div><div class="val" id="s-nprod">0</div></div>
@@ -108,7 +131,7 @@
 
 <!-- ===== DESCONTOS ===== -->
 <div id="tela-descontos" class="tela">
-  <div class="topo"><div><div class="nome">Produtos descontados</div><div class="sub">quem baixou o preço e quando</div></div><button onclick="irLoja()">🛒 Vender</button></div>
+  <div class="topo"><div><div class="nome">Produtos descontados</div><div class="sub">quem baixou o preço e quando</div></div><button onclick="abrirMenu()">☰ Menu</button></div>
   <div class="corpo">
     <div class="periodo">
       <button id="db-hoje" class="on" onclick="setPeriodoDesc('hoje')">Hoje</button>
@@ -122,6 +145,65 @@
     <a onclick="mostrarTela('resumo')"><span class="ic">📊</span>Resumo</a>
     <a onclick="mostrarTela('produtos')"><span class="ic">📦</span>Stock</a>
     <a class="on"><span class="ic">🏷️</span>Descontos</a>
+  </div>
+</div>
+
+<!-- ===== FOLHA: MENU (dono) ===== -->
+<div class="folha-fundo" id="folha-menu">
+  <div class="folha">
+    <div class="cab"><h3>☰ Menu</h3><button onclick="fecharFolha('folha-menu')">✕</button></div>
+    <div class="conteudo">
+      <div class="menu-grid">
+        <div class="mi" onclick="abrirAddProduto()"><div class="e">➕</div><div class="t">Adicionar produto</div></div>
+        <div class="mi" onclick="abrirBarcode()"><div class="e">🏷️</div><div class="t">Criar código de barras</div></div>
+        <div class="mi" onclick="irLoja()"><div class="e">🛒</div><div class="t">Ir à loja (vender)</div></div>
+        <div class="mi" onclick="suporte()"><div class="e">💬</div><div class="t">Suporte</div></div>
+        <div class="mi" onclick="sobre()"><div class="e">ℹ️</div><div class="t">Sobre o sistema</div></div>
+        <div class="mi" onclick="sairBanca()" style="background:#fef2f2;"><div class="e">🚪</div><div class="t">Sair</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== FOLHA: ADICIONAR PRODUTO ===== -->
+<div class="folha-fundo" id="folha-add">
+  <div class="folha">
+    <div class="cab"><h3>➕ Adicionar produto</h3><button onclick="fecharFolha('folha-add')">✕</button></div>
+    <div class="conteudo">
+      <div style="text-align:center;margin-bottom:12px;">
+        <div id="ap-img-wrap" onclick="document.getElementById('ap-img-file').click()" style="width:100px;height:100px;margin:0 auto;border-radius:16px;background:#f1f5f9;border:2px dashed #cbd5e1;display:flex;align-items:center;justify-content:center;font-size:32px;color:#94a3b8;overflow:hidden;">📷</div>
+        <input type="file" id="ap-img-file" accept="image/*" capture="environment" style="display:none" onchange="apImagem(event)">
+        <div style="font-size:11px;color:var(--suave);margin-top:6px;">Toca para a foto (opcional)</div>
+      </div>
+      <div class="campo"><label>Nome *</label><input id="ap-nome" type="text" placeholder="Ex: Água 500ml"></div>
+      <div class="linha2">
+        <div class="campo"><label>Preço de venda *</label><input id="ap-preco" type="number" inputmode="decimal" placeholder="0"></div>
+        <div class="campo"><label>Preço de compra</label><input id="ap-compra" type="number" inputmode="decimal" placeholder="0"></div>
+      </div>
+      <div class="linha2">
+        <div class="campo"><label>Stock</label><input id="ap-stock" type="number" inputmode="numeric" placeholder="0"></div>
+        <div class="campo"><label>Código de barras</label><input id="ap-codigo" type="text" placeholder="opcional"></div>
+      </div>
+    </div>
+    <div class="rodape"><button class="btn" id="ap-guardar" onclick="guardarAddProduto()">💾 Guardar produto</button></div>
+  </div>
+</div>
+
+<!-- ===== FOLHA: CRIAR CÓDIGO DE BARRAS ===== -->
+<div class="folha-fundo" id="folha-barcode">
+  <div class="folha">
+    <div class="cab"><h3>🏷️ Criar código de barras</h3><button onclick="fecharFolha('folha-barcode')">✕</button></div>
+    <div class="conteudo">
+      <div style="font-size:12px;color:var(--suave);margin-bottom:8px;">Escolhe um produto da loja. Gera-se um código, imprimes e colas no produto para depois o balconista escanear.</div>
+      <div class="campo"><label>🔎 Procurar produto</label><input id="bc-busca" type="text" placeholder="Nome ou código…" oninput="bcFiltrar()"></div>
+      <div id="bc-result" style="max-height:180px;overflow-y:auto;border:1px solid var(--borda);border-radius:10px;display:none;"></div>
+      <div id="bc-selo-wrap" style="display:none;text-align:center;margin-top:12px;">
+        <div id="bc-selo-nome" style="font-weight:700;font-size:14px;"></div>
+        <div id="bc-selo-preco" style="font-weight:800;color:var(--laranja);margin-bottom:6px;"></div>
+        <svg id="bc-svg" style="max-width:100%;"></svg>
+      </div>
+    </div>
+    <div class="rodape"><button class="btn" id="bc-print" style="display:none;" onclick="bcImprimir()">🖨️ Imprimir selo</button></div>
   </div>
 </div>
 
@@ -152,13 +234,20 @@ function esc(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</
 function mostrarTela(t){ document.querySelectorAll('.tela').forEach(e=>e.classList.remove('ativa')); document.getElementById('tela-'+t).classList.add('ativa'); window.scrollTo(0,0); }
 function irLoja(){ location.href='banca'; }
 
-function inicioPeriodo(p){
-  const d=new Date();
-  if(p==='hoje'){ d.setHours(0,0,0,0); }
-  else if(p==='semana'){ d.setDate(d.getDate()-6); d.setHours(0,0,0,0); }
-  else { d.setDate(d.getDate()-29); d.setHours(0,0,0,0); }
-  return d;
+// Intervalo (início e fim) de cada período. fim=null significa "até agora".
+function rangePeriodo(p){
+  const ini=new Date(); let fim=null;
+  if(p==='hoje'){ ini.setHours(0,0,0,0); }
+  else if(p==='ontem'){ ini.setDate(ini.getDate()-1); ini.setHours(0,0,0,0); fim=new Date(ini); fim.setDate(fim.getDate()+1); }
+  else if(p==='semana'){ ini.setDate(ini.getDate()-6); ini.setHours(0,0,0,0); }
+  else if(p==='mes'){ ini.setDate(ini.getDate()-29); ini.setHours(0,0,0,0); }
+  else if(p==='dia' && window._diaEscolhido){
+    const d=new Date(window._diaEscolhido+'T00:00:00'); ini.setTime(d.getTime());
+    fim=new Date(d); fim.setDate(fim.getDate()+1);
+  }
+  return { ini, fim };
 }
+function inicioPeriodo(p){ return rangePeriodo(p).ini; }
 
 // ===== PRODUTOS =====
 async function carregarProdutos(){
@@ -216,18 +305,26 @@ async function gerirProduto(id){
 
 // ===== RESUMO / VENDAS =====
 function setPeriodo(p){
-  periodo=p;
-  ['hoje','semana','mes'].forEach(x=>document.getElementById('pb-'+x).classList.toggle('on',x===p));
+  periodo=p; window._diaEscolhido=null;
+  const pd=document.getElementById('pb-dia'); if(pd) pd.value='';
+  ['hoje','ontem','semana','mes'].forEach(x=>{ const b=document.getElementById('pb-'+x); if(b) b.classList.toggle('on',x===p); });
+  carregarResumo();
+}
+function setDia(valor){
+  if(!valor) return;
+  window._diaEscolhido=valor; periodo='dia';
+  ['hoje','ontem','semana','mes'].forEach(x=>{ const b=document.getElementById('pb-'+x); if(b) b.classList.remove('on'); });
   carregarResumo();
 }
 async function carregarResumo(){
-  const ini=inicioPeriodo(periodo);
+  const r=rangePeriodo(periodo);
   let vendas=[];
   try{
-    const { data } = await supabaseClient.from('vendas')
+    let q = supabaseClient.from('vendas')
       .select('id,numero_do_dia,total,criado_em,vendedor_codigo, venda_itens(produto_nome,qtd,preco_unitario)')
-      .eq('loja_id',sessao.lojaId).gte('criado_em',ini.toISOString())
-      .order('criado_em',{ascending:false}).limit(500);
+      .eq('loja_id',sessao.lojaId).gte('criado_em',r.ini.toISOString());
+    if(r.fim) q = q.lt('criado_em', r.fim.toISOString());
+    const { data } = await q.order('criado_em',{ascending:false}).limit(500);
     vendas=data||[];
   }catch(e){}
   const totalVend = vendas.reduce((s,v)=>s+(parseFloat(v.total)||0),0);
@@ -283,8 +380,111 @@ async function carregarDescontos(){
   }).join('');
 }
 
+// ===== FOLHAS / MENU =====
+function abrirFolha(id){ document.getElementById(id).classList.add('ativa'); }
+function fecharFolha(id){ document.getElementById(id).classList.remove('ativa'); }
+function abrirMenu(){ abrirFolha('folha-menu'); }
+function suporte(){ fecharFolha('folha-menu'); window.open('https://wa.me/258866577722?text='+encodeURIComponent('Olá, preciso de ajuda com o monitor da minha banca.'),'_blank'); }
+function sobre(){ fecharFolha('folha-menu'); alert('ℹ️ Mobile POSS — Monitor\nSpap-Sercriativo\n\nBanca: '+(sessao?sessao.nomeLoja:'')+'\nVersão 2.9.145'); }
+async function sairBanca(){ if(!confirm('Terminar sessão?')) return; try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='login.html'; }
+
+// ===== ADICIONAR PRODUTO =====
+let apImg=undefined;
+function abrirAddProduto(){
+  fecharFolha('folha-menu');
+  apImg=undefined;
+  ['ap-nome','ap-preco','ap-compra','ap-stock','ap-codigo'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  document.getElementById('ap-img-wrap').innerHTML='📷';
+  document.getElementById('ap-img-file').value='';
+  abrirFolha('folha-add');
+}
+function apImagem(ev){
+  const f=ev.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=e=>{ const img=new Image(); img.onload=()=>{
+    const MAX=480; let w=img.width,h=img.height;
+    if(w>MAX||h>MAX){ if(w>=h){h=Math.round(h*MAX/w);w=MAX;} else {w=Math.round(w*MAX/h);h=MAX;} }
+    const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
+    apImg=c.toDataURL('image/jpeg',0.7);
+    document.getElementById('ap-img-wrap').innerHTML='<img src="'+apImg+'" style="width:100%;height:100%;object-fit:cover;">';
+  }; img.src=e.target.result; };
+  r.readAsDataURL(f);
+}
+async function guardarAddProduto(){
+  const nome=document.getElementById('ap-nome').value.trim();
+  const preco=parseFloat(document.getElementById('ap-preco').value);
+  if(!nome){ toast('Escreve o nome','erro'); return; }
+  if(isNaN(preco)){ toast('Escreve o preço','erro'); return; }
+  const dados={ loja_id:sessao.lojaId, nome, preco,
+    preco_compra:parseFloat(document.getElementById('ap-compra').value)||null,
+    stock:parseInt(document.getElementById('ap-stock').value)||0,
+    codbarras:document.getElementById('ap-codigo').value.trim()||null };
+  if(apImg!==undefined) dados.imagem=apImg;
+  const btn=document.getElementById('ap-guardar'); btn.disabled=true; btn.textContent='A guardar…';
+  try{
+    let { error }=await supabaseClient.from('produtos').insert(dados);
+    if(error && dados.imagem){ const r=await supabaseClient.from('produtos').insert({...dados,imagem:null}); if(r.error) throw r.error; }
+    else if(error) throw error;
+    await carregarProdutos();
+    fecharFolha('folha-add');
+    toast('✅ Produto adicionado','ok');
+  }catch(e){ toast('Erro: '+(e.message||e),'erro'); }
+  btn.disabled=false; btn.textContent='💾 Guardar produto';
+}
+
+// ===== CRIAR CÓDIGO DE BARRAS =====
+let bcProd=null;
+function abrirBarcode(){
+  fecharFolha('folha-menu');
+  bcProd=null;
+  document.getElementById('bc-busca').value='';
+  document.getElementById('bc-result').style.display='none';
+  document.getElementById('bc-result').innerHTML='';
+  document.getElementById('bc-selo-wrap').style.display='none';
+  document.getElementById('bc-print').style.display='none';
+  abrirFolha('folha-barcode');
+}
+function bcFiltrar(){
+  const termo=(document.getElementById('bc-busca').value||'').trim().toLowerCase();
+  const res=document.getElementById('bc-result');
+  if(!termo){ res.style.display='none'; res.innerHTML=''; return; }
+  const achados=produtos.filter(p=>(p.nome||'').toLowerCase().includes(termo)).slice(0,30);
+  if(!achados.length){ res.innerHTML='<div style="padding:12px;color:#dc2626;font-size:13px;text-align:center;">Nenhum produto. Só podes imprimir selos de produtos da loja.</div>'; res.style.display='block'; return; }
+  res.innerHTML=achados.map(p=>`<div onclick="bcEscolher('${p.id}')" style="padding:10px 12px;border-bottom:1px solid #f1f5f9;cursor:pointer;"><b style="font-size:13px;">${esc(p.nome)}</b> <span style="color:#94a3b8;font-size:11px;">${fmt(p.preco)}</span></div>`).join('');
+  res.style.display='block';
+}
+function bcCheck(d12){ let s=0; for(let i=0;i<12;i++) s+=(+d12[i])*(i%2?3:1); return String((10-(s%10))%10); }
+function bcGerarNum(){ let n='2'; for(let i=0;i<11;i++) n+=Math.floor(Math.random()*10); return n+bcCheck(n); }
+async function bcEscolher(id){
+  const p=produtos.find(x=>x.id===id); if(!p) return;
+  bcProd=p;
+  let cod=p.codbarras;
+  if(!cod){ cod=bcGerarNum(); try{ await supabaseClient.from('produtos').update({codbarras:cod}).eq('id',id); p.codbarras=cod; }catch(e){} }
+  bcProd.codigo=cod;
+  document.getElementById('bc-result').style.display='none';
+  document.getElementById('bc-busca').value=p.nome;
+  document.getElementById('bc-selo-nome').textContent=p.nome;
+  document.getElementById('bc-selo-preco').textContent=fmt(p.preco);
+  try{ JsBarcode('#bc-svg', cod, { format:/^\d{12,13}$/.test(cod)?'EAN13':'CODE128', width:2, height:60, fontSize:14, margin:4, displayValue:true }); }
+  catch(e){ try{ JsBarcode('#bc-svg', cod, { format:'CODE128', width:2, height:60, fontSize:14, margin:4, displayValue:true }); }catch(e2){} }
+  document.getElementById('bc-selo-wrap').style.display='block';
+  document.getElementById('bc-print').style.display='block';
+}
+function bcImprimir(){
+  if(!bcProd) return;
+  const svg=document.getElementById('bc-svg').outerHTML;
+  const w=window.open('','_blank');
+  w.document.write(`<html><head><title>Selo</title><style>@page{size:50mm 40mm;margin:0}body{width:50mm;margin:0;font-family:Arial;text-align:center;}
+  .selo{width:50mm;height:38mm;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;}
+  .n{font-size:11px;font-weight:bold;}.p{font-size:13px;font-weight:bold;}svg{max-width:46mm;}</style></head><body>
+  <div class="selo"><div class="n">${esc(bcProd.nome)}</div><div class="p">${fmt(bcProd.preco)}</div>${svg}</div>
+  <script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>`);
+  w.document.close();
+}
+
 let toastT=null;
 function toast(msg,tipo){ const t=document.getElementById('toast'); t.textContent=msg; t.className='toast '+(tipo||''); t.style.display='block'; clearTimeout(toastT); toastT=setTimeout(()=>t.style.display='none',2200); }
+document.querySelectorAll('.folha-fundo').forEach(f=>{ f.addEventListener('click', e=>{ if(e.target===f) f.classList.remove('ativa'); }); });
 </script>
 </body>
 </html>
