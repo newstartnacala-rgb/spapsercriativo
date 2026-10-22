@@ -114,6 +114,18 @@
 
 <div id="carregando" class="carregar"><div class="spin"></div><div>A abrir a banca…</div></div>
 
+<!-- ======== ECRÃ: CÓDIGO DO BALCONISTA ======== -->
+<div id="tela-codigo" style="display:none;position:fixed;inset:0;z-index:2500;background:var(--verde);color:#fff;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
+  <div style="font-size:52px;margin-bottom:8px;">🔐</div>
+  <div style="font-size:20px;font-weight:800;">Acesso do balconista</div>
+  <div style="font-size:13px;opacity:.9;margin:6px 0 20px;">Escreve o código para abrir a caixa</div>
+  <input id="cb-input" type="password" inputmode="numeric" placeholder="••••" maxlength="12" onkeydown="if(event.key==='Enter')confirmarCodigoBalconista()"
+    style="width:200px;text-align:center;font-size:30px;letter-spacing:6px;border:none;border-radius:14px;padding:16px;outline:none;color:#0f172a;">
+  <div id="cb-erro" style="display:none;background:rgba(0,0,0,.2);border-radius:10px;padding:8px 14px;margin-top:12px;font-size:13px;">Código errado. Pede ao dono.</div>
+  <button onclick="confirmarCodigoBalconista()" style="margin-top:18px;background:#fff;color:var(--verde);border:none;border-radius:14px;padding:15px 40px;font-size:17px;font-weight:800;">Entrar</button>
+  <div style="font-size:11px;opacity:.8;margin-top:22px;">Código inicial: 0000 · o dono muda em Monitor → Vendedores</div>
+</div>
+
 <!-- ======== TELA VENDER ======== -->
 <div id="tela-vender" class="tela ativa">
   <div class="topo">
@@ -248,13 +260,10 @@
     <div class="conteudo">
       <div class="menu-grid">
         <div class="mi" onclick="reimprimirRecibo()"><div class="e">🧾</div><div class="t">Recibo de venda</div></div>
-        <div class="mi" onclick="abrirRetornar()"><div class="e">↩️</div><div class="t">Devolver produto</div></div>
-        <div class="mi" onclick="abrirPerda()"><div class="e">📉</div><div class="t">Perda</div></div>
-        <div class="mi" onclick="abrirBarcodeLoja()"><div class="e">🏷️</div><div class="t">Criar código de barras</div></div>
-        <div class="mi" onclick="infoImpressora()"><div class="e">🖨️</div><div class="t">Impressora & Scanner</div></div>
+        <div class="mi" onclick="abrirRetornar()"><div class="e">↩️</div><div class="t">Retorno (devolver)</div></div>
+        <div class="mi" onclick="avisoDespacho()"><div class="e">🚚</div><div class="t">Aviso de despacho</div></div>
         <div class="mi" onclick="idioma()"><div class="e">🌐</div><div class="t">Idioma</div></div>
         <div class="mi" onclick="suporte()"><div class="e">💬</div><div class="t">Suporte</div></div>
-        <div class="mi" onclick="sobre()"><div class="e">ℹ️</div><div class="t">Sobre o sistema</div></div>
         <div class="mi" onclick="sairBanca()" style="background:#fef2f2;"><div class="e">🚪</div><div class="t">Sair</div></div>
       </div>
     </div>
@@ -346,7 +355,7 @@ let descontosLote = [];   // descontos feitos nesta venda, para registar ao conf
   try {
     const { data: membros } = await supabaseClient
       .from('membros_loja')
-      .select('loja_id, papel, nome_exibicao, lojas(nome, estado, tipo_loja)')
+      .select('loja_id, papel, nome_exibicao, lojas(nome, estado, tipo_loja, vendedores, telefone)')
       .eq('user_id', ses.user.id).limit(1);
     if (!membros || !membros.length) { alert('Esta conta não tem banca associada.'); location.href='banca/login'; return; }
     const m = membros[0];
@@ -355,15 +364,40 @@ let descontosLote = [];   // descontos feitos nesta venda, para registar ao conf
       nomeLoja: (m.lojas && m.lojas.nome) || 'Banca',
       userId: ses.user.id,
       papel: m.papel,
+      vendedores: (m.lojas && m.lojas.vendedores && m.lojas.vendedores.length) ? m.lojas.vendedores : ['0000'],
+      telefone: (m.lojas && m.lojas.telefone) || '',
       vendedor: m.nome_exibicao || (m.papel === 'admin' ? 'Dono' : 'Balconista')
     };
     document.getElementById('nome-loja').textContent = sessao.nomeLoja;
     await carregarProdutos();
+    pedirCodigoBalconista();
   } catch(e) {
     alert('Erro ao abrir: ' + (e.message || e));
   }
   document.getElementById('carregando').style.display = 'none';
 })();
+
+// ===== ACESSO DO BALCONISTA (código que o dono controla; 1º é 0000) =====
+function pedirCodigoBalconista(){
+  // Já validado nesta sessão? não volta a pedir.
+  try { if (sessionStorage.getItem('banca_vend_ok')==='1') { _codBalcAtivo(sessionStorage.getItem('banca_vend')||''); return; } } catch(e){}
+  document.getElementById('cb-erro').style.display='none';
+  document.getElementById('cb-input').value='';
+  document.getElementById('tela-codigo').style.display='flex';
+  setTimeout(()=>{ try{ document.getElementById('cb-input').focus(); }catch(e){} }, 200);
+}
+function _codBalcAtivo(cod){
+  sessao.vendedor = 'Balconista ' + cod;
+  const sub = document.querySelector('#tela-vender .topo .sub'); if (sub) sub.textContent = 'Balconista ' + cod;
+}
+function confirmarCodigoBalconista(){
+  const cod = (document.getElementById('cb-input').value||'').trim();
+  const lista = (sessao.vendedores||['0000']).map(x=>String(x).trim());
+  if (!lista.includes(cod)) { document.getElementById('cb-erro').style.display='block'; document.getElementById('cb-input').value=''; return; }
+  try { sessionStorage.setItem('banca_vend_ok','1'); sessionStorage.setItem('banca_vend', cod); } catch(e){}
+  _codBalcAtivo(cod);
+  document.getElementById('tela-codigo').style.display='none';
+}
 
 async function carregarProdutos(){
   let todos = [], pag = 0;
@@ -722,8 +756,20 @@ function infoImpressora(){
   alert('🖨️ Impressora & Scanner\n\n• O recibo imprime pela janela do telemóvel/Windows (botão Imprimir no recibo).\n• Para ler códigos, usa o botão 📷 na barra de pesquisa (câmara) ou um leitor USB.\n\nDica: numa impressora térmica, no Windows escolhe o tamanho de papel 58mm e Margens = Nenhuma.');
 }
 function suporte(){ fecharFolha('folha-menu'); window.open('https://wa.me/258866577722?text=' + encodeURIComponent('Olá, preciso de ajuda com a minha banca (Mobile POSS).'), '_blank'); }
-function sobre(){ fecharFolha('folha-menu'); alert('ℹ️ Mobile POSS — Banca\nSpap-Sercriativo\n\nLoja: ' + (sessao?sessao.nomeLoja:'') + '\nVersão 2.9.147'); }
+function sobre(){ fecharFolha('folha-menu'); alert('ℹ️ Mobile POSS — Banca\nSpap-Sercriativo\n\nLoja: ' + (sessao?sessao.nomeLoja:'') + '\nVersão 2.9.148'); }
 function idioma(){ fecharFolha('folha-menu'); alert('🌐 Idioma\n\nA banca está em Português. Mais idiomas em breve.'); }
+// Aviso de despacho: avisa o dono (por WhatsApp) do que está a acabar, para ele repor.
+function avisoDespacho(){
+  fecharFolha('folha-menu');
+  const baixos = (produtos||[]).filter(p=>(parseInt(p.stock)||0)<=5).sort((a,b)=>(parseInt(a.stock)||0)-(parseInt(b.stock)||0));
+  let lista = baixos.slice(0,30).map(p=>'• '+p.nome+' (stock '+(parseInt(p.stock)||0)+')').join('\n');
+  if(!lista) lista = '(sem produtos em falta de momento)';
+  const msg = '🚚 Aviso de despacho — '+sessao.nomeLoja+'\nProdutos a acabar, é preciso repor:\n\n'+lista;
+  let tel = (sessao.telefone||'').replace(/\D/g,'');
+  if (tel && tel.length<=9) tel = '258'+tel; // Moçambique
+  const url = 'https://wa.me/'+(tel||'')+'?text='+encodeURIComponent(msg);
+  window.open(url,'_blank');
+}
 async function sairBanca(){ if(!confirm('Terminar sessão?')) return; try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='banca/login'; }
 
 // ===== PERDA =====

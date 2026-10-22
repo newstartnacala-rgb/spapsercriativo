@@ -146,7 +146,7 @@ async function criarBanca(userId,errId){
     tipo_loja: 'banca',
     plano: 'trial',
     estado: 'pendente',
-    vendedores: ['1001']
+    vendedores: ['0000']
   }).select().single();
   if(lojaError){ erro(errId,'Erro ao criar a banca: '+lojaError.message); return false; }
   const { error:memErr }=await supabaseClient.from('membros_loja').insert({
