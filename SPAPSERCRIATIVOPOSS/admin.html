@@ -633,6 +633,15 @@ async function eliminarLoja(id) {
   notif('🗑 Loja "' + nome + '" eliminada por completo.');
 }
 
+// Expiração de cada plano: Básico e Pro = 30 dias; Anual = 1 ano de calendário (365 ou 366 dias).
+function calcularExpiracao(plano, inicio) {
+  const exp = new Date(inicio || new Date());
+  if (plano === 'anual') exp.setFullYear(exp.getFullYear() + 1);
+  else exp.setDate(exp.getDate() + 30);
+  return exp;
+}
+function diasDoPlano(plano, inicio) { return Math.round((calcularExpiracao(plano, inicio) - new Date(inicio || new Date())) / 86400000); }
+
 // ===== MUDAR O PLANO NO PRÓPRIO SELO (Básico / Pro / Anual) =====
 function fecharEscolhaPlano() { const p = document.getElementById('pop-plano'); if (p) p.remove(); }
 function abrirEscolhaPlano(id, btn) {
@@ -647,7 +656,7 @@ function abrirEscolhaPlano(id, btn) {
   ].map(([k, ico, nome]) => {
     const c = cfg(k), preco = String(Math.round(Number(c.preco || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     return '<button type="button" class="pp-op' + (atual === k ? ' sel' : '') + '" onclick="escolherPlano(\'' + id + '\',\'' + k + '\')">'
-      + '<img src="icons3d/' + ico + '.png" alt=""><span><b>' + nome + '</b><small>MT ' + preco + '/mês' + (k === 'anual' ? ' · 365 dias' : ' · 30 dias') + '</small></span>'
+      + '<img src="icons3d/' + ico + '.png" alt=""><span><b>' + nome + '</b><small>MT ' + preco + '/mês · ' + diasDoPlano(k) + ' dias</small></span>'
       + (atual === k ? '<i>✓</i>' : '') + '</button>';
   }).join('');
   const pop = document.createElement('div');
@@ -668,15 +677,19 @@ async function escolherPlano(id, plano) {
   const antes = loja.plano;
   loja.plano = plano; renderLojas();          // muda logo no ecrã
   const sel = document.getElementById('plano-' + id); if (sel) sel.value = plano;
-  const { data, error } = await supabaseClient.from('lojas').update({ plano }).eq('id', id).select();
+  // Novo plano = nova contagem a partir de hoje (30 dias, ou 1 ano no Anual)
+  const agora = new Date(), exp = calcularExpiracao(plano, agora);
+  const antesExp = loja.data_expiracao, antesUpg = loja.data_upgrade;
+  loja.data_upgrade = agora.toISOString(); loja.data_expiracao = exp.toISOString(); renderLojas();
+  const { data, error } = await supabaseClient.from('lojas').update({ plano, data_upgrade: agora.toISOString(), data_expiracao: exp.toISOString() }).eq('id', id).select();
   if (error || !data || !data.length) {
-    loja.plano = antes; renderLojas();
+    loja.plano = antes; loja.data_expiracao = antesExp; loja.data_upgrade = antesUpg; renderLojas();
     notif('❌ Não foi possível mudar o plano' + (error ? ': ' + error.message : ' (sem permissão — corre o SQL de permissões do admin).'), true);
     return;
   }
   renderContadores();
   const nomes = { basico: 'Básico', pro: 'Pro', anual: 'Anual' };
-  notif('✅ "' + (loja.nome || 'Loja') + '" agora está no plano ' + nomes[plano] + '.');
+  notif('✅ "' + (loja.nome || 'Loja') + '" agora está no plano ' + nomes[plano] + ' — ' + diasDoPlano(plano, agora) + ' dias, até ' + exp.toLocaleDateString('pt-PT') + '.');
 }
 
 async function mudarEstado(id, novoEstado) {
@@ -685,8 +698,7 @@ async function mudarEstado(id, novoEstado) {
   // Ao activar (loja PAGOU): regista a data de upgrade e calcula a expiração automaticamente.
   if (novoEstado === 'activo') {
     const agora = new Date();
-    const dur = (plano === 'anual') ? 365 : 30;   // anual = 365 dias, mensais = 30
-    const exp = new Date(agora); exp.setDate(exp.getDate() + dur);
+    const exp = calcularExpiracao(plano, agora);   // Básico/Pro = 30 dias; Anual = 1 ano (365 ou 366 dias)
     updateObj.data_upgrade = agora.toISOString();
     updateObj.data_expiracao = exp.toISOString();
   }
@@ -707,7 +719,7 @@ async function mudarEstado(id, novoEstado) {
   renderContadores();
   renderLojas();
 
-  if (novoEstado === 'activo') notif('✅ "' + (loja?.nome || 'Loja') + '" activada! Expira daqui a ' + ((plano==='anual')?'365':'30') + ' dias.');
+  if (novoEstado === 'activo') notif('✅ "' + (loja?.nome || 'Loja') + '" activada! Expira daqui a ' + diasDoPlano(plano) + ' dias.');
   else if (novoEstado === 'suspenso') notif('🚫 "' + (loja?.nome || 'Loja') + '" suspensa.');
   else notif('⏳ "' + (loja?.nome || 'Loja') + '" marcada como pendente.');
 }
