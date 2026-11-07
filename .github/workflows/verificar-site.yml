@@ -1,0 +1,32 @@
+name: Verificar site publicado
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths: [ '.github/workflows/verificar-site.yml', 'version.json' ]
+permissions:
+  contents: write
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Esperar o Vercel publicar
+        run: sleep 90
+      - name: Ler versões publicadas
+        run: |
+          mkdir -p out
+          for d in spapsercriativo.vercel.app spapsercriativo-spapcercruativoteam.vercel.app spapsercriativo2950.vercel.app spapsercriativo2950-spapcercruativoteam.vercel.app spapsercriativo-git-main-spapcercruativoteam.vercel.app spapsercriativo2950-git-main-spapcercruativoteam.vercel.app; do
+            V=$(curl -s -m 20 -o /tmp/v.json -w '%{http_code}' "https://$d/version.json?t=$(date +%s)")
+            VS=$(grep -oE '"versao" *: *"[^"]*"' /tmp/v.json 2>/dev/null | head -1)
+            M=$(curl -s -m 20 "https://$d/monitor.html?t=$(date +%s)" | grep -oE "MONITOR_VERSAO = '[^']*'|agua-mar|topbar-titulo" | sort -u | tr '\n' ' ')
+            I=$(curl -s -m 20 "https://$d/index.html?t=$(date +%s)" | grep -oE "VERSAO_ATUAL = '[^']*'|pdv_modo_moderno_lancado" | sort -u | tr '\n' ' ')
+            echo "$d | http=$V | $VS | monitor: $M | loja: $I" | tee -a out/resultado.txt
+          done
+      - name: Gravar resultado
+        run: |
+          git init -q r && cd r
+          git config user.name "github-actions[bot]"; git config user.email "github-actions[bot]@users.noreply.github.com"
+          cp ../out/resultado.txt .
+          date -u >> resultado.txt
+          git add . && git commit -qm "verificacao [skip ci]"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:verificacao
