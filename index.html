@@ -347,7 +347,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
   [tabindex]:focus-visible { outline: 2px solid #1a56a0; outline-offset: 1px; }
 </style>
-<script src="app-android.js?v=2.9.181" defer></script>
+<script src="app-android.js?v=2.9.182" defer></script>
 </head>
 <body>
 
@@ -1755,14 +1755,18 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     for (let i = 0; i < ids.length; i += LOTE) {
       const lote = ids.slice(i, i + LOTE);
       try {
-        const { data } = await supabaseClient.from('produtos').select('id,imagem').in('id', lote);
+        let { data, error } = await supabaseClient.from('produtos').select('id,imagem').in('id', lote);
+        if (error) {   // lote pesado demais → tenta 1 a 1
+          data = [];
+          for (const id of lote) { try { const r = await supabaseClient.from('produtos').select('id,imagem').eq('id', id).maybeSingle(); if (r.data) data.push(r.data); } catch (e2) {} }
+        }
         if (data) {
           let mudou = false;
           data.forEach(row => {
             const p = produtos.find(x => x.id === row.id);
             if (p && row.imagem) { p.imagem = row.imagem; mudou = true; }
           });
-          if (mudou) { try { renderProdutos(); } catch(e){} try { renderCarrinho(); } catch(e){} try { if (buscaResultadosDiv && buscaResultadosDiv.classList.contains('ativo')) renderBuscaResultados(); } catch(e){} }
+          if (mudou) { try { if (document.body.classList.contains('modo2')) { renderM2Grid(); renderM2Cart(); } } catch(e){} try { renderProdutos(); } catch(e){} try { renderCarrinho(); } catch(e){} try { if (buscaResultadosDiv && buscaResultadosDiv.classList.contains('ativo')) renderBuscaResultados(); } catch(e){} }
         }
       } catch(e) { /* um lote falhou — CONTINUA para o próximo */ }
       await new Promise(r => setTimeout(r, 120));
@@ -5797,7 +5801,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.181';
+  const VERSAO_ATUAL = '2.9.182';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -6922,6 +6926,7 @@ document.addEventListener('click', function(e){
   });
 
   function renderM2Grid(){
+    try { setTimeout(function(){ if (typeof carregarImagensDe === 'function') carregarImagensDe((typeof _m2ListaVisivel === 'function' ? _m2ListaVisivel() : produtos).slice(0, 60)); }, 0); } catch(e){}
     var el = document.getElementById('m2-grid'); if (!el) return;
     var termo = (_m2Busca||'').toLowerCase();
     var lista = (produtos||[]).filter(function(p){

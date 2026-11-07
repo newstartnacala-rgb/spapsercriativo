@@ -794,6 +794,8 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   .att-quando { font-size:12px; color:#8a9bc0; font-weight:600; margin-top:10px; min-height:14px; }
   .indicador-live.live-flash { animation:liveFlash 1.2s ease; }
   @keyframes liveFlash { 0% { transform:scale(1); box-shadow:0 0 0 0 rgba(34,197,94,.7); } 30% { transform:scale(1.15); box-shadow:0 0 0 10px rgba(34,197,94,0); } 100% { transform:scale(1); } }
+  .sub-painel { overflow-wrap:anywhere; }
+  #np-subcategoria-chips button, #ed-subcategoria-chips button { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:top; }
   .att-app-txt { font-size:14px; color:#334155; line-height:1.5; }
   .att-app-txt b { color:#0f172a; }
   .att-app-barra { height:10px; border-radius:10px; background:#e2e8f0; overflow:hidden; margin-top:10px; }
@@ -902,7 +904,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.181" defer></script>
+<script src="app-android.js?v=2.9.182" defer></script>
 </head>
 <body>
 <script>
@@ -2048,18 +2050,48 @@ const _imagensLojas = new Map();   // chave → { idProduto: imagem }
 function _aplicarImagens(chave) {
   const m = _imagensLojas.get(chave); if (!m) return;
   (todosProdutos || []).forEach(p => { if (m[p.id]) p.imagem = m[p.id]; });
+  const c = _cacheLojas.get(chave); if (c && c.produtos && c.produtos !== todosProdutos) c.produtos.forEach(p => { if (m[p.id]) p.imagem = m[p.id]; });
 }
+// Imagens em LOTES pequenos (como na Loja): uma loja com muitas fotos não estoura o tempo limite.
+// Lotes que falham são repetidos 1 a 1. O ecrã atualiza à medida que as fotos chegam.
+const _imgEmCurso = new Set();
 async function _carregarImagensProdutos(chave, daLoja, meu) {
-  if (_imagensLojas.has(chave)) { _aplicarImagens(chave); return; }
-  try {
-    const { data, error } = await daLoja(supabaseClient.from('produtos').select('id,imagem')).not('imagem', 'is', null);
-    if (error || !data) return;
-    const m = {}; data.forEach(r => { if (r.imagem) m[r.id] = r.imagem; });
-    _imagensLojas.set(chave, m);
-    if (_chaveLojaAtual() !== chave) return;
-    _aplicarImagens(chave);
-    { var _pp = document.getElementById('painel-produtos'); if (_pp && _pp.classList.contains('aberto')) renderProdutosSubPainel(); }
-  } catch (e) {}
+  const m = _imagensLojas.get(chave) || {};
+  _imagensLojas.set(chave, m);
+  _aplicarImagens(chave);
+  if (_imgEmCurso.has(chave)) return;
+  const tentados = m.__tentados || (m.__tentados = new Set());
+  const ids = (todosProdutos || []).filter(p => p && p.id && !m[p.id] && !tentados.has(p.id)).map(p => p.id);
+  if (!ids.length) return;
+  _imgEmCurso.add(chave);
+  let pendenteRender = null;
+  const pintar = () => {
+    if (pendenteRender) return;
+    pendenteRender = setTimeout(() => {
+      pendenteRender = null;
+      if (_chaveLojaAtual() !== chave) return;
+      _aplicarImagens(chave);
+      try { const pp = document.getElementById('painel-produtos'); if (pp && pp.classList.contains('aberto')) renderProdutosSubPainel(); } catch (e) {}
+    }, 400);
+  };
+  const buscar = async (lote) => {
+    const { data, error } = await supabaseClient.from('produtos').select('id,imagem').in('id', lote);
+    if (error) throw error;
+    (data || []).forEach(r => { if (r.imagem) m[r.id] = r.imagem; });
+    lote.forEach(id => tentados.add(id));
+    pintar();
+  };
+  const LOTE = 10, fila = [];
+  for (let i = 0; i < ids.length; i += LOTE) fila.push(ids.slice(i, i + LOTE));
+  const trabalhador = async () => {
+    while (fila.length) {
+      const lote = fila.shift();
+      try { await buscar(lote); }
+      catch (e) { for (const id of lote) { try { await buscar([id]); } catch (e2) {} } }   // repete 1 a 1
+    }
+  };
+  try { await Promise.all([trabalhador(), trabalhador(), trabalhador()]); }
+  finally { _imgEmCurso.delete(chave); }
 }
 // Super Admin: depois do código, prepara as outras lojas em segundo plano → abrir cada uma é instantâneo
 let _aPreparar = false;
@@ -4294,12 +4326,18 @@ function abrirCategorias() {
 }
 
 // Devolve as subcategorias de uma categoria (pelo nome) — de fábrica OU personalizada
+// Ignora subcategorias sem sentido (texto muito comprido ou «palavras» gigantes sem espaços)
+function _subcatValida(s) {
+  s = String(s || '').trim();
+  if (!s || s.length > 40) return false;
+  return !s.split(/\s+/).some(w => w.length > 22);
+}
 function subcategoriasDe(nomeCategoria) {
   const doMapa = (subcategoriasPorCategoria && subcategoriasPorCategoria[nomeCategoria]) || [];
   const c = (categoriasPersonalizadas || []).find(x => x.nome === nomeCategoria);
   const doCustom = (c && c.subs) ? c.subs : [];
   const set = new Map();
-  [...doMapa, ...doCustom].forEach(s => { if (s) set.set(String(s).toLowerCase(), s); });
+  [...doMapa, ...doCustom].forEach(s => { if (_subcatValida(s)) set.set(String(s).toLowerCase(), s); });
   return Array.from(set.values());
 }
 
@@ -4499,7 +4537,7 @@ function subcategoriasDeTudo(nomeCategoria) {
   const set = new Map();
   subcategoriasDe(nomeCategoria).forEach(s => { if (s) set.set(s.toLowerCase(), s); });
   (todosProdutos || []).forEach(p => {
-    if (p.categoria === nomeCategoria && p.subcategoria && String(p.subcategoria).trim()) {
+    if (p.categoria === nomeCategoria && _subcatValida(p.subcategoria)) {
       const s = p.subcategoria.trim(); if (!set.has(s.toLowerCase())) set.set(s.toLowerCase(), s);
     }
   });
@@ -5400,7 +5438,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.181';
+const MONITOR_VERSAO = '2.9.182';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
