@@ -1,1 +1,12 @@
-{ "versao": "2.9.65", "data": "2026-09-11", "novidades": "Indicador de internet corrigido (funciona em WiFi e dados: qualquer resposta do servidor = verde/amarelo). SUBCATEGORIAS: cria subcategorias dentro de cada categoria no monitor; no PDV, clicar na categoria mostra as subcategorias para filtrar. TRANSFERIR ENTRE LOJAS: no menu da loja, envia produtos para outra loja tua (mesmo dono); a outra loja recebe e confirma. Precisa do SQL atualizacao-v2.9.65.sql." }
+{
+ "versao": "2.9.162",
+ "data": "2026-11-07",
+ "novidades": "Ondas da Home animadas como água do mar e Verificar atualizações mais fiável, só com a informação da atualização mais recente.",
+ "melhorias": [
+  "As ondas da Home (cartões, gráfico, listas e fundo) mexem-se como água do mar.",
+  "As ondas nos cantos dos indicadores balançam como água.",
+  "«Verificar atualizações» mostra só a informação da atualização mais recente.",
+  "Só aparece «Nova versão» quando a versão publicada é mesmo mais recente do que a instalada.",
+  "Enquanto procura, a informação anterior fica escondida para não mostrar dados antigos."
+ ]
+}

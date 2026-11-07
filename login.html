@@ -39,18 +39,33 @@
 <div class="box">
   <div style="text-align:center;margin-bottom:20px;">
     <img src="logo.png" alt="Spap-Sercriativo — Tecnologia Varejista de Ponta" style="width:280px;max-width:90%;">
-    <div style="font-size:11px;color:#94a3b8;margin-top:6px;">Sistema de Ponto de Venda</div>
+    <div style="font-size:11px;color:#94a3b8;margin-top:6px;" id="lg-sub">Sistema de Ponto de Venda</div>
+  </div>
+
+  <div style="display:flex;gap:6px;justify-content:center;margin-bottom:16px;flex-wrap:wrap;">
+    <button type="button" onclick="lgLingua('pt')" id="lgl-pt" style="padding:6px 10px;border:1.5px solid #1a56a0;background:#eff6ff;border-radius:8px;cursor:pointer;font-size:12px;font-weight:bold;">🇲🇿 PT</button>
+    <button type="button" onclick="lgLingua('en')" id="lgl-en" style="padding:6px 10px;border:1.5px solid #ddd;background:white;border-radius:8px;cursor:pointer;font-size:12px;font-weight:bold;">🇬🇧 EN</button>
+    <button type="button" onclick="lgLingua('fr')" id="lgl-fr" style="padding:6px 10px;border:1.5px solid #ddd;background:white;border-radius:8px;cursor:pointer;font-size:12px;font-weight:bold;">🇫🇷 FR</button>
+    <button type="button" onclick="lgLingua('zh')" id="lgl-zh" style="padding:6px 10px;border:1.5px solid #ddd;background:white;border-radius:8px;cursor:pointer;font-size:12px;font-weight:bold;">🇨🇳 中文</button>
   </div>
 
   <div class="campo"><span>👤</span><input type="email" id="email" placeholder="Email" autocomplete="email" /></div>
   <div class="campo"><span>🔒</span><input type="password" id="senha" placeholder="Senha" autocomplete="current-password" /></div>
-  <span class="link-esqueci" onclick="esqueceuSenha()">Esqueci a senha</span>
+  <span class="link-esqueci" id="lg-esqueci" onclick="esqueceuSenha()">Esqueci a senha</span>
 
   <button class="btn-principal" id="btn-entrar" onclick="fazerLogin()" style="margin-top:14px;">ENTRAR</button>
   <div class="erro-msg" id="erro-msg"></div>
   <div class="sucesso-msg" id="sucesso-msg"></div>
 
+  <div style="display:flex;align-items:center;gap:10px;margin:16px 0 8px;"><div style="flex:1;height:1px;background:#e2e8f0;"></div><span style="font-size:12px;color:#94a3b8;">ou</span><div style="flex:1;height:1px;background:#e2e8f0;"></div></div>
+  <button onclick="entrarComGoogle()" type="button" style="width:100%;padding:12px;background:white;border:1.5px solid #dadce0;border-radius:10px;font-size:14px;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;color:#3c4043;">
+    <span style="font-size:16px;font-weight:bold;"><span style="color:#4285F4;">G</span><span style="color:#EA4335;">o</span><span style="color:#FBBC05;">o</span><span style="color:#4285F4;">g</span><span style="color:#34A853;">l</span><span style="color:#EA4335;">e</span></span> — Continuar com Google
+  </button>
+
   <div class="rodape">Ainda não tens loja? <a href="registo.html">Criar loja grátis</a></div>
+  <div style="text-align:center;margin-top:12px;padding-top:12px;border-top:1px solid #eee;">
+    <a href="banca/login" style="display:inline-block;color:#16a34a;font-weight:bold;text-decoration:none;font-size:14px;">🏪 Tens uma banca pequena? Entrar aqui →</a>
+  </div>
 </div>
 
 <script src="supabase-config.js"></script>
@@ -102,7 +117,17 @@
   (async () => {
     try {
       const { data } = await supabaseClient.auth.getSession();
-      if (data && data.session) { window.location.href = destinoAposLogin(); return; }
+      if (data && data.session) {
+        // Se há destino específico guardado, respeita-o. Senão, bancas vão para o Mobile POSS.
+        if (!localStorage.getItem('pdv_login_destino')) {
+          try {
+            const { data: mb } = await supabaseClient.from('membros_loja')
+              .select('lojas(tipo_loja)').eq('user_id', data.session.user.id).limit(1);
+            if (mb && mb[0] && mb[0].lojas && mb[0].lojas.tipo_loja === 'banca') { window.location.href = '/banca'; return; }
+          } catch(e) {}
+        }
+        window.location.href = destinoAposLogin(); return;
+      }
     } catch(e) {}
     // Sem sessão do SDK mas offline com PDV já usado antes: mostra botão de entrada offline
     if (!navigator.onLine && localStorage.getItem('pdv_cache_sessao')) {
@@ -153,13 +178,14 @@
     btn.textContent = 'A verificar conta...';
     const { data: membros } = await supabaseClient
       .from('membros_loja')
-      .select('loja_id, lojas(estado, nome)')
+      .select('loja_id, lojas(estado, nome, tipo_loja)')
       .eq('user_id', data.user.id)
       .limit(1);
 
     if (membros && membros.length > 0) {
       const estadoLoja = membros[0].lojas && membros[0].lojas.estado;
       const nomeLoja = (membros[0].lojas && membros[0].lojas.nome) || 'a tua loja';
+      const tipoLoja = (membros[0].lojas && membros[0].lojas.tipo_loja) || '';
 
       if (estadoLoja === 'pendente' || estadoLoja === 'pendente_pagamento') {
         // Loja pendente de confirmação
@@ -175,30 +201,66 @@
         btn.disabled = false; btn.textContent = 'ENTRAR';
         return;
       }
+
+      // Banca → vai para a app Mobile POSS (a não ser que haja um destino específico guardado)
+      if (tipoLoja === 'banca' && !localStorage.getItem('pdv_login_destino')) {
+        window.location.href = '/banca';
+        return;
+      }
     }
 
     window.location.href = destinoAposLogin();
   }
 
+  async function entrarComGoogle() {
+    try {
+      const { error } = await supabaseClient.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin + '/login.html' }
+      });
+      if (error) mostrarErro('O Google ainda não está ligado no Supabase (Authentication → Providers → Google). ' + error.message);
+    } catch(e) { mostrarErro('Erro: ' + (e.message || e)); }
+  }
+
   async function esqueceuSenha() {
     const email = document.getElementById('email').value.trim();
     if (!email) { mostrarErro('Escreve primeiro o teu email no campo acima.'); return; }
-
     btn.disabled = true;
-    // URL de redirecionamento após o utilizador clicar no link do email
+    // Link que abre a página onde a pessoa mete a NOVA senha
     const redirectUrl = window.location.origin + window.location.pathname.replace('login.html', 'reset-senha.html');
-
     const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: redirectUrl });
     btn.disabled = false;
-
     if (error) { mostrarErro(traduzirErro(error.message)); return; }
-    mostrarSucesso('Email de recuperação enviado! Verifica a tua caixa de entrada e clica no link.');
+    mostrarSucesso('✅ Email enviado! Abre o email, clica no link, e vais poder escrever a nova senha.');
   }
 
   document.querySelectorAll('.campo input').forEach(i => {
     i.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); fazerLogin(); } });
   });
   document.getElementById('email').focus();
+
+  // ===== IDIOMAS no login =====
+  const LG_TR = {
+    pt: { sub:'Sistema de Ponto de Venda', email:'Email', senha:'Senha', esqueci:'Esqueci a senha', entrar:'ENTRAR' },
+    en: { sub:'Point of Sale System', email:'Email', senha:'Password', esqueci:'Forgot password', entrar:'LOG IN' },
+    fr: { sub:'Système de Point de Vente', email:'E-mail', senha:'Mot de passe', esqueci:'Mot de passe oublié', entrar:'SE CONNECTER' },
+    zh: { sub:'销售点系统', email:'邮箱', senha:'密码', esqueci:'忘记密码', entrar:'登录' }
+  };
+  function lgAplicar(lang) {
+    const t = LG_TR[lang] || LG_TR.pt;
+    const set = (id, prop, val) => { const el = document.getElementById(id); if (el) el[prop] = val; };
+    set('lg-sub','textContent',t.sub);
+    set('email','placeholder',t.email);
+    set('senha','placeholder',t.senha);
+    set('lg-esqueci','textContent',t.esqueci);
+    set('btn-entrar','textContent',t.entrar);
+    ['pt','en','fr','zh'].forEach(l => {
+      const b = document.getElementById('lgl-'+l);
+      if (b) { b.style.borderColor = l===lang?'#1a56a0':'#ddd'; b.style.background = l===lang?'#eff6ff':'white'; }
+    });
+  }
+  function lgLingua(lang) { try { localStorage.setItem('pdv_lingua', lang); } catch(e){} lgAplicar(lang); }
+  lgAplicar((function(){ try { return localStorage.getItem('pdv_lingua') || 'pt'; } catch(e){ return 'pt'; } })());
 </script>
 <script>
 let eventoInstalar = null;
@@ -222,5 +284,37 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 window.addEventListener('appinstalled', () => { const b = document.getElementById('btn-instalar-app'); if (b) b.remove(); });
 </script>
+
+<!-- ===== GOOGLE TRADUTOR (traduz a pagina toda) ===== -->
+<div id="google_translate_element" style="display:none;"></div>
+<style>
+  .goog-te-banner-frame.skiptranslate, .goog-te-gadget { display:none !important; }
+  body { top:0 !important; }
+  .goog-logo-link, .goog-te-gadget span { display:none !important; }
+  #goog-gt-tt, .goog-te-balloon-frame { display:none !important; }
+  font.goog-text-highlight { background:none !important; box-shadow:none !important; }
+  .skiptranslate iframe { visibility:hidden !important; height:0 !important; }
+</style>
+<script>
+function googleTranslateElementInit(){
+  new google.translate.TranslateElement({pageLanguage:'pt', includedLanguages:'pt,en,fr,zh-CN', autoDisplay:false}, 'google_translate_element');
+}
+function traduzirPagina(lang){
+  if(lang==='zh') lang='zh-CN';
+  try{ localStorage.setItem('pdv_lingua', lang); }catch(e){}
+  var val = (!lang || lang==='pt') ? '' : '/pt/'+lang;
+  document.cookie = 'googtrans='+val+';path=/';
+  try{ document.cookie = 'googtrans='+val+';path=/;domain=.'+location.hostname; }catch(e){}
+  var combo = document.querySelector('.goog-te-combo');
+  if(combo && val){ combo.value = lang; combo.dispatchEvent(new Event('change')); }
+  else { location.reload(); }
+}
+// Os botoes de idioma que ja existem passam a usar o Google Tradutor
+window.mudarLingua = function(l){ traduzirPagina(l); };
+window.lgLingua = function(l){ traduzirPagina(l); };
+window.mudarLinguaMonitor = function(l){ traduzirPagina(l); };
+</script>
+<script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
 </body>
 </html>

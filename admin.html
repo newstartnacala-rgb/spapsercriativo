@@ -69,101 +69,245 @@ body { font-family:-apple-system,Arial,sans-serif; background:#f1f5f9; min-heigh
 .notif.erro { background:#dc2626; }
 
 .acesso-negado { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:80vh; text-align:center; padding:20px; }
+
+/* =====================================================================
+   DESIGN 2026 — Painel de Administração (vidro azul, ícones 3D)
+   ===================================================================== */
+:root { --nv:#0b1b4d; --nv2:#22305e; --az:#1d6ff2; --az-grad:linear-gradient(180deg,#3d8dff 0%,#0d5ff0 100%);
+        --sombra:0 10px 26px rgba(29,85,190,.10), 0 2px 6px rgba(29,85,190,.06);
+        --ondas:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 90' preserveAspectRatio='none'%3E%3Cpath d='M0 50 C80 20 160 80 260 46 C320 26 370 36 400 30 L400 90 L0 90 Z' fill='%23d6e7ff' fill-opacity='.7'/%3E%3Cpath d='M0 70 C90 46 190 92 290 62 C340 48 380 56 400 52 L400 90 L0 90 Z' fill='%23a9cbff' fill-opacity='.55'/%3E%3C/svg%3E"); }
+body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; color:var(--nv);
+       background:var(--ondas) no-repeat center bottom / 100% 140px, linear-gradient(180deg,#f4f8ff 0%,#ecf3ff 60%,#e4eeff 100%); background-attachment:scroll; }
+.container { max-width:860px; padding:14px 14px 40px; }
+.carregando { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:90vh; gap:14px; color:var(--nv2); font-weight:700; }
+.ad-logo-carrega { width:110px; filter:drop-shadow(0 8px 18px rgba(29,85,190,.25)); animation:ad-pulsar 1.6s ease-in-out infinite; }
+@keyframes ad-pulsar { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+
+/* Ações do topo */
+.ad-acoes { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:12px; }
+.ad-acoes-dir { display:flex; gap:8px; }
+.ad-pill { display:inline-flex; align-items:center; gap:6px; padding:9px 14px; border-radius:999px; border:1px solid #dbe6fb; cursor:pointer;
+           background:linear-gradient(180deg,#ffffff,#edf3ff); color:var(--nv); font:700 13.5px/1 inherit; font-family:inherit; box-shadow:var(--sombra); }
+.ad-pill svg { width:17px; height:17px; }
+.ad-pill:active { transform:scale(.96); }
+.ad-pill-sair { color:#dc2626; }
+
+/* Faixa */
+.ad-banner { position:relative; overflow:hidden; display:flex; align-items:center; gap:12px; padding:16px; border-radius:24px; color:#fff; margin-bottom:12px;
+             background:radial-gradient(circle at 86% 40%,rgba(90,170,255,.55),rgba(90,170,255,0) 42%), linear-gradient(118deg,#05164f 0%,#0a2c8a 55%,#0d47c9 100%);
+             box-shadow:0 12px 28px rgba(8,40,140,.32); }
+.ad-banner::before { content:''; position:absolute; inset:0; opacity:.18; pointer-events:none;
+                     background:repeating-linear-gradient(90deg,rgba(255,255,255,.35) 0 1px,transparent 1px 28px), repeating-linear-gradient(0deg,rgba(255,255,255,.25) 0 1px,transparent 1px 28px);
+                     -webkit-mask-image:linear-gradient(90deg,transparent 40%,#000); mask-image:linear-gradient(90deg,transparent 40%,#000); }
+.ad-banner-ico { position:relative; width:54px; height:54px; border-radius:50%; flex-shrink:0; display:grid; place-items:center; color:#fff;
+                 background:radial-gradient(circle at 35% 30%,#5aa2ff,#0d5ff0 72%); box-shadow:0 0 0 6px rgba(255,255,255,.12), inset 0 2px 4px rgba(255,255,255,.4); }
+.ad-banner-ico svg { width:30px; height:30px; }
+.ad-banner-txt { position:relative; min-width:0; }
+.ad-banner-tit { font-size:21px; font-weight:800; }
+.ad-banner-sub { font-size:13px; opacity:.88; margin-top:2px; }
+.ad-banner-logo { position:relative; width:62px; height:62px; object-fit:contain; margin-left:auto; flex-shrink:0; filter:drop-shadow(0 0 10px rgba(130,190,255,.65)); }
+
+/* Contadores */
+.contadores { gap:10px; margin-bottom:12px; }
+.contador { position:relative; overflow:hidden; padding:14px 8px 12px; border-radius:20px; border:2px solid #fff; box-shadow:var(--sombra);
+            background:linear-gradient(165deg,#ffffff,#f2f7ff); }
+.contador::after { content:''; position:absolute; right:0; bottom:0; width:70%; height:40%; pointer-events:none;
+                   background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 80' preserveAspectRatio='none'%3E%3Cpath d='M0 80 C70 74 130 46 200 6 L200 80 Z' fill='%23cfe2ff' fill-opacity='.55'/%3E%3C/svg%3E") no-repeat right bottom / 100% 100%; }
+.contador .num { position:relative; font-size:32px; font-weight:800; line-height:1.1; }
+.contador .lbl { position:relative; display:flex; align-items:center; justify-content:center; gap:5px; font-size:13px; font-weight:700; color:var(--nv); margin-top:4px; }
+.contador .lbl img { width:24px; height:24px; }
+.c-total .num { color:var(--az); }
+.contador.selecionado { border-color:var(--az); }
+
+/* Cartões de secção */
+.ad-card { position:relative; overflow:hidden; padding:16px; border-radius:22px; border:1px solid #fff; margin-bottom:12px; box-shadow:var(--sombra);
+           background:linear-gradient(170deg,#ffffff,#f3f8ff); }
+.ad-card-cab { display:flex; align-items:flex-start; gap:12px; margin-bottom:12px; }
+.ad-card-tit { font-size:17px; font-weight:800; color:var(--nv); }
+.ad-card-sub { font-size:13px; color:#334155; margin-top:3px; line-height:1.4; }
+.ad-ico-verde, .ad-ico-azul { width:46px; height:46px; flex-shrink:0; display:grid; place-items:center; color:#fff; }
+.ad-ico-verde { border-radius:14px; background:linear-gradient(180deg,#34d058,#139c3a); box-shadow:0 8px 16px rgba(19,156,58,.3), inset 0 1px 0 rgba(255,255,255,.4); }
+.ad-ico-azul { border-radius:50%; background:radial-gradient(circle at 35% 30%,#5aa2ff,#0d5ff0 72%); box-shadow:0 8px 16px rgba(13,95,240,.3), inset 0 2px 4px rgba(255,255,255,.4); }
+.ad-ico-verde svg, .ad-ico-azul svg { width:25px; height:25px; }
+.ad-linha { display:flex; gap:8px; align-items:center; }
+.ad-input-ico { flex:1; min-width:0; display:flex; align-items:center; gap:8px; padding:0 14px; border-radius:999px; background:#fff; border:1.5px solid #d6e4fb; box-shadow:inset 0 1px 3px rgba(29,85,190,.06); }
+.ad-input-ico svg { width:20px; height:20px; color:var(--az); flex-shrink:0; }
+.ad-input-ico input { flex:1; min-width:0; border:none; outline:none; background:none; padding:12px 0; font-size:14.5px; color:var(--nv); font-family:inherit; }
+.ad-btn-verde { display:inline-flex; align-items:center; gap:8px; padding:11px 18px; border:none; border-radius:999px; cursor:pointer; flex-shrink:0;
+                background:linear-gradient(180deg,#22c55e,#128a36); color:#fff; font:800 15px/1 inherit; font-family:inherit; box-shadow:0 8px 16px rgba(18,138,54,.3); }
+.ad-btn-verde img { width:24px; height:24px; }
+.ad-btn-verde:active, .ad-btn-grande:active { transform:scale(.97); }
+.ad-estado { font-size:12.5px; margin-top:8px; }
+.ad-sec { display:flex; align-items:center; gap:8px; font-size:14.5px; font-weight:800; color:var(--nv); margin:14px 0 8px; }
+.ad-sec img { width:26px; height:26px; }
+.ad-sec svg { width:22px; height:22px; color:var(--az); flex-shrink:0; }
+.ad-sec small { font-weight:600; color:#475569; font-size:12px; }
+.ad-planos { display:grid; grid-template-columns:1.3fr 1fr 1fr; gap:8px; }
+.ad-planos input, .ad-campos input { width:100%; padding:11px 14px; border:1.5px solid #d6e4fb; border-radius:12px; font-size:14.5px; color:var(--nv); background:#fff;
+                                      outline:none; font-family:inherit; box-shadow:inset 0 1px 3px rgba(29,85,190,.05); box-sizing:border-box; }
+.ad-planos input:focus, .ad-campos input:focus, .ad-input-ico:focus-within { border-color:var(--az); }
+.ad-campos { display:flex; flex-direction:column; gap:8px; }
+.ad-nota { font-size:11.5px; color:#64748b; margin-top:6px; }
+.ad-btn-grande { width:100%; margin-top:14px; display:flex; align-items:center; justify-content:center; gap:10px; padding:14px; border:none; border-radius:16px; cursor:pointer;
+                 background:var(--az-grad); color:#fff; font:800 16.5px/1 inherit; font-family:inherit; box-shadow:0 10px 22px rgba(13,95,240,.35); }
+.ad-btn-grande img { width:26px; height:26px; }
+
+/* Filtros */
+.filtros { gap:8px; margin:6px 0 12px; }
+.filtro-btn { display:inline-flex; align-items:center; gap:6px; padding:9px 14px; border-radius:999px; border:1px solid #dce7fb; background:linear-gradient(180deg,#fff,#f0f5ff);
+              color:var(--nv); font:700 13px/1 inherit; font-family:inherit; box-shadow:var(--sombra); }
+.filtro-btn img { width:18px; height:18px; }
+.filtro-btn.ativo { background:var(--az-grad); color:#fff; border-color:transparent; }
+.ad-busca { flex:1; min-width:200px; display:flex; align-items:center; gap:8px; padding:0 14px; border-radius:999px; background:#fff; border:1.5px solid #d6e4fb; }
+.ad-busca svg { width:18px; height:18px; color:#64748b; flex-shrink:0; }
+.ad-busca .busca { border:none; padding:11px 0; min-width:0; background:none; border-radius:0; }
+
+/* Lista de lojas */
+.loja-card { padding:12px 14px; margin-bottom:9px; border-radius:18px; border:1px solid #fff; box-shadow:var(--sombra); background:linear-gradient(165deg,#ffffff,#f4f8ff); }
+.loja-topo { align-items:center; flex-wrap:nowrap; }
+.lc-esq { display:flex; align-items:center; gap:10px; min-width:0; flex:1; }
+.lc-chev { width:18px; height:18px; color:var(--az); flex-shrink:0; display:inline-flex; transition:transform .2s; }
+.lc-chev svg { width:18px; height:18px; }
+.lc-ico { width:34px; height:34px; flex-shrink:0; }
+.loja-nome { font-size:16.5px; font-weight:800; color:var(--nv); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.lc-selos { display:flex; gap:6px; align-items:center; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end; }
+.badge { display:inline-flex; align-items:center; gap:5px; padding:5px 11px; font-size:12.5px; font-weight:800; border-radius:999px; }
+.badge img { width:17px; height:17px; }
+.badge.activo { background:linear-gradient(180deg,#f0fdf4,#dcfce7); color:#15803d; border:1px solid #bbf7d0; }
+.badge.suspenso, .badge.bloqueado { background:linear-gradient(180deg,#fff5f5,#fee2e2); color:#dc2626; border:1px solid #fecaca; }
+.badge.pendente, .badge.pendente_pagamento { background:linear-gradient(180deg,#fffaf0,#ffedd5); color:#c2410c; border:1px solid #fed7aa; }
+.badge.trial { background:linear-gradient(180deg,#f3f8ff,#e3eeff); color:#1e40af; border:1px solid #c9dcff; }
+.lc-alerta { font-size:11px; color:#dc2626; font-weight:800; }
+.loja-info { color:#334155; }
+.loja-info a { color:var(--az); }
+.sel-plano { border-radius:12px; border-color:#d6e4fb; font-family:inherit; }
+.btn { border-radius:999px; font-family:inherit; }
+.btn-activar { background:linear-gradient(180deg,#22c55e,#128a36); box-shadow:0 6px 14px rgba(18,138,54,.25); }
+.vazio { border-radius:20px; box-shadow:var(--sombra); background:linear-gradient(165deg,#fff,#f3f8ff); }
+.ad-rodape { display:flex; align-items:center; justify-content:center; gap:10px; margin-top:22px; font-size:13px; font-weight:800; color:var(--nv2); }
+.ad-rodape img { width:40px; height:40px; }
+.notif { border-radius:999px; }
+
+@media (max-width:520px) {
+  .ad-banner-tit { font-size:18px; }
+  .ad-banner-logo { width:52px; height:52px; }
+  .contadores { grid-template-columns:repeat(4,1fr); gap:7px; }
+  .contador { padding:12px 4px 10px; border-radius:16px; }
+  .contador .num { font-size:26px; }
+  .contador .lbl { flex-direction:column; gap:2px; font-size:11.5px; }
+  .contador .lbl img { width:22px; height:22px; }
+  .ad-linha { flex-wrap:wrap; }
+  .ad-linha .ad-btn-verde { width:100%; justify-content:center; }
+  .lc-selos { flex-wrap:nowrap; gap:4px; }
+  .badge { padding:4px 8px; font-size:11px; gap:4px; }
+  .badge img { width:15px; height:15px; }
+  .lc-ico { width:28px; height:28px; }
+  .loja-nome { font-size:15px; }
+}
 </style>
 </head>
 <body>
 
 <div id="tela-carregando" class="carregando">
-  <div style="font-size:40px;">⏳</div>
-  <p style="margin-top:10px;">A carregar o painel de administração...</p>
+  <img src="ssteam-logo.png" alt="SSTEAM" class="ad-logo-carrega">
+  <p>A carregar o painel de administração…</p>
 </div>
 
 <div id="tela-negado" class="acesso-negado" style="display:none;">
-  <div style="font-size:56px;">🚫</div>
+  <img src="icons3d/prohibited.png" alt="" style="width:72px;height:72px;">
   <h2 style="margin:14px 0 8px;color:#dc2626;">Acesso restrito</h2>
-  <p style="color:#64748b;font-size:14px;max-width:340px;">Esta página é exclusiva do administrador da plataforma Spap-Sercriativo.</p>
+  <p style="color:#64748b;font-size:14px;max-width:340px;">Esta página é exclusiva do administrador da plataforma.</p>
   <button class="btn btn-activar" style="margin-top:20px;" onclick="window.location.href='login.html'">Ir para o Login</button>
 </div>
 
 <div id="app" style="display:none;">
-  <div class="topbar">
-    <div style="display:flex;align-items:center;gap:12px;">
-      <img src="logo.png" alt="Spap-Sercriativo">
-      <span class="topbar-titulo">Painel de Administração</span>
-    </div>
-    <div style="display:flex;gap:8px;">
-      <button class="btn-sair" onclick="window.location.href='monitor.html'">📊 Monitor</button>
-      <button class="btn-sair" onclick="carregarLojas()">🔄 Atualizar</button>
-      <button class="btn-sair" onclick="sair()">Sair</button>
-    </div>
-  </div>
-
   <div class="container">
+
+    <!-- Barra de ações -->
+    <div class="ad-acoes">
+      <button class="ad-pill" onclick="window.location.href='monitor.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Monitor</button>
+      <div class="ad-acoes-dir">
+        <button class="ad-pill" onclick="carregarLojas()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.4 6.4L3 16"/><path d="M3 21v-5h5"/><path d="M3 12a9 9 0 0 1 15.4-6.4L21 8"/><path d="M21 3v5h-5"/></svg>Atualizar</button>
+        <button class="ad-pill ad-pill-sair" onclick="sair()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M9 16l-4-4 4-4"/><path d="M5 12h11"/></svg>Sair</button>
+      </div>
+    </div>
+
+    <!-- Faixa do título -->
+    <div class="ad-banner">
+      <div class="ad-banner-ico"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.47.47 0 0 0-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg></div>
+      <div class="ad-banner-txt"><div class="ad-banner-tit">Painel de Administração</div><div class="ad-banner-sub">Gerencie o sistema e as configurações</div></div>
+      <img class="ad-banner-logo" src="ssteam-logo.png" alt="SSTEAM">
+    </div>
+
+    <!-- Contadores -->
     <div class="contadores">
-      <div class="contador c-total" id="cont-todas" onclick="filtrar('todas')" title="Ver todas as lojas"><div class="num" id="cnt-total">0</div><div class="lbl">Total de lojas</div></div>
-      <div class="contador c-pendente" id="cont-pendente" onclick="filtrar('pendente')" title="Ver lojas pendentes"><div class="num" id="cnt-pendente">0</div><div class="lbl">⏳ Pendentes</div></div>
-      <div class="contador c-activo" id="cont-activo" onclick="filtrar('activo')" title="Ver lojas activas"><div class="num" id="cnt-activo">0</div><div class="lbl">✅ Activas</div></div>
-      <div class="contador c-suspenso" id="cont-suspenso" onclick="filtrar('suspenso')" title="Ver lojas suspensas"><div class="num" id="cnt-suspenso">0</div><div class="lbl">🚫 Suspensas</div></div>
+      <div class="contador c-total" id="cont-todas" onclick="filtrar('todas')" title="Ver todas as lojas"><div class="num" id="cnt-total">0</div><div class="lbl"><img src="icons3d/store.png" alt="">Total de lojas</div></div>
+      <div class="contador c-pendente" id="cont-pendente" onclick="filtrar('pendente')" title="Ver lojas pendentes"><div class="num" id="cnt-pendente">0</div><div class="lbl"><img src="icons3d/hourglass.png" alt="">Pendentes</div></div>
+      <div class="contador c-activo" id="cont-activo" onclick="filtrar('activo')" title="Ver lojas activas"><div class="num" id="cnt-activo">0</div><div class="lbl"><img src="icons3d/check.png" alt="">Activas</div></div>
+      <div class="contador c-suspenso" id="cont-suspenso" onclick="filtrar('suspenso')" title="Ver lojas suspensas"><div class="num" id="cnt-suspenso">0</div><div class="lbl"><img src="icons3d/prohibited.png" alt="">Suspensas</div></div>
     </div>
 
-    <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:16px;margin-bottom:16px;">
-      <div style="font-size:15px;font-weight:bold;color:#166534;margin-bottom:4px;">📱 Link de Suporte / Grupo de dúvidas</div>
-      <div style="font-size:12.5px;color:#64748b;margin-bottom:10px;">Pode ser um link de GRUPO de WhatsApp onde os clientes põem dúvidas para todos verem. Aparece na loja e no monitor, na aba Suporte. Ex: https://chat.whatsapp.com/XXXX</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <input type="text" id="input-link-suporte" placeholder="https://wa.me/258..." style="flex:1;min-width:220px;padding:12px;border:1.5px solid #86efac;border-radius:10px;font-size:14px;box-sizing:border-box;">
-        <button onclick="guardarLinkSuporte()" style="padding:12px 20px;background:#16a34a;border:none;border-radius:10px;color:white;font-weight:bold;cursor:pointer;font-size:14px;">💾 Guardar</button>
+    <!-- Link de suporte -->
+    <div class="ad-card">
+      <div class="ad-card-cab">
+        <div class="ad-ico-verde"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div>
+        <div><div class="ad-card-tit">Link de Suporte / Grupo de dúvidas</div><div class="ad-card-sub">Pode ser um link de GRUPO de WhatsApp onde os clientes põem dúvidas para todos verem. Aparece na loja e no monitor, na aba Suporte.</div></div>
       </div>
-      <div id="link-suporte-estado" style="font-size:12px;margin-top:8px;"></div>
+      <div class="ad-linha">
+        <div class="ad-input-ico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          <input type="text" id="input-link-suporte" placeholder="https://wa.me/258...">
+        </div>
+        <button class="ad-btn-verde" onclick="guardarLinkSuporte()"><img src="icons3d/floppy.png" alt="">Guardar</button>
+      </div>
+      <div id="link-suporte-estado" class="ad-estado"></div>
     </div>
 
-    <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:16px;margin-bottom:16px;">
-      <div style="font-size:15px;font-weight:bold;color:#1e40af;margin-bottom:4px;">⚙️ Planos e Pagamento da Subscrição</div>
-      <div style="font-size:12.5px;color:#64748b;margin-bottom:12px;">Controla os preços dos planos, os descontos anuais e como o cliente te paga. Isto aparece na página de planos quando alguém se regista.</div>
-
-      <div style="font-weight:bold;color:#1a202c;font-size:13px;margin-bottom:6px;">📦 Planos (nome · preço/mês · desconto anual)</div>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
-        <div style="display:grid;grid-template-columns:1.3fr 1fr 0.9fr;gap:8px;align-items:center;">
-          <input type="text" id="cfg-basico-nome" placeholder="Básico" style="padding:10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;">
-          <input type="number" id="cfg-basico-preco" placeholder="1000" style="padding:10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;">
-          <input type="number" id="cfg-basico-desc" placeholder="0%" style="padding:10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;">
-        </div>
-        <div style="display:grid;grid-template-columns:1.3fr 1fr 0.9fr;gap:8px;align-items:center;">
-          <input type="text" id="cfg-pro-nome" placeholder="Médio" style="padding:10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;">
-          <input type="number" id="cfg-pro-preco" placeholder="1500" style="padding:10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;">
-          <input type="number" id="cfg-pro-desc" placeholder="3%" style="padding:10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;">
-        </div>
-        <div style="display:grid;grid-template-columns:1.3fr 1fr 0.9fr;gap:8px;align-items:center;">
-          <input type="text" id="cfg-anual-nome" placeholder="Avançado" style="padding:10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;">
-          <input type="number" id="cfg-anual-preco" placeholder="2000" style="padding:10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;">
-          <input type="number" id="cfg-anual-desc" placeholder="5%" style="padding:10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;">
-        </div>
-        <div style="font-size:11px;color:#94a3b8;">Colunas: Nome · Preço mensal (MT) · Desconto anual (%). O desconto aplica-se sobre 12 meses.</div>
+    <!-- Planos e pagamento -->
+    <div class="ad-card">
+      <div class="ad-card-cab">
+        <div class="ad-ico-azul"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.47.47 0 0 0-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg></div>
+        <div><div class="ad-card-tit">Planos e Pagamento da Subscrição</div><div class="ad-card-sub">Controla os preços dos planos, os descontos anuais e como o cliente te paga. Aparece na página de planos quando alguém se regista.</div></div>
       </div>
 
-      <div style="font-weight:bold;color:#1a202c;font-size:13px;margin-bottom:6px;">💳 Como o cliente paga a subscrição</div>
-      <input type="text" id="cfg-mpesa" placeholder="Número M-Pesa (84 xxx xxxx)" style="width:100%;padding:10px;border:1.5px solid #86efac;border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;">
-      <input type="text" id="cfg-mpesa-nome" placeholder="Nome da conta M-Pesa (ex: João Mateus)" style="width:100%;padding:10px;border:1.5px solid #86efac;border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;">
-      <input type="text" id="cfg-emola" placeholder="Número e-Mola (86 xxx xxxx)" style="width:100%;padding:10px;border:1.5px solid #fdba74;border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;">
-      <input type="text" id="cfg-emola-nome" placeholder="Nome da conta e-Mola (ex: João Mateus)" style="width:100%;padding:10px;border:1.5px solid #fdba74;border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;">
-      <input type="text" id="cfg-banco-nome" placeholder="Nome do banco (ex: BCI, BIM)" style="width:100%;padding:10px;border:1.5px solid #bfdbfe;border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;">
-      <input type="text" id="cfg-banco-conta" placeholder="Número da conta / NIB" style="width:100%;padding:10px;border:1.5px solid #bfdbfe;border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;">
-      <input type="text" id="cfg-banco-titular" placeholder="Nome do titular" style="width:100%;padding:10px;border:1.5px solid #bfdbfe;border-radius:8px;font-size:13px;margin-bottom:12px;box-sizing:border-box;">
-      <div style="font-size:12px;color:#166534;font-weight:600;margin-bottom:4px;">💳 Link de pagamento — conversa DIRETA contigo (o cliente envia o comprovativo aqui para ativares)</div>
-      <input type="text" id="cfg-wa-pagamento" placeholder="Ex: https://wa.me/258861667843" style="width:100%;padding:10px;border:1.5px solid #86efac;border-radius:8px;font-size:13px;margin-bottom:12px;box-sizing:border-box;">
+      <div class="ad-sec"><img src="icons3d/package.png" alt="">Planos (nome · preço/mês · desconto anual)</div>
+      <div class="ad-planos">
+        <input type="text" id="cfg-basico-nome" placeholder="Básico"><input type="number" id="cfg-basico-preco" placeholder="1000"><input type="number" id="cfg-basico-desc" placeholder="0%">
+        <input type="text" id="cfg-pro-nome" placeholder="Médio"><input type="number" id="cfg-pro-preco" placeholder="1500"><input type="number" id="cfg-pro-desc" placeholder="3%">
+        <input type="text" id="cfg-anual-nome" placeholder="Avançado"><input type="number" id="cfg-anual-preco" placeholder="2000"><input type="number" id="cfg-anual-desc" placeholder="5%">
+      </div>
+      <div class="ad-nota">Colunas: Nome · Preço mensal (MT) · Desconto anual (%). O desconto aplica-se sobre 12 meses.</div>
 
-      <button onclick="guardarConfigSubscricao()" style="width:100%;padding:12px;background:#1e40af;border:none;border-radius:10px;color:white;font-weight:bold;cursor:pointer;font-size:14px;">💾 Guardar configuração</button>
-      <div id="cfg-estado" style="font-size:12px;margin-top:8px;"></div>
+      <div class="ad-sec"><img src="icons3d/card.png" alt="">Como o cliente paga a subscrição</div>
+      <div class="ad-campos">
+        <input type="text" id="cfg-mpesa" placeholder="Número M-Pesa (84 xxx xxxx)">
+        <input type="text" id="cfg-mpesa-nome" placeholder="Nome da conta M-Pesa (ex: João Mateus)">
+        <input type="text" id="cfg-emola" placeholder="Número e-Mola (86 xxx xxxx)">
+        <input type="text" id="cfg-emola-nome" placeholder="Nome da conta e-Mola (ex: João Mateus)">
+        <input type="text" id="cfg-banco-nome" placeholder="Nome do banco (ex: BCI, BIM)">
+        <input type="text" id="cfg-banco-conta" placeholder="Número da conta / NIB">
+        <input type="text" id="cfg-banco-titular" placeholder="Nome do titular">
+      </div>
+
+      <div class="ad-sec ad-sec-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span>Link de pagamento — conversa DIRETA contigo <small>(o cliente envia o comprovativo aqui para ativares)</small></span></div>
+      <div class="ad-campos"><input type="text" id="cfg-wa-pagamento" placeholder="Ex: https://wa.me/258861667843"></div>
+
+      <button class="ad-btn-grande" onclick="guardarConfigSubscricao()"><img src="icons3d/floppy.png" alt="">Guardar configuração</button>
+      <div id="cfg-estado" class="ad-estado"></div>
     </div>
 
+    <!-- Filtros e pesquisa -->
     <div class="filtros">
       <button class="filtro-btn ativo" id="f-todas" onclick="filtrar('todas')">Todas</button>
-      <button class="filtro-btn" id="f-pendente" onclick="filtrar('pendente')">⏳ Pendentes</button>
-      <button class="filtro-btn" id="f-activo" onclick="filtrar('activo')">✅ Activas</button>
-      <button class="filtro-btn" id="f-suspenso" onclick="filtrar('suspenso')">🚫 Suspensas</button>
-      <input type="text" class="busca" id="busca" placeholder="🔎 Pesquisar por loja, email ou telefone..." oninput="renderLojas()">
+      <button class="filtro-btn" id="f-pendente" onclick="filtrar('pendente')"><img src="icons3d/hourglass.png" alt="">Pendentes</button>
+      <button class="filtro-btn" id="f-activo" onclick="filtrar('activo')"><img src="icons3d/check.png" alt="">Activas</button>
+      <button class="filtro-btn" id="f-suspenso" onclick="filtrar('suspenso')"><img src="icons3d/prohibited.png" alt="">Suspensas</button>
+      <div class="ad-busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input type="text" class="busca" id="busca" placeholder="Pesquisar por loja, email ou telefone..." oninput="renderLojas()"></div>
     </div>
 
     <div id="lista-lojas"></div>
+
+    <div class="ad-rodape"><img src="ssteam-logo.png" alt=""><span>SSTEAM · Tecnologia Varejista de Ponta</span></div>
   </div>
 </div>
 
@@ -171,7 +315,8 @@ body { font-family:-apple-system,Arial,sans-serif; background:#f1f5f9; min-heigh
 
 <script src="supabase-config.js"></script>
 <script>
-const ADMIN_EMAIL = 'joaomassuvir@gmail.com';
+// Super admins (a mesma lista está no monitor.html e na função eh_super_admin() do Supabase)
+const ADMIN_EMAILS = ['joaomassuvir@gmail.com', 'bonifacioadelino1@gmail.com'];
 let lojas = [];
 let filtroAtivo = 'todas';
 
@@ -190,7 +335,7 @@ async function iniciar() {
     window.location.href = 'login.html';
     return;
   }
-  if ((sd.session.user.email || '').toLowerCase() !== ADMIN_EMAIL) {
+  if (!ADMIN_EMAILS.includes((sd.session.user.email || '').trim().toLowerCase())) {
     document.getElementById('tela-carregando').style.display = 'none';
     document.getElementById('tela-negado').style.display = 'flex';
     return;
@@ -204,7 +349,7 @@ async function iniciar() {
 async function carregarLojas() {
   const { data, error } = await supabaseClient
     .from('lojas')
-    .select('id, nome, telefone, endereco, email_dono, plano, estado, numero_transferencia, criado_em, data_expiracao')
+    .select('id, nome, telefone, endereco, email_dono, plano, estado, numero_transferencia, criado_em, data_expiracao, data_upgrade')
     .order('criado_em', { ascending: false });
 
   if (error) { notif('❌ Erro ao carregar: ' + error.message, true); return; }
@@ -330,17 +475,17 @@ function filtrar(f) {
 
 function textoEstado(e) {
   const n = estadoNorm(e);
-  if (n === 'pendente') return '⏳ Pendente';
-  if (n === 'activo') return '✅ Activa';
-  if (n === 'suspenso') return '🚫 Suspensa';
+  if (n === 'pendente') return '<img src="icons3d/hourglass.png" alt="">Pendente';
+  if (n === 'activo') return '<img src="icons3d/check.png" alt="">Activa';
+  if (n === 'suspenso') return '<img src="icons3d/prohibited.png" alt="">Suspensa';
   return e || '—';
 }
 
 function textoPlano(p) {
-  if (p === 'basico') return '🥉 Básico';
-  if (p === 'pro' || p === 'bronze') return '🥈 Pro';
-  if (p === 'anual') return '🥇 Anual';
-  return '💠 ' + (p || 'trial');
+  if (p === 'basico') return '<img src="icons3d/gem.png" alt="">Básico';
+  if (p === 'pro' || p === 'bronze') return '<img src="icons3d/star.png" alt="">Pro';
+  if (p === 'anual') return '<img src="icons3d/calendar.png" alt="">Anual';
+  return '<img src="icons3d/hourglass.png" alt="">' + (p || 'trial');
 }
 
 function renderLojas() {
@@ -365,77 +510,142 @@ function renderLojas() {
     const en = estadoNorm(l.estado);
     const data = l.criado_em ? new Date(l.criado_em).toLocaleDateString('pt-PT') : '—';
     const telLimpo = (l.telefone || '').replace(/\D/g, '');
+    // Datas de subscrição
+    const upg = l.data_upgrade ? new Date(l.data_upgrade).toLocaleString('pt-PT', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : null;
+    let expHtml = '', alerta = false;
+    if (l.data_expiracao) {
+      const exp = new Date(l.data_expiracao);
+      const dias = Math.ceil((exp - new Date()) / 86400000);
+      const cor = dias < 0 ? '#dc2626' : (dias <= 3 ? '#dc2626' : (dias <= 7 ? '#d97706' : '#16a34a'));
+      const txt = dias < 0 ? ('⚠️ EXPIROU há ' + Math.abs(dias) + ' dia(s)') : (dias + ' dia(s) restantes');
+      expHtml = `<br>⏳ Expira: ${exp.toLocaleDateString('pt-PT')} · <b style="color:${cor}">${txt}</b>`;
+      if (dias <= 3) alerta = true;
+    }
+    const upgHtml = upg ? `<br>⬆️ Upgrade em ${upg}` : '';
     return `
-    <div class="loja-card">
-      <div class="loja-topo">
-        <div>
-          <div class="loja-nome">🏪 ${l.nome || '(sem nome)'}</div>
-          <div class="loja-info">
-            📧 ${l.email_dono || '<span style="color:#cbd5e1;">sem email registado</span>'}<br>
-            📱 ${l.telefone || '—'}${telLimpo ? ' · <a href="https://wa.me/' + (telLimpo.startsWith('258') ? telLimpo : '258' + telLimpo) + '" target="_blank">WhatsApp</a>' : ''}<br>
-            📅 Registada em ${data}${l.numero_transferencia ? ' · 💳 Transf: ' + l.numero_transferencia : ''}
-          </div>
+    <div class="loja-card" ${alerta ? 'style="border:2px solid #dc2626;background:#fff5f5;"' : ''}>
+      <div class="loja-topo" onclick="toggleLojaCard('${l.id}')" style="cursor:pointer;">
+        <div class="lc-esq">
+          <span class="lc-chev" id="chev-${l.id}"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M8 5v14l11-7z"/></svg></span>
+          <img class="lc-ico" src="icons3d/store.png" alt="">
+          <div class="loja-nome">${(l.nome || '(sem nome)').replace(/</g,'&lt;')}</div>
         </div>
-        <div style="text-align:right;display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+        <div class="lc-selos">
           <span class="badge ${en}">${textoEstado(l.estado)}</span>
           <span class="badge trial">${textoPlano(l.plano)}</span>
+          ${alerta ? '<span class="lc-alerta">🔔 A expirar!</span>' : ''}
         </div>
       </div>
-      <div class="loja-acoes">
-        <select class="sel-plano" id="plano-${l.id}">
-          <option value="basico" ${l.plano==='basico'?'selected':''}>🥉 Básico — MT 1.000/mês</option>
-          <option value="pro" ${l.plano==='pro'||l.plano==='bronze'?'selected':''}>🥈 Médio — MT 1.500/mês</option>
-          <option value="anual" ${l.plano==='anual'?'selected':''}>🥇 Avançado — MT 2.000/mês</option>
-        </select>
-        ${en !== 'activo' ? `<button class="btn btn-activar" onclick="mudarEstado('${l.id}', 'activo')">✅ Activar</button>` : ''}
-        ${en === 'activo' ? `<button class="btn btn-activar" onclick="mudarEstado('${l.id}', 'activo')">💾 Guardar plano</button>` : ''}
-        ${en !== 'suspenso' ? `<button class="btn btn-suspender" onclick="mudarEstado('${l.id}', 'suspenso')">🚫 Suspender</button>` : ''}
-        ${en !== 'pendente' ? `<button class="btn btn-pendente" onclick="mudarEstado('${l.id}', 'pendente')">⏳ Pendente</button>` : ''}
-        <button class="btn" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;" onclick="alertarExpiracao('${l.id}')">🔔 Alertar expiração (3 dias)</button>
+      <div id="body-${l.id}" style="display:none;">
+        <div class="loja-info" style="margin-top:10px;">
+          📧 ${l.email_dono || '<span style="color:#cbd5e1;">sem email registado</span>'}<br>
+          📱 ${l.telefone || '—'}${telLimpo ? ' · <a href="https://wa.me/' + (telLimpo.startsWith('258') ? telLimpo : '258' + telLimpo) + '" target="_blank">WhatsApp</a>' : ''}<br>
+          📅 Registada em ${data}${l.numero_transferencia ? ' · 💳 Transf: ' + l.numero_transferencia : ''}${upgHtml}${expHtml}
+        </div>
+        <div class="loja-acoes">
+          <select class="sel-plano" id="plano-${l.id}">
+            <option value="basico" ${l.plano==='basico'?'selected':''}>🥉 Básico — MT 1.000/mês</option>
+            <option value="pro" ${l.plano==='pro'||l.plano==='bronze'?'selected':''}>🥈 Médio — MT 1.500/mês</option>
+            <option value="anual" ${l.plano==='anual'?'selected':''}>🥇 Avançado — MT 2.000/mês</option>
+          </select>
+          ${en !== 'activo' ? `<button class="btn btn-activar" onclick="mudarEstado('${l.id}', 'activo')">✅ Activar (paga agora)</button>` : `<button class="btn btn-activar" onclick="mudarEstado('${l.id}', 'activo')">💾 Renovar / Guardar</button>`}
+          ${en !== 'suspenso' ? `<button class="btn btn-suspender" onclick="mudarEstado('${l.id}', 'suspenso')">🚫 Suspender</button>` : ''}
+          ${en !== 'pendente' ? `<button class="btn btn-pendente" onclick="mudarEstado('${l.id}', 'pendente')">⏳ Pendente</button>` : ''}
+          <button class="btn" style="background:#eff6ff;color:#1a56a0;border:1px solid #bfdbfe;" onclick="adicionarDias('${l.id}')">➕ Dias (manual)</button>
+          <button class="btn" style="background:#fefce8;color:#a16207;border:1px solid #fde68a;" onclick="lembrarCliente('${l.id}')">🔔 Lembrar (WhatsApp)</button>
+          <button class="btn" style="background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;" onclick="eliminarLoja('${l.id}')">🗑 Eliminar</button>
+        </div>
       </div>
     </div>`;
   }).join('');
 }
 
-async function alertarExpiracao(id) {
-  const dias = prompt('Em quantos dias expira o pacote desta loja?\n(o dono verá a contagem: verde → laranja → vermelho)', '3');
+function lembrarCliente(id) {
+  const loja = lojas.find(l => l.id === id);
+  if (!loja) return;
+  const tel = (loja.telefone || '').replace(/\D/g, '');
+  if (!tel) { notif('Esta loja não tem telefone registado.', true); return; }
+  const num = tel.startsWith('258') ? tel : '258' + tel;
+  let quando = 'em breve';
+  if (loja.data_expiracao) {
+    const exp = new Date(loja.data_expiracao);
+    const dias = Math.ceil((exp - new Date()) / 86400000);
+    quando = dias < 0 ? ('expirou há ' + Math.abs(dias) + ' dia(s)') : ('expira em ' + dias + ' dia(s) (' + exp.toLocaleDateString('pt-PT') + ')');
+  }
+  const msg = 'Olá! 👋 A tua loja "' + (loja.nome || '') + '" no Spap-Sercriativo ' + quando + '. Para continuares a usar sem interrupção, faz o pagamento da renovação. Qualquer dúvida, estou à disposição. Obrigado!';
+  window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(msg), '_blank');
+}
+
+function toggleLojaCard(id) {
+  const body = document.getElementById('body-' + id);
+  const chev = document.getElementById('chev-' + id);
+  if (!body) return;
+  const abrir = body.style.display === 'none';
+  body.style.display = abrir ? 'block' : 'none';
+  if (chev) chev.style.transform = abrir ? 'rotate(90deg)' : 'rotate(0deg)';
+}
+
+async function adicionarDias(id) {
+  const loja = lojas.find(l => l.id === id);
+  const dias = prompt('Quantos dias queres ADICIONAR a esta loja?\n(soma aos dias que já tem; útil quando o dono não está disponível)', '30');
   if (dias === null) return;
   const n = parseInt(dias);
-  if (isNaN(n) || n < 0) { notif('❌ Número de dias inválido.', true); return; }
-  const dataExpira = new Date();
-  dataExpira.setDate(dataExpira.getDate() + n);
+  if (isNaN(n) || n === 0) { notif('❌ Número de dias inválido.', true); return; }
+  // base = expiração atual (se ainda no futuro) senão a partir de hoje
+  let base = new Date();
+  if (loja && loja.data_expiracao) { const exp = new Date(loja.data_expiracao); if (exp > base) base = exp; }
+  base.setDate(base.getDate() + n);
   const { data, error } = await supabaseClient
-    .from('lojas')
-    .update({ data_expiracao: dataExpira.toISOString() })
-    .eq('id', id).select();
-  if (error) { notif('❌ Erro: ' + error.message + ' (corre o SQL v2.4.3)', true); return; }
+    .from('lojas').update({ data_expiracao: base.toISOString() }).eq('id', id).select();
+  if (error) { notif('❌ Erro: ' + error.message + ' (corre o SQL v2.9.77)', true); return; }
   if (!data || !data.length) { notif('❌ Não gravou. Corre o SQL de permissões admin.', true); return; }
-  notif('🔔 Alerta enviado! O dono verá a contagem de ' + n + ' dia(s) no monitor.');
+  if (loja) loja.data_expiracao = data[0].data_expiracao;
+  renderLojas();
+  notif('✅ +' + n + ' dia(s). Nova expiração: ' + new Date(base).toLocaleDateString('pt-PT'));
+}
+
+async function eliminarLoja(id) {
+  const loja = lojas.find(l => l.id === id);
+  const nome = (loja && loja.nome) || 'esta loja';
+  if (!confirm('⚠️ ELIMINAR a loja "' + nome + '"?\n\nIsto apaga TUDO desta loja (produtos, vendas, membros) e NÃO se pode desfazer.')) return;
+  if (!confirm('Tens a certeza ABSOLUTA?\n\nVais perder tudo de "' + nome + '". Clica OK só se for mesmo para apagar.')) return;
+  const { error } = await supabaseClient.rpc('eliminar_loja', { p_loja: id });
+  if (error) { notif('❌ Erro ao eliminar: ' + error.message + ' (corre o SQL v2.9.77)', true); return; }
+  lojas = lojas.filter(l => l.id !== id);
+  renderContadores();
+  renderLojas();
+  notif('🗑 Loja "' + nome + '" eliminada por completo.');
 }
 
 async function mudarEstado(id, novoEstado) {
   const plano = document.getElementById('plano-' + id).value;
   const updateObj = { estado: novoEstado, plano: plano };
-  // Ao ativar (loja paga), limpa a data de expiração para o monitor não mostrar "EXPIROU".
-  if (novoEstado === 'activo') updateObj.data_expiracao = null;
+  // Ao activar (loja PAGOU): regista a data de upgrade e calcula a expiração automaticamente.
+  if (novoEstado === 'activo') {
+    const agora = new Date();
+    const dur = (plano === 'anual') ? 365 : 30;   // anual = 365 dias, mensais = 30
+    const exp = new Date(agora); exp.setDate(exp.getDate() + dur);
+    updateObj.data_upgrade = agora.toISOString();
+    updateObj.data_expiracao = exp.toISOString();
+  }
   const { data, error } = await supabaseClient
     .from('lojas')
     .update(updateObj)
     .eq('id', id)
     .select();
 
-  if (error) { notif('❌ Erro: ' + error.message, true); return; }
+  if (error) { notif('❌ Erro: ' + error.message + ' (corre o SQL v2.9.77)', true); return; }
   if (!data || data.length === 0) {
-    notif('❌ A alteração não foi gravada! Corre o SQL de permissões do admin no Supabase (atualizacao-v1.6.0-admin.sql).', true);
+    notif('❌ A alteração não foi gravada! Corre o SQL de permissões do admin no Supabase.', true);
     return;
   }
 
   const loja = lojas.find(l => l.id === id);
-  if (loja) { loja.estado = novoEstado; loja.plano = plano; }
+  if (loja) { loja.estado = novoEstado; loja.plano = plano; if (data[0]) { loja.data_upgrade = data[0].data_upgrade; loja.data_expiracao = data[0].data_expiracao; } }
   renderContadores();
   renderLojas();
 
-  if (novoEstado === 'activo') notif('✅ "' + (loja?.nome || 'Loja') + '" activada com o plano ' + plano + '!');
+  if (novoEstado === 'activo') notif('✅ "' + (loja?.nome || 'Loja') + '" activada! Expira daqui a ' + ((plano==='anual')?'365':'30') + ' dias.');
   else if (novoEstado === 'suspenso') notif('🚫 "' + (loja?.nome || 'Loja') + '" suspensa.');
   else notif('⏳ "' + (loja?.nome || 'Loja') + '" marcada como pendente.');
 }

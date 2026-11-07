@@ -1,0 +1,66 @@
+====================================================
+GUIA DE IMPRESSÃO — Spap-Sercriativo
+====================================================
+
+Há duas impressoras térmicas: a de RECIBOS e a de ETIQUETAS (selos).
+A app imprime pela JANELA do Windows. Para ficar perfeito é preciso
+acertar 2 definições no Windows (uma vez só por máquina).
+
+
+====================================================
+A) ETIQUETAS (selos) A SAIR SEPARADAS / COM ESPAÇOS
+====================================================
+
+O problema NÃO é da app — é o "Tamanho do papel" da impressora de
+etiquetas estar errado no Windows (fica em Letter/A4, muito maior que
+o selo, por isso o Windows deixa etiquetas em branco entre cada uma).
+
+ARRANJAR (uma vez):
+1. Painel de Controlo -> Dispositivos e Impressoras
+2. Clica com o botão direito na impressora de ETIQUETAS (ex.: Xprinter)
+   -> "Preferências de impressão"
+3. Em "Tamanho do papel" (ou "Stock"), escolhe/cria o tamanho EXACTO
+   do teu selo. Ex.: 40 x 30 mm. (Se não existir, cria um tamanho
+   personalizado com essas medidas.)
+4. Margens = 0 (Nenhuma). Guarda.
+5. Na app: Menu -> Criar Código de Barras -> escolhe o mesmo tamanho
+   -> imprime. Na janela do Windows confirma: impressora de ETIQUETAS,
+   papel = 40x30, Margens = Nenhuma.
+
+Se ainda sair mal, na app troca o "Modo da folha":
+   - "Etiqueta a etiqueta" (recomendado, com o papel certo no Windows)
+   - "Rolo contínuo" (se a tua impressora preferir tira contínua)
+E usa "Rodar 90°" se o selo sair de lado.
+
+
+====================================================
+B) RECIBO SEM A JANELA DO WINDOWS (impressão directa)
+====================================================
+
+A janela aparece porque é o navegador que a abre. Só há 2 formas de a
+tirar:
+
+OPÇÃO 1 (recomendada) — MODO QUIOSQUE do navegador:
+Faz o recibo sair SOZINHO, sem janela, para a impressora predefinida.
+1. Define a impressora de RECIBOS como PREDEFINIDA no Windows.
+2. Clica com o botão direito no atalho do Edge (ou Chrome) na área de
+   trabalho -> Propriedades.
+3. No campo "Destino", no fim, acrescenta um espaço e:
+      --kiosk-printing
+   (Exemplo: "...\msedge.exe" --kiosk-printing)
+4. Guarda. Abre a app SEMPRE por esse atalho.
+5. Na app, no pagamento, deixa "Imprimir recibo: SIM".
+   A partir daqui o recibo sai directo, sem janela.
+
+   NOTA: no modo quiosque TUDO vai para a impressora predefinida.
+   Por isso as etiquetas convém imprimi-las à parte (ver Opção 2) ou
+   num atalho normal (sem --kiosk-printing).
+
+OPÇÃO 2 — USB DIRECTO (sem janela, para recibo E etiqueta):
+Na app: Menu -> definir impressoras -> "Escolher" a de recibos e a de
+etiquetas. Se o Windows deixar, a app envia directo por USB.
+IMPORTANTE: no Windows, muitas impressoras já têm o driver instalado e
+não deixam o USB directo do navegador. Se o teste USB falhar, usa a
+Opção 1 (quiosque).
+
+====================================================

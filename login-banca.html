@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#16a34a">
+<title>Banca — Entrar</title>
+<base href="/">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;background:#f0fdf4;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .box{background:#fff;border-radius:22px;padding:30px 24px;width:100%;max-width:400px;box-shadow:0 10px 40px rgba(16,163,74,.12);}
+  .logo{text-align:center;margin-bottom:6px;}
+  .logo .ic{font-size:44px;}
+  .logo h1{font-size:22px;color:#166534;margin-top:4px;}
+  .logo p{font-size:13px;color:#16a34a;font-weight:600;}
+  .sub{text-align:center;font-size:13px;color:#64748b;margin:4px 0 22px;}
+  label{display:block;font-size:12px;color:#64748b;font-weight:700;margin:14px 0 6px;}
+  input{width:100%;border:1.5px solid #d7eadd;border-radius:13px;padding:15px 16px;font-size:16px;outline:none;}
+  input:focus{border-color:#16a34a;}
+  .btn{width:100%;margin-top:22px;padding:16px;background:#16a34a;color:#fff;border:none;border-radius:13px;font-size:17px;font-weight:800;}
+  .btn:disabled{background:#a7d8ba;}
+  .erro{display:none;margin-top:14px;background:#fef2f2;color:#dc2626;border-radius:10px;padding:11px 13px;font-size:13px;}
+  .rodape{text-align:center;margin-top:20px;font-size:14px;color:#64748b;}
+  .rodape a{color:#16a34a;font-weight:800;text-decoration:none;}
+  .mini{text-align:center;margin-top:14px;font-size:12px;}
+  .mini a{color:#94a3b8;text-decoration:none;}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="logo"><div class="ic">🏪</div><h1>Mobile POSS</h1><p>A tua banca no bolso</p></div>
+  <div class="sub">Entra para vender</div>
+  <label>📧 Email</label>
+  <input id="email" type="email" inputmode="email" placeholder="o-teu-email@exemplo.com" autocomplete="username">
+  <label>🔑 Código (senha)</label>
+  <input id="senha" type="password" placeholder="o teu código" autocomplete="current-password">
+  <button class="btn" id="btn" onclick="entrar()">Entrar</button>
+  <div class="erro" id="erro"></div>
+  <div class="rodape">Ainda não tens banca? <a href="banca/registo">Cadastrar</a></div>
+  <div class="mini"><a href="login.html">Tenho uma loja grande →</a></div>
+</div>
+<script src="supabase-config.js"></script>
+<script>
+const btn=document.getElementById('btn');
+function erro(m){ const e=document.getElementById('erro'); e.textContent=m; e.style.display='block'; }
+
+function destino(){ return new URLSearchParams(location.search).get('to') || 'banca'; }
+(async()=>{ try{ const {data}=await supabaseClient.auth.getSession(); if(data&&data.session){ location.href=destino(); } }catch(e){} })();
+
+async function entrar(){
+  const email=document.getElementById('email').value.trim();
+  const senha=document.getElementById('senha').value;
+  if(!email||!senha){ erro('Preenche o email e o código.'); return; }
+  btn.disabled=true; btn.textContent='A entrar…';
+  let data,error;
+  try{ const r=await supabaseClient.auth.signInWithPassword({email,password:senha}); data=r.data; error=r.error; }
+  catch(e){ error={message:'Sem internet. Tenta de novo.'}; }
+  if(error){ erro(error.message.includes('Invalid')?'Email ou código errado.':error.message); btn.disabled=false; btn.textContent='Entrar'; return; }
+  // Verifica estado da banca
+  try{
+    const { data:m }=await supabaseClient.from('membros_loja').select('lojas(estado,nome)').eq('user_id',data.user.id).limit(1);
+    const est = m&&m[0]&&m[0].lojas&&m[0].lojas.estado;
+    if(est==='pendente'||est==='pendente_pagamento'){ await supabaseClient.auth.signOut(); erro('⏳ A tua banca aguarda confirmação de pagamento. Envia o comprovativo e aguarda a ativação.'); btn.disabled=false; btn.textContent='Entrar'; return; }
+    if(est==='suspenso'||est==='bloqueado'){ await supabaseClient.auth.signOut(); erro('🚫 Banca suspensa. Contacta o suporte: +258 86 657 7722'); btn.disabled=false; btn.textContent='Entrar'; return; }
+  }catch(e){}
+  location.href=destino();
+}
+document.getElementById('senha').addEventListener('keydown',e=>{ if(e.key==='Enter') entrar(); });
+</script>
+</body>
+</html>
