@@ -1,12 +1,1 @@
-{
- "versao": "2.9.162",
- "data": "2026-11-07",
- "novidades": "Ondas da Home animadas como água do mar e Verificar atualizações mais fiável, só com a informação da atualização mais recente.",
- "melhorias": [
-  "As ondas da Home (cartões, gráfico, listas e fundo) mexem-se como água do mar.",
-  "As ondas nos cantos dos indicadores balançam como água.",
-  "«Verificar atualizações» mostra só a informação da atualização mais recente.",
-  "Só aparece «Nova versão» quando a versão publicada é mesmo mais recente do que a instalada.",
-  "Enquanto procura, a informação anterior fica escondida para não mostrar dados antigos."
- ]
-}
+{"versao": "2.9.163", "data": "2026-11-07", "novidades": "Novo modelo publicado para todas as lojas: a Loja abre no Modo Moderno.", "melhorias": ["A Loja (PDV) abre agora no novo modelo (Modo Moderno) para todas as lojas, não só para os administradores.", "Quem já usava a Loja passa automaticamente para o modelo novo.", "O Monitor continua com o novo design (ondas animadas, ícones animados, gráfico por hora)."]}

@@ -5111,7 +5111,7 @@ async function verificarAtualizacoesManual() {
   cardN.style.display = _cmpVersao(d.versao, MONITOR_VERSAO) >= 0 ? '' : 'none';
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.162';
+const MONITOR_VERSAO = '2.9.163';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
