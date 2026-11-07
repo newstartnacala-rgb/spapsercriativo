@@ -6,8 +6,14 @@ plugins {
 val appVersionName = (findProperty("appVersionName") as String?) ?: "1.0.0"
 val appVersionCode = ((findProperty("appVersionCode") as String?)?.toIntOrNull()) ?: 1
 
-// Endereços do sistema (o primeiro que responder é usado; os outros são reserva).
-val baseUrls = "https://spapsercriativo.vercel.app|https://spapsercriativo2950.vercel.app"
+// Endereços do sistema. Ao abrir, a app lê o version.json de cada um e usa o que
+// tem a versão MAIS RECENTE (assim nunca fica presa num site antigo).
+val baseUrls = listOf(
+    "https://spapsercriativo.vercel.app",
+    "https://spapsercriativo-spapcercruativoteam.vercel.app",
+    "https://spapsercriativo2950.vercel.app",
+    "https://spapsercriativo2950-spapcercruativoteam.vercel.app"
+).joinToString("|")
 
 android {
     namespace = "com.spapsercriativo.app"

@@ -129,7 +129,7 @@ public class MainActivity extends Activity {
         if (estado != null) {
             web.restoreState(estado);
         } else {
-            web.loadUrl(urlInicial());
+            escolherEnderecoECarregar();
         }
     }
 
@@ -216,6 +216,70 @@ public class MainActivity extends Activity {
         w.setWebViewClient(new Cliente(principal));
         w.setWebChromeClient(new Chrome(principal));
         w.setDownloadListener((url, ua, disposicao, mime, tamanho) -> descarregarUrl(url, ua, disposicao, mime));
+    }
+
+    /** Lê o version.json de todos os endereços e abre o que tem a versão mais recente. */
+    private void escolherEnderecoECarregar() {
+        new Thread(() -> {
+            final String[] versoes = new String[bases.length];
+            Thread[] t = new Thread[bases.length];
+            for (int i = 0; i < bases.length; i++) {
+                final int k = i;
+                t[i] = new Thread(() -> versoes[k] = lerVersao(bases[k]));
+                t[i].start();
+            }
+            for (Thread x : t) { try { x.join(6000); } catch (InterruptedException ignored) { } }
+            int melhor = -1;
+            for (int i = 0; i < bases.length; i++) {
+                if (versoes[i] == null) continue;
+                if (melhor < 0 || compararVersoes(versoes[i], versoes[melhor]) > 0) melhor = i;
+            }
+            if (melhor >= 0) baseAtual = melhor;
+            final String versaoNova = melhor >= 0 ? versoes[melhor] : null;
+            ui.post(() -> {
+                // Versão nova do sistema → limpa a cópia antiga guardada para mostrar logo o modelo novo
+                SharedPreferences pr = getSharedPreferences("spap", MODE_PRIVATE);
+                if (versaoNova != null && !versaoNova.equals(pr.getString("ultima_versao", ""))) {
+                    web.clearCache(true);
+                    pr.edit().putString("ultima_versao", versaoNova).apply();
+                }
+                emOffline = false;
+                web.loadUrl(urlInicial());
+            });
+        }).start();
+    }
+
+    private static String lerVersao(String base) {
+        java.net.HttpURLConnection c = null;
+        try {
+            c = (java.net.HttpURLConnection) new java.net.URL(base + "/version.json?t=" + System.currentTimeMillis()).openConnection();
+            c.setConnectTimeout(5000);
+            c.setReadTimeout(5000);
+            c.setUseCaches(false);
+            c.setRequestProperty("Cache-Control", "no-cache");
+            if (c.getResponseCode() != 200) return null;
+            StringBuilder sb = new StringBuilder();
+            try (BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream(), StandardCharsets.UTF_8))) {
+                String l; while ((l = r.readLine()) != null) sb.append(l);
+            }
+            String v = new org.json.JSONObject(sb.toString()).optString("versao", "");
+            return v.isEmpty() ? null : v;
+        } catch (Exception e) {
+            return null;
+        } finally {
+            if (c != null) c.disconnect();
+        }
+    }
+
+    private static int compararVersoes(String a, String b) {
+        String[] x = a.replaceAll("[^0-9.]", "").split("\\.");
+        String[] y = b.replaceAll("[^0-9.]", "").split("\\.");
+        for (int i = 0; i < Math.max(x.length, y.length); i++) {
+            int p = i < x.length && !x[i].isEmpty() ? Integer.parseInt(x[i]) : 0;
+            int q = i < y.length && !y[i].isEmpty() ? Integer.parseInt(y[i]) : 0;
+            if (p != q) return p > q ? 1 : -1;
+        }
+        return 0;
     }
 
     private String urlInicial() {
@@ -385,9 +449,8 @@ public class MainActivity extends Activity {
 
     private void tentarDeNovo() {
         ui.post(() -> {
-            emOffline = false;
             web.clearHistory();
-            web.loadUrl(urlInicial());
+            escolherEnderecoECarregar();
         });
     }
 
