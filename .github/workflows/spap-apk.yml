@@ -2,7 +2,7 @@ name: SPAP Apps Android (Monitor + Loja)
 on:
   push:
     branches: [ main ]
-    paths: [ 'spap-android/**', '.github/workflows/spap-apk.yml' ]
+    paths: [ 'spap-android/**', '.github/workflows/spap-apk.yml', 'SPAPSERCRIATIVOPOSS/version.json' ]
   workflow_dispatch:
 permissions:
   contents: write
@@ -28,8 +28,10 @@ jobs:
         working-directory: spap-android
         run: |
           chmod +x gradlew
-          VN="1.0.${GITHUB_RUN_NUMBER}"
-          VC=$(( 100 + ${GITHUB_RUN_NUMBER} ))
+          # A app tem a MESMA versão do sistema (version.json) → sobe em cada atualização
+          VN=$(python3 -c "import json;print(json.load(open('../SPAPSERCRIATIVOPOSS/version.json'))['versao'])")
+          VC=$(python3 -c "v='$VN'.split('.')+['0','0'];print(int(v[0])*1000000+int(v[1])*10000+int(v[2]))")
+          echo "Versão da app: $VN (code $VC)"
           echo "VN=$VN" >> $GITHUB_ENV
           ./gradlew assembleMonitorRelease assembleLojaRelease --no-daemon --stacktrace -PappVersionName="$VN" -PappVersionCode="$VC"
       - name: Publicar APKs no site (para a app se atualizar sozinha)
@@ -54,7 +56,7 @@ jobs:
           gh release create "$TAG" apks-build/SPAP-Monitor.apk apks-build/SPAP-Loja.apk \
             --title "SPAP Apps $VN" \
             --notes "SPAP Monitor e SPAP Loja (Android). Instalar: descarregar o APK e abrir no telemóvel." \
-            --latest
+            --latest || gh release upload "$TAG" apks-build/SPAP-Monitor.apk apks-build/SPAP-Loja.apk --clobber
       - uses: actions/upload-artifact@v4
         with:
           name: spap-apks

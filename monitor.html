@@ -902,7 +902,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.180" defer></script>
+<script src="app-android.js?v=2.9.181" defer></script>
 </head>
 <body>
 <script>
@@ -5230,7 +5230,8 @@ window.addEventListener('beforeinstallprompt', (e) => {
   }
 });
 async function instalarAppMonitor() {
-  if (window.SPAP_APP_NATIVA || /android/i.test(navigator.userAgent)) { abrirAtualizacoes(); setTimeout(() => { const c = document.getElementById('att-app'); if (c) c.scrollIntoView({ behavior:'smooth', block:'center' }); }, 600); return; }
+  // Instalar a app nativa (APK): Android → baixa e instala; dentro da app → instala a versão mais recente; computador → explica e deixa baixar
+  if (window.spapInstalarApp) { window.spapInstalarApp(); return; }
   if (!_promptInstalarMonitor) {
     alert('Para instalar: abre o menu do navegador (⋮) e escolhe "Instalar aplicação" ou "Adicionar ao ecrã principal".');
     return;
@@ -5269,10 +5270,11 @@ function _dataPT(iso) {
 }
 function _pintarLista(el, itens) { el.innerHTML = itens.map(x => '<li>' + _escMon(x) + '</li>').join(''); }
 function abrirAtualizacoes() {
-  document.getElementById('att-instalada').textContent = MONITOR_VERSAO;
+  // abre SEMPRE (antes, à 2.ª vez falhava porque um texto da página já tinha sido substituído)
+  try { const vi = document.getElementById('att-instalada'); if (vi) vi.textContent = MONITOR_VERSAO; } catch (e) {}
   abrirSubPainel('painel-atualizacoes');
-  verificarAtualizacoesManual();
-  verificarApp();
+  try { verificarAtualizacoesManual(); } catch (e) {}
+  try { verificarApp(); } catch (e) {}
 }
 async function verificarAtualizacoesManual() {
   const ico = document.getElementById('att-ico'), est = document.getElementById('att-estado'), sub = document.getElementById('att-sub');
@@ -5353,6 +5355,7 @@ async function verificarApp() {
 }
 function instalarAppNova() {
   const url = new URL((_infoApp && _infoApp.monitor) || 'apps/SPAP-Monitor.apk', location.href).href;
+  if (_EH_APP && !(window.SPAPNative && typeof SPAPNative.instalarApp === 'function')) { window.location.href = url; return; }  // app antiga: usa o descarregador do Android
   if (_EH_APP) {
     const btn = document.getElementById('att-app-btn');
     btn.disabled = true; btn.textContent = 'A baixar…';
@@ -5397,7 +5400,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.180';
+const MONITOR_VERSAO = '2.9.181';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });

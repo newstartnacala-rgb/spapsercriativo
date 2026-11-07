@@ -110,8 +110,11 @@
         else if (estado === 'instalar') { btn.disabled = false; btn.textContent = 'Toque em «Instalar» no Android'; }
         else btn.textContent = 'A baixar… ' + Math.round(pct) + '%';
       };
-      try { SPAPNative.instalarApp(new URL(d[tipo] || apk, location.href).href); }
-      catch (e) { btn.disabled = false; btn.textContent = 'Tentar outra vez'; }
+      var urlApk = new URL(d[tipo] || apk, location.href).href;
+      // App antiga sem instalador interno → usa o descarregador do Android (abre o instalador no fim)
+      if (typeof SPAPNative.instalarApp !== 'function') { window.location.href = urlApk; btn.textContent = 'A baixar… abre a notificação para instalar'; return; }
+      try { SPAPNative.instalarApp(urlApk); }
+      catch (e) { window.location.href = urlApk; }
     };
   }
 
