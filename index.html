@@ -347,7 +347,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
   [tabindex]:focus-visible { outline: 2px solid #1a56a0; outline-offset: 1px; }
 </style>
-<script src="app-android.js?v=2.9.182" defer></script>
+<script src="app-android.js?v=2.9.183" defer></script>
 </head>
 <body>
 
@@ -5801,7 +5801,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.182';
+  const VERSAO_ATUAL = '2.9.183';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -6433,6 +6433,24 @@ body.modo2 #m2-sidebar .m2-nav:hover .ico, body.modo2 #m2-sidebar .m2-nav.ativo 
 body.modo2 #m2-sidebar .m2-nav.ativo { border-color:rgba(245,197,66,.55) !important; }
 body.modo2 #m2-sidebar .m2-nav.m2-sair .ico { color:#f5c542 !important; }
 body.modo2 #m2-sidebar .m2-nav.m2-sair { color:#ffffff !important; }
+/* ===== BOTÃO «ENTREGA TOTAL DO DIA» — cartão em destaque (v2.9.183) ===== */
+body.modo2 #m2-sidebar #m2-entrega-dia { position:relative; margin:4px 0 12px; padding:13px 10px 13px 12px !important; gap:10px; border-radius:16px !important; overflow:hidden;
+  background:linear-gradient(135deg,rgba(245,197,66,.34) 0%,rgba(200,144,26,.20) 55%,rgba(255,255,255,.08) 100%) !important;
+  border:1.5px solid rgba(245,197,66,.70) !important; box-shadow:0 10px 26px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,240,190,.35) !important; }
+body.modo2 #m2-sidebar #m2-entrega-dia::before { content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:linear-gradient(180deg,#ffe08a,#c8901a); }
+body.modo2 #m2-sidebar #m2-entrega-dia::after { content:''; position:absolute; top:0; left:-60%; width:40%; height:100%; background:linear-gradient(100deg,transparent,rgba(255,255,255,.28),transparent); transform:skewX(-20deg); animation:m2EdBrilho 4.5s ease-in-out infinite; pointer-events:none; }
+@keyframes m2EdBrilho { 0%,70% { left:-60%; } 100% { left:140%; } }
+body.modo2 #m2-sidebar #m2-entrega-dia .ico { width:40px !important; height:40px !important; flex-shrink:0; border-radius:12px !important; background:linear-gradient(145deg,#f7d46b,#c8901a) !important; color:#1a1405 !important; border-color:#ffe08a !important; box-shadow:0 6px 14px rgba(200,144,26,.45) !important; }
+body.modo2 #m2-sidebar #m2-entrega-dia .ico svg { width:22px; height:22px; }
+body.modo2 #m2-sidebar #m2-entrega-dia .m2-ed-txt { display:flex; flex-direction:column; flex:1; min-width:0; line-height:1.2; }
+body.modo2 #m2-sidebar #m2-entrega-dia .m2-ed-txt b { font-size:14.5px; font-weight:800; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:-.1px; }
+body.modo2 #m2-sidebar #m2-entrega-dia .m2-ed-txt small { font-size:11.5px; font-weight:600; color:rgba(255,244,214,.92); margin-top:3px; }
+body.modo2 #m2-sidebar #m2-entrega-dia .m2-ed-seta { flex-shrink:0; font-size:24px; font-weight:300; color:#ffe08a; line-height:1; transition:transform .2s; }
+body.modo2 #m2-sidebar #m2-entrega-dia:hover { background:linear-gradient(135deg,rgba(245,197,66,.46) 0%,rgba(200,144,26,.28) 55%,rgba(255,255,255,.10) 100%) !important; }
+body.modo2 #m2-sidebar #m2-entrega-dia:hover .m2-ed-seta { transform:translateX(3px); }
+body.modo2 #m2-sidebar #m2-entrega-dia:active { transform:scale(.98); }
+body.modo2.m2-escuro #m2-sidebar #m2-entrega-dia { background:linear-gradient(135deg,rgba(245,197,66,.26),rgba(22,163,74,.18) 60%,rgba(255,255,255,.04)) !important; }
+@media (prefers-reduced-motion:reduce) { body.modo2 #m2-sidebar #m2-entrega-dia::after { animation:none; display:none; } }
 body.modo2 #m2-sidebar #m2-instalar-app { margin:8px 0 6px; background:linear-gradient(135deg,rgba(245,197,66,.28),rgba(200,144,26,.16)) !important; border:1px solid rgba(245,197,66,.55) !important; }
 body.modo2 #m2-sidebar #m2-instalar-app .ico { background:linear-gradient(145deg,#f7d46b,#c8901a) !important; color:#1a1405 !important; border-color:#f5c542 !important; }
 body.modo2 #m2-sidebar .m2-status { padding-bottom:calc(10px + env(safe-area-inset-bottom)); }
@@ -6622,7 +6640,7 @@ body.modo2.m2-escuro #modal-pagamento #toggle-imprimir, body.modo2.m2-escuro #mo
       <div class="m2-logo-ico" id="m2-logo-ico"><img src="ssteam-logo.png" alt="SSTEAM"></div>
       <div><b id="m2-logo-nome">Loja</b><small>Vendas | Stock</small></div>
     </div>
-    <div class="m2-nav" onclick="document.body.classList.remove('m2-menu-aberto'); if(typeof abrirRelatorioEntregar==='function') abrirRelatorioEntregar();"><span class="ico" data-ico="box"></span><span>Entrega total do dia</span></div>
+    <div class="m2-nav" id="m2-entrega-dia" onclick="document.body.classList.remove('m2-menu-aberto'); if(typeof abrirRelatorioEntregar==='function') abrirRelatorioEntregar();"><span class="ico" data-ico="box"></span><span class="m2-ed-txt"><b>Entrega total do dia</b><small>Fechar o caixa e entregar</small></span><span class="m2-ed-seta">›</span></div>
     <!-- Todos os itens do menu aparecem aqui (preenchido por renderM2Nav) -->
     <div id="m2-nav-lista"></div>
     <div class="m2-flex"></div>
