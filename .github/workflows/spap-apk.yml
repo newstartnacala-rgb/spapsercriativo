@@ -32,16 +32,18 @@ jobs:
           VC=$(( 100 + ${GITHUB_RUN_NUMBER} ))
           echo "VN=$VN" >> $GITHUB_ENV
           ./gradlew assembleMonitorRelease assembleLojaRelease --no-daemon --stacktrace -PappVersionName="$VN" -PappVersionCode="$VC"
-      - name: Gravar APKs no repositório
+      - name: Publicar APKs no site (para a app se atualizar sozinha)
         run: |
-          mkdir -p apks-build
+          mkdir -p apks-build SPAPSERCRIATIVOPOSS/apps
           cp spap-android/app/build/outputs/apk/monitor/release/app-monitor-release.apk apks-build/SPAP-Monitor.apk
           cp spap-android/app/build/outputs/apk/loja/release/app-loja-release.apk apks-build/SPAP-Loja.apk
-          ls -lh apks-build
+          cp apks-build/SPAP-Monitor.apk apks-build/SPAP-Loja.apk SPAPSERCRIATIVOPOSS/apps/
+          printf '{"versao":"%s","data":"%s","monitor":"apps/SPAP-Monitor.apk","loja":"apps/SPAP-Loja.apk"}\n' "$VN" "$(date -u +%Y-%m-%d)" > SPAPSERCRIATIVOPOSS/apps/app-version.json
+          cat SPAPSERCRIATIVOPOSS/apps/app-version.json
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f apks-build/SPAP-Monitor.apk apks-build/SPAP-Loja.apk
-          git commit -m "APKs SPAP $VN [skip ci]" || echo "sem mudanças"
+          git add -f SPAPSERCRIATIVOPOSS/apps
+          git commit -m "Apps SPAP $VN publicadas no site" || echo "sem mudanças"
           git pull --rebase --autostash || true
           git push
       - name: Publicar em Releases (link fixo de download)

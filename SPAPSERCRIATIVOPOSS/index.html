@@ -5700,7 +5700,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.164';
+  const VERSAO_ATUAL = '2.9.165';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -6255,31 +6255,67 @@ body.modo2.m2-escuro #modo2-app ::selection { background:#ffffff; color:#000000;
 /* Ícones-emoji decorativos em tons de cinza (as fotos dos produtos ficam como estão) */
 body.modo2.m2-escuro .m2-cat-item-ico span, body.modo2.m2-escuro div.m2-img, body.modo2.m2-escuro div.m2-it-img,
 body.modo2.m2-escuro #m2-cart .m2-item button, body.modo2.m2-escuro #m2-cart .m2-item .m2-it-preco, body.modo2.m2-escuro #m2-cart .m2-item .m2-it-nome { filter:grayscale(1); }
-/* ===== MENU LATERAL — legível e profissional (v2.9.164) ===== */
-body.modo2 #m2-sidebar, body.modo2.m2-azul #m2-sidebar, body.modo2.m2-claro #m2-sidebar {
-  background:linear-gradient(180deg,#0e1a33 0%,#0b1426 100%) !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
-  color:#f8fafc; border-right:1px solid rgba(245,197,66,.18); box-shadow:10px 0 40px rgba(0,0,0,.45); }
-body.modo2.m2-escuro #m2-sidebar { background:linear-gradient(180deg,#141414 0%,#0a0a0a 100%) !important; }
-body.modo2.m2-verde #m2-sidebar { background:linear-gradient(180deg,#0a3a20 0%,#052e16 100%) !important; }
-body.modo2 #m2-sidebar .m2-logo { border-bottom:1px solid rgba(255,255,255,.08); margin-bottom:10px; padding-bottom:14px; }
-body.modo2 #m2-sidebar .m2-logo b { color:#ffffff; font-size:18px; letter-spacing:.2px; }
-body.modo2 #m2-sidebar .m2-logo small { color:rgba(241,245,249,.72) !important; font-size:11px; }
-body.modo2 #m2-sidebar .m2-nav { color:#f1f5f9 !important; font-size:15px; font-weight:600; letter-spacing:.1px; padding:10px 12px; gap:12px; margin-bottom:3px; text-shadow:none; }
-body.modo2 #m2-sidebar .m2-nav .ico { width:34px; height:34px; border-radius:10px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.08); color:#f5c542; }
+/* ===== MENU LATERAL — vidro transparente com letras bem visíveis (v2.9.165) ===== */
+body.modo2 #m2-sidebar, body.modo2.m2-azul #m2-sidebar, body.modo2.m2-claro #m2-sidebar, body.modo2.m2-verde #m2-sidebar {
+  background:linear-gradient(180deg,rgba(15,23,42,.46) 0%,rgba(15,23,42,.34) 100%) !important;
+  backdrop-filter:blur(26px) saturate(150%) !important; -webkit-backdrop-filter:blur(26px) saturate(150%) !important;
+  border-right:1px solid rgba(255,255,255,.22); box-shadow:10px 0 40px rgba(0,0,0,.30); color:#fff; }
+body.modo2.m2-escuro #m2-sidebar { background:rgba(255,255,255,.06) !important; }
+body.modo2 #m2-sidebar .m2-logo { border-bottom:1px solid rgba(255,255,255,.14); margin-bottom:10px; padding-bottom:14px; }
+body.modo2 #m2-sidebar .m2-logo b { color:#fff; font-size:18px; text-shadow:0 1px 3px rgba(0,0,0,.6); }
+body.modo2 #m2-sidebar .m2-logo small { color:rgba(255,255,255,.85) !important; font-size:11px; text-shadow:0 1px 2px rgba(0,0,0,.6); }
+body.modo2 #m2-sidebar .m2-nav { color:#ffffff !important; font-size:15px; font-weight:700; letter-spacing:.15px; padding:10px 12px; gap:12px; margin-bottom:3px;
+  text-shadow:0 1px 2px rgba(0,0,0,.75), 0 0 10px rgba(0,0,0,.35); }
+body.modo2 #m2-sidebar .m2-nav .ico { width:34px; height:34px; border-radius:10px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.22); color:#fff;
+  box-shadow:0 2px 8px rgba(0,0,0,.18); filter:drop-shadow(0 1px 1px rgba(0,0,0,.4)); }
 body.modo2 #m2-sidebar .m2-nav .ico svg { width:18px; height:18px; }
-body.modo2 #m2-sidebar .m2-nav:hover { background:rgba(255,255,255,.08) !important; color:#ffffff !important; }
-body.modo2 #m2-sidebar .m2-nav.ativo { background:rgba(245,197,66,.14) !important; border-color:rgba(245,197,66,.35) !important; color:#ffffff !important; box-shadow:inset 3px 0 0 #f5c542; }
-body.modo2 #m2-sidebar .m2-nav.ativo .ico { background:#f5c542; color:#1a1405; border-color:#f5c542; }
-body.modo2 #m2-sidebar .m2-nav.m2-sub { font-size:14px; color:#e2e8f0 !important; }
-body.modo2 #m2-sidebar .m2-rodape { border-top:1px solid rgba(255,255,255,.1); }
-body.modo2 #m2-sidebar .m2-nav.m2-sair { color:#fca5a5 !important; }
-body.modo2 #m2-sidebar .m2-nav.m2-sair .ico { color:#f87171; background:rgba(248,113,113,.1); border-color:rgba(248,113,113,.2); }
-body.modo2 #m2-sidebar .m2-nav.m2-sair:hover { background:rgba(248,113,113,.14) !important; color:#fff !important; }
-body.modo2 #m2-sidebar .m2-def-titulo { color:rgba(241,245,249,.65) !important; font-size:10.5px; }
-body.modo2 #m2-sidebar .m2-modo-op { color:#f1f5f9; background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.14); }
-body.modo2 #m2-sidebar .m2-modo-op.sel { background:rgba(245,197,66,.18); border-color:rgba(245,197,66,.5); color:#fff; }
-body.modo2 #m2-sidebar .m2-status { color:rgba(241,245,249,.65) !important; }
-body.modo2.m2-menu-aberto #m2-backdrop { background:rgba(2,6,23,.55) !important; backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); }
+body.modo2 #m2-sidebar .m2-nav:hover { background:rgba(255,255,255,.16) !important; }
+body.modo2 #m2-sidebar .m2-nav.ativo { background:rgba(255,255,255,.24) !important; border-color:rgba(255,255,255,.4) !important; box-shadow:0 4px 14px rgba(0,0,0,.22); }
+body.modo2 #m2-sidebar .m2-nav.m2-sub { font-size:14px; }
+body.modo2 #m2-sidebar .m2-rodape { border-top:1px solid rgba(255,255,255,.18); }
+body.modo2 #m2-sidebar .m2-nav.m2-sair { color:#fecaca !important; }
+body.modo2 #m2-sidebar .m2-nav.m2-sair .ico { background:rgba(248,113,113,.22); border-color:rgba(248,113,113,.4); }
+body.modo2 #m2-sidebar .m2-def-titulo { color:rgba(255,255,255,.8) !important; text-shadow:0 1px 2px rgba(0,0,0,.6); }
+body.modo2 #m2-sidebar .m2-modo-op { color:#fff; background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.25); text-shadow:0 1px 2px rgba(0,0,0,.6); }
+body.modo2 #m2-sidebar .m2-modo-op.sel { background:rgba(255,255,255,.3); border-color:rgba(255,255,255,.55); }
+body.modo2 #m2-sidebar .m2-status { color:rgba(255,255,255,.8) !important; text-shadow:0 1px 2px rgba(0,0,0,.6); }
+body.modo2.m2-menu-aberto #m2-backdrop { background:rgba(2,6,23,.35) !important; }
+
+/* ===== LOJA NO TELEMÓVEL — produtos visíveis + carrinho em baixo (v2.9.165) ===== */
+@media(max-width:1100px){
+  #m2-esquerda { min-height:auto !important; flex:none; }
+  #m2-painel { flex:none !important; min-height:auto !important; }
+  #m2-grid { flex:none !important; }
+}
+@media(max-width:760px){
+  #m2-corpo { padding:12px 12px 150px !important; gap:12px; }
+  #m2-cabecalho { margin-bottom:10px; }
+  #m2-cabecalho .m2-cab-ico { width:42px; height:42px; }
+  #m2-cabecalho h1 { font-size:19px; }
+  #m2-painel { padding:12px; }
+  #m2-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:10px; padding:2px; }
+  .m2-card { padding:9px; border-radius:12px; }
+  .m2-card .m2-img { height:86px; font-size:32px; }
+  .m2-card .m2-nome { font-size:13px; margin:7px 0 4px; min-height:32px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .m2-card .m2-preco { font-size:14px; }
+  .m2-card .m2-add { width:32px; height:32px; }
+  #m2-cart { position:fixed !important; left:8px; right:8px; bottom:8px; z-index:900; height:auto !important; max-height:78dvh; overflow:hidden !important;
+    border-radius:18px; box-shadow:0 -8px 32px rgba(0,0,0,.22) !important; border:1px solid rgba(0,0,0,.06); }
+  #m2-cart .m2-cart-top { padding:11px 14px; cursor:pointer; }
+  #m2-cart .m2-cart-top b::after { content:'▲'; font-size:10px; margin-left:6px; opacity:.6; transition:transform .2s; }
+  #m2-cart.m2-aberto .m2-cart-top b::after { transform:rotate(180deg); }
+  #m2-cart .m2-itens { display:none; max-height:42dvh !important; }
+  #m2-cart.m2-aberto .m2-itens { display:block; }
+  #m2-cart .m2-cart-fundo { padding:10px 12px; display:grid; grid-template-columns:1fr 1fr; gap:8px; align-items:center; }
+  #m2-cart .m2-cart-fundo > .m2-linha, #m2-cart .m2-guardar { display:none; }
+  #m2-cart.m2-aberto .m2-cart-fundo > .m2-linha, #m2-cart.m2-aberto .m2-guardar { display:flex; grid-column:1 / -1; }
+  #m2-cart.m2-aberto .m2-guardar { justify-content:center; }
+  #m2-cart .m2-total-box { margin:0; padding:10px 12px; }
+  #m2-cart .m2-total-box b { font-size:14px; }
+  #m2-cart .m2-total-box .v { font-size:18px; }
+  #m2-cart .m2-finalizar { padding:13px 10px; font-size:15px; }
+  #m2-cart .m2-finalizar .m2-fin-seta { display:none; }
+}
 </style>
 
 <!-- Scanner de câmara (nível de topo: funciona no Modo Clássico e no Moderno) -->
@@ -6389,6 +6425,13 @@ body.modo2.m2-menu-aberto #m2-backdrop { background:rgba(2,6,23,.55) !important;
   </div>
 </div>
 
+<script>
+document.addEventListener('click', function(e){
+  var top = e.target.closest && e.target.closest('#m2-cart .m2-cart-top');
+  if (!top || e.target.closest('.m2-limpar') || window.innerWidth > 760) return;
+  document.getElementById('m2-cart').classList.toggle('m2-aberto');
+});
+</script>
 <div id="sidebar-m2" style="display:none;"></div>
 
 <script>

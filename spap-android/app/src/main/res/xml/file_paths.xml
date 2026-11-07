@@ -2,5 +2,6 @@
 <paths>
     <cache-path name="partilhas" path="partilhas/" />
     <cache-path name="fotos" path="fotos/" />
+    <cache-path name="apk" path="apk/" />
     <external-path name="transferencias" path="Download/" />
 </paths>

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spap-pdv-v238';
+const CACHE_NAME = 'spap-pdv-v239';
 const FICHEIROS = [
   '/',
   '/index.html',
@@ -69,6 +69,12 @@ self.addEventListener('fetch', e => {
         return r;
       }))
     );
+    return;
+  }
+
+  // Apps Android (APK + versão) — sempre da rede, nunca da cache
+  if (url.pathname.startsWith('/apps/')) {
+    e.respondWith(fetch(e.request, { cache: 'no-store' }));
     return;
   }
 

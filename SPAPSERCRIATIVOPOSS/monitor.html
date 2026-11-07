@@ -789,6 +789,21 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   .att-btn.att-sec { background:#fff; color:var(--az); box-shadow:0 2px 8px rgba(29,85,190,.08); border:1px solid #dbe7fb; }
   .att-btn-verde { background:linear-gradient(180deg,#34d399,#059669); box-shadow:0 10px 22px rgba(5,150,105,.30); }
   .att-quando { font-size:12px; color:#8a9bc0; font-weight:600; margin-top:10px; min-height:14px; }
+  .att-app-txt { font-size:14px; color:#334155; line-height:1.5; }
+  .att-app-txt b { color:#0f172a; }
+  .att-app-barra { height:10px; border-radius:10px; background:#e2e8f0; overflow:hidden; margin-top:10px; }
+  .att-app-barra i { display:block; height:100%; width:0; background:linear-gradient(90deg,#34d399,#059669); transition:width .2s; }
+  #pop-att { position:fixed; inset:0; z-index:100000; background:rgba(2,6,23,.55); display:flex; align-items:center; justify-content:center; padding:20px; animation:popAttF .2s ease; }
+  #pop-att .pa-box { background:#fff; border-radius:22px; max-width:360px; width:100%; padding:22px 20px 18px; text-align:center; box-shadow:0 24px 60px rgba(0,0,0,.35); animation:popAttS .28s cubic-bezier(.3,1.4,.5,1); }
+  #pop-att .pa-ico { width:70px; height:70px; margin:0 auto 10px; border-radius:50%; background:#ecfdf5; display:flex; align-items:center; justify-content:center; }
+  #pop-att .pa-ico img { width:46px; height:46px; animation:popAttG 2.4s ease-in-out infinite; }
+  #pop-att h3 { margin:0 0 6px; font-size:19px; color:#0f172a; }
+  #pop-att p { margin:0 0 16px; font-size:14px; color:#475569; line-height:1.45; }
+  #pop-att .pa-sim { width:100%; border:none; border-radius:14px; padding:14px; font-size:15.5px; font-weight:800; color:#fff; background:linear-gradient(180deg,#34d399,#059669); cursor:pointer; }
+  #pop-att .pa-nao { width:100%; border:none; background:none; color:#64748b; font-size:14px; padding:12px 0 2px; cursor:pointer; }
+  @keyframes popAttF { from { opacity:0; } }
+  @keyframes popAttS { from { transform:scale(.85); opacity:0; } }
+  @keyframes popAttG { 50% { transform:rotate(-8deg) scale(1.06); } }
   .att-card { background:#fff; border:1px solid #e3edfc; border-radius:20px; box-shadow:var(--sombra); padding:16px; }
   .att-card-tit { display:flex; align-items:center; gap:8px; font-size:16px; font-weight:800; color:var(--nv); margin-bottom:8px; }
   .att-card-tit img { width:28px; height:28px; }
@@ -5024,6 +5039,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
   }
 });
 async function instalarAppMonitor() {
+  if (window.SPAP_APP_NATIVA || /android/i.test(navigator.userAgent)) { abrirAtualizacoes(); setTimeout(() => { const c = document.getElementById('att-app'); if (c) c.scrollIntoView({ behavior:'smooth', block:'center' }); }, 600); return; }
   if (!_promptInstalarMonitor) {
     alert('Para instalar: abre o menu do navegador (⋮) e escolhe "Instalar aplicação" ou "Adicionar ao ecrã principal".');
     return;
@@ -5065,6 +5081,7 @@ function abrirAtualizacoes() {
   document.getElementById('att-instalada').textContent = MONITOR_VERSAO;
   abrirSubPainel('painel-atualizacoes');
   verificarAtualizacoesManual();
+  verificarApp();
 }
 async function verificarAtualizacoesManual() {
   const ico = document.getElementById('att-ico'), est = document.getElementById('att-estado'), sub = document.getElementById('att-sub');
@@ -5110,34 +5127,97 @@ async function verificarAtualizacoesManual() {
   // Só mostra a lista se a informação do servidor for desta versão ou de uma mais recente
   cardN.style.display = _cmpVersao(d.versao, MONITOR_VERSAO) >= 0 ? '' : 'none';
 }
+
+// ===== APP ANDROID (APK publicado no GitHub → servido em /apps/) =====
+const _EH_ANDROID = /android/i.test(navigator.userAgent);
+const _EH_APP = !!(window.SPAP_APP_NATIVA && window.SPAPNative);
+function _versaoAppInstalada() { try { return _EH_APP ? SPAPNative.versaoApp() : ''; } catch (e) { return ''; } }
+async function _lerVersaoApp() {
+  const r = await fetch('apps/app-version.json?nocache=' + Date.now(), { cache: 'no-store' });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+let _infoApp = null;
+async function verificarApp() {
+  const card = document.getElementById('att-app'); if (!card) return;
+  if (!_EH_APP && !_EH_ANDROID) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  const txt = document.getElementById('att-app-txt'), btn = document.getElementById('att-app-btn'), ver = document.getElementById('att-app-ver');
+  txt.textContent = 'A verificar a app…'; btn.style.display = 'none';
+  try { _infoApp = await _lerVersaoApp(); } catch (e) { _infoApp = null; }
+  if (!_infoApp || !_infoApp.versao) { txt.textContent = 'Não foi possível verificar a app agora. Tenta outra vez.'; return; }
+  ver.textContent = 'v' + _infoApp.versao;
+  const inst = _versaoAppInstalada();
+  if (_EH_APP) {
+    if (_cmpVersao(_infoApp.versao, inst) > 0) {
+      txt.innerHTML = 'Nova versão da app: <b>' + _escMon(_infoApp.versao) + '</b><br>Instalada: ' + _escMon(inst);
+      btn.style.display = ''; btn.textContent = 'Baixar e instalar ' + _infoApp.versao;
+    } else {
+      txt.innerHTML = 'A app está atualizada: <b>' + _escMon(inst) + '</b>';
+    }
+  } else {
+    txt.innerHTML = 'Instala a app <b>SPAP Monitor</b> no teu Android (versão ' + _escMon(_infoApp.versao) + ').';
+    btn.style.display = ''; btn.textContent = 'Baixar a app (' + _escMon(_infoApp.versao) + ')';
+  }
+}
+function instalarAppNova() {
+  const url = new URL((_infoApp && _infoApp.monitor) || 'apps/SPAP-Monitor.apk', location.href).href;
+  if (_EH_APP) {
+    const btn = document.getElementById('att-app-btn');
+    btn.disabled = true; btn.textContent = 'A baixar…';
+    document.getElementById('att-app-barra').style.display = '';
+    try { SPAPNative.instalarApp(url); } catch (e) { btn.disabled = false; btn.textContent = 'Tentar outra vez'; }
+  } else {
+    window.location.href = url;
+    try { mostrarNotif('📥 A baixar a app… Depois abre o ficheiro para instalar.'); } catch (e) {}
+  }
+}
+// Progresso enviado pela app nativa
+window.__spapAppProgresso = function (pct, estado) {
+  const barra = document.getElementById('att-app-prog'), btn = document.getElementById('att-app-btn');
+  if (barra) barra.style.width = Math.max(0, Math.min(100, pct)) + '%';
+  if (!btn) return;
+  if (estado === 'erro') { btn.disabled = false; btn.textContent = 'Falhou. Tentar outra vez'; }
+  else if (estado === 'permissao') { btn.disabled = false; btn.textContent = 'Permite instalar e toca aqui outra vez'; }
+  else if (estado === 'instalar') { btn.disabled = false; btn.textContent = 'Toca em «Instalar» no Android'; }
+  else btn.textContent = 'A baixar… ' + Math.round(pct) + '%';
+};
+
+// ===== POP-UP DE ATUALIZAÇÃO (aparece sozinho quando há versão nova) =====
+function _popupAtualizacao(chave, titulo, texto) {
+  if (document.getElementById('pop-att')) return;
+  try { if (sessionStorage.getItem('pop_att_' + chave)) return; } catch (e) {}
+  const el = document.createElement('div'); el.id = 'pop-att';
+  el.innerHTML = '<div class="pa-box"><div class="pa-ico"><img src="icons3d/brilho.png" alt=""></div><h3>' + _escMon(titulo) + '</h3><p>' + _escMon(texto) + '</p>'
+    + '<button class="pa-sim" type="button">Ver atualização</button><button class="pa-nao" type="button">Mais tarde</button></div>';
+  const fechar = () => { el.remove(); try { sessionStorage.setItem('pop_att_' + chave, '1'); } catch (e) {} };
+  el.querySelector('.pa-sim').onclick = () => { fechar(); try { fecharDefinicoes(); } catch (e) {} abrirAtualizacoes(); };
+  el.querySelector('.pa-nao').onclick = fechar;
+  document.body.appendChild(el);
+}
+async function verificarAppAuto() {
+  if (!_EH_APP) return;
+  try {
+    const d = await _lerVersaoApp();
+    if (d && d.versao && _cmpVersao(d.versao, _versaoAppInstalada()) > 0) {
+      _infoApp = d;
+      _popupAtualizacao('app' + d.versao, 'Nova versão da app!', 'A app SPAP Monitor ' + d.versao + ' já está disponível. Toca em «Ver atualização» para baixar e instalar.');
+    }
+  } catch (e) {}
+}
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.164';
+const MONITOR_VERSAO = '2.9.165';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
     if (!res.ok) return;
     const d = await res.json();
     _marcarAtualizacao(d);
-    if (_haVersaoNova(d) && !document.getElementById('banner-att-mon')) {
-      const livre = !document.querySelector('.sub-painel.aberto, .sub-painel.ativo, .modal-fundo.ativo, #def-sheet.aberto') && !document.querySelector('body > [id^="overlay-"]');
-      _marcarAtualizacao(d);
-      if (livre) {
-        // Volta a confirmar antes de recarregar: se entretanto abriste uma página, não interrompe
-        setTimeout(() => {
-          const aindaLivre = !document.querySelector('.sub-painel.aberto, .sub-painel.ativo, .modal-fundo.ativo, #def-sheet.aberto') && !document.querySelector('body > [id^="overlay-"]');
-          if (aindaLivre) { try { mostrarNotif('🔄 Nova versão. A atualizar automaticamente...'); } catch(e){} setTimeout(atualizarAgoraMonitor, 1200); }
-        }, 3500);
-        return;
-      }
-      const b = document.createElement('div');
-      b.id = 'banner-att-mon';
-      b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#1a56a0;color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);';
-      b.innerHTML = '<div style="flex:1;"><b>\ud83d\udd04 Nova versao disponivel! (' + d.versao + ')</b><div style="font-size:12px;color:#93c5fd;">' + (d.novidades||'Melhorias disponiveis.') + '</div></div>' +
-        '<button onclick="atualizarAgoraMonitor()" style="background:#e05c00;border:none;color:#fff;padding:10px 18px;border-radius:8px;font-weight:bold;cursor:pointer;">\u2b06\ufe0f Atualizar agora</button>' +
-        '<button onclick="this.parentElement.remove()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;padding:8px 12px;border-radius:8px;cursor:pointer;">\u2715</button>';
-      document.body.appendChild(b);
+    if (_haVersaoNova(d)) {
+      _popupAtualizacao('web' + d.versao, 'Nova atualização disponível!', 'Versão ' + d.versao + ': ' + (d.novidades || 'melhorias no Monitor.'));
     }
   } catch(e) {}
+  verificarAppAuto();
 }
 async function atualizarAgoraMonitor() {
   try {
@@ -5155,7 +5235,8 @@ async function atualizarAgoraMonitor() {
   window.location.replace(window.location.pathname + '?v=' + Date.now());
 }
 setTimeout(verificarAtualizacaoMonitor, 2000);
-setInterval(verificarAtualizacaoMonitor, 3 * 60 * 1000);
+setInterval(verificarAtualizacaoMonitor, 60 * 1000);
+setTimeout(verificarAtualizacaoMonitor, 8000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) verificarAtualizacaoMonitor(); });
 
 async function sair() {
@@ -6256,6 +6337,12 @@ async function carregarContagensEquipa() {
         <button class="att-btn" id="att-btn-verificar" onclick="verificarAtualizacoesManual()">Verificar agora</button>
       </div>
       <div class="att-quando" id="att-quando"></div>
+    </div>
+    <div class="att-card" id="att-app" style="display:none">
+      <div class="att-card-tit"><img src="icons3d/telemovel.png" alt=""><span>App Android · SPAP Monitor</span><em id="att-app-ver"></em></div>
+      <div class="att-app-txt" id="att-app-txt">A verificar a app…</div>
+      <div class="att-app-barra" id="att-app-barra" style="display:none"><i id="att-app-prog"></i></div>
+      <button class="att-btn att-btn-verde" id="att-app-btn" style="display:none;width:100%;margin-top:10px" onclick="instalarAppNova()">Baixar e instalar</button>
     </div>
     <div class="att-card" id="att-novidades" style="display:none">
       <div class="att-card-tit"><img src="icons3d/brilho.png" alt=""><span id="att-novidades-tit">O que há de novo</span><em id="att-novidades-ver"></em></div>

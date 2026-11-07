@@ -100,6 +100,9 @@ public class MainActivity extends Activity {
     private boolean emOffline = false;
     private final Handler ui = new Handler(Looper.getMainLooper());
     private ConnectivityManager.NetworkCallback redeCallback;
+    private String instalacaoPendente;
+    private boolean aBaixarApp = false;
+    private boolean avisoAppMostrado = false;
 
     // ------------------------------------------------------------------ ciclo de vida
 
@@ -144,6 +147,11 @@ public class MainActivity extends Activity {
         super.onResume();
         web.onResume();
         CookieManager.getInstance().flush();
+        if (instalacaoPendente != null && podeInstalar()) {
+            String u = instalacaoPendente; instalacaoPendente = null;
+            instalarApp(u);
+        }
+        if (!BuildConfig.IS_MONITOR) ui.postDelayed(this::verificarAppLoja, 4000);
     }
 
     @Override
@@ -689,6 +697,104 @@ public class MainActivity extends Activity {
         }
     }
 
+    // ------------------------------------------------------------------ atualizar a app (APK)
+
+    private boolean podeInstalar() {
+        return Build.VERSION.SDK_INT < 26 || getPackageManager().canRequestPackageInstalls();
+    }
+
+    private void progressoJs(int pct, String estado) {
+        ui.post(() -> web.evaluateJavascript("window.__spapAppProgresso && window.__spapAppProgresso(" + pct + ",'" + estado + "')", null));
+    }
+
+    /** Baixa o APK e abre o instalador do Android. */
+    private void instalarApp(String url) {
+        if (aBaixarApp) return;
+        if (!podeInstalar()) {
+            instalacaoPendente = url;
+            progressoJs(0, "permissao");
+            Toast.makeText(this, "Ative «Permitir desta fonte» e volte à app.", Toast.LENGTH_LONG).show();
+            try {
+                startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + getPackageName())));
+            } catch (Exception e) { instalacaoPendente = null; abrirFora(Uri.parse(url)); }
+            return;
+        }
+        aBaixarApp = true;
+        new Thread(() -> {
+            java.net.HttpURLConnection c = null;
+            try {
+                File pasta = new File(getCacheDir(), "apk");
+                pasta.mkdirs();
+                File f = new File(pasta, "SPAP-atualizacao.apk");
+                c = (java.net.HttpURLConnection) new java.net.URL(url + (url.contains("?") ? "&" : "?") + "t=" + System.currentTimeMillis()).openConnection();
+                c.setConnectTimeout(15000);
+                c.setReadTimeout(30000);
+                c.setInstanceFollowRedirects(true);
+                if (c.getResponseCode() != 200) throw new IllegalStateException("HTTP " + c.getResponseCode());
+                long total = c.getContentLengthLong();
+                try (java.io.InputStream in = c.getInputStream(); FileOutputStream out = new FileOutputStream(f)) {
+                    byte[] buf = new byte[64 * 1024];
+                    long lido = 0; int n, ultimo = -1;
+                    while ((n = in.read(buf)) > 0) {
+                        out.write(buf, 0, n); lido += n;
+                        int pct = total > 0 ? (int) (lido * 100 / total) : 50;
+                        if (pct != ultimo) { ultimo = pct; progressoJs(pct, "baixar"); }
+                    }
+                }
+                progressoJs(100, "instalar");
+                Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".ficheiros", f);
+                Intent i = new Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/vnd.android.package-archive")
+                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                ui.post(() -> {
+                    try { startActivity(i); } catch (Exception e) { Toast.makeText(this, "Não foi possível abrir o instalador.", Toast.LENGTH_LONG).show(); }
+                });
+            } catch (Exception e) {
+                progressoJs(0, "erro");
+                ui.post(() -> Toast.makeText(this, "Falhou a baixar a atualização. Verifique a internet.", Toast.LENGTH_LONG).show());
+            } finally {
+                if (c != null) c.disconnect();
+                aBaixarApp = false;
+            }
+        }).start();
+    }
+
+    /** App Loja: verifica se há APK novo e mostra o aviso para atualizar. */
+    private void verificarAppLoja() {
+        if (avisoAppMostrado || isFinishing()) return;
+        final String base = bases[baseAtual];
+        new Thread(() -> {
+            java.net.HttpURLConnection c = null;
+            try {
+                c = (java.net.HttpURLConnection) new java.net.URL(base + "/apps/app-version.json?t=" + System.currentTimeMillis()).openConnection();
+                c.setConnectTimeout(8000); c.setReadTimeout(8000); c.setUseCaches(false);
+                if (c.getResponseCode() != 200) return;
+                StringBuilder sb = new StringBuilder();
+                try (BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream(), StandardCharsets.UTF_8))) {
+                    String l; while ((l = r.readLine()) != null) sb.append(l);
+                }
+                org.json.JSONObject j = new org.json.JSONObject(sb.toString());
+                String v = j.optString("versao", "");
+                String caminho = j.optString("loja", "apps/SPAP-Loja.apk");
+                if (v.isEmpty() || compararVersoes(v, BuildConfig.VERSION_NAME) <= 0) return;
+                final String url = caminho.startsWith("http") ? caminho : base + "/" + caminho.replaceFirst("^/", "");
+                ui.post(() -> {
+                    if (avisoAppMostrado || isFinishing()) return;
+                    avisoAppMostrado = true;
+                    new android.app.AlertDialog.Builder(this)
+                            .setTitle("Nova versão da app")
+                            .setMessage("A app SPAP Loja " + v + " já está disponível.\n\nQuer baixar e instalar agora?")
+                            .setPositiveButton("Atualizar", (d, w) -> {
+                                Toast.makeText(this, "A baixar a atualização…", Toast.LENGTH_SHORT).show();
+                                instalarApp(url);
+                            })
+                            .setNegativeButton("Mais tarde", null)
+                            .show();
+                });
+            } catch (Exception ignored) {
+            } finally { if (c != null) c.disconnect(); }
+        }).start();
+    }
+
     // ------------------------------------------------------------------ notificações
 
     private void criarCanalNotificacoes() {
@@ -796,6 +902,10 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void tentarDeNovo() { MainActivity.this.tentarDeNovo(); }
 
         @JavascriptInterface public String versaoApp() { return BuildConfig.VERSION_NAME; }
+
+        @JavascriptInterface public String tipoApp() { return BuildConfig.IS_MONITOR ? "monitor" : "loja"; }
+
+        @JavascriptInterface public void instalarApp(String url) { ui.post(() -> MainActivity.this.instalarApp(url)); }
     }
 
     // ------------------------------------------------------------------ utilitários
