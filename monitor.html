@@ -275,6 +275,9 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
              font:700 14.5px/1.2 inherit; font-family:inherit; color:var(--nv); text-align:left; cursor:pointer; }
   .sa-item img { width:26px; height:26px; flex-shrink:0; }
   .sa-item span { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .sa-item .sa-txt { display:flex; flex-direction:column; min-width:0; text-align:left; }
+  .sa-item .sa-txt b { font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .sa-item .sa-txt small { font-size:11.5px; font-weight:600; color:#64748b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:1px; }
   .sa-item:hover { background:#f1f6ff; }
   .sa-item.atual { background:#e8f1ff; color:var(--az); }
   .sa-ok { font-style:normal; font-weight:900; color:var(--az); }
@@ -899,7 +902,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.174" defer></script>
+<script src="app-android.js?v=2.9.175" defer></script>
 </head>
 <body>
 <script>
@@ -1633,9 +1636,9 @@ async function iniciar() {
   if (isSuperAdmin) {
     // Super-admin: carrega TODAS as lojas
     const { data: lojas } = await supabaseClient
-      .from('lojas').select('id, nome').order('nome');
+      .from('lojas').select('id, nome, nome_empresa, email_dono').order('nome');
 
-    todasLojas = lojas || [];
+    todasLojas = (lojas || []).map(l => Object.assign({}, l, { nome: _nomeLojaPerfil(l) }));
     // Por defeito abre a LOJA DE TESTE criada com a própria conta do Super Admin
     // (a loja onde este e-mail é dono/membro). Ver outras lojas exige o código 0210.
     let _minhas = [];
@@ -1887,14 +1890,21 @@ function renderSelectorLojas() {
   const dl = document.getElementById('def-loja'); if (dl) dl.textContent = 'Super Admin · ' + atual;
   _renderSuperMenu();
 }
+// Nome da loja como está no PERFIL: usa o nome; se estiver vazio (ou for um e-mail), usa o «Nome da empresa» do perfil.
+function _nomeLojaPerfil(l) {
+  const n = String((l && l.nome) || '').trim(), e = String((l && l.nome_empresa) || '').trim();
+  if (n && !n.includes('@')) return n;
+  if (e && !e.includes('@')) return e;
+  return 'Loja sem nome';
+}
 function _renderSuperMenu() {
   const box = document.getElementById('sa-box'); if (!box) return;
-  const item = (val, nome, ico, eAtual) => '<button class="sa-item' + (eAtual ? ' atual' : '') + '" type="button" onclick="trocarLojaSuper(\'' + val + '\')">'
-    + '<img src="icons3d/' + ico + '.png" alt=""><span>' + _escMon(nome) + '</span>' + (eAtual ? '<i class="sa-ok">✓</i>' : '') + '</button>';
+  const item = (val, nome, ico, eAtual, email) => '<button class="sa-item' + (eAtual ? ' atual' : '') + '" type="button" onclick="trocarLojaSuper(\'' + val + '\')">'
+    + '<img src="icons3d/' + ico + '.png" alt=""><span class="sa-txt"><b>' + _escMon(nome) + '</b>' + (email ? '<small>' + _escMon(email) + '</small>' : '') + '</span>' + (eAtual ? '<i class="sa-ok">✓</i>' : '') + '</button>';
   box.innerHTML = '<button class="sa-item sa-admin" type="button" onclick="window.location.href=\'admin.html\'"><img src="icons3d/shield.png" alt=""><span>Painel de Administração</span><i class="sa-chev-r"></i></button>'
     + '<div class="sa-sec">Ver loja</div>'
     + item('geral', 'Todas as Lojas', 'globe', modoGeral)
-    + (todasLojas || []).map(l => item(l.id, l.nome, 'store', !modoGeral && l.id === lojaId)).join('');
+    + (todasLojas || []).map(l => item(l.id, l.nome, 'store', !modoGeral && l.id === lojaId, l.email_dono)).join('');
 }
 function _esconderSuperAdmin() {
   const da = document.getElementById('def-admin'); if (da) da.style.display = 'none';
@@ -5274,7 +5284,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.174';
+const MONITOR_VERSAO = '2.9.175';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });

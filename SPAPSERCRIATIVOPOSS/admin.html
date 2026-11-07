@@ -349,7 +349,7 @@ async function iniciar() {
 async function carregarLojas() {
   const { data, error } = await supabaseClient
     .from('lojas')
-    .select('id, nome, telefone, endereco, email_dono, plano, estado, numero_transferencia, criado_em, data_expiracao, data_upgrade')
+    .select('id, nome, nome_empresa, telefone, endereco, email_dono, plano, estado, numero_transferencia, criado_em, data_expiracao, data_upgrade')
     .order('criado_em', { ascending: false });
 
   if (error) { notif('❌ Erro ao carregar: ' + error.message, true); return; }
@@ -528,7 +528,7 @@ function renderLojas() {
         <div class="lc-esq">
           <span class="lc-chev" id="chev-${l.id}"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M8 5v14l11-7z"/></svg></span>
           <img class="lc-ico" src="icons3d/store.png" alt="">
-          <div class="loja-nome">${(l.nome || '(sem nome)').replace(/</g,'&lt;')}</div>
+          <div class="loja-nome">${((l.nome && !String(l.nome).includes('@') ? l.nome : (l.nome_empresa && !String(l.nome_empresa).includes('@') ? l.nome_empresa : 'Loja sem nome')) + '').replace(/</g,'&lt;')}${l.email_dono ? '<div style="font-size:12px;font-weight:600;color:#64748b;margin-top:2px;">' + String(l.email_dono).replace(/</g,'&lt;') + '</div>' : ''}</div>
         </div>
         <div class="lc-selos">
           <span class="badge ${en}">${textoEstado(l.estado)}</span>
