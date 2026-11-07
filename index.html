@@ -5700,7 +5700,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.165';
+  const VERSAO_ATUAL = '2.9.166';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -6316,6 +6316,40 @@ body.modo2.m2-menu-aberto #m2-backdrop { background:rgba(2,6,23,.35) !important;
   #m2-cart .m2-finalizar { padding:13px 10px; font-size:15px; }
   #m2-cart .m2-finalizar .m2-fin-seta { display:none; }
 }
+
+/* ===== ÍCONES DO MENU EM DOURADO DA MARCA (v2.9.166) ===== */
+body.modo2 #m2-sidebar .m2-nav .ico { color:#f5c542 !important; background:linear-gradient(145deg,rgba(245,197,66,.20),rgba(200,144,26,.10)) !important;
+  border:1px solid rgba(245,197,66,.45) !important; box-shadow:0 2px 10px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,235,170,.25); }
+body.modo2 #m2-sidebar .m2-nav .ico svg { filter:drop-shadow(0 1px 1px rgba(0,0,0,.5)); }
+body.modo2 #m2-sidebar .m2-nav:hover .ico, body.modo2 #m2-sidebar .m2-nav.ativo .ico { background:linear-gradient(145deg,#f7d46b,#c8901a) !important; color:#1a1405 !important; border-color:#f5c542 !important; }
+body.modo2 #m2-sidebar .m2-nav.ativo { border-color:rgba(245,197,66,.55) !important; }
+body.modo2 #m2-sidebar .m2-nav.m2-sair .ico { color:#f5c542 !important; }
+body.modo2 #m2-sidebar .m2-nav.m2-sair { color:#ffffff !important; }
+
+/* ===== MODO ESCURO MISTURADO COM VERDE (v2.9.166) ===== */
+body.modo2.m2-escuro { --m2-ac:#22c55e; --m2-ac-soft:rgba(34,197,94,.16); }
+body.modo2.m2-escuro #modo2-app { background:radial-gradient(1200px 600px at 0% 0%, #0c3a22 0%, transparent 60%), radial-gradient(900px 500px at 100% 100%, #0a2e1b 0%, transparent 55%), #04110a !important; }
+body.modo2.m2-escuro #m2-topbar { background:rgba(6,26,15,.92) !important; border-bottom-color:#12402a !important; }
+body.modo2.m2-escuro #m2-topbar .m2-busca input, body.modo2.m2-escuro #m2-topbar .m2-loja, body.modo2.m2-escuro #m2-subrow input, body.modo2.m2-escuro .m2-cat-btn { background:#0b2617 !important; border-color:#174d31 !important; color:#ecfdf3 !important; }
+body.modo2.m2-escuro #m2-painel, body.modo2.m2-escuro #m2-cart { background:rgba(7,28,17,.88) !important; border:1px solid #14432b !important; }
+body.modo2.m2-escuro .m2-card { background:#0b2617 !important; border-color:#174d31 !important; }
+body.modo2.m2-escuro .m2-card:hover { border-color:#22c55e !important; box-shadow:0 8px 22px rgba(34,197,94,.15); }
+body.modo2.m2-escuro .m2-card .m2-img, body.modo2.m2-escuro #m2-cart .m2-item .m2-it-img { background:linear-gradient(160deg,#0f3320,#08200f) !important; }
+body.modo2.m2-escuro .m2-card .m2-add, body.modo2.m2-escuro #m2-topbar .m2-menu-btn, body.modo2.m2-escuro #m2-cabecalho .m2-cab-ico { background:#16a34a !important; color:#ffffff !important; }
+body.modo2.m2-escuro #m2-cabecalho .m2-cab-ico svg { color:#ffffff !important; }
+body.modo2.m2-escuro #m2-cart .m2-finalizar { background:linear-gradient(180deg,#22c55e,#15803d) !important; color:#fff !important; box-shadow:0 8px 22px rgba(34,197,94,.28) !important; }
+body.modo2.m2-escuro #m2-cart .m2-total-box { background:#0b2617 !important; border:1px solid #174d31 !important; }
+body.modo2.m2-escuro #m2-cart .m2-total-box .v { color:#4ade80 !important; }
+body.modo2.m2-escuro #m2-cart .m2-guardar, body.modo2.m2-escuro #m2-cart .m2-item .m2-step button { background:#0b2617 !important; border-color:#174d31 !important; color:#ecfdf3 !important; }
+body.modo2.m2-escuro #m2-cart .m2-cart-top, body.modo2.m2-escuro #m2-cart .m2-cart-fundo, body.modo2.m2-escuro #m2-cart .m2-item { border-color:#14432b !important; }
+body.modo2.m2-escuro #m2-chips .chip { background:#0b2617 !important; color:#d1fae5 !important; }
+body.modo2.m2-escuro #m2-chips .chip.ativo, body.modo2.m2-escuro .m2-cat-item.ativo { background:#16a34a !important; color:#fff !important; }
+body.modo2.m2-escuro .m2-cat-menu { background:#071b10 !important; border-color:#14432b !important; }
+body.modo2.m2-escuro .m2-cat-item:hover { background:#0b2617 !important; }
+body.modo2.m2-escuro .m2-cat-btn .m2-cat-ico { color:#4ade80 !important; }
+body.modo2.m2-escuro #m2-cabecalho p, body.modo2.m2-escuro #m2-cart .m2-linha, body.modo2.m2-escuro #m2-cart .m2-item .m2-it-preco, body.modo2.m2-escuro .m2-card .m2-preco small { color:#86efac !important; }
+body.modo2.m2-escuro #m2-sidebar { background:linear-gradient(180deg,rgba(8,40,24,.55),rgba(4,20,12,.45)) !important; border-right-color:rgba(74,222,128,.22) !important; }
+body.modo2.m2-escuro #m2-grid::-webkit-scrollbar-thumb, body.modo2.m2-escuro #m2-cart .m2-itens::-webkit-scrollbar-thumb { background:#174d31 !important; }
 </style>
 
 <!-- Scanner de câmara (nível de topo: funciona no Modo Clássico e no Moderno) -->
