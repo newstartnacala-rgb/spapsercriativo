@@ -2,7 +2,13 @@
 (function () {
   try {
     var ua = navigator.userAgent || '';
-    if (!/android/i.test(ua) || /SPAPApp/i.test(ua) || window.SPAP_APP_NATIVA) return;
+    if (/SPAPApp/i.test(ua) || window.SPAP_APP_NATIVA) return;          // já está dentro da app
+    if (/Windows|Macintosh|Mac OS X|CrOS|iPhone|iPad|iPod/i.test(ua) && !/android/i.test(ua)) return; // computador / iPhone: nunca
+    var plat = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+    // Telemóvel ou TABLET Android — os tablets costumam abrir o site em «modo computador» (Linux, sem a palavra Android)
+    var ehAndroid = /android/i.test(ua) || /android/i.test(plat)
+      || (/Linux/i.test(ua) && ((navigator.maxTouchPoints || 0) > 0 || /arm|aarch64/i.test(navigator.platform || '')));
+    if (!ehAndroid) return;
     var tipo = /monitor/i.test(location.pathname) ? 'monitor' : 'loja';
     var nome = tipo === 'monitor' ? 'SPAP Monitor' : 'SPAP Loja';
     var apk = 'apps/' + (tipo === 'monitor' ? 'SPAP-Monitor.apk' : 'SPAP-Loja.apk');
@@ -32,7 +38,7 @@
       var el = document.createElement('div'); el.id = 'apk-convite';
       el.innerHTML = '<div class="ak"><div class="ak-ico"><img src="apps/icon-' + tipo + '.png" alt=""></div>'
         + '<h3>Instale a app ' + nome + '</h3>'
-        + '<p>Use o ' + (tipo === 'monitor' ? 'Monitor' : 'sistema da Loja') + ' como uma app no seu telemóvel' + (versao ? ' (versão ' + versao + ')' : '') + '.</p>'
+        + '<p>Use o ' + (tipo === 'monitor' ? 'Monitor' : 'sistema da Loja') + ' como uma app no seu telemóvel ou tablet' + (versao ? ' (versão ' + versao + ')' : '') + '.</p>'
         + '<div class="ak-van"><span>⚡ Mais rápida</span><span>📲 Ícone no ecrã</span><span>🔄 Atualiza sozinha</span></div>'
         + '<a class="ak-sim" href="' + apk + '" download>Baixar e instalar</a>'
         + '<button class="ak-nao" type="button">Agora não</button></div>';
