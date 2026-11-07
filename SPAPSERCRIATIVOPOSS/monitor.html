@@ -899,7 +899,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.173" defer></script>
+<script src="app-android.js?v=2.9.174" defer></script>
 </head>
 <body>
 <script>
@@ -1636,8 +1636,19 @@ async function iniciar() {
       .from('lojas').select('id, nome').order('nome');
 
     todasLojas = lojas || [];
-    // Por defeito mostra SÓ a Loja João (demo). Ver outras lojas exige o código 0210.
-    const _joao = (todasLojas.find(l => /jo[aã]o/i.test(l.nome || '')) || todasLojas[0]);
+    // Por defeito abre a LOJA DE TESTE criada com a própria conta do Super Admin
+    // (a loja onde este e-mail é dono/membro). Ver outras lojas exige o código 0210.
+    let _minhas = [];
+    try {
+      const { data: _m } = await supabaseClient.from('membros_loja').select('loja_id, papel').eq('user_id', sessao.user.id);
+      _minhas = (_m || []).slice().sort((a, b) => (b.papel === 'dono') - (a.papel === 'dono')).map(x => x.loja_id);
+    } catch (e) {}
+    const _teste = (_minhas.map(id => todasLojas.find(l => l.id === id)).find(Boolean))
+      || todasLojas.find(l => /teste|test/i.test(l.nome || ''))
+      || todasLojas.find(l => /jo[aã]o/i.test(l.nome || ''))
+      || todasLojas[0];
+    window._lojaTesteId = _teste ? _teste.id : null;
+    const _joao = _teste;
     if (_joao) { lojaId = _joao.id; modoGeral = false; nomeLoja = _joao.nome; }
     else { lojaId = null; modoGeral = true; }
     window._lojasDesbloqueadas = false;
@@ -1898,7 +1909,7 @@ async function trocarLojaSuper(valor) {
   if (!isSuperAdmin) return;
   fecharSuperMenu();
   // Ver outras lojas / todas exige o código 0210 (uma vez por sessão) — igual ao comportamento anterior
-  const _joaoId = ((todasLojas || []).find(l => /jo[aã]o/i.test(l.nome || '')) || {}).id;
+  const _joaoId = window._lojaTesteId;
   if (!window._lojasDesbloqueadas && valor !== _joaoId) {
     const cod = prompt('🔒 Para ver as vendas de outras lojas, escreve o código:');
     if (cod !== '0210') { mostrarNotif('❌ Código errado.', true); return; }
@@ -5263,7 +5274,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.173';
+const MONITOR_VERSAO = '2.9.174';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
