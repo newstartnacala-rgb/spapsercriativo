@@ -1,0 +1,60 @@
+name: SPAP Apps Android (Monitor + Loja)
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'spap-android/**', '.github/workflows/spap-apk.yml' ]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: spap-apk
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Instalar componentes do SDK
+        run: |
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKM" ] || SDKM="$(command -v sdkmanager)"
+          yes | "$SDKM" --licenses >/dev/null 2>&1 || true
+          "$SDKM" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+      - name: Compilar APKs
+        working-directory: spap-android
+        run: |
+          chmod +x gradlew
+          VN="1.0.${GITHUB_RUN_NUMBER}"
+          VC=$(( 100 + ${GITHUB_RUN_NUMBER} ))
+          echo "VN=$VN" >> $GITHUB_ENV
+          ./gradlew assembleMonitorRelease assembleLojaRelease --no-daemon --stacktrace -PappVersionName="$VN" -PappVersionCode="$VC"
+      - name: Gravar APKs no repositório
+        run: |
+          mkdir -p apks-build
+          cp spap-android/app/build/outputs/apk/monitor/release/app-monitor-release.apk apks-build/SPAP-Monitor.apk
+          cp spap-android/app/build/outputs/apk/loja/release/app-loja-release.apk apks-build/SPAP-Loja.apk
+          ls -lh apks-build
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f apks-build/SPAP-Monitor.apk apks-build/SPAP-Loja.apk
+          git commit -m "APKs SPAP $VN [skip ci]" || echo "sem mudanças"
+          git pull --rebase --autostash || true
+          git push
+      - name: Publicar em Releases (link fixo de download)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="apps-v$VN"
+          gh release create "$TAG" apks-build/SPAP-Monitor.apk apks-build/SPAP-Loja.apk \
+            --title "SPAP Apps $VN" \
+            --notes "SPAP Monitor e SPAP Loja (Android). Instalar: descarregar o APK e abrir no telemóvel." \
+            --latest
+      - uses: actions/upload-artifact@v4
+        with:
+          name: spap-apks
+          path: apks-build/SPAP-*.apk
+          retention-days: 14
