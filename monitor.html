@@ -902,7 +902,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.175" defer></script>
+<script src="app-android.js?v=2.9.176" defer></script>
 </head>
 <body>
 <script>
@@ -1928,7 +1928,9 @@ async function trocarLojaSuper(valor) {
   if (valor === 'geral') { lojaId = null; modoGeral = true; nomeLoja = 'Todas as Lojas'; }
   else { lojaId = valor; modoGeral = false; const l = todasLojas.find(x => x.id === lojaId); nomeLoja = (l && l.nome) || ''; }
   renderSelectorLojas();
-  await carregarTudo();
+  _ultimaVendaVista = null;
+  mostrarLojaEmCache();          // instantâneo: dados desta loja (se já aberta) ou ecrã limpo — nunca os da loja anterior
+  try { await carregarTudo(); } catch (e) { mostrarNotif('⚠️ Sem ligação para carregar esta loja.', true); }
 }
 // O título do topo mostra o nome da loja registada pelo dono (1.ª palavra escura, resto a azul);
 // por baixo fica só a palavra "Loja".
@@ -2032,31 +2034,46 @@ async function mudarCodigoVendas() {
   mostrarNotif('✅ Código de acesso às vendas alterado!');
 }
 
+// ===== CARREGAMENTO RÁPIDO + SEM MISTURAR LOJAS =====
+// • Cada pedido tem um número: se entretanto se escolheu outra loja, a resposta antiga é deitada fora
+//   (antes, uma resposta atrasada da loja anterior podia aparecer na loja nova).
+// • Fase 1 (≈ 1 s): vendas de ontem e hoje + produtos → o ecrã aparece logo.
+// • Fase 2 (em segundo plano, 1 vez por loja): histórico completo de vendas.
+// • As lojas já abertas ficam em memória: voltar a uma loja é instantâneo.
+let _pedidoCarga = 0;
+const _cacheLojas = new Map();
+function _chaveLojaAtual() { return (isSuperAdmin && modoGeral) ? 'geral' : String(lojaId || ''); }
+function mostrarLojaEmCache() {
+  const c = _cacheLojas.get(_chaveLojaAtual());
+  if (c) { todasVendas = c.vendas.slice(); todosProdutos = c.produtos; todosMemb = c.memb; }
+  else { todasVendas = []; todosProdutos = []; todosMemb = []; }
+  try { aplicarDiaHome(); renderVendasHistorico(filtroVendasAtivo); } catch (e) {}
+  return !!c;
+}
 async function carregarTudo() {
+  const meu = ++_pedidoCarga;
+  const chave = _chaveLojaAtual();
+  const geral = isSuperAdmin && modoGeral;
+  const lojaDoPedido = lojaId;
   const hoje = new Date();
   const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).toISOString();
+  const desde = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - 1).toISOString();
+  const daLoja = (q) => geral ? q : q.eq('loja_id', lojaDoPedido);
+  const COLS_P = 'id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em,imagem,unidade';
+  const cache = _cacheLojas.get(chave);
 
-  if (isSuperAdmin && modoGeral) {
-    // Modo geral: busca vendas e produtos de TODAS as lojas
-    const [r1, r2, r3] = await Promise.all([
-      supabaseClient.from('vendas').select('*, venda_itens(*)').order('criado_em', {ascending:false}),
-      supabaseClient.from('produtos').select('id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em,imagem,unidade').order('nome'),
-      supabaseClient.from('membros_loja').select('*, lojas(nome)')
-    ]);
-    todasVendas = r1.data || [];
-    todosProdutos = r2.data || [];
-    todosMemb = r3.data || [];
-  } else {
-    // Modo loja específica
-    const [r1, r2, r3] = await Promise.all([
-      supabaseClient.from('vendas').select('*, venda_itens(*)').eq('loja_id', lojaId).order('criado_em', {ascending:false}),
-      supabaseClient.from('produtos').select('id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em,imagem,unidade').eq('loja_id', lojaId).order('nome'),
-      supabaseClient.from('membros_loja').select('*, lojas(nome)').eq('loja_id', lojaId)
-    ]);
-    todasVendas = r1.data || [];
-    todosProdutos = r2.data || [];
-    todosMemb = r3.data || [];
-  }
+  const [r1, r2, r3] = await Promise.all([
+    daLoja(supabaseClient.from('vendas').select('*, venda_itens(*)')).gte('criado_em', desde).order('criado_em', {ascending:false}),
+    daLoja(supabaseClient.from('produtos').select(COLS_P)).order('nome'),
+    geral ? supabaseClient.from('membros_loja').select('*, lojas(nome)') : supabaseClient.from('membros_loja').select('*, lojas(nome)').eq('loja_id', lojaDoPedido)
+  ]);
+  if (meu !== _pedidoCarga) return;            // entretanto escolheu-se outra loja → ignora
+  const recentes = r1.data || [];
+  // junta as vendas recentes com o histórico mais antigo já conhecido desta loja
+  const antigas = (cache && cache.completo) ? cache.vendas.filter(v => v.criado_em < desde) : [];
+  todasVendas = recentes.concat(antigas);
+  todosProdutos = r2.data || [];
+  todosMemb = r3.data || [];
 
   // O Supabase devolve no máx. 1000 produtos por pedido. Se bateu no limite,
   // vai buscar as páginas seguintes (senão lojas com muitos produtos perdiam os mais recentes).
@@ -2077,6 +2094,8 @@ async function carregarTudo() {
     } catch(e) {}
   }
 
+  if (meu !== _pedidoCarga) return;
+  _cacheLojas.set(chave, { vendas: todasVendas.slice(), produtos: todosProdutos, memb: todosMemb, completo: !!(cache && cache.completo), t: Date.now() });
   aplicarDiaHome();
   renderVendasHistorico(filtroVendasAtivo);
   const vendasHojeReal = todasVendas.filter(v => v.criado_em >= inicioHoje);
@@ -2084,6 +2103,23 @@ async function carregarTudo() {
   // Se algum sub-painel estiver aberto, re-renderiza com os dados novos
   { var _pp = document.getElementById('painel-produtos'); if (_pp && _pp.classList.contains('aberto')) renderProdutosSubPainel(); }
   { var _ps = document.getElementById('painel-stock'); if (_ps && _ps.classList.contains('aberto')) renderStockSubPainel(); }
+
+  // Fase 2: histórico completo (em segundo plano; 1 vez por loja, e de novo a cada 5 minutos)
+  const c2 = _cacheLojas.get(chave);
+  if (!c2.completo || (Date.now() - (c2.tCompleto || 0)) > 5 * 60 * 1000) {
+    (async () => {
+      try {
+        const { data, error } = await daLoja(supabaseClient.from('vendas').select('*, venda_itens(*)')).order('criado_em', {ascending:false});
+        if (error || !data) return;
+        const atual = _cacheLojas.get(chave);
+        if (atual) { atual.vendas = data; atual.completo = true; atual.tCompleto = Date.now(); }
+        if (meu !== _pedidoCarga || _chaveLojaAtual() !== chave) return;   // já se mudou de loja
+        todasVendas = data.slice();
+        aplicarDiaHome();
+        renderVendasHistorico(filtroVendasAtivo);
+      } catch (e) {}
+    })();
+  }
 }
 
 // Aplica o dia seleccionado (ou hoje) aos cards da Home
@@ -5284,7 +5320,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.175';
+const MONITOR_VERSAO = '2.9.176';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
