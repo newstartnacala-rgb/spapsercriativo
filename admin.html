@@ -173,6 +173,20 @@ body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; c
 .lc-selos { display:flex; gap:6px; align-items:center; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end; }
 .badge { display:inline-flex; align-items:center; gap:5px; padding:5px 11px; font-size:12.5px; font-weight:800; border-radius:999px; }
 .badge img { width:17px; height:17px; }
+.plano-btn { cursor:pointer; font-family:inherit; transition:transform .12s, box-shadow .15s; }
+.plano-btn:hover { box-shadow:0 4px 12px rgba(29,111,242,.18); transform:translateY(-1px); }
+.plano-btn .pb-seta { width:16px; height:16px; margin-left:-2px; opacity:.75; }
+#pop-plano { position:fixed; z-index:9999; width:250px; background:#fff; border-radius:18px; padding:8px; box-shadow:0 20px 50px rgba(11,27,77,.25); border:1px solid #e2e8f0; animation:ppIn .18s ease; }
+#pop-plano .pp-tit { font-size:11px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:#64748b; padding:6px 10px 8px; }
+#pop-plano .pp-op { display:flex; align-items:center; gap:10px; width:100%; border:none; background:none; padding:10px; border-radius:12px; cursor:pointer; text-align:left; font-family:inherit; color:#0b1b4d; }
+#pop-plano .pp-op:hover { background:#f1f6ff; }
+#pop-plano .pp-op.sel { background:#eaf2ff; }
+#pop-plano .pp-op img { width:28px; height:28px; flex-shrink:0; }
+#pop-plano .pp-op span { flex:1; display:flex; flex-direction:column; }
+#pop-plano .pp-op b { font-size:14.5px; }
+#pop-plano .pp-op small { font-size:12px; color:#64748b; font-weight:600; margin-top:1px; }
+#pop-plano .pp-op i { font-style:normal; color:#1d6ff2; font-weight:900; }
+@keyframes ppIn { from { opacity:0; transform:translateY(-6px) scale(.97); } }
 .badge.activo { background:linear-gradient(180deg,#f0fdf4,#dcfce7); color:#15803d; border:1px solid #bbf7d0; }
 .badge.suspenso, .badge.bloqueado { background:linear-gradient(180deg,#fff5f5,#fee2e2); color:#dc2626; border:1px solid #fecaca; }
 .badge.pendente, .badge.pendente_pagamento { background:linear-gradient(180deg,#fffaf0,#ffedd5); color:#c2410c; border:1px solid #fed7aa; }
@@ -398,8 +412,10 @@ async function lerConfig(chave) {
   return null;
 }
 
+let _planosCfg = PLANOS_DEFAULT;
 async function carregarConfigSubscricao() {
   const planos = (await lerConfig('planos_config')) || PLANOS_DEFAULT;
+  _planosCfg = planos;
   ['basico','pro','anual'].forEach(k => {
     const p = planos[k] || PLANOS_DEFAULT[k];
     const n = document.getElementById('cfg-'+k+'-nome');
@@ -532,7 +548,7 @@ function renderLojas() {
         </div>
         <div class="lc-selos">
           <span class="badge ${en}">${textoEstado(l.estado)}</span>
-          <span class="badge trial">${textoPlano(l.plano)}</span>
+          <button type="button" class="badge trial plano-btn" title="Mudar plano" onclick="event.stopPropagation(); abrirEscolhaPlano('${l.id}', this)">${textoPlano(l.plano)}<svg class="pb-seta" viewBox="0 0 24 24"><path fill="currentColor" d="M7 10l5 5 5-5z"/></svg></button>
           ${alerta ? '<span class="lc-alerta">🔔 A expirar!</span>' : ''}
         </div>
       </div>
@@ -615,6 +631,52 @@ async function eliminarLoja(id) {
   renderContadores();
   renderLojas();
   notif('🗑 Loja "' + nome + '" eliminada por completo.');
+}
+
+// ===== MUDAR O PLANO NO PRÓPRIO SELO (Básico / Pro / Anual) =====
+function fecharEscolhaPlano() { const p = document.getElementById('pop-plano'); if (p) p.remove(); }
+function abrirEscolhaPlano(id, btn) {
+  const jaAberto = document.getElementById('pop-plano');
+  fecharEscolhaPlano();
+  if (jaAberto && jaAberto.dataset.loja === id) return;
+  const loja = lojas.find(l => l.id === id); if (!loja) return;
+  const atual = loja.plano === 'bronze' ? 'pro' : loja.plano;
+  const cfg = (k) => Object.assign({}, PLANOS_DEFAULT[k], (_planosCfg || {})[k] || {});
+  const op = [
+    ['basico', 'gem', 'Básico'], ['pro', 'star', 'Pro'], ['anual', 'calendar', 'Anual']
+  ].map(([k, ico, nome]) => {
+    const c = cfg(k), preco = String(Math.round(Number(c.preco || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return '<button type="button" class="pp-op' + (atual === k ? ' sel' : '') + '" onclick="escolherPlano(\'' + id + '\',\'' + k + '\')">'
+      + '<img src="icons3d/' + ico + '.png" alt=""><span><b>' + nome + '</b><small>MT ' + preco + '/mês' + (k === 'anual' ? ' · 365 dias' : ' · 30 dias') + '</small></span>'
+      + (atual === k ? '<i>✓</i>' : '') + '</button>';
+  }).join('');
+  const pop = document.createElement('div');
+  pop.id = 'pop-plano'; pop.dataset.loja = id;
+  pop.innerHTML = '<div class="pp-tit">Plano da loja</div>' + op;
+  document.body.appendChild(pop);
+  const r = btn.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+  let x = Math.min(window.innerWidth - w - 10, Math.max(10, r.right - w));
+  let y = r.bottom + 6; if (y + h > window.innerHeight - 10) y = Math.max(10, r.top - h - 6);
+  pop.style.left = x + 'px'; pop.style.top = y + 'px';
+  setTimeout(() => document.addEventListener('click', _fecharPlanoFora, { once: true }), 0);
+}
+function _fecharPlanoFora(e) { const p = document.getElementById('pop-plano'); if (p && !p.contains(e.target)) fecharEscolhaPlano(); else if (p) document.addEventListener('click', _fecharPlanoFora, { once: true }); }
+async function escolherPlano(id, plano) {
+  fecharEscolhaPlano();
+  const loja = lojas.find(l => l.id === id); if (!loja) return;
+  if (loja.plano === plano) return;
+  const antes = loja.plano;
+  loja.plano = plano; renderLojas();          // muda logo no ecrã
+  const sel = document.getElementById('plano-' + id); if (sel) sel.value = plano;
+  const { data, error } = await supabaseClient.from('lojas').update({ plano }).eq('id', id).select();
+  if (error || !data || !data.length) {
+    loja.plano = antes; renderLojas();
+    notif('❌ Não foi possível mudar o plano' + (error ? ': ' + error.message : ' (sem permissão — corre o SQL de permissões do admin).'), true);
+    return;
+  }
+  renderContadores();
+  const nomes = { basico: 'Básico', pro: 'Pro', anual: 'Anual' };
+  notif('✅ "' + (loja.nome || 'Loja') + '" agora está no plano ' + nomes[plano] + '.');
 }
 
 async function mudarEstado(id, novoEstado) {
