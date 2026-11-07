@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+  actions: write
 concurrency:
   group: spap-apk
   cancel-in-progress: true
@@ -57,6 +58,10 @@ jobs:
             --title "SPAP Apps $VN" \
             --notes "SPAP Monitor e SPAP Loja (Android). Instalar: descarregar o APK e abrir no telemóvel." \
             --latest || gh release upload "$TAG" apks-build/SPAP-Monitor.apk apks-build/SPAP-Loja.apk --clobber
+      - name: Voltar a verificar o site (com a app nova)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run verificar-site.yml --ref main || true
       - uses: actions/upload-artifact@v4
         with:
           name: spap-apks
