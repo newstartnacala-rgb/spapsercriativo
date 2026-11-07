@@ -373,8 +373,6 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     </div>
   </div>
 
-  <div id="busca-scanner-area" style="display:none;position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:9000;width:92%;max-width:420px;background:#000;border-radius:14px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,0.45);"></div>
-
   <div class="categorias" id="categorias">
     <div class="categorias-lista" id="categorias-lista"></div>
     <div class="mais-vendidos" id="mais-vendidos">
@@ -3689,6 +3687,7 @@ async function scannerFechar() {
 
   function executarAcaoMenu(acao) {
     if (acao === 'verPlanos') { fecharMenu(); window.open('planos.html','_blank'); return; }
+    if (acao === 'atualizar') { fecharMenu(); if (typeof atualizarLojaManual === 'function') atualizarLojaManual(); return; }
     if (acao === 'abrirPainelVendas') { abrirPainelVendas(); return; }
     if (acao === 'novoProduto') { fecharMenu(); abrirModalProduto(); return; }
     if (acao === 'gerirProdutos') { fecharMenu(); abrirModalProduto(); mostrarGestao(); return; }
@@ -5701,7 +5700,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.149';
+  const VERSAO_ATUAL = '2.9.163';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -5889,30 +5888,44 @@ async function mostrarEcraSuspenso(motivo){
 /* ===== App do Modo 2 ===== */
 #modo2-app { display:none; }
 body.modo2 #tela-pdv { display:none !important; }
-body.modo2 #modo2-app { display:block; min-height:100vh; background:#eef2f6; }
+body.modo2 { overflow:hidden; }
+body.modo2 #modo2-app { display:block; height:100dvh; overflow:hidden; background:#eef2f6; }
 
 /* Sidebar = GAVETA: escondida, aparece ao clicar nas 3 barras (☰) */
-#m2-sidebar { background:#0b1220; color:#cbd5e1; display:flex; flex-direction:column; padding:16px 12px; position:fixed; top:0; left:-280px; width:250px; height:100vh; box-sizing:border-box; overflow-y:auto; z-index:1200; transition:left .22s ease; box-shadow:3px 0 20px rgba(0,0,0,.25); }
+#m2-sidebar { background:rgba(255,255,255,.07); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); color:#f4f7fb; display:flex; flex-direction:column; padding:16px 12px; position:fixed; top:0; left:-300px; width:270px; height:100dvh; box-sizing:border-box; overflow-y:auto; z-index:1200; transition:left .28s cubic-bezier(.4,0,.2,1); box-shadow:6px 0 34px rgba(0,0,0,.28); border-right:1px solid rgba(255,255,255,.16); }
 body.modo2.m2-menu-aberto #m2-sidebar { left:0; }
-/* Fundo escuro ao abrir a gaveta */
-#m2-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1100; }
-body.modo2.m2-menu-aberto #m2-backdrop { display:block; }
-#m2-sidebar .m2-logo { display:flex; align-items:center; gap:10px; padding:4px 8px 20px; }
-#m2-sidebar .m2-logo .m2-logo-ico { width:40px; height:40px; border-radius:10px; background:#16a34a; display:flex; align-items:center; justify-content:center; font-size:20px; }
+/* Fundo com desfoque ao abrir a gaveta (efeito vidro) */
+#m2-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); z-index:1100; }
+body.modo2.m2-menu-aberto #m2-backdrop { display:block; animation:m2-fade .22s ease; }
+#m2-sidebar .m2-logo { display:flex; align-items:center; gap:11px; padding:4px 8px 18px; }
+#m2-sidebar .m2-logo .m2-logo-ico { width:46px; height:46px; display:flex; align-items:center; justify-content:center; flex-shrink:0; filter:drop-shadow(0 2px 5px rgba(0,0,0,.35)); }
+#m2-sidebar .m2-logo .m2-logo-ico img { width:100%; height:100%; object-fit:contain; }
+#m2-sidebar .m2-logo .m2-logo-ico svg { width:22px; height:22px; color:#fff; }
 #m2-sidebar .m2-logo b { color:#fff; font-size:17px; line-height:1.05; display:block; }
-#m2-sidebar .m2-logo small { color:#64748b; font-size:10px; letter-spacing:.3px; }
-#m2-sidebar .m2-nav { display:flex; align-items:center; gap:13px; padding:13px 14px; border-radius:11px; cursor:pointer; font-size:14.5px; font-weight:600; color:#cbd5e1; margin-bottom:4px; }
-#m2-sidebar .m2-nav:hover { background:#1e293b; color:#fff; }
-#m2-sidebar .m2-nav.ativo { background:#16a34a; color:#fff; }
-#m2-sidebar .m2-nav .ico { font-size:18px; width:20px; text-align:center; }
-#m2-sidebar .m2-flex { flex:1; }
-#m2-sidebar .m2-rodape { border-top:1px solid #1e293b; padding-top:12px; margin-top:8px; }
+#m2-sidebar .m2-logo small { color:rgba(226,240,255,.6); font-size:10px; letter-spacing:.3px; }
+#m2-sidebar .m2-nav { display:flex; align-items:center; gap:13px; padding:12px 14px; border-radius:12px; cursor:pointer; font-size:14.5px; font-weight:600; color:#dbe7ff; margin-bottom:4px; border:1px solid transparent; position:relative; overflow:hidden; }
+#m2-sidebar .m2-nav:hover { background:rgba(255,255,255,.14); color:#fff; }
+#m2-sidebar .m2-nav.ativo { background:rgba(255,255,255,.22); color:#fff; border-color:rgba(255,255,255,.3); box-shadow:0 4px 14px rgba(8,15,40,.25); }
+#m2-sidebar .m2-nav .ico { width:20px; height:20px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+#m2-sidebar .m2-nav .ico svg { width:19px; height:19px; }
+#m2-sidebar .m2-flex { flex:1; min-height:8px; }
+#m2-sidebar .m2-rodape { border-top:1px solid rgba(255,255,255,.18); padding-top:10px; margin-top:8px; }
 #m2-sidebar .m2-rodape .m2-nav { background:transparent; }
-#m2-sidebar .m2-status { font-size:11px; color:#64748b; padding:8px 10px 0; }
-#m2-sidebar .m2-status b { color:#22c55e; }
+#m2-sidebar .m2-status { font-size:11px; color:rgba(226,240,255,.55); padding:10px 10px 0; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+#m2-sidebar .m2-status b { color:#4ade80; font-weight:700; }
+/* Secção Definições (dobrável) */
+.m2-def-toggle .m2-def-seta { margin-left:auto; display:flex; transition:transform .28s ease; opacity:.75; }
+.m2-def-toggle .m2-def-seta svg { width:16px; height:16px; }
+.m2-def-toggle.aberto .m2-def-seta { transform:rotate(180deg); }
+.m2-def-painel { max-height:0; overflow:hidden; transition:max-height .32s cubic-bezier(.4,0,.2,1); }
+.m2-def-painel.aberto { max-height:480px; }
+.m2-def-titulo { font-size:10px; color:rgba(226,240,255,.5); padding:10px 12px 4px; letter-spacing:.6px; text-transform:uppercase; font-weight:700; }
+#m2-sidebar .m2-nav.m2-sub { font-size:13.5px; padding:10px 14px 10px 18px; margin-left:8px; }
+#m2-sidebar .m2-nav.m2-sair { color:#fecaca; }
+#m2-sidebar .m2-nav.m2-sair:hover { background:rgba(248,113,113,.25); color:#fff; }
 
 /* Topbar */
-#m2-main { display:flex; flex-direction:column; min-width:0; }
+#m2-main { display:flex; flex-direction:column; min-width:0; height:100dvh; }
 #m2-topbar { background:#fff; border-bottom:1px solid #e5e9ef; padding:12px 22px; display:flex; align-items:center; gap:16px; position:sticky; top:0; z-index:20; }
 #m2-topbar .m2-busca { flex:1; position:relative; max-width:560px; }
 #m2-topbar .m2-busca input { width:100%; box-sizing:border-box; padding:12px 44px 12px 42px; border:1px solid #e5e9ef; background:#f1f5f9; border-radius:11px; font-size:14px; }
@@ -5920,37 +5933,54 @@ body.modo2.m2-menu-aberto #m2-backdrop { display:block; }
 #m2-topbar .m2-busca .barra { position:absolute; right:14px; top:50%; transform:translateY(-50%); color:#94a3b8; cursor:pointer; }
 #m2-topbar .m2-loja { display:flex; align-items:center; gap:8px; border:1px solid #e5e9ef; border-radius:11px; padding:10px 14px; font-size:14px; color:#334155; font-weight:600; white-space:nowrap; }
 #m2-topbar .m2-user { display:flex; align-items:center; gap:10px; }
-#m2-topbar .m2-user .av { width:40px; height:40px; border-radius:50%; background:#0b1220; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:14px; }
-#m2-topbar .m2-user span { font-weight:700; color:#0f172a; font-size:14px; }
-#m2-topbar .m2-sino { position:relative; font-size:20px; cursor:pointer; color:#475569; }
+#m2-topbar .m2-user .m2-atualizar { width:40px; height:40px; border-radius:50%; background:#0b1220; color:#fff; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 8px rgba(15,23,42,.25); }
+#m2-topbar .m2-user .m2-atualizar svg { width:19px; height:19px; }
+#m2-topbar .m2-user .m2-atualizar:hover { background:#16a34a; transform:rotate(90deg); transition:transform .3s, background .2s; }
+#m2-topbar .m2-user .m2-atualizar:active { transform:scale(.9); }
+#m2-topbar .m2-user .m2-atualizar.m2-a-girar svg { animation:m2-spin .8s linear infinite; }
+@keyframes m2-spin { to { transform:rotate(360deg); } }
+#m2-topbar .m2-user span.m2-edit-nome { font-weight:700; color:#0f172a; font-size:14px; cursor:pointer; padding:4px 8px; border-radius:8px; border:1px dashed transparent; max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#m2-topbar .m2-user span.m2-edit-nome:hover { border-color:#cbd5e1; background:#f1f5f9; }
+#m2-topbar .m2-user input.m2-edit-input { font-weight:700; font-size:14px; padding:5px 8px; border:1.5px solid #16a34a; border-radius:8px; outline:none; width:150px; }
+body.modo2.m2-escuro #m2-topbar .m2-user span.m2-edit-nome { color:#ececec; }
+body.modo2.m2-escuro #m2-topbar .m2-user span.m2-edit-nome:hover { background:#171717; border-color:#2a2a2a; }
+#m2-topbar .m2-sos { display:flex; align-items:center; gap:5px; border:none; cursor:pointer; background:linear-gradient(135deg,#ef4444,#b91c1c); color:#fff; font-weight:700; font-size:11.5px; padding:6px 11px; border-radius:9px; white-space:nowrap; box-shadow:0 2px 9px rgba(239,68,68,.35); position:relative; }
+#m2-topbar .m2-sos::before { content:''; position:absolute; inset:0; border-radius:9px; box-shadow:0 0 0 0 rgba(239,68,68,.5); animation:m2-sos-pulse 2.2s infinite; }
+#m2-topbar .m2-sos:hover { filter:brightness(1.07); transform:translateY(-1px); }
+#m2-topbar .m2-sos:active { transform:scale(.94); }
+#m2-topbar .m2-sos .m2-sos-ico { display:flex; }
+#m2-topbar .m2-sos .m2-sos-ico svg { width:14px; height:14px; }
+@keyframes m2-sos-pulse { 0%{ box-shadow:0 0 0 0 rgba(239,68,68,.5); } 70%{ box-shadow:0 0 0 10px rgba(239,68,68,0); } 100%{ box-shadow:0 0 0 0 rgba(239,68,68,0); } }
+@media(max-width:620px){ #m2-topbar .m2-sos .m2-sos-txt { display:none; } #m2-topbar .m2-sos { padding:11px 13px; } }
 
 /* Corpo */
-#m2-corpo { display:grid; grid-template-columns:1fr 380px; gap:20px; padding:20px 22px; align-items:start; }
-@media(max-width:1100px){ #m2-corpo { grid-template-columns:1fr; } }
-#m2-cabecalho { display:flex; align-items:center; gap:14px; margin-bottom:16px; }
-#m2-cabecalho .m2-cab-ico { width:52px; height:52px; border-radius:13px; background:#16a34a; display:flex; align-items:center; justify-content:center; font-size:24px; }
-#m2-cabecalho h1 { margin:0; font-size:24px; color:#0f172a; }
-#m2-cabecalho p { margin:2px 0 0; color:#64748b; font-size:14px; }
+#m2-corpo { flex:1; min-height:0; display:grid; grid-template-columns:1fr 380px; gap:20px; padding:18px 22px; align-items:stretch; overflow:hidden; }
+#m2-esquerda { display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+#m2-cabecalho { display:flex; align-items:center; gap:14px; margin-bottom:14px; flex-shrink:0; }
+#m2-cabecalho .m2-cab-ico { width:52px; height:52px; border-radius:13px; background:#16a34a; display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0; }
+#m2-cabecalho .m2-cab-ico svg { width:26px; height:26px; color:#fff; }
+#m2-cabecalho h1 { margin:0; font-size:23px; color:#0f172a; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; line-height:1.1; }
+#m2-cabecalho p { margin:4px 0 0; color:#64748b; font-size:13.5px; font-weight:500; letter-spacing:.2px; }
 
-#m2-painel { background:#fff; border-radius:16px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.05); }
-#m2-chips { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+#m2-painel { background:#fff; border-radius:16px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.05); flex:1; min-height:0; display:flex; flex-direction:column; }
+#m2-chips { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; flex-shrink:0; }
 #m2-chips .chip { display:flex; align-items:center; gap:7px; padding:11px 16px; border-radius:11px; background:#f1f5f9; cursor:pointer; font-size:14px; font-weight:600; color:#475569; border:none; }
 #m2-chips .chip.ativo { background:#16a34a; color:#fff; }
-#m2-subrow { display:flex; gap:12px; margin-bottom:16px; }
+#m2-subrow { display:flex; gap:12px; margin-bottom:14px; flex-shrink:0; }
 #m2-subrow input { flex:1; padding:11px 14px; border:1px solid #e5e9ef; border-radius:10px; font-size:14px; background:#f8fafc; }
 
-#m2-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:14px; }
+#m2-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:14px; flex:1; min-height:0; overflow-y:auto; align-content:start; padding:2px 8px 10px 2px; }
 .m2-card { border:1px solid #eef2f6; border-radius:14px; padding:12px; text-align:center; background:#fff; transition:.15s; }
 .m2-card:hover { border-color:#16a34a; box-shadow:0 8px 20px rgba(0,0,0,.08); }
 .m2-card .m2-img { width:100%; height:110px; border-radius:10px; object-fit:contain; background:#f8fafc; display:flex; align-items:center; justify-content:center; font-size:40px; }
 .m2-card .m2-nome { font-size:13.5px; font-weight:600; color:#0f172a; margin:10px 0 4px; min-height:34px; }
 .m2-card .m2-linha { display:flex; align-items:center; justify-content:space-between; }
 .m2-card .m2-preco { font-weight:bold; color:#0f172a; font-size:15px; }
-.m2-card .m2-preco small { color:#16a34a; font-size:11px; }
+.m2-card .m2-preco small { color:var(--m2-ac, #16a34a); font-size:11px; }
 .m2-card .m2-add { width:36px; height:36px; border-radius:9px; background:#16a34a; color:#fff; border:none; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
 
 /* Carrinho */
-#m2-cart { background:#fff; border-radius:16px; box-shadow:0 1px 3px rgba(0,0,0,.05); display:flex; flex-direction:column; max-height:calc(100vh - 110px); position:sticky; top:90px; }
+#m2-cart { background:#fff; border-radius:16px; box-shadow:0 1px 3px rgba(0,0,0,.05); display:flex; flex-direction:column; min-height:0; height:100%; overflow:hidden; }
 #m2-cart .m2-cart-top { display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid #eef2f6; }
 #m2-cart .m2-cart-top b { font-size:16px; color:#0f172a; display:flex; align-items:center; gap:8px; }
 #m2-cart .m2-limpar { color:#64748b; font-size:13px; cursor:pointer; background:none; border:none; }
@@ -5962,6 +5992,7 @@ body.modo2.m2-menu-aberto #m2-backdrop { display:block; }
 #m2-cart .m2-item .m2-it-preco { font-size:12px; color:#64748b; cursor:pointer; }
 #m2-cart .m2-item .m2-step { display:flex; align-items:center; gap:6px; margin-top:4px; }
 #m2-cart .m2-item .m2-step button { width:26px; height:26px; border-radius:7px; border:1px solid #e5e9ef; background:#f8fafc; cursor:pointer; font-size:15px; }
+#m2-cart .m2-item .m2-step button.m2-peso { width:auto; height:28px; padding:0 10px; white-space:nowrap; font-size:13px; font-weight:600; }
 #m2-cart .m2-item .m2-it-tot { font-weight:bold; color:#0f172a; font-size:13px; white-space:nowrap; }
 #m2-cart .m2-item .m2-x { color:#cbd5e1; cursor:pointer; font-size:18px; }
 #m2-cart .m2-vazio { text-align:center; color:#94a3b8; padding:40px 10px; font-size:13px; }
@@ -5973,26 +6004,48 @@ body.modo2.m2-menu-aberto #m2-backdrop { display:block; }
 #m2-cart .m2-finalizar { width:100%; padding:15px; background:#16a34a; color:#fff; border:none; border-radius:12px; font-size:16px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:10px; }
 #m2-cart .m2-guardar { width:100%; padding:14px; background:#fff; color:#0f172a; border:1.5px solid #e5e9ef; border-radius:12px; font-size:15px; font-weight:bold; cursor:pointer; }
 
-@media(max-width:1100px){ #m2-corpo { grid-template-columns:1fr; } }
+@media(max-width:1100px){
+  #m2-corpo { grid-template-columns:1fr; overflow-y:auto; align-items:start; }
+  #m2-esquerda { overflow:visible; }
+  #m2-painel { overflow:visible; }
+  #m2-grid { overflow:visible; min-height:0; }
+  #m2-cart { height:auto; max-height:none; overflow:visible; }
+  #m2-cart .m2-itens { max-height:320px; }
+}
+
+/* ===== MODO CLARO (painel todo branco) ===== */
+body.modo2.m2-claro #modo2-app { background:#ffffff; }
+body.modo2.m2-claro #m2-topbar { background:#ffffff; border-bottom-color:#e5e9ef; }
+body.modo2.m2-claro #m2-topbar .m2-busca input { background:#f4f6f9; border-color:#e5e9ef; color:#0f172a; }
+body.modo2.m2-claro #m2-topbar .m2-loja { background:#ffffff; border-color:#e5e9ef; color:#334155; }
+body.modo2.m2-claro #m2-topbar .m2-user span.m2-edit-nome { color:#0f172a; }
+body.modo2.m2-claro #m2-cabecalho h1 { color:#0f172a; }
+body.modo2.m2-claro #m2-cabecalho p { color:#64748b; }
+body.modo2.m2-claro #m2-painel, body.modo2.m2-claro #m2-cart { background:#ffffff; border:1px solid #eef2f6; }
+body.modo2.m2-claro .m2-card { background:#ffffff; border-color:#eef2f6; }
+body.modo2.m2-claro .m2-card .m2-nome, body.modo2.m2-claro .m2-card .m2-preco { color:#0f172a; }
+body.modo2.m2-claro #m2-cart .m2-cart-top b, body.modo2.m2-claro #m2-cart .m2-item .m2-it-nome, body.modo2.m2-claro #m2-cart .m2-item .m2-it-tot { color:#0f172a; }
+body.modo2.m2-claro #m2-cart .m2-total-box { background:#eafaf0; }
+body.modo2.m2-claro .m2-cat-btn { background:#f4f6f9; border-color:#e5e9ef; color:#334155; }
 
 /* ===== TEMA ESCURO ===== */
-body.modo2.m2-escuro #modo2-app { background:#0b1220; }
-body.modo2.m2-escuro #m2-topbar { background:#111c33; border-bottom-color:#1e293b; }
-body.modo2.m2-escuro #m2-topbar .m2-busca input { background:#1e293b; border-color:#334155; color:#e2e8f0; }
-body.modo2.m2-escuro #m2-topbar .m2-loja { background:#1e293b; border-color:#334155; color:#e2e8f0; }
-body.modo2.m2-escuro #m2-topbar .m2-user span { color:#e2e8f0; }
-body.modo2.m2-escuro #m2-cabecalho h1 { color:#f1f5f9; }
-body.modo2.m2-escuro #m2-painel, body.modo2.m2-escuro #m2-cart { background:#111c33; border-color:#1e293b; }
-body.modo2.m2-escuro #m2-chips .chip { background:#1e293b; color:#cbd5e1; }
+body.modo2.m2-escuro #modo2-app { background:#000000; }
+body.modo2.m2-escuro #m2-topbar { background:#0a0a0a; border-bottom-color:#171717; }
+body.modo2.m2-escuro #m2-topbar .m2-busca input { background:#171717; border-color:#2a2a2a; color:#ececec; }
+body.modo2.m2-escuro #m2-topbar .m2-loja { background:#171717; border-color:#2a2a2a; color:#ececec; }
+body.modo2.m2-escuro #m2-topbar .m2-user span { color:#ececec; }
+body.modo2.m2-escuro #m2-cabecalho h1 { color:#f5f5f5; }
+body.modo2.m2-escuro #m2-painel, body.modo2.m2-escuro #m2-cart { background:#0a0a0a; border-color:#171717; }
+body.modo2.m2-escuro #m2-chips .chip { background:#171717; color:#d4d4d4; }
 body.modo2.m2-escuro #m2-chips .chip.ativo { background:#16a34a; color:#fff; }
-body.modo2.m2-escuro #m2-subrow input { background:#1e293b; border-color:#334155; color:#e2e8f0; }
-body.modo2.m2-escuro .m2-card { background:#1e293b; border-color:#334155; }
-body.modo2.m2-escuro .m2-card .m2-nome, body.modo2.m2-escuro .m2-card .m2-preco { color:#f1f5f9; }
-body.modo2.m2-escuro #m2-cart .m2-cart-top b { color:#f1f5f9; }
-body.modo2.m2-escuro #m2-cart .m2-item { border-bottom-color:#1e293b; }
-body.modo2.m2-escuro #m2-cart .m2-item .m2-it-nome, body.modo2.m2-escuro #m2-cart .m2-item .m2-it-tot { color:#f1f5f9; }
-body.modo2.m2-escuro #m2-cart .m2-total-box { background:#14331f; }
-body.modo2.m2-escuro #m2-cart .m2-guardar { background:#1e293b; color:#f1f5f9; border-color:#334155; }
+body.modo2.m2-escuro #m2-subrow input { background:#171717; border-color:#2a2a2a; color:#ececec; }
+body.modo2.m2-escuro .m2-card { background:#171717; border-color:#2a2a2a; }
+body.modo2.m2-escuro .m2-card .m2-nome, body.modo2.m2-escuro .m2-card .m2-preco { color:#f5f5f5; }
+body.modo2.m2-escuro #m2-cart .m2-cart-top b { color:#f5f5f5; }
+body.modo2.m2-escuro #m2-cart .m2-item { border-bottom-color:#171717; }
+body.modo2.m2-escuro #m2-cart .m2-item .m2-it-nome, body.modo2.m2-escuro #m2-cart .m2-item .m2-it-tot { color:#f5f5f5; }
+body.modo2.m2-escuro #m2-cart .m2-total-box { background:#171717; }
+body.modo2.m2-escuro #m2-cart .m2-guardar { background:#171717; color:#f5f5f5; border-color:#2a2a2a; }
 
 /* ===== TEMA VERDE ===== */
 body.modo2.m2-verde #modo2-app { background:#e8f5ec; }
@@ -6008,14 +6061,204 @@ body.modo2.m2-verde #m2-chips .chip.ativo { background:#166534; }
 body.modo2.m2-verde .m2-card:hover { border-color:#166534; }
 body.modo2.m2-verde #m2-cart .m2-total-box { background:#dcfce7; }
 
-/* Seletor de tema na barra lateral */
-#m2-temas { display:flex; gap:10px; padding:10px 8px 4px; }
-#m2-temas .tdot { width:30px; height:30px; border-radius:50%; cursor:pointer; border:2px solid transparent; }
-#m2-temas .tdot.sel { border-color:#22c55e; }
-#m2-temas .tdot.branco { background:#ffffff; }
-#m2-temas .tdot.escuro { background:#0b1220; }
-#m2-temas .tdot.verde { background:#166534; }
+/* ===== TEMA AZUL ===== */
+body.modo2.m2-azul #modo2-app { background:#eef2ff; }
+body.modo2.m2-azul #m2-topbar { background:#1e3a8a; border-bottom-color:#1e40af; }
+body.modo2.m2-azul #m2-topbar .m2-busca input { background:#dbeafe; border-color:#93c5fd; }
+body.modo2.m2-azul #m2-topbar .m2-loja { background:#1e40af; border-color:#1e40af; color:#fff; }
+body.modo2.m2-azul #m2-topbar .m2-user span.m2-edit-nome { color:#fff; }
+body.modo2.m2-azul #m2-cabecalho h1 { color:#1e3a8a; }
+body.modo2.m2-azul #m2-painel, body.modo2.m2-azul #m2-cart { background:#fff; border-color:#bfdbfe; }
+body.modo2.m2-azul .m2-card:hover { border-color:#2563eb; }
+body.modo2.m2-azul #m2-cart .m2-total-box { background:#dbeafe; }
+body.modo2.m2-azul #m2-cart .m2-total-box .v { color:#2563eb; }
+body.modo2.m2-azul #m2-cart .m2-finalizar { background:#2563eb; box-shadow:0 6px 18px rgba(37,99,235,.35); }
+
+/* ===== VARIÁVEL DA COR DE DESTAQUE (muda Verde<->Azul) ===== */
+body.modo2 { --m2-ac:#16a34a; --m2-ac-soft:rgba(22,163,74,.16); }
+body.modo2.m2-ac-azul { --m2-ac:#2563eb; --m2-ac-soft:rgba(37,99,235,.16); }
+
+/* A cor de destaque fica só nos elementos funcionais (sem molduras/linhas soltas) */
+#m2-cabecalho .m2-cab-ico { background:var(--m2-ac); }
+.m2-cat-btn:hover { border-color:var(--m2-ac); }
+.m2-card:hover { border-color:var(--m2-ac); }
+
+/* ===== COR DE DESTAQUE AZUL (aplica-se por cima de Claro/Escuro) ===== */
+body.modo2.m2-ac-azul #m2-topbar .m2-menu-btn { background:#2563eb !important; }
+body.modo2.m2-ac-azul #m2-cabecalho .m2-cab-ico { background:#2563eb; }
+body.modo2.m2-ac-azul .m2-card .m2-add { background:#2563eb; }
+body.modo2.m2-ac-azul .m2-card:hover { border-color:#2563eb; }
+body.modo2.m2-ac-azul .m2-cat-item.ativo { background:#2563eb; }
+body.modo2.m2-ac-azul .m2-cat-btn:hover { border-color:#2563eb; }
+body.modo2.m2-ac-azul #m2-cart .m2-finalizar { background:#2563eb; box-shadow:0 6px 18px rgba(37,99,235,.35); }
+body.modo2.m2-ac-azul #m2-cart .m2-finalizar:hover { box-shadow:0 10px 28px rgba(37,99,235,.45); }
+body.modo2.m2-ac-azul #m2-cart .m2-total-box .v { color:#2563eb; }
+body.modo2.m2-ac-azul.m2-claro #m2-cart .m2-total-box { background:#dbeafe; }
+body.modo2.m2-ac-azul .m2-busca input:focus { border-color:#2563eb; }
+
+/* ===== Polimento do MODO ESCURO ===== */
+body.modo2.m2-escuro .m2-card .m2-img { background:#0d0d0d; }
+body.modo2.m2-escuro #m2-cart .m2-item .m2-it-img { background:#0d0d0d; }
+body.modo2.m2-escuro #m2-topbar .m2-user .m2-atualizar { background:#171717; box-shadow:0 2px 8px rgba(0,0,0,.45); }
+body.modo2.m2-escuro #m2-cabecalho p { color:#a3a3a3; }
+body.modo2.m2-escuro .m2-cat-menu .m2-cat-item { color:#ececec; }
+body.modo2.m2-escuro #m2-cart .m2-item .m2-step button { background:#171717; border-color:#2a2a2a; color:#ececec; }
+body.modo2.m2-escuro #m2-cart .m2-limpar { color:#a3a3a3; }
+
+/* Interruptor Modo claro/escuro */
+.m2-modo-switch { display:flex; gap:6px; padding:4px 2px 2px; }
+.m2-modo-op { flex:1; display:flex; align-items:center; justify-content:center; gap:7px; padding:10px 10px; border-radius:10px; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:#dbe7ff; font-size:13px; font-weight:700; cursor:pointer; }
+.m2-modo-op svg { width:16px; height:16px; }
+.m2-modo-op:hover { background:rgba(255,255,255,.14); color:#fff; }
+.m2-modo-op.sel { background:rgba(255,255,255,.26); border-color:rgba(255,255,255,.45); color:#fff; }
+
+/* Seletor de cor de destaque (lista com nomes) */
+#m2-temas { display:flex; flex-direction:column; gap:3px; padding:4px 2px 6px; }
+.m2-tema-op { display:flex; align-items:center; gap:11px; padding:9px 12px; border-radius:10px; cursor:pointer; font-size:13.5px; font-weight:600; color:#dbe7ff; border:1px solid transparent; }
+.m2-tema-op:hover { background:rgba(255,255,255,.12); color:#fff; }
+.m2-tema-op.sel { background:rgba(255,255,255,.22); border-color:rgba(255,255,255,.3); color:#fff; }
+.m2-tema-op .tdot { width:22px; height:22px; border-radius:50%; flex-shrink:0; box-shadow:0 0 0 1.5px rgba(255,255,255,.55), 0 1px 3px rgba(0,0,0,.3); }
+.m2-tema-op.sel .tdot { box-shadow:0 0 0 2.5px #22c55e, 0 1px 3px rgba(0,0,0,.3); }
+.tdot.claro, .tdot.branco { background:#ffffff; }
+.tdot.escuro { background:#1e293b; }
+.tdot.azul { background:#2563eb; }
+.tdot.verde { background:#16a34a; }
+
+/* ===== SIDEBAR EM VIDRO SEM COR (transparência pura em qualquer tema) ===== */
+body.modo2.m2-verde #m2-sidebar,
+body.modo2.m2-azul #m2-sidebar,
+body.modo2.m2-escuro #m2-sidebar { background:rgba(255,255,255,.07); }
+
+/* ===== ÍCONES SVG (tamanhos) ===== */
+#m2-topbar .m2-menu-btn svg { width:22px; height:22px; }
+#m2-topbar .m2-busca .lupa svg, #m2-topbar .m2-busca .barra svg { width:18px; height:18px; display:block; }
+#m2-topbar .m2-loja svg { width:17px; height:17px; flex-shrink:0; }
+#m2-topbar .m2-sino svg { width:21px; height:21px; display:block; }
+#m2-cart .m2-cart-top b svg { width:19px; height:19px; vertical-align:-4px; margin-right:2px; }
+#m2-cart .m2-limpar svg { width:14px; height:14px; vertical-align:-2px; }
+#m2-cart .m2-finalizar svg, #m2-cart .m2-guardar svg { width:18px; height:18px; }
+#m2-cart .m2-finalizar .m2-fin-seta { display:flex; align-items:center; transition:transform .22s ease; }
+#m2-cart .m2-finalizar:hover .m2-fin-seta { transform:translateX(4px); }
+.m2-card .m2-add svg { width:18px; height:18px; }
+#m2-chips .chip svg { width:15px; height:15px; vertical-align:-3px; }
+
+/* ===== ANIMAÇÕES DE CLIQUE ===== */
+#modo2-app button, #m2-sidebar .m2-nav, .m2-tema-op, .m2-cat-item, .m2-card, .m2-card .m2-add, #m2-cart .m2-finalizar, #m2-cart .m2-guardar {
+  transition: transform .14s cubic-bezier(.34,1.5,.6,1), box-shadow .22s ease, background .2s ease, border-color .2s ease, color .15s ease;
+}
+#m2-sidebar .m2-nav:active, .m2-tema-op:active, #m2-cart .m2-guardar:active { transform:scale(.96); }
+.m2-card:hover { transform:translateY(-3px); }
+.m2-card:active { transform:scale(.97); }
+.m2-card .m2-add:active, #m2-topbar .m2-menu-btn:active { transform:scale(.86); }
+#m2-cart .m2-finalizar { box-shadow:0 6px 18px rgba(22,163,74,.35); }
+#m2-cart .m2-finalizar:hover { transform:translateY(-2px); box-shadow:0 10px 28px rgba(22,163,74,.45); }
+#m2-cart .m2-finalizar:active { transform:scale(.96); }
+
+/* Efeito ondulação (ripple) ao clicar */
+.m2-ripple { position:absolute; border-radius:50%; background:rgba(255,255,255,.5); transform:scale(0); animation:m2rip .6s ease-out; pointer-events:none; z-index:5; }
+@keyframes m2rip { to { transform:scale(2.6); opacity:0; } }
+#m2-chips .chip, .m2-card .m2-add, #m2-cart .m2-finalizar, #m2-cart .m2-guardar, #m2-topbar .m2-menu-btn { position:relative; overflow:hidden; }
+
+/* Entrada dos cartões de produto */
+@keyframes m2cardin { from { opacity:0; transform:translateY(12px); } }
+#m2-grid .m2-card { animation:m2cardin .28s ease backwards; }
+
+/* Transição suave de abertura dos modais (abas) */
+.modal-fundo.ativo { animation:m2-fade .18s ease; }
+.modal-fundo.ativo > .modal { animation:m2-pop .26s cubic-bezier(.34,1.3,.5,1); }
+@keyframes m2-fade { from { opacity:0; } }
+@keyframes m2-pop { from { opacity:0; transform:translateY(16px) scale(.97); } }
+/* Ecrã de pagamento: entrada animada profissional (desliza de baixo) */
+#modal-pagamento.ativo { animation:m2-fade .2s ease; }
+#modal-pagamento.ativo > div { animation:m2-pag-in .36s cubic-bezier(.22,1,.36,1); }
+@keyframes m2-pag-in { from { opacity:0; transform:translateY(30px) scale(.985); } }
+
+/* Barras de rolagem discretas */
+#m2-grid::-webkit-scrollbar, #m2-cart .m2-itens::-webkit-scrollbar, #m2-sidebar::-webkit-scrollbar, #m2-corpo::-webkit-scrollbar { width:9px; }
+#m2-grid::-webkit-scrollbar-thumb, #m2-cart .m2-itens::-webkit-scrollbar-thumb, #m2-corpo::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:9px; }
+#m2-grid::-webkit-scrollbar-thumb:hover, #m2-cart .m2-itens::-webkit-scrollbar-thumb:hover { background:#94a3b8; }
+#m2-sidebar::-webkit-scrollbar-thumb { background:rgba(255,255,255,.25); border-radius:9px; }
+body.modo2.m2-escuro #m2-grid::-webkit-scrollbar-thumb, body.modo2.m2-escuro #m2-cart .m2-itens::-webkit-scrollbar-thumb { background:#2a2a2a; }
+
+/* ===== Cartão de produto clicável ===== */
+.m2-card { cursor:pointer; }
+
+/* ===== Categorias num único lugar (botão + menu) ===== */
+#m2-subrow { align-items:center; }
+.m2-cat-wrap { position:relative; flex-shrink:0; }
+.m2-cat-btn { display:flex; align-items:center; gap:8px; padding:11px 14px; border:1px solid #e5e9ef; border-radius:10px; background:#f8fafc; font-size:14px; font-weight:600; color:#334155; cursor:pointer; white-space:nowrap; }
+.m2-cat-btn:hover { border-color:#16a34a; }
+.m2-cat-btn .m2-cat-ico { display:flex; color:#16a34a; } .m2-cat-btn .m2-cat-ico svg { width:17px; height:17px; }
+.m2-cat-btn .m2-cat-seta { display:flex; transition:transform .25s; opacity:.7; } .m2-cat-btn .m2-cat-seta svg { width:15px; height:15px; }
+.m2-cat-wrap.aberto .m2-cat-seta { transform:rotate(180deg); }
+.m2-cat-menu { position:absolute; top:calc(100% + 6px); right:0; min-width:230px; max-height:320px; overflow-y:auto; background:#fff; border:1px solid #e5e9ef; border-radius:12px; box-shadow:0 14px 36px rgba(15,23,42,.18); padding:6px; z-index:40; display:none; }
+.m2-cat-wrap.aberto .m2-cat-menu { display:block; animation:m2-pop .18s ease; }
+.m2-cat-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:9px; cursor:pointer; font-size:14px; color:#334155; font-weight:500; }
+.m2-cat-item:hover { background:#f1f5f9; }
+.m2-cat-item.ativo { background:#16a34a; color:#fff; }
+.m2-cat-item .m2-cat-item-ico { width:18px; display:flex; align-items:center; flex-shrink:0; } .m2-cat-item .m2-cat-item-ico svg { width:16px; height:16px; }
+body.modo2.m2-escuro .m2-cat-btn { background:#171717; border-color:#2a2a2a; color:#ececec; }
+body.modo2.m2-escuro .m2-cat-menu { background:#0a0a0a; border-color:#171717; }
+body.modo2.m2-escuro .m2-cat-item { color:#ececec; }
+body.modo2.m2-escuro .m2-cat-item:hover { background:#171717; }
+@media(max-width:520px){ #m2-subrow { flex-wrap:wrap; } .m2-cat-wrap { width:100%; } .m2-cat-btn { width:100%; justify-content:space-between; } .m2-cat-menu { left:0; right:0; } }
+
+/* ===== MODO PRETO 100% (monocromático: sem azul-marinho, sem verde/azul) ===== */
+body.modo2.m2-escuro { --m2-ac:#ffffff; --m2-ac-soft:rgba(255,255,255,.12); }
+body.modo2.m2-escuro #m2-topbar .m2-menu-btn { background:#ffffff !important; color:#000000 !important; }
+body.modo2.m2-escuro #m2-cabecalho .m2-cab-ico { background:#ffffff !important; color:#000000; }
+body.modo2.m2-escuro #m2-cabecalho .m2-cab-ico svg { color:#000000; }
+body.modo2.m2-escuro .m2-card .m2-add { background:#ffffff !important; color:#000000 !important; }
+body.modo2.m2-escuro .m2-card:hover { border-color:#5a5a5a !important; }
+body.modo2.m2-escuro #m2-cart .m2-finalizar { background:#ffffff !important; color:#000000 !important; box-shadow:0 6px 18px rgba(255,255,255,.12) !important; }
+body.modo2.m2-escuro #m2-cart .m2-finalizar:hover { box-shadow:0 10px 26px rgba(255,255,255,.18) !important; }
+body.modo2.m2-escuro #m2-cart .m2-total-box { background:#171717 !important; border:1px solid #2a2a2a; }
+body.modo2.m2-escuro #m2-cart .m2-total-box .v { color:#ffffff !important; }
+body.modo2.m2-escuro #m2-cart .m2-total-box b { color:#ececec; }
+body.modo2.m2-escuro .m2-cat-item.ativo { background:#ffffff !important; color:#000000 !important; }
+body.modo2.m2-escuro .m2-cat-btn .m2-cat-ico { color:#ffffff; }
+body.modo2.m2-escuro .m2-cat-btn:hover { border-color:#5a5a5a !important; }
+body.modo2.m2-escuro .m2-card .m2-preco small { color:#a3a3a3; }
+body.modo2.m2-escuro #m2-cart .m2-linha { color:#a3a3a3; }
+body.modo2.m2-escuro #m2-cart .m2-cart-top, body.modo2.m2-escuro #m2-cart .m2-cart-fundo { border-color:#2a2a2a; }
+body.modo2.m2-escuro #m2-cart .m2-item .m2-it-preco { color:#a3a3a3; }
+body.modo2.m2-escuro #m2-cart .m2-vazio { color:#737373; }
+body.modo2.m2-escuro #m2-topbar .m2-busca .lupa, body.modo2.m2-escuro #m2-topbar .m2-busca .barra { color:#a3a3a3; }
+body.modo2.m2-escuro #m2-topbar .m2-busca input::placeholder, body.modo2.m2-escuro #m2-subrow input::placeholder { color:#737373; }
+body.modo2.m2-escuro #m2-grid::-webkit-scrollbar-thumb, body.modo2.m2-escuro #m2-cart .m2-itens::-webkit-scrollbar-thumb { background:#2a2a2a; }
+
+/* ===== Claro fiel em qualquer aparelho (mesmo com o sistema em modo escuro) ===== */
+body.modo2.m2-claro { color-scheme: light; }
+body.modo2.m2-escuro { color-scheme: dark; }
+
+/* ===== ESCURO 100% PRETO: menu, emergência, detalhes e estados (passar rato/foco/seleção) ===== */
+body.modo2.m2-escuro #m2-sidebar, body.modo2.m2-escuro #m2-sidebar .m2-nav, body.modo2.m2-escuro .m2-modo-op { color:#e5e5e5; }
+body.modo2.m2-escuro #m2-sidebar .m2-nav:hover, body.modo2.m2-escuro #m2-sidebar .m2-nav.ativo, body.modo2.m2-escuro .m2-modo-op.sel, body.modo2.m2-escuro .m2-modo-op:hover { color:#ffffff; }
+body.modo2.m2-escuro #m2-sidebar .m2-nav.m2-sair { color:#d4d4d4; }
+body.modo2.m2-escuro #m2-sidebar .m2-nav.m2-sair:hover { background:rgba(255,255,255,.14); color:#ffffff; }
+body.modo2.m2-escuro #m2-sidebar .m2-logo small, body.modo2.m2-escuro .m2-def-titulo, body.modo2.m2-escuro #m2-sidebar .m2-status { color:rgba(255,255,255,.5); }
+body.modo2.m2-escuro #m2-sidebar .m2-status b, body.modo2.m2-escuro #m2-sidebar .m2-status [data-ico] { color:#e5e5e5 !important; }
+/* No escuro não existe cor de destaque: a secção "Cor" esconde-se */
+body.modo2.m2-escuro .m2-cor-sec, body.modo2.m2-escuro #m2-temas { display:none; }
+/* Emergência em branco (destaca-se no preto sem usar vermelho) */
+body.modo2.m2-escuro #m2-topbar .m2-sos { background:#ffffff; color:#000000; box-shadow:0 2px 9px rgba(255,255,255,.15); }
+body.modo2.m2-escuro #m2-topbar .m2-sos::before { animation-name:m2-sos-pulse-b; }
+@keyframes m2-sos-pulse-b { 0%{ box-shadow:0 0 0 0 rgba(255,255,255,.45); } 70%{ box-shadow:0 0 0 10px rgba(255,255,255,0); } 100%{ box-shadow:0 0 0 0 rgba(255,255,255,0); } }
+body.modo2.m2-escuro #m2-cart .m2-item .m2-x { color:#a3a3a3; }
+body.modo2.m2-escuro #m2-cart .m2-item .m2-step span { color:#f5f5f5; }
+body.modo2.m2-escuro .m2-cat-menu { box-shadow:0 14px 36px rgba(0,0,0,.6); }
+body.modo2.m2-escuro #m2-topbar .m2-user .m2-atualizar:hover { background:#2a2a2a; }
+body.modo2.m2-escuro #m2-topbar .m2-busca input:focus, body.modo2.m2-escuro #m2-subrow input:focus { border-color:#737373 !important; outline:none; }
+body.modo2.m2-escuro #m2-topbar .m2-user input.m2-edit-input { background:#171717; color:#ececec; border-color:#737373; }
+body.modo2.m2-escuro #modo2-app :focus-visible { outline-color:#ffffff; }
+body.modo2.m2-escuro #modo2-app ::selection { background:#ffffff; color:#000000; }
+/* Ícones-emoji decorativos em tons de cinza (as fotos dos produtos ficam como estão) */
+body.modo2.m2-escuro .m2-cat-item-ico span, body.modo2.m2-escuro div.m2-img, body.modo2.m2-escuro div.m2-it-img,
+body.modo2.m2-escuro #m2-cart .m2-item button, body.modo2.m2-escuro #m2-cart .m2-item .m2-it-preco, body.modo2.m2-escuro #m2-cart .m2-item .m2-it-nome { filter:grayscale(1); }
 </style>
+
+<!-- Scanner de câmara (nível de topo: funciona no Modo Clássico e no Moderno) -->
+<div id="busca-scanner-area" style="display:none;position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:9000;width:92%;max-width:420px;background:#000;border-radius:14px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,0.45);"></div>
 
 <div id="escolher-modo">
   <div class="em-box">
@@ -6040,49 +6283,64 @@ body.modo2.m2-verde #m2-cart .m2-total-box { background:#dcfce7; }
   <div id="m2-backdrop" onclick="document.body.classList.remove('m2-menu-aberto')"></div>
   <aside id="m2-sidebar">
     <div class="m2-logo">
-      <div class="m2-logo-ico">🛒</div>
-      <div><b id="m2-logo-nome">SPAP</b><small>PDV | Vendas | Stock</small></div>
+      <div class="m2-logo-ico" id="m2-logo-ico"><img src="ssteam-logo.png" alt="SSTEAM"></div>
+      <div><b id="m2-logo-nome">Loja</b><small>Vendas | Stock</small></div>
     </div>
-    <div class="m2-nav ativo" onclick="m2Nav('home',this)"><span class="ico">🏠</span><span>Loja (vender)</span></div>
+    <div class="m2-nav" onclick="document.body.classList.remove('m2-menu-aberto'); if(typeof abrirRelatorioEntregar==='function') abrirRelatorioEntregar();"><span class="ico" data-ico="box"></span><span>Entrega total do dia</span></div>
     <!-- Todos os itens do menu aparecem aqui (preenchido por renderM2Nav) -->
     <div id="m2-nav-lista"></div>
     <div class="m2-flex"></div>
     <div class="m2-rodape">
-      <div style="font-size:12px;color:#64748b;padding:4px 8px 0;">🎨 Tema</div>
-      <div id="m2-temas">
-        <div class="tdot branco" title="Branco" onclick="setTemaM2('branco')"></div>
-        <div class="tdot escuro" title="Escuro" onclick="setTemaM2('escuro')"></div>
-        <div class="tdot verde" title="Verde" onclick="setTemaM2('verde')"></div>
+      <div class="m2-nav m2-def-toggle" onclick="m2ToggleDefinicoes()"><span class="ico" data-ico="gear"></span><span>Definições</span><span class="m2-def-seta" data-ico="chevron"></span></div>
+      <div class="m2-def-painel" id="m2-def-painel">
+        <div class="m2-def-titulo">Modo</div>
+        <div class="m2-modo-switch">
+          <button class="m2-modo-op" data-modo="claro" onclick="setModoM2('claro')"><span data-ico="sun"></span>Claro</button>
+          <button class="m2-modo-op" data-modo="escuro" onclick="setModoM2('escuro')"><span data-ico="moon"></span>Escuro</button>
+        </div>
+        <div class="m2-def-titulo m2-cor-sec">Cor</div>
+        <div id="m2-temas">
+          <div class="m2-tema-op" data-cor="verde" onclick="setCorM2('verde')"><span class="tdot verde"></span><span>Verde</span></div>
+          <div class="m2-tema-op" data-cor="azul" onclick="setCorM2('azul')"><span class="tdot azul"></span><span>Azul</span></div>
+        </div>
+        <div class="m2-def-titulo">Opções</div>
+        <div class="m2-nav m2-sub" onclick="m2AcaoMenu('escolherLingua')"><span class="ico" data-ico="globe"></span><span>Idiomas</span></div>
+        <div class="m2-nav m2-sub" onclick="m2AcaoMenu('verPlanos')"><span class="ico" data-ico="zap"></span><span>Ver planos</span></div>
+        <div class="m2-nav m2-sub" onclick="mudarModoDesign()"><span class="ico" data-ico="layout"></span><span>Mudar design</span></div>
+        <div class="m2-nav m2-sub" onclick="m2AcaoMenu('abrirSuporte')"><span class="ico" data-ico="support"></span><span>Suporte</span></div>
+        <div class="m2-nav m2-sub" onclick="m2AcaoMenu('sobreSistema')"><span class="ico" data-ico="info"></span><span>Sobre o Sistema</span></div>
       </div>
-      <div class="m2-nav" onclick="mudarModoDesign()"><span class="ico">🔁</span><span>Mudar design</span></div>
-      <div class="m2-nav" onclick="fazerLogout()"><span class="ico">🚪</span><span>Sair</span></div>
-      <div class="m2-status">🟢 <b>Sistema online</b><br><span id="m2-versao"></span></div>
+      <div class="m2-nav m2-sair" onclick="fazerLogout()"><span class="ico" data-ico="logout"></span><span>Sair</span></div>
+      <div class="m2-status"><span data-ico="dot-online" style="display:inline-flex;color:#4ade80;"></span><b>Sistema online</b><span id="m2-versao"></span></div>
     </div>
   </aside>
 
   <div id="m2-main">
     <div id="m2-topbar">
-      <button style="cursor:pointer;background:#16a34a;color:#fff;border:none;border-radius:11px;width:46px;height:46px;font-size:22px;flex-shrink:0;" onclick="document.body.classList.toggle('m2-menu-aberto')" title="Menu (todas as opções)">☰</button>
+      <button class="m2-menu-btn" style="cursor:pointer;background:#16a34a;color:#fff;border:none;border-radius:11px;width:46px;height:46px;flex-shrink:0;display:flex;align-items:center;justify-content:center;" onclick="document.body.classList.toggle('m2-menu-aberto')" title="Menu (todas as opções)" data-ico="menu"></button>
       <div class="m2-busca">
-        <span class="lupa">🔎</span>
+        <span class="lupa" data-ico="search"></span>
         <input type="text" id="m2-busca-input" placeholder="Pesquisar produto ou código de barras..." oninput="_m2Busca=this.value; renderM2Grid();">
-        <span class="barra" title="Ler com câmara" onclick="abrirScannerLoja()">▮▮▌</span>
+        <span class="barra" title="Ler com câmara" onclick="abrirScannerLoja()" data-ico="camera"></span>
       </div>
-      <div class="m2-loja" id="m2-loja-nome">🏪 Loja</div>
-      <div class="m2-sino" onclick="acionarEmergencia()" title="Emergência (F9)">🔔</div>
-      <div class="m2-user"><div class="av" id="m2-avatar">SC</div><span id="m2-user-nome"></span></div>
+      <div class="m2-loja"><span data-ico="store"></span><span id="m2-loja-nome">Loja</span></div>
+      <button class="m2-sos" onclick="acionarEmergencia()" title="Emergência (F9)"><span class="m2-sos-ico" data-ico="alert"></span><span class="m2-sos-txt">Emergência</span></button>
+      <div class="m2-user"><button class="m2-atualizar" id="m2-atualizar" onclick="this.classList.add('m2-a-girar'); var b=this; try{atualizarLojaManual();}catch(e){} setTimeout(function(){b.classList.remove('m2-a-girar');},1600);" title="Atualizar dados"><span data-ico="refresh"></span></button><span id="m2-user-nome" class="m2-edit-nome" onclick="m2EditarNome()" title="Clica para editar o teu nome">—</span></div>
     </div>
 
     <div id="m2-corpo">
-      <div>
+      <div id="m2-esquerda">
         <div id="m2-cabecalho">
-          <div class="m2-cab-ico">🏬</div>
-          <div><h1>Ponto de venda</h1><p>Gestão de vendas e stock em tempo real</p></div>
+          <div class="m2-cab-ico" data-ico="store"></div>
+          <div><h1>PONTO DE VENDA</h1><p>Gestão de vendas</p></div>
         </div>
         <div id="m2-painel">
-          <div id="m2-chips"></div>
           <div id="m2-subrow">
             <input type="text" id="m2-busca2" placeholder="Pesquisar produtos..." oninput="_m2Busca=this.value; document.getElementById('m2-busca-input').value=this.value; renderM2Grid();">
+            <div class="m2-cat-wrap">
+              <button class="m2-cat-btn" onclick="m2ToggleCategorias(event)"><span class="m2-cat-ico" data-ico="grid"></span><span id="m2-cat-label">Todas as categorias</span><span class="m2-cat-seta" data-ico="chevron"></span></button>
+              <div class="m2-cat-menu" id="m2-cat-menu"></div>
+            </div>
           </div>
           <div id="m2-grid"></div>
         </div>
@@ -6090,16 +6348,16 @@ body.modo2.m2-verde #m2-cart .m2-total-box { background:#dcfce7; }
 
       <div id="m2-cart">
         <div class="m2-cart-top">
-          <b>🛒 Carrinho atual (<span id="m2-cart-n">0</span>)</b>
-          <button class="m2-limpar" onclick="limparCarrinho()">🗑 Limpar</button>
+          <b><span data-ico="cart"></span>Carrinho atual (<span id="m2-cart-n">0</span>)</b>
+          <button class="m2-limpar" onclick="limparCarrinho()"><span data-ico="trash"></span> Limpar</button>
         </div>
         <div class="m2-itens" id="m2-cart-itens"><div class="m2-vazio">Nenhum produto. Clica num produto para adicionar.</div></div>
         <div class="m2-cart-fundo">
           <div class="m2-linha"><span>Subtotal</span><span id="m2-subtotal">MT 0,00</span></div>
           <div class="m2-linha"><span>Desconto</span><span id="m2-desc">MT 0,00</span></div>
           <div class="m2-total-box"><b>Total</b><span class="v" id="m2-total">MT 0,00</span></div>
-          <button class="m2-finalizar" onclick="abrirPagamento()">💳 Finalizar venda ›</button>
-          <button class="m2-guardar" onclick="guardarPedidoM2()">🧾 Guardar pedido</button>
+          <button class="m2-finalizar" onclick="abrirPagamento()"><span data-ico="card"></span><span class="m2-fin-txt">Finalizar venda</span><span class="m2-fin-seta" data-ico="arrow-right"></span></button>
+          <button class="m2-guardar" onclick="guardarPedidoM2()"><span data-ico="save"></span> Guardar pedido</button>
         </div>
       </div>
     </div>
@@ -6110,10 +6368,135 @@ body.modo2.m2-verde #m2-cart .m2-total-box { background:#dcfce7; }
 
 <script>
   var _m2Busca = '', _m2Cat = 'Todos';
+
+  /* ===== ÍCONES SVG REAIS (traço, herdam a cor do texto) ===== */
+  var _M2_ICONS = {
+    home:'<path d="M3 11l9-8 9 8"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/>',
+    cart:'<circle cx="9" cy="21" r="1.4"/><circle cx="18" cy="21" r="1.4"/><path d="M3 4h2l2.4 12.4a1.5 1.5 0 0 0 1.5 1.1h9.3a1.5 1.5 0 0 0 1.5-1.2L23 7H6"/>',
+    receipt:'<path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6M9 15h4"/>',
+    retornar:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
+    down:'<path d="M12 3v16"/><path d="M6 13l6 6 6-6"/>',
+    tag:'<path d="M20.6 13.4 12 22l-9-9V4h9z"/><circle cx="7.5" cy="7.5" r="1.4"/>',
+    truck:'<path d="M1 6h13v9H1z"/><path d="M14 9h4l3 3v3h-7z"/><circle cx="5.5" cy="18" r="1.8"/><circle cx="17.5" cy="18" r="1.8"/>',
+    transfer:'<path d="M7 4 3 8l4 4"/><path d="M3 8h14"/><path d="M17 20l4-4-4-4"/><path d="M21 16H7"/>',
+    alert:'<path d="M12 3 2 20h20z"/><path d="M12 9v5"/><path d="M12 17h.01"/>',
+    barcode:'<path d="M4 5v14M7 5v14M10 5v10M13 5v14M16 5v10M20 5v14"/>',
+    printer:'<path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/>',
+    globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18"/>',
+    support:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/>',
+    zap:'<path d="M13 2 3 14h7l-1 8 10-12h-7z"/>',
+    info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/>',
+    refresh:'<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v5h-5"/>',
+    layout:'<path d="M3 3h8v8H3zM13 3h8v5h-8zM13 11h8v10h-8zM3 13h8v8H3z"/>',
+    gear:'<circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/>',
+    logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>',
+    menu:'<path d="M3 6h18M3 12h18M3 18h18"/>',
+    search:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+    scan:'<path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><path d="M4 12h16"/>',
+    bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
+    store:'<path d="M3 9l1.6-5h14.8L21 9"/><path d="M4 9v11h16V9"/><path d="M3 9h18"/><path d="M9 20v-6h6v6"/>',
+    card:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
+    save:'<path d="M5 3h14a1 1 0 0 1 1 1v17l-8-4-8 4V4a1 1 0 0 1 1-1z"/>',
+    trash:'<path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M6 6l1 14a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-14"/>',
+    plus:'<path d="M12 5v14M5 12h14"/>',
+    chevron:'<path d="M6 9l6 6 6-6"/>',
+    box:'<path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/>',
+    grid:'<path d="M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM13 13h8v8h-8z"/>',
+    camera:'<path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.5"/>',
+    scale:'<path d="M12 3v18"/><path d="M4 7h16"/><path d="M7 7l-3 6a3 3 0 0 0 6 0z"/><path d="M17 7l-3 6a3 3 0 0 0 6 0z"/><path d="M8 21h8"/>',
+    'arrow-right':'<path d="M5 12h14"/><path d="M13 6l6 6-6 6"/>',
+    sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+    moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>'
+  };
+  function m2Svg(name){
+    var p = _M2_ICONS[name];
+    if (name === 'dot-online') return '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="5"/></svg>';
+    if (!p) p = _M2_ICONS.box;
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>';
+  }
+  var _M2_ACAO_ICON = {
+    abrirPainelVendas:'receipt', retornar:'retornar', verPerdas:'down', fazerEtiqueta:'tag',
+    avisoDespacho:'truck', transferirLoja:'transfer', emergencia:'alert', abrirEtiquetadora:'barcode',
+    abrirImpressora:'printer', escolherLingua:'globe', abrirSuporte:'support', verPlanos:'zap',
+    sobreSistema:'info', mudarModo:'layout', atualizar:'refresh'
+  };
+  function m2IconeAcao(acao){ return m2Svg(_M2_ACAO_ICON[acao] || 'box'); }
+  // Preenche todos os marcadores [data-ico] com o respetivo SVG
+  function m2PintarIcones(raiz){
+    try {
+      (raiz||document).querySelectorAll('[data-ico]').forEach(function(el){
+        if (el.getAttribute('data-ico-ok')) return;
+        el.innerHTML = m2Svg(el.getAttribute('data-ico'));
+        el.setAttribute('data-ico-ok','1');
+      });
+    } catch(e){}
+  }
+  // ===== Nome do operador (editável na topbar) =====
+  function m2EditarNome(){
+    var span = document.getElementById('m2-user-nome'); if (!span) return;
+    if (span.dataset.editando) return;
+    span.dataset.editando = '1';
+    var atual = '';
+    try { atual = (localStorage.getItem('pdv_m2_operador')) || (sessaoAtual && sessaoAtual.nomeExibicao) || ''; } catch(e){}
+    var inp = document.createElement('input');
+    inp.type = 'text'; inp.className = 'm2-edit-input'; inp.value = atual; inp.maxLength = 40;
+    inp.placeholder = 'O teu nome';
+    span.style.display = 'none';
+    span.parentNode.insertBefore(inp, span.nextSibling);
+    inp.focus(); inp.select();
+    function guardar(){
+      var v = inp.value.trim();
+      if (v){ try { localStorage.setItem('pdv_m2_operador', v); } catch(e){} if (typeof sessaoAtual!=='undefined' && sessaoAtual) sessaoAtual.nomeExibicao = v; try { mostrarNotif('Nome guardado: '+v); } catch(e){} }
+      try { inp.remove(); } catch(e){}
+      span.style.display = ''; delete span.dataset.editando;
+      try { renderM2Topo(); } catch(e){}
+    }
+    inp.addEventListener('keydown', function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); guardar(); } else if(ev.key==='Escape'){ try{inp.remove();}catch(e){} span.style.display=''; delete span.dataset.editando; } });
+    inp.addEventListener('blur', guardar);
+  }
+
+  // ===== Vibração (feedback tátil leve; SEM som) =====
+  function m2Vibrar(p){ try { if(navigator.vibrate) navigator.vibrate(p); } catch(e){} }
+
+  function m2ToggleDefinicoes(){
+    var t = document.querySelector('.m2-def-toggle');
+    var p = document.getElementById('m2-def-painel');
+    if (!t || !p) return;
+    var ab = p.classList.toggle('aberto');
+    t.classList.toggle('aberto', ab);
+  }
+  // Efeito ondulação (ripple) ao clicar — delegado
+  (function(){
+    document.addEventListener('pointerdown', function(e){
+      if (!document.body.classList.contains('modo2')) return;
+      var t = e.target.closest('#modo2-app .m2-nav, #modo2-app .m2-cat-item, #modo2-app .m2-cat-btn, #modo2-app .m2-add, #modo2-app .m2-finalizar, #modo2-app .m2-guardar, #modo2-app .m2-menu-btn, #modo2-app .m2-card, #modo2-app .m2-sos, #modo2-app .m2-atualizar, #modo2-app .tdot');
+      if (!t) return;
+      var ehCartao = t.classList.contains('m2-card');
+      if (!ehCartao){
+        var rect = t.getBoundingClientRect();
+        var size = Math.max(rect.width, rect.height);
+        var r = document.createElement('span'); r.className = 'm2-ripple';
+        r.style.width = r.style.height = size + 'px';
+        r.style.left = (e.clientX - rect.left - size/2) + 'px';
+        r.style.top = (e.clientY - rect.top - size/2) + 'px';
+        t.appendChild(r);
+        setTimeout(function(){ try { r.remove(); } catch(_){} }, 600);
+      }
+      // Feedback sonoro + vibração (o toque de "marcar produto" é tocado em m2AddProduto)
+      // Sem som. Apenas vibração leve (silenciosa) onde faz sentido.
+      if (t.classList.contains('m2-finalizar')) { m2Vibrar([18,30,18]); }
+      else if (ehCartao || t.classList.contains('m2-add')) { m2Vibrar(14); }
+      else { m2Vibrar(8); }
+    }, true);
+  })();
+
+  // v2.9.163: Modo Moderno libertado para todos — passa toda a gente para o modelo novo (uma vez).
+  try { if (!localStorage.getItem('pdv_modo_moderno_lancado')) { localStorage.setItem('pdv_modo', '2'); localStorage.setItem('pdv_modo_moderno_lancado', '1'); } } catch(e){}
   function _modoGuardado() { try { return localStorage.getItem('pdv_modo'); } catch(e) { return null; } }
   // Só estes emails (admin/dev) podem usar o Modo Moderno enquanto está em desenvolvimento.
-  const _ADMINS_MODO2 = ['joaomassuvir@gmail.com','newstartnacala@gmail.com'];
+  const _ADMINS_MODO2 = ['joaomassuvir@gmail.com','bonifacioadelino1@gmail.com','newstartnacala@gmail.com'];
   function _ehAdminModo2(){
+    return true; // Modo Moderno disponível para todas as lojas
     try { const e = (sessaoAtual && sessaoAtual.user && sessaoAtual.user.email || '').toLowerCase(); return _ADMINS_MODO2.indexOf(e) >= 0; } catch(err){ return false; }
   }
   function definirModo(m) {
@@ -6141,47 +6524,82 @@ body.modo2.m2-verde #m2-cart .m2-total-box { background:#dcfce7; }
   function renderM2Topo(){
     var nome = _m2NomeLoja();
     var e;
-    if (e=document.getElementById('m2-logo-nome')) e.textContent = nome.split(' ')[0] || 'SPAP';
-    if (e=document.getElementById('m2-loja-nome')) e.textContent = '🏪 ' + nome;
-    if (e=document.getElementById('m2-user-nome')) e.textContent = (typeof sessaoAtual!=='undefined'&&sessaoAtual)?(sessaoAtual.nomeExibicao||''):'';
-    if (e=document.getElementById('m2-avatar')) e.textContent = (nome.substr(0,2)||'SC').toUpperCase();
+    if (e=document.getElementById('m2-logo-nome')) e.textContent = 'Loja';
+    if (e=document.getElementById('m2-loja-nome')) e.textContent = nome;
+    try { var _op = localStorage.getItem('pdv_m2_operador'); if (_op && typeof sessaoAtual!=='undefined' && sessaoAtual) sessaoAtual.nomeExibicao = _op; } catch(err){}
+    if (e=document.getElementById('m2-user-nome')) { var vn=(typeof sessaoAtual!=='undefined'&&sessaoAtual)?(sessaoAtual.nomeExibicao||''):''; e.textContent = vn || 'Pôr o teu nome'; }
     if (e=document.getElementById('m2-versao')) e.textContent = 'v' + (typeof VERSAO_ATUAL!=='undefined'?VERSAO_ATUAL:'');
   }
 
+  function _m2TemKg(){ try { return (produtos||[]).some(function(p){ return p.unidade==='kg'; }); } catch(e){ return false; } }
+  function _m2RotuloCat(c){ return c==='Todos' ? 'Todas as categorias' : (c==='__kg__' ? 'Por quilo (kg)' : c); }
   function renderM2Chips(){
-    var el = document.getElementById('m2-chips'); if (!el) return;
+    var menu = document.getElementById('m2-cat-menu'); if (!menu) return;
     var cats = ['Todos'];
     (produtos||[]).forEach(function(p){ var c=(p.categoria&&String(p.categoria).trim())?p.categoria.trim():'Outros'; if(cats.indexOf(c)<0) cats.push(c); });
-    var icon = function(c){ try { return (typeof categoriasInfo!=='undefined' && categoriasInfo[c]) ? categoriasInfo[c] : '📦'; } catch(e){ return '📦'; } };
-    el.innerHTML = cats.map(function(c){
-      var ic = c==='Todos' ? '▦' : icon(c);
-      return '<button class="chip'+(_m2Cat===c?' ativo':'')+'" onclick="_m2Cat=\''+c.replace(/'/g,"\\'")+'\'; renderM2Chips(); renderM2Grid();"><span>'+ic+'</span>'+c+'</button>';
+    var itens = cats.slice();
+    if (_m2TemKg()) itens.push('__kg__');  // categoria especial: produtos vendidos por quilo
+    function _ico(c){
+      if (c==='Todos') return m2Svg('grid');
+      if (c==='__kg__') return m2Svg('scale');
+      try { var em=(typeof categoriasInfo!=='undefined'&&categoriasInfo[c])?categoriasInfo[c]:null; return em?('<span style="font-size:15px">'+em+'</span>'):m2Svg('box'); } catch(e){ return m2Svg('box'); }
+    }
+    menu.innerHTML = itens.map(function(c){
+      var cj = String(c).replace(/'/g,"\\'");
+      return '<div class="m2-cat-item'+(_m2Cat===c?' ativo':'')+'" onclick="m2EscolherCat(\''+cj+'\')"><span class="m2-cat-item-ico">'+_ico(c)+'</span>'+_m2RotuloCat(c)+'</div>';
     }).join('');
+    var lab = document.getElementById('m2-cat-label'); if (lab) lab.textContent = _m2RotuloCat(_m2Cat||'Todos');
   }
+  function m2ToggleCategorias(e){
+    if(e) e.stopPropagation();
+    var w=document.querySelector('.m2-cat-wrap'); if(!w) return;
+    var abrir = !w.classList.contains('aberto');
+    w.classList.toggle('aberto', abrir);
+    if (abrir){
+      var btn = w.querySelector('.m2-cat-btn'), menu = document.getElementById('m2-cat-menu');
+      if (btn && menu){
+        var r = btn.getBoundingClientRect();
+        menu.style.position = 'fixed';
+        menu.style.top = (r.bottom + 6) + 'px';
+        menu.style.left = 'auto';
+        menu.style.right = (window.innerWidth - r.right) + 'px';
+        menu.style.minWidth = Math.max(r.width, 230) + 'px';
+        var disp = window.innerHeight - r.bottom - 18;
+        menu.style.maxHeight = Math.max(160, Math.min(380, disp)) + 'px';
+      }
+    }
+  }
+  function m2EscolherCat(c){ _m2Cat=c; var w=document.querySelector('.m2-cat-wrap'); if(w) w.classList.remove('aberto'); renderM2Chips(); renderM2Grid(); }
+  document.addEventListener('click', function(e){
+    if(!document.body.classList.contains('modo2')) return;
+    var w=document.querySelector('.m2-cat-wrap');
+    if(w && w.classList.contains('aberto') && !e.target.closest('.m2-cat-wrap')) w.classList.remove('aberto');
+  });
 
   function renderM2Grid(){
     var el = document.getElementById('m2-grid'); if (!el) return;
     var termo = (_m2Busca||'').toLowerCase();
     var lista = (produtos||[]).filter(function(p){
       var c=(p.categoria&&String(p.categoria).trim())?p.categoria.trim():'Outros';
-      if (_m2Cat!=='Todos' && c!==_m2Cat) return false;
+      if (_m2Cat==='__kg__'){ if (p.unidade!=='kg') return false; }
+      else if (_m2Cat!=='Todos' && c!==_m2Cat) return false;
       if (termo){ var n=(p.nome||'').toLowerCase(), cod=(p.codigo||'').toLowerCase(), cb=(p.codbarras||'').toLowerCase(); if(!(n.indexOf(termo)>=0||cod.indexOf(termo)>=0||cb.indexOf(termo)>=0)) return false; }
       return true;
     });
     if (!lista.length){ el.innerHTML = '<div style="color:#94a3b8;padding:30px;grid-column:1/-1;text-align:center;">Nenhum produto.</div>'; return; }
     el.innerHTML = lista.map(function(p){
-      var img = p.imagem ? '<img class="m2-img" src="'+p.imagem+'" onclick="event.stopPropagation(); abrirImagemGrande(this.src)" style="cursor:zoom-in;" onerror="this.outerHTML=\'<div class=m2-img>🛒</div>\'">' : '<div class="m2-img">🛒</div>';
+      var img = p.imagem ? '<img class="m2-img" src="'+p.imagem+'" onerror="this.outerHTML=\'<div class=m2-img>🛒</div>\'">' : '<div class="m2-img">🛒</div>';
       var kg = (p.unidade==='kg') ? ' <small>/kg</small>' : '';
       var nomeJS = (p.nome||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');
-      return '<div class="m2-card">'+img+
+      return '<div class="m2-card" onclick="m2AddProduto(\''+nomeJS+'\')" title="Clica para adicionar">'+img+
         '<div class="m2-nome">'+(p.nome||'')+'</div>'+
         '<div class="m2-linha"><span class="m2-preco">'+_m2Money(p.preco)+kg+'</span>'+
-        '<button class="m2-add" onclick="m2AddProduto(\''+nomeJS+'\')">+</button></div></div>';
+        '<button class="m2-add" onclick="event.stopPropagation(); m2AddProduto(\''+nomeJS+'\')">'+m2Svg('plus')+'</button></div></div>';
     }).join('');
   }
   function m2AddProduto(nome){
     var p = (produtos||[]).find(function(x){ return x.nome===nome; });
-    if (p) { try { cliqueNoProduto(p); } catch(e){} }
+    if (p) { try { m2Vibrar(14); } catch(e){} try { cliqueNoProduto(p); } catch(e){} }
   }
 
   function renderM2Cart(){
@@ -6192,7 +6610,7 @@ body.modo2.m2-verde #m2-cart .m2-total-box { background:#dcfce7; }
         var pReal = (produtos||[]).find(function(p){ return p.nome===item.nome; });
         var thumb = (pReal&&pReal.imagem) ? '<img class="m2-it-img" src="'+pReal.imagem+'" onerror="this.outerHTML=\'<div class=m2-it-img>🛒</div>\'">' : '<div class="m2-it-img">🛒</div>';
         var step = (item.unidade==='kg')
-          ? '<button onclick="editarPesoCarrinho('+i+')">⚖️ '+(item.qtd<1?(Math.round(item.qtd*1000)+'g'):(item.qtd+'kg'))+' ✏️</button>'
+          ? '<button class="m2-peso" onclick="editarPesoCarrinho('+i+')">⚖️ '+(item.qtd<1?(Math.round(item.qtd*1000)+'g'):(item.qtd+'kg'))+' ✏️</button>'
           : '<button onclick="alterarQtd('+i+',-1)">−</button><span style="min-width:22px;text-align:center;font-weight:bold;">'+item.qtd+'</span><button onclick="alterarQtd('+i+',1)">+</button>';
         return '<div class="m2-item">'+thumb+
           '<div class="m2-it-info"><div class="m2-it-nome">'+item.nome+'</div>'+
@@ -6239,8 +6657,10 @@ body.modo2.m2-verde #m2-cart .m2-total-box { background:#dcfce7; }
         {emoji:'ℹ️',label:'Sobre o Sistema',acao:'sobreSistema'}
       ];
     }
-    el.innerHTML = itens.filter(function(it){ return it.acao !== 'mudarModo'; }).map(function(it){
-      return '<div class="m2-nav" onclick="m2AcaoMenu(\''+it.acao+'\')"><span class="ico">'+(it.emoji||'•')+'</span><span>'+(it.label||it.acao)+'</span></div>';
+    // Idioma, Ver planos e Mudar design passam para "Definições" (no rodapé)
+    var _ocultar = ['mudarModo','escolherLingua','verPlanos','abrirSuporte','sobreSistema','emergencia'];
+    el.innerHTML = itens.filter(function(it){ return _ocultar.indexOf(it.acao) < 0; }).map(function(it){
+      return '<div class="m2-nav" onclick="m2AcaoMenu(\''+it.acao+'\')"><span class="ico">'+m2IconeAcao(it.acao)+'</span><span>'+(it.label||it.acao)+'</span></div>';
     }).join('');
   }
   function m2AcaoMenu(acao){
@@ -6248,23 +6668,34 @@ body.modo2.m2-verde #m2-cart .m2-total-box { background:#dcfce7; }
     try { executarAcaoMenu(acao); } catch(e){}
   }
 
-  function setTemaM2(t){
-    try { localStorage.setItem('pdv_m2_tema', t); } catch(e){}
-    aplicarTemaM2();
-  }
-  function aplicarTemaM2(){
-    var t = 'branco';
-    try { t = localStorage.getItem('pdv_m2_tema') || 'branco'; } catch(e){}
-    document.body.classList.remove('m2-escuro','m2-verde');
-    if (t==='escuro') document.body.classList.add('m2-escuro');
-    else if (t==='verde') document.body.classList.add('m2-verde');
+  // Aparência = MODO (claro/escuro) + COR de destaque (verde/azul), independentes
+  function setModoM2(m){ try{ localStorage.setItem('pdv_m2_modo', m); }catch(e){} aplicarAparenciaM2(m, null); }
+  function setCorM2(c){ try{ localStorage.setItem('pdv_m2_cor', c); }catch(e){} aplicarAparenciaM2(null, c); }
+  function aplicarAparenciaM2(modoForcado, corForcada){
+    var modo = modoForcado;
+    if (!modo){ try { modo = localStorage.getItem('pdv_m2_modo'); } catch(e){} }
+    var cor = corForcada;
+    if (!cor){ try { cor = localStorage.getItem('pdv_m2_cor'); } catch(e){} }
+    // Compatibilidade com o nome antigo "pdv_m2_tema"
+    try { var old = localStorage.getItem('pdv_m2_tema');
+      if (!modo && (old==='escuro'||old==='claro'||old==='branco')) modo = (old==='branco'?'claro':old);
+      if (!cor && (old==='azul'||old==='verde')) cor = old;
+    } catch(e){}
+    modo = (modo==='escuro') ? 'escuro' : 'claro';
+    cor  = (cor==='azul')   ? 'azul'   : 'verde';
+    document.body.classList.remove('m2-claro','m2-escuro','m2-verde','m2-azul','m2-ac-verde','m2-ac-azul');
+    document.body.classList.add(modo==='escuro' ? 'm2-escuro' : 'm2-claro');
+    document.body.classList.add(cor==='azul' ? 'm2-ac-azul' : 'm2-ac-verde');
     try {
-      document.querySelectorAll('#m2-temas .tdot').forEach(function(d){ d.classList.remove('sel'); });
-      var sel = document.querySelector('#m2-temas .tdot.'+t); if (sel) sel.classList.add('sel');
+      document.querySelectorAll('#m2-temas .m2-tema-op').forEach(function(d){ d.classList.toggle('sel', d.getAttribute('data-cor')===cor); });
+      document.querySelectorAll('.m2-modo-op').forEach(function(d){ d.classList.toggle('sel', d.getAttribute('data-modo')===modo); });
     } catch(e){}
   }
+  // Compat: chamadas antigas continuam a funcionar
+  function aplicarTemaM2(){ aplicarAparenciaM2(); }
+  function setTemaM2(t){ if (t==='escuro'||t==='claro'||t==='branco') setModoM2(t==='branco'?'claro':t); else setCorM2(t); }
 
-  function renderModo2(){ renderM2Topo(); renderM2Nav(); renderM2Chips(); renderM2Grid(); renderM2Cart(); aplicarTemaM2(); }
+  function renderModo2(){ renderM2Topo(); renderM2Nav(); renderM2Chips(); renderM2Grid(); renderM2Cart(); aplicarAparenciaM2(); m2PintarIcones(); }
 
   function aplicarModoVisual(){
     // Se por algum motivo ficou em modo 2 mas não é admin, volta ao clássico.

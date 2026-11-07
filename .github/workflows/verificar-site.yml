@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [ main ]
-    paths: [ '.github/workflows/verificar-site.yml', 'version.json' ]
+    paths: [ '.github/workflows/verificar-site.yml', 'version.json', 'SPAPSERCRIATIVOPOSS/version.json' ]
 permissions:
   contents: write
 jobs:
