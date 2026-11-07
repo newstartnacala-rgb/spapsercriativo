@@ -902,7 +902,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.178" defer></script>
+<script src="app-android.js?v=2.9.179" defer></script>
 </head>
 <body>
 <script>
@@ -5320,7 +5320,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.178';
+const MONITOR_VERSAO = '2.9.179';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -5727,11 +5727,15 @@ async function abrirMeuPerfil() {
   document.getElementById('painel-meu-perfil').classList.add('aberto'); try{history.pushState({subpainel:'painel-meu-perfil'},'');}catch(e){}
   try {
     const { data: sess } = await supabaseClient.auth.getUser();
-    const email = sess && sess.user ? sess.user.email : '—';
-    document.getElementById('perfil-email').textContent = email;
+    const emailSessao = sess && sess.user ? sess.user.email : '';
+    // O Super Admin a ver a loja de outra pessoa não pode mexer no e-mail/senha da sua própria conta aqui
+    const eLojaDeOutro = isSuperAdmin && lojaId !== window._lojaTesteId;
+    const seg = document.getElementById('perfil-seguranca'); if (seg) seg.style.display = eLojaDeOutro ? 'none' : '';
 
     const { data } = await supabaseClient.from('lojas')
-      .select('nome, nome_empresa, telefone, endereco, plano, pin_monitor, codigo_agente, pin_gerente, logo, recibo_rodape, codigo_desconto').eq('id', lojaId).maybeSingle();
+      .select('nome, nome_empresa, telefone, endereco, plano, pin_monitor, codigo_agente, pin_gerente, logo, recibo_rodape, codigo_desconto, email_dono').eq('id', lojaId).maybeSingle();
+    // E-mail mostrado = o e-mail com que a LOJA foi registada
+    document.getElementById('perfil-email').textContent = (data && data.email_dono) || (eLojaDeOutro ? '—' : emailSessao) || '—';
     if (data) {
       const estPin = document.getElementById('perfil-pin-estado');
       if (estPin) {
@@ -6570,7 +6574,7 @@ async function carregarContagensEquipa() {
     </div>
 
     <!-- Segurança: email e senha -->
-    <div style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:16px;">
+    <div id="perfil-seguranca" style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:16px;">
       <div style="font-weight:bold;font-size:15px;margin-bottom:12px;color:#334155;">🔒 Segurança</div>
 
       <label style="font-size:13px;color:#64748b;font-weight:600;">Trocar e-mail de acesso</label>
