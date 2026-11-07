@@ -789,6 +789,8 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   .att-btn.att-sec { background:#fff; color:var(--az); box-shadow:0 2px 8px rgba(29,85,190,.08); border:1px solid #dbe7fb; }
   .att-btn-verde { background:linear-gradient(180deg,#34d399,#059669); box-shadow:0 10px 22px rgba(5,150,105,.30); }
   .att-quando { font-size:12px; color:#8a9bc0; font-weight:600; margin-top:10px; min-height:14px; }
+  .indicador-live.live-flash { animation:liveFlash 1.2s ease; }
+  @keyframes liveFlash { 0% { transform:scale(1); box-shadow:0 0 0 0 rgba(34,197,94,.7); } 30% { transform:scale(1.15); box-shadow:0 0 0 10px rgba(34,197,94,0); } 100% { transform:scale(1); } }
   .att-app-txt { font-size:14px; color:#334155; line-height:1.5; }
   .att-app-txt b { color:#0f172a; }
   .att-app-barra { height:10px; border-radius:10px; background:#e2e8f0; overflow:hidden; margin-top:10px; }
@@ -897,7 +899,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.171" defer></script>
+<script src="app-android.js?v=2.9.172" defer></script>
 </head>
 <body>
 <script>
@@ -1738,6 +1740,60 @@ async function iniciarMonitor() {
   aplicarModoGerente();
   intervalo = setInterval(carregarTudo, 30000);
   verificarNotifStatus();
+  ligarVendasTempoReal();
+}
+
+// ===== VENDAS EM TEMPO REAL =====
+// 1) Supabase Realtime: avisa no próprio segundo em que a venda entra no servidor.
+// 2) Vigia leve a cada 3 s (só lê o ID da última venda) — funciona sempre, mesmo sem Realtime.
+let _ultimaVendaVista = null, _aRecarregarVendas = false, _recarregarPendente = false, _canalVendas = null, _timerVigia = null;
+async function _recarregarVendasJa(novaVenda) {
+  if (_aRecarregarVendas) { _recarregarPendente = true; return; }
+  _aRecarregarVendas = true;
+  try {
+    await carregarTudo();
+    if (novaVenda) {
+      const live = document.querySelector('.indicador-live');
+      if (live) { live.classList.remove('live-flash'); void live.offsetWidth; live.classList.add('live-flash'); }
+    }
+  } catch (e) {} finally {
+    _aRecarregarVendas = false;
+    if (_recarregarPendente) { _recarregarPendente = false; setTimeout(() => _recarregarVendasJa(false), 200); }
+  }
+}
+async function _vigiarVendasNovas() {
+  if (document.hidden || !supabaseClient) return;
+  try {
+    let q = supabaseClient.from('vendas').select('id').order('criado_em', { ascending: false }).limit(1);
+    if (!(isSuperAdmin && modoGeral)) q = q.eq('loja_id', lojaId);
+    const { data, error } = await q;
+    if (error) return;
+    const topo = (data && data[0]) ? data[0].id : '';
+    const chave = (isSuperAdmin && modoGeral ? 'geral' : lojaId) + ':' + topo;
+    if (_ultimaVendaVista === null || _ultimaVendaVista.split(':')[0] !== chave.split(':')[0]) { _ultimaVendaVista = chave; return; }
+    if (chave !== _ultimaVendaVista) { _ultimaVendaVista = chave; _recarregarVendasJa(true); }
+  } catch (e) {}
+}
+function ligarVendasTempoReal() {
+  if (!_timerVigia) {
+    _timerVigia = setInterval(_vigiarVendasNovas, 3000);
+    _vigiarVendasNovas();
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) _recarregarVendasJa(false); });
+    window.addEventListener('online', () => _recarregarVendasJa(false));
+  }
+  try {
+    if (_canalVendas || !supabaseClient.channel) return;
+    let espera = null;
+    const aoMudar = (payload) => {
+      const v = (payload && (payload.new || payload.old)) || {};
+      if (!(isSuperAdmin && modoGeral) && v.loja_id && v.loja_id !== lojaId) return;
+      clearTimeout(espera);
+      espera = setTimeout(() => _recarregarVendasJa(payload && payload.eventType === 'INSERT'), 350);
+    };
+    _canalVendas = supabaseClient.channel('monitor-vendas-' + Date.now())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'vendas' }, aoMudar)
+      .subscribe();
+  } catch (e) {}
 }
 
 // ===== PIN DE SEGURANÇA DO MONITOR =====
@@ -5207,7 +5263,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.171';
+const MONITOR_VERSAO = '2.9.172';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
