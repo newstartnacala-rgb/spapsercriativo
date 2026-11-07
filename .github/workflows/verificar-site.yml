@@ -32,3 +32,4 @@ jobs:
           date -u >> resultado.txt
           git add . && git commit -qm "verificacao [skip ci]"
           git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:verificacao
+# re-verificar após publicar as apps
