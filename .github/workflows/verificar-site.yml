@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [ main ]
-    paths: [ '.github/workflows/verificar-site.yml', 'version.json', 'SPAPSERCRIATIVOPOSS/version.json' ]
+    paths: [ '.github/workflows/verificar-site.yml', 'version.json', 'SPAPSERCRIATIVOPOSS/version.json', 'SPAPSERCRIATIVOPOSS/apps/app-version.json' ]
 permissions:
   contents: write
 jobs:
@@ -20,7 +20,9 @@ jobs:
             VS=$(grep -oE '"versao" *: *"[^"]*"' /tmp/v.json 2>/dev/null | head -1)
             M=$(curl -s -m 20 "https://$d/monitor.html?t=$(date +%s)" | grep -oE "MONITOR_VERSAO = '[^']*'|agua-mar|topbar-titulo" | sort -u | tr '\n' ' ')
             I=$(curl -s -m 20 "https://$d/index.html?t=$(date +%s)" | grep -oE "VERSAO_ATUAL = '[^']*'|pdv_modo_moderno_lancado" | sort -u | tr '\n' ' ')
-            echo "$d | http=$V | $VS | monitor: $M | loja: $I" | tee -a out/resultado.txt
+            A=$(curl -s -m 20 "https://$d/apps/app-version.json?t=$(date +%s)" | grep -oE '"versao" *: *"[^"]*"' | head -1)
+            K=$(curl -s -m 30 -o /dev/null -w '%{http_code} %{size_download} %{content_type}' "https://$d/apps/SPAP-Monitor.apk")
+            echo "$d | http=$V | $VS | monitor: $M | loja: $I | app: $A apk=$K" | tee -a out/resultado.txt
           done
       - name: Gravar resultado
         run: |
