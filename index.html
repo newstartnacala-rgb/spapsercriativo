@@ -5700,7 +5700,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.166';
+  const VERSAO_ATUAL = '2.9.167';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -5873,7 +5873,7 @@ async function mostrarEcraSuspenso(motivo){
 <style>
 /* Ecrã de escolha de modo */
 #escolher-modo { position:fixed; inset:0; z-index:100000; background:#0f172a; display:none; align-items:center; justify-content:center; padding:20px; }
-#escolher-modo.ativo { display:flex; }
+#escolher-modo.ativo { display:none !important; }
 #escolher-modo .em-box { max-width:720px; width:100%; }
 #escolher-modo h1 { color:#fff; text-align:center; font-size:26px; margin:0 0 6px; }
 #escolher-modo p { color:#94a3b8; text-align:center; margin:0 0 24px; font-size:14px; }
@@ -6401,7 +6401,6 @@ body.modo2.m2-escuro #m2-grid::-webkit-scrollbar-thumb, body.modo2.m2-escuro #m2
         <div class="m2-def-titulo">Opções</div>
         <div class="m2-nav m2-sub" onclick="m2AcaoMenu('escolherLingua')"><span class="ico" data-ico="globe"></span><span>Idiomas</span></div>
         <div class="m2-nav m2-sub" onclick="m2AcaoMenu('verPlanos')"><span class="ico" data-ico="zap"></span><span>Ver planos</span></div>
-        <div class="m2-nav m2-sub" onclick="mudarModoDesign()"><span class="ico" data-ico="layout"></span><span>Mudar design</span></div>
         <div class="m2-nav m2-sub" onclick="m2AcaoMenu('abrirSuporte')"><span class="ico" data-ico="support"></span><span>Suporte</span></div>
         <div class="m2-nav m2-sub" onclick="m2AcaoMenu('sobreSistema')"><span class="ico" data-ico="info"></span><span>Sobre o Sistema</span></div>
       </div>
@@ -6594,7 +6593,9 @@ document.addEventListener('click', function(e){
 
   // v2.9.163: Modo Moderno libertado para todos — passa toda a gente para o modelo novo (uma vez).
   try { if (!localStorage.getItem('pdv_modo_moderno_lancado')) { localStorage.setItem('pdv_modo', '2'); localStorage.setItem('pdv_modo_moderno_lancado', '1'); } } catch(e){}
-  function _modoGuardado() { try { return localStorage.getItem('pdv_modo'); } catch(e) { return null; } }
+  // v2.9.167: a interface antiga foi removida — todas as lojas usam só a interface nova.
+  try { localStorage.setItem('pdv_modo', '2'); } catch(e){}
+  function _modoGuardado() { return '2'; }
   // Só estes emails (admin/dev) podem usar o Modo Moderno enquanto está em desenvolvimento.
   const _ADMINS_MODO2 = ['joaomassuvir@gmail.com','bonifacioadelino1@gmail.com','newstartnacala@gmail.com'];
   function _ehAdminModo2(){
@@ -6602,6 +6603,7 @@ document.addEventListener('click', function(e){
     try { const e = (sessaoAtual && sessaoAtual.user && sessaoAtual.user.email || '').toLowerCase(); return _ADMINS_MODO2.indexOf(e) >= 0; } catch(err){ return false; }
   }
   function definirModo(m) {
+    m = '2';
     // Modo Moderno só para admin. Outros: aviso "em desenvolvimento" e abre o Clássico.
     if (m === '2' && !_ehAdminModo2()) {
       try { localStorage.setItem('pdv_modo', '1'); } catch(e){}
@@ -6614,7 +6616,7 @@ document.addEventListener('click', function(e){
     document.getElementById('escolher-modo').classList.remove('ativo');
     aplicarModoVisual();
   }
-  function mudarModoDesign() { try{fecharMenu();}catch(e){} document.getElementById('escolher-modo').classList.add('ativo'); }
+  function mudarModoDesign() { try{fecharMenu();}catch(e){} }
   function m2Nav(secao, el) {
     if (el) { document.querySelectorAll('#m2-sidebar .m2-nav').forEach(n=>n.classList.remove('ativo')); el.classList.add('ativo'); }
     document.body.classList.remove('m2-menu-aberto');
@@ -6870,29 +6872,59 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Indicador discreto de internet no topo (bolinha verde/vermelha)
+// Indicador de internet — pílula profissional no topo (Online / Lenta / Offline)
+(function(){
+  if (document.getElementById('net-estilo')) return;
+  var st = document.createElement('style'); st.id = 'net-estilo';
+  st.textContent =
+    '#banner-offline{position:fixed;top:14px;right:14px;z-index:9998;display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 12px 0 10px;border-radius:999px;'+
+    'font:700 12px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;letter-spacing:.2px;color:#065f46;background:rgba(236,253,245,.92);border:1px solid rgba(16,185,129,.35);'+
+    'box-shadow:0 4px 14px rgba(0,0,0,.10);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:background .3s,color .3s,border-color .3s;white-space:nowrap;cursor:default;user-select:none;}'+
+    '#m2-topbar #banner-offline{position:static;flex-shrink:0;box-shadow:none;}'+
+    '#banner-offline .np-dot{position:relative;width:9px;height:9px;border-radius:50%;background:#10b981;flex-shrink:0;}'+
+    '#banner-offline .np-dot::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid currentColor;opacity:0;animation:npPulso 2s ease-out infinite;color:#10b981;}'+
+    '#banner-offline.np-fraco{color:#92400e;background:rgba(255,251,235,.95);border-color:rgba(245,158,11,.45);}'+
+    '#banner-offline.np-fraco .np-dot{background:#f59e0b;} #banner-offline.np-fraco .np-dot::after{color:#f59e0b;animation-duration:1s;}'+
+    '#banner-offline.np-sem{color:#991b1b;background:rgba(254,242,242,.96);border-color:rgba(239,68,68,.45);}'+
+    '#banner-offline.np-sem .np-dot{background:#ef4444;} #banner-offline.np-sem .np-dot::after{color:#ef4444;animation-duration:.9s;}'+
+    'body.modo2.m2-escuro #banner-offline{color:#bbf7d0;background:rgba(6,40,24,.85);border-color:rgba(74,222,128,.35);}'+
+    'body.modo2.m2-escuro #banner-offline.np-fraco{color:#fde68a;background:rgba(60,40,5,.85);border-color:rgba(245,158,11,.45);}'+
+    'body.modo2.m2-escuro #banner-offline.np-sem{color:#fecaca;background:rgba(60,10,10,.85);border-color:rgba(239,68,68,.45);}'+
+    '@keyframes npPulso{0%{transform:scale(.6);opacity:.7}100%{transform:scale(1.9);opacity:0}}'+
+    '@media(max-width:620px){#m2-topbar #banner-offline{width:30px;padding:0;justify-content:center;gap:0}#m2-topbar #banner-offline .np-txt{display:none}'+
+    '#m2-topbar{gap:8px !important;padding:10px 12px !important}#m2-topbar .m2-loja{min-width:0;flex:1 1 auto;overflow:hidden}'+
+    '#m2-topbar #m2-loja-nome{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;min-width:0}#m2-topbar .m2-busca{flex:0 0 auto}#m2-topbar .m2-sos{flex-shrink:0}#m2-topbar .m2-loja{min-width:84px;padding-left:10px;padding-right:10px}#m2-topbar .m2-user > span,#m2-topbar .m2-user .m2-edit-nome{display:none !important}#m2-topbar .m2-user{flex-shrink:0;gap:0}'+
+    '#m2-topbar{gap:6px !important;padding:10px 8px !important}#m2-topbar .m2-menu-btn{width:42px !important;height:42px !important}#m2-topbar .m2-busca{padding:0 8px !important;gap:8px !important;height:42px}'+
+    '#m2-topbar .m2-loja{min-width:56px;padding:0 9px !important;height:42px}#m2-topbar .m2-sos{padding:10px !important}#m2-topbar .m2-atualizar{width:40px !important;height:40px !important}}';
+  document.head.appendChild(st);
+})();
 const dotNet = document.createElement('div');
 dotNet.id = 'banner-offline';
 dotNet.title = 'Estado da internet';
-dotNet.style.cssText = 'position:fixed;top:10px;right:150px;width:26px;height:26px;border-radius:50%;background:#16a34a;border:2.5px solid rgba(255,255,255,0.85);z-index:9998;box-shadow:0 1px 5px rgba(0,0,0,0.35);transition:background 0.3s;display:flex;align-items:center;justify-content:center;font-size:12px;';
-dotNet.textContent = '📶';
+dotNet.innerHTML = '<i class="np-dot"></i><span class="np-txt">Online</span>';
 document.body.appendChild(dotNet);
+// Na interface nova, a pílula fica dentro da barra de topo (ao lado do nome da loja)
+function _colocarIndicadorNet(){
+  var loja = document.querySelector('#m2-topbar .m2-loja');
+  if (loja && dotNet.parentNode !== loja.parentNode) loja.parentNode.insertBefore(dotNet, loja.nextSibling);
+}
+_colocarIndicadorNet(); setInterval(_colocarIndicadorNet, 2000);
 let _netOscilar = null;
 function estadoNet(estado) {
-  // aceita boolean antigo (true/false) ou 'bom'/'fraco'/'sem'
   if (estado === true) estado = 'bom';
   if (estado === false) estado = 'sem';
   if (_netOscilar) { clearInterval(_netOscilar); _netOscilar = null; }
+  dotNet.style.display = '';
+  dotNet.classList.remove('np-fraco', 'np-sem');
+  var txt = dotNet.querySelector('.np-txt');
   if (estado === 'sem') {
-    dotNet.style.background = '#dc2626'; dotNet.textContent = '📵';
-    dotNet.title = 'Sem internet — vendas serão sincronizadas ao voltar';
+    dotNet.classList.add('np-sem'); txt.textContent = 'Offline';
+    dotNet.title = 'Sem internet — as vendas ficam guardadas e sincronizam quando voltar';
   } else if (estado === 'fraco') {
-    dotNet.textContent = '📶'; dotNet.title = 'Internet fraca (lenta)';
-    let on = true; dotNet.style.background = '#f59e0b';
-    _netOscilar = setInterval(() => { on = !on; dotNet.style.background = on ? '#f59e0b' : '#fef08a'; }, 450);
+    dotNet.classList.add('np-fraco'); txt.textContent = 'Internet lenta';
+    dotNet.title = 'Internet fraca (lenta)';
   } else {
-    dotNet.style.background = '#16a34a'; dotNet.textContent = '📶';
-    dotNet.title = 'Com internet';
+    txt.textContent = 'Online'; dotNet.title = 'Com internet';
   }
 }
 // Verde/amarelo/vermelho conforme consegue chegar ao servidor E a velocidade
@@ -6921,9 +6953,7 @@ window.addEventListener('offline', () => estadoNet(false));
 window.addEventListener('online', () => { verificarNetReal(); if (typeof sincronizarFila==='function') sincronizarFila(); });
 
 // Verifica estado inicial
-if (!navigator.onLine) {
-  document.getElementById('banner-offline').style.display = 'block';
-}
+if (!navigator.onLine) { estadoNet('sem'); }
 
 // Sincroniza vendas guardadas offline
 async function sincronizarVendasOffline() {
