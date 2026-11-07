@@ -902,7 +902,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.179" defer></script>
+<script src="app-android.js?v=2.9.180" defer></script>
 </head>
 <body>
 <script>
@@ -1806,6 +1806,7 @@ function ligarVendasTempoReal() {
     };
     _canalVendas = supabaseClient.channel('monitor-vendas-' + Date.now())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'vendas' }, aoMudar)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'venda_itens' }, aoMudar)
       .subscribe();
   } catch (e) {}
 }
@@ -1924,6 +1925,7 @@ async function trocarLojaSuper(valor) {
     const cod = prompt('🔒 Para ver as vendas de outras lojas, escreve o código:');
     if (cod !== '0210') { mostrarNotif('❌ Código errado.', true); return; }
     window._lojasDesbloqueadas = true;
+    setTimeout(prepararLojasSuper, 50);
   }
   if (valor === 'geral') { lojaId = null; modoGeral = true; nomeLoja = 'Todas as Lojas'; }
   else { lojaId = valor; modoGeral = false; const l = todasLojas.find(x => x.id === lojaId); nomeLoja = (l && l.nome) || ''; }
@@ -2042,10 +2044,54 @@ async function mudarCodigoVendas() {
 // • As lojas já abertas ficam em memória: voltar a uma loja é instantâneo.
 let _pedidoCarga = 0;
 const _cacheLojas = new Map();
+const _imagensLojas = new Map();   // chave → { idProduto: imagem }
+function _aplicarImagens(chave) {
+  const m = _imagensLojas.get(chave); if (!m) return;
+  (todosProdutos || []).forEach(p => { if (m[p.id]) p.imagem = m[p.id]; });
+}
+async function _carregarImagensProdutos(chave, daLoja, meu) {
+  if (_imagensLojas.has(chave)) { _aplicarImagens(chave); return; }
+  try {
+    const { data, error } = await daLoja(supabaseClient.from('produtos').select('id,imagem')).not('imagem', 'is', null);
+    if (error || !data) return;
+    const m = {}; data.forEach(r => { if (r.imagem) m[r.id] = r.imagem; });
+    _imagensLojas.set(chave, m);
+    if (_chaveLojaAtual() !== chave) return;
+    _aplicarImagens(chave);
+    { var _pp = document.getElementById('painel-produtos'); if (_pp && _pp.classList.contains('aberto')) renderProdutosSubPainel(); }
+  } catch (e) {}
+}
+// Super Admin: depois do código, prepara as outras lojas em segundo plano → abrir cada uma é instantâneo
+let _aPreparar = false;
+async function prepararLojasSuper() {
+  if (!isSuperAdmin || _aPreparar) return;
+  _aPreparar = true;
+  try {
+    const hoje = new Date();
+    const desde = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - 1).toISOString();
+    const COLS = 'id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em,unidade';
+    const fila = (todasLojas || []).filter(l => !_cacheLojas.has(String(l.id)));
+    const trabalhar = async () => {
+      while (fila.length) {
+        const l = fila.shift(); if (_cacheLojas.has(String(l.id))) continue;
+        try {
+          const [r1, r2, r3] = await Promise.all([
+            supabaseClient.from('vendas').select('*, venda_itens(*)').eq('loja_id', l.id).gte('criado_em', desde).order('criado_em', {ascending:false}),
+            supabaseClient.from('produtos').select(COLS).eq('loja_id', l.id).order('nome'),
+            supabaseClient.from('membros_loja').select('*, lojas(nome)').eq('loja_id', l.id)
+          ]);
+          if (!_cacheLojas.has(String(l.id)) && !r1.error)
+            _cacheLojas.set(String(l.id), { vendas: r1.data || [], produtos: r2.data || [], memb: r3.data || [], completo: false, t: Date.now() });
+        } catch (e) {}
+      }
+    };
+    await Promise.all([trabalhar(), trabalhar(), trabalhar()]);
+  } finally { _aPreparar = false; }
+}
 function _chaveLojaAtual() { return (isSuperAdmin && modoGeral) ? 'geral' : String(lojaId || ''); }
 function mostrarLojaEmCache() {
   const c = _cacheLojas.get(_chaveLojaAtual());
-  if (c) { todasVendas = c.vendas.slice(); todosProdutos = c.produtos; todosMemb = c.memb; }
+  if (c) { todasVendas = c.vendas.slice(); todosProdutos = c.produtos; todosMemb = c.memb; _aplicarImagens(_chaveLojaAtual()); }
   else { todasVendas = []; todosProdutos = []; todosMemb = []; }
   try { aplicarDiaHome(); renderVendasHistorico(filtroVendasAtivo); } catch (e) {}
   return !!c;
@@ -2059,7 +2105,7 @@ async function carregarTudo() {
   const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).toISOString();
   const desde = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - 1).toISOString();
   const daLoja = (q) => geral ? q : q.eq('loja_id', lojaDoPedido);
-  const COLS_P = 'id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em,imagem,unidade';
+  const COLS_P = 'id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em,unidade';   // sem «imagem» (pesada) — chega depois
   const cache = _cacheLojas.get(chave);
 
   const [r1, r2, r3] = await Promise.all([
@@ -2079,7 +2125,7 @@ async function carregarTudo() {
   // vai buscar as páginas seguintes (senão lojas com muitos produtos perdiam os mais recentes).
   if (todosProdutos.length >= 1000) {
     try {
-      const cols = 'id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em,imagem,unidade';
+      const cols = 'id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em,unidade';
       let pagina = 1;
       while (true) {
         let q = supabaseClient.from('produtos').select(cols).order('nome').range(pagina*1000, pagina*1000+999);
@@ -2103,6 +2149,9 @@ async function carregarTudo() {
   // Se algum sub-painel estiver aberto, re-renderiza com os dados novos
   { var _pp = document.getElementById('painel-produtos'); if (_pp && _pp.classList.contains('aberto')) renderProdutosSubPainel(); }
   { var _ps = document.getElementById('painel-stock'); if (_ps && _ps.classList.contains('aberto')) renderStockSubPainel(); }
+
+  // Imagens dos produtos: em segundo plano, guardadas por loja (não atrasam o ecrã)
+  _carregarImagensProdutos(chave, daLoja, meu);
 
   // Fase 2: histórico completo (em segundo plano; 1 vez por loja, e de novo a cada 5 minutos)
   const c2 = _cacheLojas.get(chave);
@@ -5063,18 +5112,46 @@ async function guardarInventario() {
 
 // ===== NOTIFICAÇÕES =====
 let ultimaVendaId = null;
+// ===== NOTIFICAÇÃO DE CADA VENDA (produto, código e valor) =====
+const _vistoPorLoja = {};
+const _semItens = new Map();   // vendas que chegaram antes dos itens → notifica quando os itens chegarem
+function _textoItensVenda(v) {
+  return (v.venda_itens || []).map(it => {
+    const p = (todosProdutos || []).find(x => x.nome === it.produto_nome);
+    const cod = p && (p.codigo || p.codbarras);
+    const q = Number(it.qtd) || 0, tot = q * (parseFloat(it.preco_unitario) || 0);
+    return (it.produto_nome || 'Produto') + (cod ? ' (cód. ' + cod + ')' : '') + ' ×' + q + ' — MT ' + tot.toFixed(2);
+  }).join('\n');
+}
+function _notificarVenda(v) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const tot = parseFloat(v.total) || 0;
+  const nomeL = (isSuperAdmin && modoGeral) ? ((todasLojas || []).find(l => l.id === v.loja_id) || {}).nome : nomeLoja;
+  const corpo = _textoItensVenda(v) || ('Venda #' + (v.numero_do_dia || ''));
+  try { new Notification('🛒 Vendido: MT ' + tot.toFixed(2) + (nomeL ? ' · ' + nomeL : ''), { body: corpo, tag: 'venda-' + v.id }); } catch (e) {}
+}
 function verificarNovasVendas(vendasHoje) {
-  if (vendasHoje.length === 0) return;
-  const mais = vendasHoje[0];
-  // Só notifica vendas da LOJA ATUAL — nunca de outra loja
-  if (mais.loja_id && lojaId && mais.loja_id !== lojaId) { ultimaVendaId = mais.id; return; }
-  if (ultimaVendaId && mais.id !== ultimaVendaId) {
-    const val = parseFloat(mais.total);
-    if (val >= 500 && Notification.permission === 'granted') {
-      new Notification('💰 Venda grande em '+nomeLoja+'!', {body:'Venda #'+mais.numero_do_dia+' — MT '+val.toFixed(2)});
-    }
+  const chave = _chaveLojaAtual();
+  // vendas que estavam à espera dos itens
+  _semItens.forEach((t, id) => {
+    const v = vendasHoje.find(x => x.id === id);
+    if (v && (v.venda_itens || []).length) { _notificarVenda(v); _semItens.delete(id); }
+    else if (Date.now() - t > 60000) { if (v) _notificarVenda(v); _semItens.delete(id); }
+  });
+  if (!(chave in _vistoPorLoja)) { _vistoPorLoja[chave] = vendasHoje.length ? vendasHoje[0].id : null; return; }   // 1.ª vez: não avisa vendas antigas
+  if (!vendasHoje.length) return;
+  const ultima = _vistoPorLoja[chave];
+  const novas = [];
+  for (const v of vendasHoje) { if (v.id === ultima) break; novas.push(v); }
+  _vistoPorLoja[chave] = vendasHoje[0].id;
+  if (!novas.length || novas.length > 30) return;
+  novas.slice(0, 6).reverse().forEach(v => {
+    if ((v.venda_itens || []).length) _notificarVenda(v);
+    else { _semItens.set(v.id, Date.now()); setTimeout(() => _recarregarVendasJa(false), 2500); }
+  });
+  if (novas.length > 6 && Notification.permission === 'granted') {
+    try { new Notification('🛒 Mais ' + (novas.length - 6) + ' vendas', { body: 'Abre o Monitor para ver todas.' }); } catch (e) {}
   }
-  ultimaVendaId = mais.id;
 }
 
 function verificarNotifStatus() {
@@ -5082,7 +5159,7 @@ function verificarNotifStatus() {
   const t = document.getElementById('notif-txt');
   if (Notification.permission === 'granted') {
     b.classList.remove('bloqueado'); b.classList.add('ativo');
-    t.textContent = 'Alertas ativos para vendas > MT 500';
+    t.textContent = 'Notificação de cada venda ativa';
   } else if (Notification.permission === 'denied') {
     b.classList.add('bloqueado'); b.classList.remove('ativo');
     t.textContent = 'Notificações bloqueadas no browser';
@@ -5093,7 +5170,7 @@ async function pedirNotif() {
   if (!('Notification' in window)) { alert('Notificações não suportadas neste browser.'); return; }
   const p = await Notification.requestPermission();
   verificarNotifStatus();
-  if (p === 'granted') new Notification('📊 PDV Dashboard ativo!', {body:'Receberás alertas para vendas > MT 500 em '+nomeLoja+'.'});
+  if (p === 'granted') new Notification('🛒 Notificações de vendas ativas', {body:'Vais receber uma notificação de cada venda em '+nomeLoja+', com os produtos e o valor.'});
 }
 
 // ===== NAVEGAÇÃO =====
@@ -5320,7 +5397,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.179';
+const MONITOR_VERSAO = '2.9.180';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
