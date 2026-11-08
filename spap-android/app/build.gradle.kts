@@ -9,6 +9,7 @@ val appVersionCode = ((findProperty("appVersionCode") as String?)?.toIntOrNull()
 // Endereços do sistema. Ao abrir, a app lê o version.json de cada um e usa o que
 // tem a versão MAIS RECENTE (assim nunca fica presa num site antigo).
 val baseUrls = listOf(
+    "https://newstartnacala-rgb.github.io/spapsercriativo",   // GitHub Pages: principal, sem limite diário
     "https://spapsercriativo2950.vercel.app",
     "https://spapsercriativo-spapcercruativoteam.vercel.app").joinToString("|")
 
@@ -57,7 +58,7 @@ android {
             dimension = "app"
             applicationId = "com.spapsercriativo.banca"
             resValue("string", "app_name", "SPAP Banca")
-            buildConfigField("String", "START_PATH", "\"/banca\"")
+            buildConfigField("String", "START_PATH", "\"/mobile.html\"")
             buildConfigField("boolean", "IS_MONITOR", "false")
             buildConfigField("String", "APP_TIPO", "\"banca\"")
         }
@@ -65,7 +66,7 @@ android {
             dimension = "app"
             applicationId = "com.spapsercriativo.bancamonitor"
             resValue("string", "app_name", "SPAP Banca Monitor")
-            buildConfigField("String", "START_PATH", "\"/banca/monitor\"")
+            buildConfigField("String", "START_PATH", "\"/mobile-monitor.html\"")
             buildConfigField("boolean", "IS_MONITOR", "true")
             buildConfigField("String", "APP_TIPO", "\"bancamonitor\"")
         }

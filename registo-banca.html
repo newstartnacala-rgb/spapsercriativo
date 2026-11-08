@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#16a34a">
 <title>Banca — Criar conta</title>
-<base href="/">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -28,8 +27,8 @@
   .otp input{width:46px;height:56px;text-align:center;font-size:24px;font-weight:800;padding:0;}
   .dica{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.1.0">
-<script src="banca-tema.js?v=3.1.0" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.1.1">
+<script src="banca-tema.js?v=3.1.1" defer></script>
 </head>
 <body>
 <div class="box">
@@ -50,7 +49,7 @@
     <input id="senha2" type="password" placeholder="escreve o código outra vez">
     <button class="btn" id="btn1" onclick="criar()">Criar banca</button>
     <div class="erro" id="erro1"></div>
-    <div class="rodape">Já tens banca? <a href="banca/login">Entrar</a></div>
+    <div class="rodape">Já tens banca? <a href="login-banca.html">Entrar</a></div>
   </div>
 
   <!-- PASSO 2: código OTP -->
@@ -78,7 +77,7 @@
       <div class="pl-card"><div class="pl-t"><b>Pro</b><small>Pagamento mensal</small></div><div class="pl-p"><span id="pl-mensal">500</span> MT<small>/mês</small></div></div>
       <div class="pl-card pl-anual"><div class="pl-t"><b>Anual</b><small id="pl-anual-eco">Poupa 5% (300 MT)</small></div><div class="pl-p"><span id="pl-anual">5.700</span> MT<small>/ano</small></div></div>
     </div>
-    <button class="btn" onclick="location.href='banca'">Começar a vender</button>
+    <button class="btn" onclick="location.href='mobile.html'">Começar a vender</button>
   </div>
 </div>
 

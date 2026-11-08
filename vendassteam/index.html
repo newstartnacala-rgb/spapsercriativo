@@ -471,8 +471,9 @@ section{padding:88px 0}
   var REL = 'https://github.com/newstartnacala-rgb/spapsercriativo/releases/download/';
   function ehBanca(f) { return f.indexOf('SPAP-Banca') === 0; }
   function apkDe(f) { return REL + (ehBanca(f) ? 'banca-latest/' : 'loja-latest/') + f + '.apk'; }
-  var WEB = { 'SPAP-Banca': SITE + '/banca', 'SPAP-Banca-Monitor': SITE + '/banca/monitor', 'SPAP-Loja': SITE + '/login.html', 'SPAP-Monitor': SITE + '/monitor.html' };
-  var REGISTO = SITE + '/registo.html';
+  var GH = 'https://newstartnacala-rgb.github.io/spapsercriativo';   // sites no GitHub Pages (sem depender da Vercel)
+  var WEB = { 'SPAP-Banca': GH + '/mobile.html', 'SPAP-Banca-Monitor': GH + '/mobile-monitor.html', 'SPAP-Loja': GH + '/login.html', 'SPAP-Monitor': GH + '/monitor.html' };
+  var REGISTO = GH + '/registo.html';
 
   document.querySelectorAll('[data-tipo]').forEach(function (a) {
     var f = a.getAttribute('data-f'), t = a.getAttribute('data-tipo');

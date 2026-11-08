@@ -39,7 +39,7 @@
   .link-esqueci { display: block; margin-top: 10px; font-size: 14px; color: #999; text-align: right; cursor: pointer; }
   .link-esqueci:hover { color: #1a56a0; }
 </style>
-<script src="app-android.js?v=2.9.204" defer></script>
+<script src="app-android.js?v=2.9.205" defer></script>
 </head>
 <body>
 <div class="box">
@@ -70,7 +70,7 @@
 
   <div class="rodape">Ainda não tens loja? <a href="registo.html">Criar loja grátis</a></div>
   <div style="text-align:center;margin-top:12px;padding-top:12px;border-top:1px solid #eee;">
-    <a href="banca/login" style="display:inline-block;color:#16a34a;font-weight:bold;text-decoration:none;font-size:14px;">🏪 Tens uma banca pequena? Entrar aqui →</a>
+    <a href="login-banca.html" style="display:inline-block;color:#16a34a;font-weight:bold;text-decoration:none;font-size:14px;">🏪 Tens uma banca pequena? Entrar aqui →</a>
   </div>
 </div>
 
@@ -129,7 +129,7 @@
           try {
             const { data: mb } = await supabaseClient.from('membros_loja')
               .select('lojas(tipo_loja)').eq('user_id', data.session.user.id).limit(1);
-            if (mb && mb[0] && mb[0].lojas && mb[0].lojas.tipo_loja === 'banca') { window.location.href = 'banca'; return; }
+            if (mb && mb[0] && mb[0].lojas && mb[0].lojas.tipo_loja === 'banca') { window.location.href = 'mobile.html'; return; }
           } catch(e) {}
         }
         window.location.href = destinoAposLogin(); return;
@@ -210,7 +210,7 @@
 
       // Banca → vai para a app Mobile POSS (a não ser que haja um destino específico guardado)
       if (tipoLoja === 'banca' && !localStorage.getItem('pdv_login_destino')) {
-        window.location.href = 'banca';
+        window.location.href = 'mobile.html';
         return;
       }
     }

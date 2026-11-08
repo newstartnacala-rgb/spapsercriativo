@@ -112,7 +112,11 @@ public class MainActivity extends Activity {
         super.onCreate(estado);
 
         bases = BuildConfig.BASE_URLS.split("\\|");
-        for (String b : bases) hostsProprios.add(Uri.parse(b).getHost());
+        for (String b : bases) {
+            hostsProprios.add(Uri.parse(b).getHost());
+            String pre = Uri.parse(b).getPath();
+            if (pre != null && pre.length() > 1) PREFIXOS.add(pre.replaceAll("/+$", ""));
+        }
         SharedPreferences prefs = getSharedPreferences("spap", MODE_PRIVATE);
         baseAtual = Math.max(0, Math.min(prefs.getInt("base", 0), bases.length - 1));
         ponteJs = lerAsset("ponte.js");
@@ -394,11 +398,15 @@ public class MainActivity extends Activity {
                 if (!principal) { web.loadUrl(uri.toString()); fecharPopup(); return true; }
                 // Na app Monitor, a página da loja/banca abre o painel correspondente
                 if (BuildConfig.IS_MONITOR) {
-                    String p = uri.getPath() == null ? "/" : uri.getPath();
+                    String p = caminho(uri.toString());
                     String novo = null;
                     if (p.equals("/") || p.equals("/index.html") || p.equals("/index")) novo = "bancamonitor".equals(BuildConfig.APP_TIPO) ? "/mobile-monitor.html" : "/monitor.html";
                     else if (p.equals("/banca") || p.equals("/mobile.html") || p.equals("/mobile")) novo = "/mobile-monitor.html";
-                    if (novo != null) { v.loadUrl(uri.getScheme() + "://" + host + novo); return true; }
+                    if (novo != null) {
+                        String inteiro = uri.getPath() == null ? "/" : uri.getPath();
+                        String pre = inteiro.endsWith(p) ? inteiro.substring(0, inteiro.length() - p.length()) : "";
+                        v.loadUrl(uri.getScheme() + "://" + host + pre + novo); return true;
+                    }
                 }
                 return false;
             }
@@ -927,11 +935,15 @@ public class MainActivity extends Activity {
                 || caminho.equals("/banca") || caminho.equals("/banca/monitor") || caminho.equals("/offline.html");
     }
 
+    /** Pastas dos endereços (ex.: /spapsercriativo no GitHub Pages), tiradas para comparar caminhos. */
+    private static final java.util.List<String> PREFIXOS = new java.util.ArrayList<>();
     private static String caminho(String url) {
         try {
             Uri u = Uri.parse(url);
             String p = u.getPath();
-            return p == null || p.isEmpty() ? "/" : p;
+            if (p == null || p.isEmpty()) return "/";
+            for (String pre : PREFIXOS) if (p.equals(pre) || p.startsWith(pre + "/")) { p = p.substring(pre.length()); break; }
+            return p.isEmpty() ? "/" : p;
         } catch (Exception e) { return "/"; }
     }
 

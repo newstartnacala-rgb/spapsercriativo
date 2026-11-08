@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#16a34a">
 <title>Banca — Mobile POSS</title>
-<base href="/">
 <link rel="manifest" href="manifest-mobile.json">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
@@ -111,9 +110,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="SPAP Banca">
-<link rel="stylesheet" href="banca-tema.css?v=3.1.0">
-<script src="banca-tema.js?v=3.1.0" defer></script>
-<script src="app-android.js?v=3.1.0" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.1.1">
+<script src="banca-tema.js?v=3.1.1" defer></script>
+<script src="app-android.js?v=3.1.1" defer></script>
 </head>
 <body>
 
@@ -375,7 +374,7 @@ let descontosLote = [];   // descontos feitos nesta venda, para registar ao conf
   try { ses = (await supabaseClient.auth.getSession()).data.session; } catch(e){}
   if (!ses) {
     //
-    location.href = 'banca/login';
+    location.href = 'login-banca.html';
     return;
   }
   try {
@@ -383,7 +382,7 @@ let descontosLote = [];   // descontos feitos nesta venda, para registar ao conf
       .from('membros_loja')
       .select('loja_id, papel, nome_exibicao, lojas(nome, estado, tipo_loja, vendedores, telefone)')
       .eq('user_id', ses.user.id).limit(1);
-    if (!membros || !membros.length) { alert('Esta conta não tem banca associada.'); location.href='banca/login'; return; }
+    if (!membros || !membros.length) { alert('Esta conta não tem banca associada.'); location.href='login-banca.html'; return; }
     const m = membros[0];
     sessao = {
       lojaId: m.loja_id,
@@ -449,7 +448,7 @@ function mostrarTela(t){
   document.getElementById('tela-' + t).classList.add('ativa');
   window.scrollTo(0,0);
 }
-function irMonitor(){ location.href = 'banca/monitor'; }
+function irMonitor(){ location.href = 'mobile-monitor.html'; }
 
 // ===================== PRODUTOS (grelha de venda) =====================
 function fmt(v){ return 'MT ' + (parseFloat(v)||0).toLocaleString('pt-PT',{minimumFractionDigits:2,maximumFractionDigits:2}); }
@@ -894,7 +893,7 @@ async function rejeitarDespacho(i){
   try{ await supabaseClient.from('despachos').update({estado:'rejeitado'}).eq('id',d.id); toast('Despacho rejeitado','ok'); avisoDespacho(); }
   catch(e){ toast('Erro: '+(e.message||e),'erro'); }
 }
-async function sairBanca(){ try{ sessionStorage.removeItem('banca_vend_ok'); }catch(e){} try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='banca/login'; }
+async function sairBanca(){ try{ sessionStorage.removeItem('banca_vend_ok'); }catch(e){} try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='login-banca.html'; }
 
 // ===== PERDA =====
 function abrirPerda(){ fecharFolha('folha-menu'); const b=document.getElementById('pd-busca'); if(b)b.value=''; const r=document.getElementById('pd-result'); if(r)r.innerHTML=''; abrirFolha('folha-perda'); }
@@ -1045,7 +1044,7 @@ async function confirmarEntrega(){
   const sobra = Math.round((dinheiro - ((window._entTotalHoje||0) - gastos))*100)/100;
   fecharFolha('folha-entregar');
   toast('✅ Entrega registada' + (sobra>0?(' · sobra '+fmt(sobra)):''), 'ok');
-  setTimeout(async()=>{ try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='banca/login'; }, 1500);
+  setTimeout(async()=>{ try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='login-banca.html'; }, 1500);
 }
 
 // ===================== FOLHAS / TOAST =====================

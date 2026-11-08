@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#16a34a">
 <title>Banca — Entrar</title>
-<base href="/">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -29,9 +28,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="SPAP Banca">
-<link rel="stylesheet" href="banca-tema.css?v=3.1.0">
-<script src="banca-tema.js?v=3.1.0" defer></script>
-<script src="app-android.js?v=3.1.0" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.1.1">
+<script src="banca-tema.js?v=3.1.1" defer></script>
+<script src="app-android.js?v=3.1.1" defer></script>
 </head>
 <body>
 <div class="box">
@@ -43,7 +42,7 @@
   <input id="senha" type="password" placeholder="o teu código" autocomplete="current-password">
   <button class="btn" id="btn" onclick="entrar()">Entrar</button>
   <div class="erro" id="erro"></div>
-  <div class="rodape">Ainda não tens banca? <a href="banca/registo">Cadastrar</a></div>
+  <div class="rodape">Ainda não tens banca? <a href="registo-banca.html">Cadastrar</a></div>
   <div class="mini"><a href="login.html">Tenho uma loja grande →</a></div>
 </div>
 <script src="supabase-config.js"></script>
@@ -51,7 +50,7 @@
 const btn=document.getElementById('btn');
 function erro(m){ const e=document.getElementById('erro'); e.textContent=m; e.style.display='block'; }
 
-function destino(){ return new URLSearchParams(location.search).get('to') || 'banca'; }
+function destino(){ return new URLSearchParams(location.search).get('to') || 'mobile.html'; }
 (async()=>{ try{ const {data}=await supabaseClient.auth.getSession(); if(data&&data.session){ location.href=destino(); } }catch(e){} })();
 
 async function entrar(){

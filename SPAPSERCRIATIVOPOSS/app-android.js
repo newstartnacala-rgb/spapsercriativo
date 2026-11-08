@@ -13,7 +13,8 @@
   var FICH = { monitor: 'SPAP-Monitor', loja: 'SPAP-Loja', banca: 'SPAP-Banca', bancamonitor: 'SPAP-Banca-Monitor' };
   var nome = NOMES[tipo];
   var ficheiro = FICH[tipo] + '.apk';
-  var apk = 'apps/' + ficheiro;
+  // APK sempre dos lançamentos do GitHub (funciona no GitHub Pages e na Vercel)
+  var apk = 'https://github.com/newstartnacala-rgb/spapsercriativo/releases/download/' + (tipo.indexOf('banca') === 0 ? 'banca-latest/' : 'loja-latest/') + ficheiro;
   var chave = 'spap_apk_convite_' + tipo;
 
   // iPhone / iPad (os iPad recentes dizem que são «Macintosh», mas têm ecrã tátil)
@@ -129,7 +130,8 @@
   var SVG_PARTILHAR = '<svg viewBox="0 0 24 24" width="20" height="20" style="vertical-align:-4px"><path fill="none" stroke="#0a84ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12M8 7l4-4 4 4M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>';
   var SVG_MAIS = '<svg viewBox="0 0 24 24" width="20" height="20" style="vertical-align:-4px"><rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="none" stroke="#0f172a" stroke-width="2"/><path d="M12 8v8M8 12h8" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/></svg>';
   // iPhone: instala logo a app (perfil do iPhone com o ícone no ecrã principal) — sem explicações
-  var perfilIOS = 'apps/' + FICH[tipo] + '.mobileconfig';
+  // o perfil do iPhone precisa do tipo de ficheiro certo: no GitHub Pages vem da Vercel
+  var perfilIOS = (/github\.io$/i.test(location.hostname) ? 'https://spapsercriativo2950.vercel.app/' : '') + 'apps/' + FICH[tipo] + '.mobileconfig';
   function avisoIOS(txt) {
     var t = document.getElementById('apk-aviso-ios'); if (t) t.remove();
     t = document.createElement('div'); t.id = 'apk-aviso-ios';
@@ -156,7 +158,7 @@
 
   // ---- Pedido para a OUTRA plataforma (ex.: «App iPhone» tocado num Android ou no computador)
   function folhaIOSnoutro() {
-    var endereco = new URL({ monitor: 'monitor.html', banca: 'banca', bancamonitor: 'banca/monitor', loja: 'login.html' }[tipo], location.href).href;
+    var endereco = new URL({ monitor: 'monitor.html', banca: 'banca', bancamonitor: 'mobile-monitor.html', loja: 'login.html' }[tipo], location.href).href;
     var el = abrirFolha('<h3>App ' + nome + ' para iPhone / iPad</h3>'
       + '<p>No iPhone a app instala-se pelo <b>Safari</b>. Abra este endereço no iPhone:</p>'
       + '<p><code>' + endereco + '</code></p>'
