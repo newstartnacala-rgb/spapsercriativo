@@ -108,8 +108,12 @@
     try { if (typeof carrinho !== 'undefined' && carrinho.length) return true; } catch (e) {}
     return !!document.querySelector('.folha-fundo.ativa');
   }
-  function aplicarAtualizacao() {
-    var feito = function () { location.reload(); };
+  function aplicarAtualizacao(versao) {
+    // pede a página nova ao servidor (o endereço muda, por isso não usa a cópia guardada do telemóvel)
+    var feito = function () {
+      var q = new URLSearchParams(location.search); q.set('atualizado', versao || Date.now());
+      location.replace(location.pathname + '?' + q.toString() + location.hash);
+    };
     try {
       if ('caches' in window) caches.keys().then(function (k) { return Promise.all(k.map(function (n) { return caches.delete(n); })); }).then(feito, feito);
       else feito();
@@ -127,7 +131,7 @@
               : '<button class="btn" type="button" id="att-nao">Fechar</button>')
       + '</div>';
     document.body.appendChild(ov);
-    var s1 = ov.querySelector('#att-sim'); if (s1) s1.onclick = function () { s1.disabled = true; s1.textContent = 'A atualizar…'; aplicarAtualizacao(); };
+    var s1 = ov.querySelector('#att-sim'); if (s1) s1.onclick = function () { s1.disabled = true; s1.textContent = 'A atualizar…'; aplicarAtualizacao(v.versao); };
     ov.querySelector('#att-nao').onclick = function () { ov.remove(); };
     ov.addEventListener('click', function (e) { if (e.target === ov) ov.remove(); });
   }
@@ -146,7 +150,7 @@
         var chave = 'banca_att_' + v.versao, ja = false;
         try { ja = sessionStorage.getItem(chave) === '1'; sessionStorage.setItem(chave, '1'); } catch (e) {}
         if (ja) return;
-        if (!ocupado()) { if (window.toast) toast('🔄 A atualizar a Banca para a versão ' + v.versao + '…', 'ok'); setTimeout(aplicarAtualizacao, 1800); }
+        if (!ocupado()) { if (window.toast) toast('🔄 A atualizar a Banca para a versão ' + v.versao + '…', 'ok'); setTimeout(function () { aplicarAtualizacao(v.versao); }, 1800); }
         else folhaAtualizacao(v, true);
       }).catch(function () { if (manual && window.toast) toast('Sem internet para verificar', 'erro'); });
   }
@@ -308,8 +312,17 @@
     ov.querySelector('.le-foto').onclick = function () { fim(); window.bancaLerPorFoto && bancaLerPorFoto(aoLer); };
     function semCamara(e) {
       var negado = e && /NotAllowed|Permission|denied/i.test((e.name || '') + (e.message || ''));
-      dica.innerHTML = negado ? '⚠️ A câmara não foi autorizada. Permita a câmara nas definições do telemóvel (ou atualize a app) e tente de novo, ou use a foto.' : '⚠️ Não foi possível abrir a câmara. Use «Ler a partir de uma foto».';
+      var naApp = /SPAPApp/i.test(navigator.userAgent || '') || !!window.SPAPNative;
+      dica.innerHTML = naApp
+        ? '⚠️ Esta versão da app ainda não deixa usar a câmara. Toque em «Atualizar a app», instale e volte a abrir.'
+        : (negado ? '⚠️ A câmara não foi autorizada. Toque no cadeado ao lado do endereço, permita a câmara e tente de novo.' : '⚠️ Não foi possível abrir a câmara deste aparelho.');
       ov.classList.add('le-erro');
+      if (naApp && window.spapInstalarApp) {
+        var bt = document.createElement('button'); bt.type = 'button'; bt.className = 'le-foto'; bt.textContent = 'Atualizar a app';
+        bt.onclick = function () { fim(); spapInstalarApp('android'); };
+        ov.querySelector('.le-botoes').insertBefore(bt, ov.querySelector('.le-botoes').firstChild);
+        ov.querySelector('.le-foto:not(:first-child)') && (ov.querySelector('.le-botoes').lastChild.className = 'le-sec');
+      }
     }
     // 1) leitor nativo do telemóvel (mais rápido e certeiro)
     function comNativo() {
@@ -420,8 +433,14 @@
     else location.reload();   // voltar ao Português (ou o tradutor ainda a carregar): recarrega já na língua certa
   };
 
+  function versaoNasDefinicoes() {
+    var f = document.querySelector('#folha-definicoes .conteudo'); if (!f || f.querySelector('.def-versao')) return;
+    var d = document.createElement('div'); d.className = 'def-versao notranslate';
+    d.textContent = 'SPAP Banca · versão ' + EU_VERSAO; f.appendChild(d);
+  }
   function iniciar() {
     try { marcaTopo(); menuTresBarras(); numerarMenus(); } catch (e) {}
+    try { versaoNasDefinicoes(); } catch (e) {}
     marcarNaoTraduzir(document.body);
     try { bancaNet(); } catch (e) {}
     // a língua escolhida acompanha todas as páginas da Banca
