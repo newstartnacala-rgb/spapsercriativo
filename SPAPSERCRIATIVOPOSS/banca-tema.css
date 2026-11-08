@@ -489,3 +489,43 @@ html.escuro #leitor-ecra video{filter:none !important;}
 .barra-stock input:focus{border-color:var(--lj);box-shadow:0 0 0 3px rgba(242,112,15,.15),var(--sombra);}
 .barra-stock button{width:52px;flex-shrink:0;border:0;border-radius:16px;background:var(--lj-grad);color:#fff;font-size:20px;cursor:pointer;box-shadow:var(--sombra-lj);}
 .barra-stock button img.e3d{width:26px;height:26px;vertical-align:0;}
+
+/* ---------- 3.5.1: folhas sem piscar (sempre montadas; só muda o fundo e a posição) ---------- */
+.folha-fundo{display:flex !important;visibility:hidden;pointer-events:none;background:rgba(8,20,60,0) !important;
+  transition:background-color .22s ease, visibility 0s linear .26s;animation:none !important;}
+.folha-fundo.ativa{visibility:visible;pointer-events:auto;background:rgba(8,20,60,.42) !important;transition:background-color .22s ease;animation:none !important;}
+.folha-fundo .folha{transform:translateY(105%);transition:transform .26s cubic-bezier(.2,.8,.2,1);will-change:transform;backface-visibility:hidden;-webkit-backface-visibility:hidden;animation:none !important;}
+.folha-fundo.ativa .folha{transform:none;}
+/* folhas criadas já abertas (idioma, recibo, avisos) sobem como as outras */
+.folha-fundo.ativa:not(.ja-vista) .folha{animation:folha-subir .26s cubic-bezier(.2,.8,.2,1) !important;}
+@keyframes folha-subir{from{transform:translateY(60px)}}
+#folha-menu .folha, #folha-definicoes .folha, #folha-calendario .folha, #folha-gerir .folha, #folha-pagamento .folha, #folha-carrinho .folha{animation:none !important;}
+/* menu: os cartões já não começam invisíveis (era o «pisca») — só o ícone dá um salto suave */
+.folha-fundo.ativa .menu-grid .mi{animation:none !important;}
+.folha-fundo.ativa .menu-grid .mi .e img.e3d{animation:cg-ico-in .5s cubic-bezier(.25,1.4,.4,1) both !important;animation-delay:calc(var(--i,0) * 25ms + 60ms) !important;}
+@keyframes cg-ico-in{0%{transform:scale(.6) rotate(-10deg)}60%{transform:scale(1.1) rotate(3deg)}100%{transform:none}}
+/* com uma folha aberta, as animações do fundo param (o telemóvel deixa de redesenhar por trás) */
+body:has(.folha-fundo.ativa) .stat, body:has(.folha-fundo.ativa) .cartao, body:has(.folha-fundo.ativa) .tela.ativa .corpo,
+body:has(.folha-fundo.ativa) .stat .lbl img, body:has(.folha-fundo.ativa) .row .ph img, body:has(.folha-fundo.ativa) .nav a.on .ic img,
+body:has(.folha-fundo.ativa) #bt-entrega-dia::after, body:has(.folha-fundo.ativa) #btn-abrir-cart::after, body:has(.folha-fundo.ativa) .gb-barra{animation-play-state:paused !important;}
+
+/* ---------- 3.5.1: gráfico de vendas ---------- */
+.graf-card{background:#fff;border-radius:20px;box-shadow:var(--sombra);padding:14px 14px 10px;margin-bottom:14px;}
+.graf-cab{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.graf-ico{width:38px;height:38px;border-radius:12px;background:linear-gradient(180deg,#fff3e8,#ffe2c7);display:grid;place-items:center;flex-shrink:0;}
+.graf-ico img.e3d{width:24px;height:24px;vertical-align:0;}
+.graf-cab b{display:block;font-size:15px;color:var(--nv);}
+.graf-cab small{display:block;font-size:12px;color:#64748b;font-weight:700;}
+.graf-tot{margin-left:auto;font-weight:800;color:#16a34a;font-size:15px;white-space:nowrap;}
+.graf{position:relative;display:flex;align-items:flex-end;gap:3px;height:150px;padding-top:18px;}
+.graf-linhas{position:absolute;inset:18px 0 22px 0;display:flex;flex-direction:column;justify-content:space-between;pointer-events:none;}
+.graf-linhas i{display:block;border-top:1px dashed #e3ebfa;}
+.gb{position:relative;flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;}
+.gb-barra{display:block;width:100%;max-width:22px;border-radius:7px 7px 3px 3px;background:linear-gradient(180deg,#ffb36b,#f26a0c);box-shadow:0 4px 10px rgba(242,112,15,.25);transform-origin:50% 100%;margin-bottom:22px;}
+.gb-barra.anim{animation:gb-crescer .6s cubic-bezier(.2,.9,.3,1.1) both;}
+@keyframes gb-crescer{from{transform:scaleY(0)}}
+.gb.agora .gb-barra{background:linear-gradient(180deg,#5aa2ff,#0d5ff0);box-shadow:0 4px 10px rgba(13,95,240,.25);}
+.gb-rot{position:absolute;bottom:0;font-size:10px;font-weight:700;color:#94a3b8;white-space:nowrap;}
+.gb.agora .gb-rot{color:var(--nv);}
+.gb-val{position:absolute;top:-16px;font-size:10.5px;font-weight:800;color:var(--lj-esc);white-space:nowrap;}
+.graf-vazio{width:100%;align-self:center;text-align:center;color:#94a3b8;font-size:13.5px;font-weight:600;}

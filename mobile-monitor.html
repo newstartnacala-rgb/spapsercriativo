@@ -73,9 +73,9 @@
   .menu-grid .mi{background:#f0fdf4;border:1px solid var(--borda);border-radius:14px;padding:16px 10px;text-align:center;}
   .menu-grid .mi .e{font-size:28px;} .menu-grid .mi .t{font-size:12px;font-weight:700;margin-top:6px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.5.0">
-<script src="banca-tema.js?v=3.5.0" defer></script>
-<script src="app-android.js?v=3.5.0" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.5.1">
+<script src="banca-tema.js?v=3.5.1" defer></script>
+<script src="app-android.js?v=3.5.1" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -120,6 +120,10 @@
       <div class="stat wide"><div class="lbl">💰 Vendido no período</div><div class="val verde" id="s-vendido">MT 0,00</div></div>
       <div class="stat"><div class="lbl">🧾 Nº de vendas</div><div class="val" id="s-nvendas">0</div></div>
       <div class="stat"><div class="lbl">📈 Lucro estimado</div><div class="val laranja" id="s-lucro">MT 0,00</div></div>
+    </div>
+    <div class="graf-card">
+      <div class="graf-cab"><span class="graf-ico">📊</span><div><b id="graf-tit">Vendas por hora</b><small id="graf-sub">—</small></div><span class="graf-tot" id="graf-tot">MT 0,00</span></div>
+      <div class="graf" id="graf"><div class="graf-vazio">A carregar…</div></div>
     </div>
     <h4>Vendas recentes</h4>
     <div id="lista-vendas" class="cartao"><div class="vazio">A carregar…</div></div>
@@ -508,7 +512,7 @@ async function desenharCalendario(){
   for(let d=1; d<=ndias; d++){
     const dt=new Date(ano,mes,d), iso=isoDia(dt), futuro=dt>hoje;
     const cls=['cal-dia', iso===isoDia(hoje)?'hoje':'', iso===sel?'sel':'', comVendas[iso]?'venda':'', futuro?'futuro':''].join(' ');
-    h+='<button type="button" class="'+cls+'" '+(futuro?'disabled':'onclick="calEscolher(\''+iso+'\')"')+'>'+d+'</button>';
+    h+='<button type="button" data-iso="'+iso+'" class="'+cls+'" '+(futuro?'disabled':'onclick="calEscolher(\''+iso+'\')"')+'>'+d+'</button>';
   }
   document.getElementById('cal-grelha').innerHTML=h;
   // marca os dias com vendas (uma consulta leve por mês)
@@ -518,7 +522,8 @@ async function desenharCalendario(){
       const ini=new Date(ano,mes,1), fim=new Date(ano,mes+1,1);
       const { data }=await supabaseClient.from('vendas').select('criado_em').eq('loja_id',sessao.lojaId).gte('criado_em',ini.toISOString()).lt('criado_em',fim.toISOString()).limit(5000);
       (data||[]).forEach(v=>{ _calVendas[chave][isoDia(new Date(v.criado_em))]=true; });
-      if(_calRef.getFullYear()===ano && _calRef.getMonth()===mes) desenharCalendario();
+      if(_calRef.getFullYear()===ano && _calRef.getMonth()===mes)
+        document.querySelectorAll('#cal-grelha .cal-dia').forEach(b=>{ if(_calVendas[chave][b.dataset.iso]) b.classList.add('venda'); });
     }catch(e){}
   }
 }
@@ -546,6 +551,7 @@ async function carregarResumo(){
     lucro += (pv-pc)*q;
   }));
   document.getElementById('s-lucro').textContent = fmt(lucro);
+  try{ desenharGrafico(vendas, r); }catch(e){}
   const div=document.getElementById('lista-vendas');
   if(!vendas.length){ div.innerHTML='<div class="vazio">Sem vendas no período.</div>'; return; }
   div.innerHTML = vendas.slice(0,50).map(v=>{
@@ -554,6 +560,44 @@ async function carregarResumo(){
     return `<div class="row"><div class="ph">🧾</div>
       <div class="in"><div class="nn">Venda nº ${v.numero_do_dia||'-'}</div><div class="mt">${dt} · ${nit} item(s)${v.vendedor_codigo?(' · '+esc(v.vendedor_codigo)):''}</div></div>
       <div class="vv">${fmt(v.total)}</div></div>`;
+  }).join('');
+}
+
+// ===== GRÁFICO DE VENDAS (por hora no dia; por dia na semana/mês) =====
+let _grafAssin='';
+function desenharGrafico(vendas, r){
+  const porHora = (periodo==='hoje'||periodo==='ontem'||periodo==='dia');
+  let barras=[];
+  if(porHora){
+    const soma=new Array(24).fill(0), n=new Array(24).fill(0);
+    vendas.forEach(v=>{ const h=new Date(v.criado_em).getHours(); soma[h]+=parseFloat(v.total)||0; n[h]++; });
+    let ini=6, fim=21;
+    soma.forEach((x,h)=>{ if(x>0){ ini=Math.min(ini,h); fim=Math.max(fim,h); } });
+    if(periodo==='hoje') fim=Math.max(fim, Math.min(23,new Date().getHours()));
+    const passo = (fim-ini+1) > 12 ? 3 : ((fim-ini+1) > 8 ? 2 : 1);
+    for(let h=ini; h<=fim; h++){ const ag = periodo==='hoje' && h===new Date().getHours(); if(ag && barras.length) barras[barras.length-1].mostrar=false; barras.push({ rot:String(h).padStart(2,'0')+'h', val:soma[h], n:n[h], agora:ag, mostrar: ((h-ini)%passo===0 && !(barras.length && barras[barras.length-1].agora)) || ag }); }
+  } else {
+    const dias = periodo==='semana'?7:30, hoje=new Date(); hoje.setHours(0,0,0,0);
+    const mapa={}; vendas.forEach(v=>{ const k=isoDia(new Date(v.criado_em)); mapa[k]=mapa[k]||{v:0,n:0}; mapa[k].v+=parseFloat(v.total)||0; mapa[k].n++; });
+    for(let i=dias-1;i>=0;i--){ const d=new Date(hoje); d.setDate(d.getDate()-i); const k=isoDia(d), m=mapa[k]||{v:0,n:0};
+      barras.push({ rot: dias===7 ? ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][d.getDay()] : String(d.getDate()), val:m.v, n:m.n, agora:i===0, mostrar: dias===7 || i%5===0 || i===0 }); }
+  }
+  const total=barras.reduce((s,b)=>s+b.val,0), max=Math.max(1,...barras.map(b=>b.val));
+  document.getElementById('graf-tit').textContent = porHora ? 'Vendas por hora' : 'Vendas por dia';
+  document.getElementById('graf-sub').textContent = (document.getElementById('data-rotulo')||{}).textContent || '';
+  document.getElementById('graf-tot').textContent = fmt(total);
+  const assin = periodo+'|'+barras.map(b=>b.val.toFixed(0)).join(',');
+  if(assin===_grafAssin) return;          // nada mudou: não redesenha (evita piscar)
+  const novo = !_grafAssin || _grafAssin.split('|')[0]!==periodo; _grafAssin=assin;
+  const g=document.getElementById('graf');
+  if(!total){ g.innerHTML='<div class="graf-vazio">Sem vendas neste período</div>'; return; }
+  const imax=barras.findIndex(b=>b.val===max);
+  g.innerHTML='<div class="graf-linhas"><i></i><i></i><i></i></div>'+barras.map((b,i)=>{
+    const h=b.val>0?Math.max(4,Math.round(b.val/max*100)):0;
+    return '<div class="gb'+(b.agora?' agora':'')+(i===imax?' gb-max':'')+'" title="'+b.rot+': '+fmt(b.val)+' ('+b.n+' venda'+(b.n===1?'':'s')+')">'
+      +(i===imax?'<span class="gb-val">'+fmt(b.val).replace('MT ','')+'</span>':'')
+      +'<span class="gb-barra'+(novo?' anim':'')+'" style="height:'+h+'%;animation-delay:'+(i*18)+'ms"></span>'
+      +'<span class="gb-rot">'+(b.mostrar===false?'':b.rot)+'</span></div>';
   }).join('');
 }
 

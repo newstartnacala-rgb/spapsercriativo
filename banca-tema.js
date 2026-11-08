@@ -479,6 +479,7 @@
   function iniciar() {
     try { marcaTopo(); menuTresBarras(); numerarMenus(); } catch (e) {}
     try { versaoNasDefinicoes(); } catch (e) {}
+    document.querySelectorAll('.folha-fundo').forEach(function (f) { f.classList.add('ja-vista'); });
     marcarNaoTraduzir(document.body);
     try { bancaNet(); } catch (e) {}
     // a língua escolhida acompanha todas as páginas da Banca
