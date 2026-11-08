@@ -74,9 +74,9 @@
   .menu-grid .mi{background:#f0fdf4;border:1px solid var(--borda);border-radius:14px;padding:16px 10px;text-align:center;}
   .menu-grid .mi .e{font-size:28px;} .menu-grid .mi .t{font-size:12px;font-weight:700;margin-top:6px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.0.1">
-<script src="banca-tema.js?v=3.0.1" defer></script>
-<script src="app-android.js?v=3.0.1" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.1.0">
+<script src="banca-tema.js?v=3.1.0" defer></script>
+<script src="app-android.js?v=3.1.0" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar"><div class="spin"></div><div>A abrir o monitor…</div></div>
@@ -172,6 +172,7 @@
         <div class="mi" onclick="fecharFolha('folha-menu');window.spapInstalarApp?spapInstalarApp('android'):mInstalar()"><div class="e">📲</div><div class="t">App para Android</div></div>
         <div class="mi" onclick="fecharFolha('folha-menu');window.spapInstalarApp?spapInstalarApp('ios'):mInstalar()"><div class="e">📱</div><div class="t">App para iPhone</div></div>
         <div class="mi" onclick="suporte()"><div class="e">💬</div><div class="t">Suporte</div></div>
+        <div class="mi" onclick="location.href='planos-banca.html?ver=1'"><div class="e">⭐</div><div class="t">O meu plano</div></div>
         <div class="mi" onclick="fecharFolha('folha-menu');window.bancaVerificarAtualizacao&&bancaVerificarAtualizacao(true)"><div class="e">🔄</div><div class="t">Verificar atualizações</div></div>
         <div class="mi" onclick="sairBanca()" style="background:#fef2f2;"><div class="e">🚪</div><div class="t">Sair</div></div>
       </div>

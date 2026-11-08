@@ -12,7 +12,7 @@
     '📅': 'calendar', '🏪': 'store', '📧': 'envelope', '🔑': 'key', '📱': 'telemovel', '🔁': 'refresh',
     '🔐': 'cadeado', '💳': 'card', '📷': 'camera', '💵': 'dinheiro-voa', '✅': 'check', '🖨️': 'page', '🖨': 'page',
     '🗑': 'lixo', '🗑️': 'lixo', '☰': null, '📩': 'envelope', '⏳': 'hourglass', '🚫': 'prohibited', '🔒': 'cadeado',
-    '📋': 'clipboard', '🔄': 'refresh', '🔔': 'bell', '⭐': 'star', '🏆': 'trophy', '📌': 'pin'
+    '📋': 'clipboard', '🔄': 'refresh', '🔔': 'bell', '⭐': 'star', '🏆': 'trophy', '📌': 'pin', '🎁': 'gem'
   };
   var chaves = Object.keys(MAPA).sort(function (a, b) { return b.length - a.length; });
   var RE = new RegExp('(' + chaves.map(function (k) { return k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }).join('|') + ')\\uFE0F?', 'g');
@@ -152,6 +152,111 @@
   }
   window.bancaVerificarAtualizacao = verificarAtualizacao;
 
+  // ===== Sincronização em tempo real (≈1 segundo) =====
+  // Vendas da Banca → Monitor da Banca; produtos do Monitor → Banca. Canal em tempo real + verificação rápida de reserva.
+  var _sync = { ligado: false, t: {} };
+  function atrasar(nome, fn, ms) { clearTimeout(_sync.t[nome]); _sync.t[nome] = setTimeout(fn, ms || 150); }
+  function recarregarVendas() {
+    if (typeof carregarResumo === 'function') atrasar('vendas', function () { try { carregarResumo(); } catch (e) {} if (typeof carregarDescontos === 'function') try { carregarDescontos(); } catch (e) {} });
+  }
+  function recarregarProdutos() {
+    if (typeof carregarProdutos !== 'function') return;
+    atrasar('produtos', function () {
+      Promise.resolve(carregarProdutos()).then(function () {
+        try { if (document.body.classList.contains('pg-vender') && typeof renderProdutos === 'function') renderProdutos(); } catch (e) {}
+      }).catch(function () {});
+    });
+  }
+  function ligarTempoReal() {
+    if (_sync.ligado) return;
+    var s; try { s = sessao; } catch (e) { return; }
+    if (!s || !s.lojaId || typeof supabaseClient === 'undefined') return;
+    _sync.ligado = true;
+    var loja = s.lojaId, filtro = 'loja_id=eq.' + loja, mon = document.body.classList.contains('pg-mon');
+    try {
+      var ch = supabaseClient.channel('banca-sync-' + loja + '-' + (mon ? 'mon' : 'vend'));
+      if (mon) {
+        ch.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'vendas', filter: filtro }, function (m) {
+          recarregarVendas();
+          var v = m && m.new; if (v && window.toast) toast('🛒 Nova venda: MT ' + (parseFloat(v.total) || 0).toFixed(2), 'ok');
+        });
+        ch.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'venda_itens', filter: filtro }, recarregarVendas);
+        ch.on('postgres_changes', { event: '*', schema: 'public', table: 'descontos', filter: filtro }, recarregarVendas);
+      }
+      ch.on('postgres_changes', { event: '*', schema: 'public', table: 'produtos', filter: filtro }, recarregarProdutos);
+      ch.subscribe();
+    } catch (e) {}
+    // Reserva: se o canal falhar, uma consulta leve de 2 em 2 segundos apanha as mudanças
+    var ultVenda = null, ultProd = null;
+    setInterval(function () {
+      if (document.hidden) return;
+      if (mon) {
+        supabaseClient.from('vendas').select('id,criado_em').eq('loja_id', loja).order('criado_em', { ascending: false }).limit(1)
+          .then(function (r) { var id = r && r.data && r.data[0] ? r.data[0].id : ''; if (ultVenda !== null && id !== ultVenda) recarregarVendas(); ultVenda = id; });
+      }
+      supabaseClient.from('produtos').select('id', { count: 'exact', head: true }).eq('loja_id', loja)
+        .then(function (r) { var n = r ? r.count : null; if (n == null) return; if (ultProd !== null && n !== ultProd) recarregarProdutos(); ultProd = n; });
+    }, 2000);
+  }
+  window.bancaLigarTempoReal = ligarTempoReal;
+
+  // ===== Plano da Banca: grátis 15 dias, depois Mensal ou Anual; ao expirar, bloqueia e abre o pagamento =====
+  var _plano = { ok: false, ultimo: null };
+  function precos(c) {
+    c = Object.assign({ gratis_dias: 15, mensal: 500, anual_desconto: 5 }, c || {});
+    var m = +c.mensal || 500, d = +c.anual_desconto || 0;
+    return { dias: +c.gratis_dias || 15, mensal: m, desc: d, anual: Math.round(m * 12 * (1 - d / 100)) };
+  }
+  function mt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+  function irPagamento(motivo) { location.href = 'planos-banca.html' + (motivo ? '?m=' + motivo : ''); }
+  function verificarPlano() {
+    var s; try { s = sessao; } catch (e) { return; }
+    if (!s || !s.lojaId || typeof supabaseClient === 'undefined') return;
+    supabaseClient.from('lojas').select('plano,estado,data_expiracao,tipo_loja').eq('id', s.lojaId).maybeSingle().then(function (r) {
+      var l = r && r.data; if (!l) return;
+      _plano.ultimo = l;
+      if (l.estado === 'suspenso' || l.estado === 'bloqueado') return irPagamento('suspenso');
+      var exp = l.data_expiracao ? new Date(l.data_expiracao) : null;
+      if (!exp) { if (l.estado === 'pendente' || l.estado === 'pendente_pagamento') irPagamento('pendente'); return; }
+      var falta = exp - new Date();
+      if (falta <= 0) return irPagamento('expirou');           // bloqueio automático
+      var dias = Math.ceil(falta / 864e5);
+      mostrarAvisoPlano(l, dias);
+      if (!_plano.ok) { _plano.ok = true; boasVindas(l, dias); }
+    });
+  }
+  function mostrarAvisoPlano(l, dias) {
+    var ant = document.getElementById('plano-aviso'); if (ant) ant.remove();
+    if (!(l.plano === 'banca_free' || dias <= 5)) return;
+    var ecra = document.querySelector('.tela.ativa .topo'); if (!ecra) return;
+    var d = document.createElement('div'); d.className = 'plano-aviso'; d.id = 'plano-aviso';
+    d.innerHTML = (l.plano === 'banca_free' ? 'Plano grátis: <b>' + dias + ' dia' + (dias === 1 ? '' : 's') + '</b> restantes' : 'O seu plano termina em <b>' + dias + ' dia' + (dias === 1 ? '' : 's') + '</b>')
+      + '<span class="pa-btn">Ver planos</span>';
+    d.onclick = function () { location.href = 'planos-banca.html?ver=1'; };
+    ecra.parentNode.insertBefore(d, ecra.nextSibling);
+  }
+  function boasVindas(l, dias) {
+    if (l.plano !== 'banca_free') return;
+    var s; try { s = sessao; } catch (e) { return; }
+    var chave = 'banca_boasvindas_' + s.lojaId;
+    try { if (localStorage.getItem(chave)) return; localStorage.setItem(chave, '1'); } catch (e) { return; }
+    supabaseClient.from('config_global').select('valor').eq('chave', 'planos_banca').maybeSingle().then(function (r) {
+      var c = null; try { c = r && r.data && r.data.valor ? (typeof r.data.valor === 'string' ? JSON.parse(r.data.valor) : r.data.valor) : null; } catch (e) {}
+      var p = precos(c);
+      var ov = document.createElement('div'); ov.className = 'folha-fundo ativa'; ov.id = 'folha-boasvindas';
+      ov.innerHTML = '<div class="folha att-folha"><div class="att-ico">⭐</div><h3>Bem-vindo à SPAP Banca!</h3>'
+        + '<div class="att-v">Plano grátis activo: ' + dias + ' dia' + (dias === 1 ? '' : 's') + '</div>'
+        + '<div class="pl-lista" style="text-align:left">'
+        + '<div class="pl-card pl-gratis"><div class="pl-t"><b>Grátis</b><small>' + p.dias + ' dias, só para a primeira conta</small></div><div class="pl-p">0 MT</div><span class="pl-selo">Activo agora</span></div>'
+        + '<div class="pl-card"><div class="pl-t"><b>Pro</b><small>Pagamento mensal</small></div><div class="pl-p">' + mt(p.mensal) + ' MT<small>/mês</small></div></div>'
+        + '<div class="pl-card pl-anual"><div class="pl-t"><b>Anual</b><small>Poupa ' + p.desc + '% (' + mt(p.mensal * 12 - p.anual) + ' MT)</small></div><div class="pl-p">' + mt(p.anual) + ' MT<small>/ano</small></div></div>'
+        + '</div><button class="btn" type="button" id="bv-ok">Começar a vender</button></div>';
+      document.body.appendChild(ov);
+      ov.querySelector('#bv-ok').onclick = function () { ov.remove(); };
+    });
+  }
+  window.bancaVerificarPlano = verificarPlano;
+
   function iniciar() {
     try { marcaTopo(); menuTresBarras(); numerarMenus(); } catch (e) {}
     if (document.getElementById('tela-resumo')) document.body.classList.add('pg-mon');
@@ -167,6 +272,12 @@
         });
       }).observe(document.body, { childList: true, subtree: true, characterData: true });
     } catch (e) {}
+    // liga a sincronização assim que a sessão da banca estiver pronta
+    var tentativas = 0, espera = setInterval(function () { tentativas++; ligarTempoReal(); if (_sync.ligado || tentativas > 120) clearInterval(espera); }, 500);
+    if (!/planos-banca|login|registo/i.test(location.pathname)) {
+      var t2 = 0, espPlano = setInterval(function () { t2++; var s; try { s = sessao; } catch (e) {} if (s && s.lojaId) { clearInterval(espPlano); verificarPlano(); } else if (t2 > 120) clearInterval(espPlano); }, 500);
+      setInterval(verificarPlano, 60000);   // bloqueia sozinha no momento em que o plano expira
+    }
     setTimeout(function () { verificarAtualizacao(false); }, 6000);
     setInterval(function () { verificarAtualizacao(false); }, 60000);
     document.addEventListener('visibilitychange', function () { if (!document.hidden) verificarAtualizacao(false); });

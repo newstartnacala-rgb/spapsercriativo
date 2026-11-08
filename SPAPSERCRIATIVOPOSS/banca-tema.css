@@ -298,3 +298,26 @@ body.pg-mon .tela.ativa .corpo{background:var(--agua1) repeat-x 0 100% / 360px 1
 .att-folha .att-v{font-weight:800;color:var(--lj);margin:4px 0 10px;}
 .att-folha ul{text-align:left;margin:0 0 14px 18px;color:#475569;font-size:14px;display:grid;gap:6px;}
 .att-folha .btn{margin-top:8px;}
+
+/* ---------- 3.1.0: marca no login, planos da Banca ---------- */
+.box .logo .ic img.logo-ssteam{width:96px;height:96px;object-fit:contain;filter:drop-shadow(0 10px 18px rgba(120,80,0,.3));}
+.pl-ok{text-align:center;margin:4px 0 14px;}
+.pl-ok-ico{font-size:40px;line-height:1;}
+.pl-ok-ico img.e3d{width:56px;height:56px;vertical-align:0;}
+.pl-ok h2{color:var(--nv);font-size:21px;font-weight:800;margin:8px 0 4px;}
+.pl-ok p{color:#475569;font-size:14px;line-height:1.5;}
+.pl-lista{display:grid;gap:10px;margin-bottom:16px;}
+.pl-card{position:relative;display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid #e3ebfa;border-radius:18px;padding:14px 16px;text-align:left;}
+.pl-card .pl-t{flex:1;min-width:0;}
+.pl-card .pl-t b{display:block;font-size:16px;color:var(--nv);}
+.pl-card .pl-t small{display:block;font-size:12.5px;color:#64748b;font-weight:600;margin-top:2px;}
+.pl-card .pl-p{font-weight:800;font-size:20px;color:var(--nv);white-space:nowrap;}
+.pl-card .pl-p small{font-size:12px;color:#64748b;font-weight:700;margin-left:2px;}
+.pl-card.pl-gratis{border-color:#bbf7d0;background:linear-gradient(135deg,#f0fdf4,#ffffff);}
+.pl-card.pl-anual{border-color:#ffd2a8;background:linear-gradient(135deg,#fff7ef,#ffffff);}
+.pl-card.pl-anual .pl-p{color:var(--lj-esc);}
+.pl-selo{position:absolute;top:-9px;right:14px;background:var(--vd-grad);color:#fff;font-size:11px;font-weight:800;border-radius:999px;padding:3px 10px;box-shadow:0 4px 10px rgba(22,163,74,.3);}
+/* aviso do plano no topo da app */
+.plano-aviso{display:flex;align-items:center;gap:10px;margin:8px 12px 0;padding:9px 12px;border-radius:14px;background:#fff7ef;border:1px solid #ffd9b8;color:var(--lj-esc);font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0;}
+.plano-aviso b{color:var(--nv);}
+.plano-aviso .pa-btn{margin-left:auto;background:var(--lj-grad);color:#fff;border-radius:999px;padding:5px 11px;font-size:12px;white-space:nowrap;}

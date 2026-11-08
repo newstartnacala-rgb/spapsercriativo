@@ -28,12 +28,12 @@
   .otp input{width:46px;height:56px;text-align:center;font-size:24px;font-weight:800;padding:0;}
   .dica{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.0.1">
-<script src="banca-tema.js?v=3.0.1" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.1.0">
+<script src="banca-tema.js?v=3.1.0" defer></script>
 </head>
 <body>
 <div class="box">
-  <div class="logo"><div class="ic">🏪</div><h1>Criar a tua banca</h1></div>
+  <div class="logo"><div class="ic"><img class="logo-ssteam" src="ssteam-logo.png" alt="SSTEAM"></div><h1>Criar a tua banca</h1></div>
 
   <!-- PASSO 1: dados -->
   <div class="passo on" id="p1">
@@ -66,14 +66,19 @@
     <div class="dica"><a href="#" onclick="reenviar();return false;" style="color:#16a34a;font-weight:700;text-decoration:none;">📩 Reenviar código</a></div>
   </div>
 
-  <!-- PASSO 3: sucesso -->
+  <!-- PASSO 3: sucesso + planos -->
   <div class="passo" id="p3">
-    <div style="text-align:center;padding:10px 0;">
-      <div style="font-size:48px;">✅</div>
-      <h2 style="color:#166534;font-size:19px;margin:8px 0;">Banca criada!</h2>
-      <p style="color:#475569;font-size:14px;line-height:1.5;">Falta escolher o plano de pagamento. Depois de confirmado, entras direto na tua banca.</p>
-      <button class="btn" onclick="location.href='planos.html'">Escolher plano →</button>
+    <div class="pl-ok">
+      <div class="pl-ok-ico">✅</div>
+      <h2>Banca criada!</h2>
+      <p>Tem <b id="pl-dias">15</b> dias grátis para vender. Depois escolha o plano que preferir.</p>
     </div>
+    <div class="pl-lista">
+      <div class="pl-card pl-gratis"><div class="pl-t"><b>Grátis</b><small><span id="pl-dias2">15</span> dias, só para a primeira conta</small></div><div class="pl-p">0 MT</div><span class="pl-selo">Activo agora</span></div>
+      <div class="pl-card"><div class="pl-t"><b>Pro</b><small>Pagamento mensal</small></div><div class="pl-p"><span id="pl-mensal">500</span> MT<small>/mês</small></div></div>
+      <div class="pl-card pl-anual"><div class="pl-t"><b>Anual</b><small id="pl-anual-eco">Poupa 5% (300 MT)</small></div><div class="pl-p"><span id="pl-anual">5.700</span> MT<small>/ano</small></div></div>
+    </div>
+    <button class="btn" onclick="location.href='banca'">Começar a vender</button>
   </div>
 </div>
 
@@ -83,6 +88,15 @@ let dados={};
 function erro(id,m){ const e=document.getElementById(id); e.textContent=m; e.style.display='block'; }
 function limpaErro(id){ const e=document.getElementById(id); if(e) e.style.display='none'; }
 function passo(n){ ['p1','p2','p3'].forEach((p,i)=>document.getElementById(p).classList.toggle('on',i===n-1)); }
+// Preços da Banca (definidos pelo super admin)
+async function precosBanca(){
+  let c={gratis_dias:15,mensal:500,anual_desconto:5};
+  try{ const { data }=await supabaseClient.from('config_global').select('valor').eq('chave','planos_banca').maybeSingle(); if(data&&data.valor){ c=Object.assign(c, typeof data.valor==='string'?JSON.parse(data.valor):data.valor); } }catch(e){}
+  const m=+c.mensal||500, d=+c.anual_desconto||0, a=Math.round(m*12*(1-d/100)), f=n=>String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+  document.getElementById('pl-mensal').textContent=f(m); document.getElementById('pl-anual').textContent=f(a);
+  document.getElementById('pl-anual-eco').textContent='Poupa '+d+'% ('+f(m*12-a)+' MT)';
+  document.getElementById('pl-dias').textContent=c.gratis_dias; document.getElementById('pl-dias2').textContent=c.gratis_dias;
+}
 
 async function criar(){
   limpaErro('erro1');
@@ -104,7 +118,7 @@ async function criar(){
   if(authError){ erro('erro1', authError.message.includes('already')?'Este email já está registado. Tenta entrar.':authError.message); return; }
   if(authData && authData.user && Array.isArray(authData.user.identities) && authData.user.identities.length===0){ erro('erro1','Este email já está registado. Tenta entrar.'); return; }
   if(authData && authData.session){ // confirmação desligada: cria já
-    const ok=await criarBanca(authData.user.id,'erro1'); if(ok) passo(3); return;
+    const ok=await criarBanca(authData.user.id,'erro1'); if(ok){ passo(3); precosBanca(); } return;
   }
   document.getElementById('email-mostra').textContent=email;
   passo(2); limparOtp();
@@ -128,7 +142,7 @@ async function verificar(){
   btn.textContent='A criar banca…';
   const ok=await criarBanca(data.user.id,'erro2');
   btn.disabled=false; btn.textContent='Confirmar código'; aVer=false;
-  if(ok) passo(3);
+  if(ok){ passo(3); precosBanca(); }
 }
 
 async function reenviar(){

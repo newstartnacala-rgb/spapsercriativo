@@ -238,6 +238,15 @@ body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; c
   .lc-ico { width:28px; height:28px; }
   .loja-nome { font-size:15px; }
 }
+/* Bancas */
+.ad-divisao { display:flex; align-items:center; gap:14px; margin:34px 0 14px; padding:16px 18px; border-radius:22px; background:linear-gradient(135deg,#14244f,#0b1b4d); color:#fff; box-shadow:0 12px 28px rgba(11,27,77,.25); position:relative; overflow:hidden; }
+.ad-divisao::before { content:''; position:absolute; left:0; top:0; bottom:0; width:5px; background:linear-gradient(180deg,#ffa24a,#f26a0c); }
+.ad-divisao img { width:52px; height:52px; object-fit:contain; flex-shrink:0; filter:drop-shadow(0 4px 8px rgba(0,0,0,.3)); }
+.ad-div-tit { font-size:20px; font-weight:800; }
+.ad-div-sub { font-size:13px; color:#c4cde6; margin-top:2px; line-height:1.4; }
+.ad-planos-banca { grid-template-columns:repeat(3,1fr) !important; }
+.ad-planos-banca label { display:flex; flex-direction:column; gap:4px; font-size:12px; font-weight:700; color:#475569; }
+@media(max-width:520px){ .ad-planos-banca { grid-template-columns:1fr !important; } }
 </style>
 </head>
 <body>
@@ -312,6 +321,14 @@ body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; c
       </div>
       <div class="ad-nota">Colunas: Nome · Preço mensal (MT) · Desconto anual (%). O desconto aplica-se sobre 12 meses.</div>
 
+      <div class="ad-sec"><img src="ssteam-logo.png" alt="">Planos da Banca (app SPAP Banca)</div>
+      <div class="ad-planos ad-planos-banca">
+        <label>Dias grátis<input type="number" id="cfg-banca-dias" placeholder="15" oninput="previaBanca()"></label>
+        <label>Mensal (MT)<input type="number" id="cfg-banca-mensal" placeholder="500" oninput="previaBanca()"></label>
+        <label>Desconto anual (%)<input type="number" id="cfg-banca-desc" placeholder="5" oninput="previaBanca()"></label>
+      </div>
+      <div class="ad-nota" id="cfg-banca-previa">Grátis 15 dias (só na primeira conta) · Mensal MT 500 · Anual MT 5.700 (poupa 5%)</div>
+
       <div class="ad-sec"><img src="icons3d/card.png" alt="">Como o cliente paga a subscrição</div>
       <div class="ad-campos">
         <input type="text" id="cfg-mpesa" placeholder="Número M-Pesa (84 xxx xxxx)">
@@ -340,6 +357,26 @@ body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; c
     </div>
 
     <div id="lista-lojas"></div>
+
+    <!-- ===== BANCAS (balconistas) — lista própria ===== -->
+    <div class="ad-divisao" id="sec-bancas">
+      <img src="ssteam-logo.png" alt="">
+      <div><div class="ad-div-tit">Bancas</div><div class="ad-div-sub">Contas da app SPAP Banca, com os e-mails e o estado do pagamento. Quando o plano expira, a banca fica bloqueada sozinha até pagar.</div></div>
+    </div>
+    <div class="contadores">
+      <div class="contador c-total" id="bc-todas" onclick="filtrarBancas('todas')"><div class="num" id="bn-total">0</div><div class="lbl"><img src="icons3d/store.png" alt="">Total de bancas</div></div>
+      <div class="contador c-activo" id="bc-gratis" onclick="filtrarBancas('gratis')"><div class="num" id="bn-gratis">0</div><div class="lbl"><img src="icons3d/gem.png" alt="">No grátis</div></div>
+      <div class="contador c-pendente" id="bc-pagamento" onclick="filtrarBancas('pagamento')"><div class="num" id="bn-pagamento">0</div><div class="lbl"><img src="icons3d/hourglass.png" alt="">Pagamentos a confirmar</div></div>
+      <div class="contador c-suspenso" id="bc-expiradas" onclick="filtrarBancas('expiradas')"><div class="num" id="bn-expiradas">0</div><div class="lbl"><img src="icons3d/prohibited.png" alt="">Expiradas</div></div>
+    </div>
+    <div class="filtros">
+      <button class="filtro-btn ativo" id="fb-todas" onclick="filtrarBancas('todas')">Todas</button>
+      <button class="filtro-btn" id="fb-pagamento" onclick="filtrarBancas('pagamento')"><img src="icons3d/hourglass.png" alt="">A confirmar</button>
+      <button class="filtro-btn" id="fb-pagas" onclick="filtrarBancas('pagas')"><img src="icons3d/check.png" alt="">Pagas</button>
+      <button class="filtro-btn" id="fb-expiradas" onclick="filtrarBancas('expiradas')"><img src="icons3d/prohibited.png" alt="">Expiradas</button>
+      <div class="ad-busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input type="text" class="busca" id="busca-bancas" placeholder="Procurar banca, e-mail ou telefone" oninput="renderBancas()"></div>
+    </div>
+    <div id="lista-bancas"></div>
 
     <div class="ad-rodape"><img src="ssteam-logo.png" alt=""><span>SSTEAM · Tecnologia Varejista de Ponta</span></div>
   </div>
@@ -383,13 +420,14 @@ async function iniciar() {
 async function carregarLojas() {
   const { data, error } = await supabaseClient
     .from('lojas')
-    .select('id, nome, nome_empresa, telefone, endereco, email_dono, plano, estado, numero_transferencia, criado_em, data_expiracao, data_upgrade')
+    .select('id, nome, nome_empresa, telefone, endereco, email_dono, plano, estado, numero_transferencia, criado_em, data_expiracao, data_upgrade, tipo_loja')
     .order('criado_em', { ascending: false });
 
   if (error) { notif('❌ Erro ao carregar: ' + error.message, true); return; }
   lojas = data || [];
   renderContadores();
   renderLojas();
+  renderBancas();
   carregarLinkSuporte();
   carregarConfigSubscricao();
 }
@@ -452,8 +490,21 @@ async function carregarConfigSubscricao() {
   set('cfg-banco-nome', m.banco_nome); set('cfg-banco-conta', m.banco_conta); set('cfg-banco-titular', m.banco_titular);
   const wa = await lerConfig('link_whatsapp_pagamento');
   set('cfg-wa-pagamento', typeof wa === 'string' ? wa : '');
+  const pbc = await lerConfig('planos_banca');
+  if (pbc && typeof pbc === 'object') _planosBanca = pbc;
+  const pb = precosBanca();
+  document.getElementById('cfg-banca-dias').value = pb.dias;
+  document.getElementById('cfg-banca-mensal').value = pb.mensal;
+  document.getElementById('cfg-banca-desc').value = pb.desc;
+  previaBanca(); renderBancas();
 }
 
+function previaBanca() {
+  const n = id => parseFloat(document.getElementById(id).value);
+  const d = n('cfg-banca-dias') || 15, m = n('cfg-banca-mensal') || 500, ds = isNaN(n('cfg-banca-desc')) ? 5 : n('cfg-banca-desc');
+  const a = Math.round(m * 12 * (1 - ds / 100)), f = x => String(Math.round(x)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  document.getElementById('cfg-banca-previa').textContent = 'Grátis ' + d + ' dias (só na primeira conta) · Mensal MT ' + f(m) + ' · Anual MT ' + f(a) + ' (poupa ' + ds + '%, MT ' + f(m * 12 - a) + ')';
+}
 async function guardarConfigSubscricao() {
   const estado = document.getElementById('cfg-estado');
   const num = id => parseFloat(document.getElementById(id).value) || 0;
@@ -469,15 +520,18 @@ async function guardarConfigSubscricao() {
     banco_nome: txt('cfg-banco-nome'), banco_conta: txt('cfg-banco-conta'), banco_titular: txt('cfg-banco-titular')
   };
   const waPag = txt('cfg-wa-pagamento');
+  const planosBanca = { gratis_dias: num('cfg-banca-dias') || 15, mensal: num('cfg-banca-mensal') || 500, anual_desconto: num('cfg-banca-desc') };
   estado.innerHTML = '<span style="color:#64748b;">A guardar...</span>';
   try {
     const rows = [
       { chave: 'planos_config', valor: JSON.stringify(planos), atualizado_em: new Date().toISOString() },
       { chave: 'metodos_subscricao', valor: JSON.stringify(metodos), atualizado_em: new Date().toISOString() },
-      { chave: 'link_whatsapp_pagamento', valor: JSON.stringify(waPag), atualizado_em: new Date().toISOString() }
+      { chave: 'link_whatsapp_pagamento', valor: JSON.stringify(waPag), atualizado_em: new Date().toISOString() },
+      { chave: 'planos_banca', valor: JSON.stringify(planosBanca), atualizado_em: new Date().toISOString() }
     ];
     const { error } = await supabaseClient.from('config_global').upsert(rows, { onConflict: 'chave' });
     if (error) throw error;
+    _planosBanca = planosBanca; renderBancas();
     estado.innerHTML = '<span style="color:#16a34a;">✅ Guardado! A página de planos já mostra os novos valores.</span>';
   } catch(e) {
     estado.innerHTML = '<span style="color:#dc2626;">❌ ' + e.message + ' (corre o SQL v2.6.8 se a tabela não existir)</span>';
@@ -492,8 +546,9 @@ function estadoNorm(e) {
 
 function renderContadores() {
   const cont = { pendente: 0, activo: 0, suspenso: 0 };
-  lojas.forEach(l => { const e = estadoNorm(l.estado); if (cont[e] !== undefined) cont[e]++; });
-  document.getElementById('cnt-total').textContent = lojas.length;
+  const normais = lojas.filter(l => !ehBanca(l));
+  normais.forEach(l => { const e = estadoNorm(l.estado); if (cont[e] !== undefined) cont[e]++; });
+  document.getElementById('cnt-total').textContent = normais.length;
   document.getElementById('cnt-pendente').textContent = cont.pendente;
   document.getElementById('cnt-activo').textContent = cont.activo;
   document.getElementById('cnt-suspenso').textContent = cont.suspenso;
@@ -517,7 +572,19 @@ function textoEstado(e) {
   return e || '—';
 }
 
+function ehBanca(l) { return (l && l.tipo_loja) === 'banca'; }
+function bancaExpirada(l) { return !l.data_expiracao || new Date(l.data_expiracao) <= new Date(); }
+const PLANOS_BANCA_DEFAULT = { gratis_dias: 15, mensal: 500, anual_desconto: 5 };
+let _planosBanca = PLANOS_BANCA_DEFAULT;
+function precosBanca() {
+  const c = Object.assign({}, PLANOS_BANCA_DEFAULT, _planosBanca || {});
+  const m = +c.mensal || 0, d = +c.anual_desconto || 0;
+  return { dias: +c.gratis_dias || 15, mensal: m, desc: d, anual: Math.round(m * 12 * (1 - d / 100)) };
+}
 function textoPlano(p) {
+  if (p === 'banca_free') return '<img src="icons3d/gem.png" alt="">Grátis';
+  if (p === 'banca_mensal') return '<img src="icons3d/star.png" alt="">Mensal';
+  if (p === 'banca_anual') return '<img src="icons3d/calendar.png" alt="">Anual';
   if (p === 'basico') return '<img src="icons3d/gem.png" alt="">Básico';
   if (p === 'pro' || p === 'bronze') return '<img src="icons3d/star.png" alt="">Pro';
   if (p === 'anual') return '<img src="icons3d/calendar.png" alt="">Anual';
@@ -528,7 +595,7 @@ function renderLojas() {
   const div = document.getElementById('lista-lojas');
   const termo = (document.getElementById('busca').value || '').trim().toLowerCase();
 
-  let lista = lojas;
+  let lista = lojas.filter(l => !ehBanca(l));
   if (filtroAtivo !== 'todas') lista = lista.filter(l => estadoNorm(l.estado) === filtroAtivo);
   if (termo) {
     lista = lista.filter(l =>
@@ -542,7 +609,10 @@ function renderLojas() {
     return;
   }
 
-  div.innerHTML = lista.map(l => {
+  div.innerHTML = lista.map(cartaoLoja).join('');
+}
+
+function cartaoLoja(l) {
     const en = estadoNorm(l.estado);
     const data = l.criado_em ? new Date(l.criado_em).toLocaleDateString('pt-PT') : '—';
     const telLimpo = (l.telefone || '').replace(/\D/g, '');
@@ -563,13 +633,15 @@ function renderLojas() {
       <div class="loja-topo" onclick="toggleLojaCard('${l.id}')" style="cursor:pointer;">
         <div class="lc-esq">
           <span class="lc-chev" id="chev-${l.id}"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M8 5v14l11-7z"/></svg></span>
-          <img class="lc-ico" src="icons3d/store.png" alt="">
+          <img class="lc-ico" src="${ehBanca(l) ? 'ssteam-logo.png' : 'icons3d/store.png'}" alt="">
           <div class="loja-nome">${((l.nome && !String(l.nome).includes('@') ? l.nome : (l.nome_empresa && !String(l.nome_empresa).includes('@') ? l.nome_empresa : 'Loja sem nome')) + '').replace(/</g,'&lt;')}${l.email_dono ? '<div style="font-size:12px;font-weight:600;color:#64748b;margin-top:2px;">' + String(l.email_dono).replace(/</g,'&lt;') + '</div>' : ''}</div>
         </div>
         <div class="lc-selos">
-          <span class="badge ${en}">${textoEstado(l.estado)}</span>
+          ${ehBanca(l) && l.estado === 'pendente_pagamento' ? '<span class="badge pendente"><img src="icons3d/hourglass.png" alt="">A confirmar</span>'
+            : ehBanca(l) && bancaExpirada(l) && en !== 'suspenso' ? '<span class="badge suspenso"><img src="icons3d/prohibited.png" alt="">Bloqueada</span>'
+            : `<span class="badge ${en}">${textoEstado(l.estado)}</span>`}
           <button type="button" class="badge trial plano-btn" title="Mudar plano" onclick="event.stopPropagation(); abrirEscolhaPlano('${l.id}', this)">${textoPlano(l.plano)}<svg class="pb-seta" viewBox="0 0 24 24"><path fill="currentColor" d="M7 10l5 5 5-5z"/></svg></button>
-          ${alerta ? '<span class="lc-alerta">🔔 A expirar!</span>' : ''}
+          ${alerta && !(ehBanca(l) && bancaExpirada(l)) ? '<span class="lc-alerta">🔔 A expirar!</span>' : ''}
         </div>
       </div>
       <div id="body-${l.id}" style="display:none;">
@@ -595,8 +667,8 @@ function renderLojas() {
         </div>
       </div>
     </div>`;
-  }).join('');
 }
+
 
 function lembrarCliente(id) {
   const loja = lojas.find(l => l.id === id);
@@ -680,7 +752,8 @@ async function eliminarLoja(id) {
 // Expiração de cada plano: Básico e Pro = 30 dias; Anual = 1 ano de calendário (365 ou 366 dias).
 function calcularExpiracao(plano, inicio) {
   const exp = new Date(inicio || new Date());
-  if (plano === 'anual') exp.setFullYear(exp.getFullYear() + 1);
+  if (plano === 'anual' || plano === 'banca_anual') exp.setFullYear(exp.getFullYear() + 1);
+  else if (plano === 'banca_free') exp.setDate(exp.getDate() + precosBanca().dias);
   else exp.setDate(exp.getDate() + 30);
   return exp;
 }
@@ -695,17 +768,18 @@ function abrirEscolhaPlano(id, btn) {
   const loja = lojas.find(l => l.id === id); if (!loja) return;
   const atual = loja.plano === 'bronze' ? 'pro' : loja.plano;
   const cfg = (k) => Object.assign({}, PLANOS_DEFAULT[k], (_planosCfg || {})[k] || {});
-  const op = [
-    ['basico', 'gem', 'Básico'], ['pro', 'star', 'Pro'], ['anual', 'calendar', 'Anual']
-  ].map(([k, ico, nome]) => {
-    const c = cfg(k), preco = String(Math.round(Number(c.preco || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    return '<button type="button" class="pp-op' + (atual === k ? ' sel' : '') + '" onclick="escolherPlano(\'' + id + '\',\'' + k + '\')">'
-      + '<img src="icons3d/' + ico + '.png" alt=""><span><b>' + nome + '</b><small>MT ' + preco + '/mês · ' + diasDoPlano(k) + ' dias</small></span>'
-      + (atual === k ? '<i>✓</i>' : '') + '</button>';
-  }).join('');
+  const fmtP = n => String(Math.round(Number(n || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const pb = precosBanca();
+  const lista = ehBanca(loja)
+    ? [['banca_free', 'gem', 'Grátis', 'Grátis'], ['banca_mensal', 'star', 'Mensal', 'MT ' + fmtP(pb.mensal) + '/mês'], ['banca_anual', 'calendar', 'Anual', 'MT ' + fmtP(pb.anual) + '/ano']]
+    : [['basico', 'gem', 'Básico'], ['pro', 'star', 'Pro'], ['anual', 'calendar', 'Anual']].map(([k, ico, nome]) => [k, ico, nome, 'MT ' + fmtP(cfg(k).preco) + '/mês']);
+  const op = lista.map(([k, ico, nome, preco]) =>
+    '<button type="button" class="pp-op' + (atual === k ? ' sel' : '') + '" onclick="escolherPlano(\'' + id + '\',\'' + k + '\')">'
+      + '<img src="icons3d/' + ico + '.png" alt=""><span><b>' + nome + '</b><small>' + preco + ' · ' + diasDoPlano(k) + ' dias</small></span>'
+      + (atual === k ? '<i>✓</i>' : '') + '</button>').join('');
   const pop = document.createElement('div');
   pop.id = 'pop-plano'; pop.dataset.loja = id;
-  pop.innerHTML = '<div class="pp-tit">Plano da loja</div>' + op;
+  pop.innerHTML = '<div class="pp-tit">' + (ehBanca(loja) ? 'Plano da banca' : 'Plano da loja') + '</div>' + op;
   document.body.appendChild(pop);
   const r = btn.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
   let x = Math.min(window.innerWidth - w - 10, Math.max(10, r.right - w));
@@ -719,24 +793,25 @@ async function escolherPlano(id, plano) {
   const loja = lojas.find(l => l.id === id); if (!loja) return;
   if (loja.plano === plano) return;
   const antes = loja.plano;
-  loja.plano = plano; renderLojas();          // muda logo no ecrã
+  loja.plano = plano; renderLojas(); renderBancas();          // muda logo no ecrã
   // Novo plano = nova contagem a partir de hoje (30 dias, ou 1 ano no Anual)
   const agora = new Date(), exp = calcularExpiracao(plano, agora);
   const antesExp = loja.data_expiracao, antesUpg = loja.data_upgrade;
-  loja.data_upgrade = agora.toISOString(); loja.data_expiracao = exp.toISOString(); renderLojas();
+  loja.data_upgrade = agora.toISOString(); loja.data_expiracao = exp.toISOString(); renderLojas(); renderBancas();
   const { data, error } = await supabaseClient.from('lojas').update({ plano, data_upgrade: agora.toISOString(), data_expiracao: exp.toISOString() }).eq('id', id).select();
   if (error || !data || !data.length) {
-    loja.plano = antes; loja.data_expiracao = antesExp; loja.data_upgrade = antesUpg; renderLojas();
+    loja.plano = antes; loja.data_expiracao = antesExp; loja.data_upgrade = antesUpg; renderLojas(); renderBancas();
     notif('❌ Não foi possível mudar o plano' + (error ? ': ' + error.message : ' (sem permissão — corre o SQL de permissões do admin).'), true);
     return;
   }
-  renderContadores();
-  const nomes = { basico: 'Básico', pro: 'Pro', anual: 'Anual' };
+  renderContadores(); renderBancas();
+  const nomes = { basico: 'Básico', pro: 'Pro', anual: 'Anual', banca_free: 'Grátis', banca_mensal: 'Mensal', banca_anual: 'Anual' };
   notif('✅ "' + (loja.nome || 'Loja') + '" agora está no plano ' + nomes[plano] + ' — ' + diasDoPlano(plano, agora) + ' dias, até ' + exp.toLocaleDateString('pt-PT') + '.');
 }
 
 async function mudarEstado(id, novoEstado) {
-  const plano = ((lojas.find(l => l.id === id) || {}).plano) || 'basico';
+  const _l = lojas.find(l => l.id === id) || {};
+  const plano = _l.plano || (ehBanca(_l) ? 'banca_mensal' : 'basico');
   const updateObj = { estado: novoEstado, plano: plano };
   // Ao activar (loja PAGOU): regista a data de upgrade e calcula a expiração automaticamente.
   if (novoEstado === 'activo') {
@@ -761,10 +836,43 @@ async function mudarEstado(id, novoEstado) {
   if (loja) { loja.estado = novoEstado; loja.plano = plano; if (data[0]) { loja.data_upgrade = data[0].data_upgrade; loja.data_expiracao = data[0].data_expiracao; } }
   renderContadores();
   renderLojas();
+  renderBancas();
 
   if (novoEstado === 'activo') notif('✅ "' + (loja?.nome || 'Loja') + '" activada! Expira daqui a ' + diasDoPlano(plano) + ' dias.');
   else if (novoEstado === 'suspenso') notif('🚫 "' + (loja?.nome || 'Loja') + '" suspensa.');
   else notif('⏳ "' + (loja?.nome || 'Loja') + '" marcada como pendente.');
+}
+
+// ===== Lista das Bancas =====
+let filtroBancas = 'todas';
+function grupoBanca(l) {
+  if (estadoNorm(l.estado) === 'suspenso') return 'expiradas';
+  if (l.estado === 'pendente_pagamento') return 'pagamento';   // pagamento enviado: aparece primeiro, mesmo se expirou
+  if (bancaExpirada(l)) return 'expiradas';
+  if (l.plano === 'banca_free') return 'gratis';
+  return 'pagas';
+}
+function filtrarBancas(f) {
+  filtroBancas = f;
+  ['todas', 'pagamento', 'pagas', 'expiradas'].forEach(x => { const b = document.getElementById('fb-' + x); if (b) b.classList.toggle('ativo', x === f); });
+  ['todas', 'gratis', 'pagamento', 'expiradas'].forEach(x => { const c = document.getElementById('bc-' + x); if (c) c.classList.toggle('selecionado', x === f); });
+  renderBancas();
+}
+function renderBancas() {
+  const div = document.getElementById('lista-bancas'); if (!div) return;
+  const bancas = lojas.filter(ehBanca);
+  const cont = { gratis: 0, pagamento: 0, pagas: 0, expiradas: 0 };
+  bancas.forEach(l => { cont[grupoBanca(l)]++; });
+  document.getElementById('bn-total').textContent = bancas.length;
+  document.getElementById('bn-gratis').textContent = cont.gratis;
+  document.getElementById('bn-pagamento').textContent = cont.pagamento;
+  document.getElementById('bn-expiradas').textContent = cont.expiradas;
+  const termo = (document.getElementById('busca-bancas').value || '').trim().toLowerCase();
+  let lista = filtroBancas === 'todas' ? bancas : bancas.filter(l => grupoBanca(l) === filtroBancas);
+  if (termo) lista = lista.filter(l => (l.nome || '').toLowerCase().includes(termo) || (l.email_dono || '').toLowerCase().includes(termo) || (l.telefone || '').toLowerCase().includes(termo));
+  // pagamentos a confirmar primeiro
+  lista = lista.slice().sort((a, b) => (grupoBanca(a) === 'pagamento' ? 0 : 1) - (grupoBanca(b) === 'pagamento' ? 0 : 1));
+  div.innerHTML = lista.length ? lista.map(cartaoLoja).join('') : '<div class="vazio">Nenhuma banca' + (filtroBancas !== 'todas' ? ' neste filtro' : '') + '.</div>';
 }
 
 async function sair() {
