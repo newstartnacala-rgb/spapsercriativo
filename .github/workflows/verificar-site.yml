@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [ main ]
-    paths: [ '.github/workflows/verificar-site.yml', 'version.json', 'SPAPSERCRIATIVOPOSS/version.json', 'SPAPSERCRIATIVOPOSS/apps/app-version.json' ]
+    paths: [ '.github/workflows/verificar-site.yml', 'vendassteam/**', 'version.json', 'SPAPSERCRIATIVOPOSS/version.json', 'SPAPSERCRIATIVOPOSS/apps/app-version.json' ]
 permissions:
   contents: write
 jobs:
@@ -27,6 +27,10 @@ jobs:
             BT=$(curl -s -m 20 "https://$d/mobile.html?t=$(date +%s)" | grep -oE 'banca-tema' | head -1)
             echo "$d | http=$V | $VS | monitor: $M | loja: $I | app: $A apk=$K | iphone=$P | banca: apk=$B tema=$BT" | tee -a out/resultado.txt
           done
+          VS=$(curl -s -m 20 -o /tmp/vs.html -w '%{http_code}' "https://newstartnacala-rgb.github.io/spapsercriativo/vendassteam/?t=$(date +%s)")
+          VT=$(grep -oE '<title>[^<]*' /tmp/vs.html | head -1)
+          VA=$(curl -sL -m 60 -o /dev/null -w '%{http_code} %{size_download}' "https://github.com/newstartnacala-rgb/spapsercriativo/releases/latest/download/SPAP-Banca.apk")
+          echo "vendassteam | http=$VS | $VT | apk banca github=$VA" | tee -a out/resultado.txt
       - name: Gravar resultado
         run: |
           git init -q r && cd r

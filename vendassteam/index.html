@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VendasSTEAM — apps de venda da SSTEAM</title>
+<meta name="description" content="VendasSTEAM: as apps de venda da SSTEAM num só lugar. SPAP Banca, SPAP Loja e SPAP Monitor para Android, iPhone e navegador.">
+<meta name="theme-color" content="#0b1b4d">
+<link rel="icon" href="img/ssteam-logo.png">
+<link rel="apple-touch-icon" href="img/ssteam-logo.png">
+<meta property="og:title" content="VendasSTEAM">
+<meta property="og:description" content="Da banca à loja: as apps de venda da SSTEAM para Android, iPhone e navegador.">
+<meta property="og:image" content="img/ssteam-logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --tinta:#0b1b4d; --tinta2:#33416b; --papel:#f5f7fb; --branco:#ffffff;
+  --ouro:#d9a21b; --ouro-claro:#fbe7b0;
+  --banca:#f2700f; --loja:#16a34a; --monitor:#1d6ff2;
+  --linha:#dfe6f3;
+  --raio:22px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+body{font-family:Figtree,"Segoe UI",system-ui,sans-serif;font-size:17px;line-height:1.6;color:var(--tinta);background:var(--papel);}
+img{max-width:100%;display:block}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--ouro);outline-offset:3px;border-radius:8px}
+h1,h2,h3{font-family:"Bricolage Grotesque",Figtree,sans-serif;line-height:1.08;letter-spacing:-.02em}
+.envolve{width:min(1140px,100% - 32px);margin-inline:auto}
+
+/* ---------- Cabeçalho ---------- */
+.cab{position:sticky;top:0;z-index:20;background:rgba(245,247,251,.9);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:1px solid transparent;transition:border-color .2s}
+.cab.rolou{border-bottom-color:var(--linha)}
+.cab .envolve{display:flex;align-items:center;gap:18px;height:68px}
+.marca{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:22px;letter-spacing:-.02em}
+.marca img{width:40px;height:40px;object-fit:contain}
+.cab nav{margin-left:auto;display:flex;gap:4px}
+.cab nav a{text-decoration:none;font-weight:600;font-size:15px;padding:8px 12px;border-radius:999px;color:var(--tinta2)}
+.cab nav a:hover{background:#e8eef9;color:var(--tinta)}
+.cab .bt-cab{margin-left:6px}
+@media (max-width:760px){.cab nav{display:none}.cab .bt-cab{margin-left:auto}}
+
+/* ---------- Botões ---------- */
+.bt{display:inline-flex;align-items:center;justify-content:center;gap:9px;text-decoration:none;font-weight:700;font-size:16px;border-radius:999px;padding:13px 22px;border:2px solid transparent;cursor:pointer;font-family:inherit;transition:transform .12s, box-shadow .2s}
+.bt:active{transform:scale(.97)}
+.bt svg{width:20px;height:20px;flex-shrink:0}
+.bt-tinta{background:var(--tinta);color:#fff;box-shadow:0 10px 24px rgba(11,27,77,.22)}
+.bt-tinta:hover{box-shadow:0 14px 30px rgba(11,27,77,.3)}
+.bt-linha{background:transparent;color:var(--tinta);border-color:#c9d4ea}
+.bt-linha:hover{border-color:var(--tinta)}
+.bt-zap{background:#1fa855;color:#fff}
+.bt-peq{padding:9px 16px;font-size:14.5px}
+
+/* ---------- Topo (hero) ---------- */
+.heroi{position:relative;overflow:hidden;padding:56px 0 0}
+.heroi .envolve{display:grid;grid-template-columns:1.05fr 1fr;gap:40px;align-items:center}
+.heroi h1{font-size:clamp(42px,6.4vw,78px);font-weight:800;max-width:11ch}
+.heroi p.lead{font-size:clamp(17px,1.6vw,20px);color:var(--tinta2);max-width:34em;margin:22px 0 30px}
+.heroi .acoes{display:flex;flex-wrap:wrap;gap:12px}
+.heroi .nota{margin-top:22px;font-size:14.5px;color:#5b6789;display:flex;gap:18px;flex-wrap:wrap}
+.heroi .nota span{display:inline-flex;align-items:center;gap:7px}
+.heroi .nota i{width:8px;height:8px;border-radius:50%;display:inline-block}
+
+/* três telemóveis em leque */
+.leque{position:relative;height:560px}
+.tel{position:absolute;width:236px;aspect-ratio:390/844;border-radius:36px;background:#0d1530;padding:9px;box-shadow:0 30px 60px rgba(11,27,77,.28)}
+.tel img{width:100%;height:100%;object-fit:cover;object-position:top;border-radius:28px}
+.tel::before{content:"";position:absolute;top:16px;left:50%;width:62px;height:7px;margin-left:-31px;border-radius:9px;background:#0d1530;z-index:2}
+.tel.t1{left:2%;top:70px;transform:rotate(-8deg)}
+.tel.t2{left:50%;margin-left:-118px;top:0;z-index:2}
+.tel.t3{right:2%;top:70px;transform:rotate(8deg)}
+.heroi.pronto .tel{animation:entra .9s cubic-bezier(.2,.8,.2,1) both}
+.heroi.pronto .tel.t1{animation-delay:.08s}.heroi.pronto .tel.t3{animation-delay:.16s}
+@keyframes entra{from{opacity:0;translate:0 40px}}
+
+/* faixa de capulana — o elemento marcante */
+.capulana{height:58px;margin-top:-30px;position:relative;z-index:3;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='116' height='58' viewBox='0 0 116 58'%3E%3Crect width='116' height='58' fill='%230b1b4d'/%3E%3Cpath d='M0 29 L29 0 L58 29 L29 58Z' fill='%23d9a21b'/%3E%3Cpath d='M58 29 L87 0 L116 29 L87 58Z' fill='%23f2700f'/%3E%3Cpath d='M14.5 29 L29 14.5 L43.5 29 L29 43.5Z' fill='%230b1b4d'/%3E%3Cpath d='M72.5 29 L87 14.5 L101.5 29 L87 43.5Z' fill='%230b1b4d'/%3E%3Ccircle cx='29' cy='29' r='5' fill='%2316a34a'/%3E%3Ccircle cx='87' cy='29' r='5' fill='%23fbe7b0'/%3E%3Cpath d='M58 0 L65 0 L58 7Z M58 58 L51 58 L58 51Z M58 0 L51 0 L58 7Z M58 58 L65 58 L58 51Z' fill='%231d6ff2'/%3E%3C/svg%3E") repeat-x center / auto 100%;
+  box-shadow:0 -1px 0 #0b1b4d}
+@media (max-width:900px){
+  .heroi .envolve{grid-template-columns:1fr}
+  .leque{height:430px;max-width:520px;width:100%;margin:0 auto}
+  .tel{width:180px;border-radius:28px;padding:7px}.tel img{border-radius:22px}
+  .tel.t2{margin-left:-90px}
+}
+@media (max-width:480px){.leque{height:360px}.tel{width:150px}.tel.t2{margin-left:-75px}.tel.t1{left:-2%}.tel.t3{right:-2%}}
+
+/* ---------- Secções ---------- */
+section{padding:88px 0}
+.tit-sec{font-size:clamp(32px,4vw,48px);font-weight:800;max-width:18ch}
+.sub-sec{color:var(--tinta2);max-width:40em;margin-top:12px;font-size:18px}
+
+/* ---------- Apps: linhas alternadas ---------- */
+.apps{background:var(--branco)}
+.app{display:grid;grid-template-columns:300px 1fr;gap:56px;align-items:center;padding:56px 0;border-top:1px solid var(--linha)}
+.app:first-of-type{margin-top:40px}
+.app:nth-of-type(even){grid-template-columns:1fr 300px}
+.app:nth-of-type(even) .app-tela{order:2}
+.app-tela{position:relative;justify-self:center}
+.app-tela .tel{position:relative;width:250px}
+.app-tela .aura{position:absolute;inset:40px -30px -10px;border-radius:50%;filter:blur(40px);opacity:.35;z-index:0}
+.app-tela .tel{z-index:1}
+.app-cab{display:flex;align-items:center;gap:16px}
+.app-cab img{width:72px;height:72px;border-radius:18px;box-shadow:0 10px 22px rgba(11,27,77,.16);background:#fff;object-fit:cover}
+.app h3{font-size:clamp(30px,3.4vw,42px);font-weight:800}
+.app .para{font-weight:700;margin-top:2px}
+.app p.desc{color:var(--tinta2);margin:18px 0 18px;max-width:36em}
+.app ul{list-style:none;display:grid;gap:9px;margin-bottom:26px}
+.app li{display:flex;gap:11px;align-items:flex-start}
+.app li svg{width:22px;height:22px;flex-shrink:0;margin-top:2px}
+.app .botoes{display:flex;flex-wrap:wrap;gap:10px}
+.app .web{display:inline-block;margin-top:14px;font-weight:600;font-size:15px;color:var(--tinta2)}
+.app.banca .para{color:var(--banca)} .app.banca li svg{color:var(--banca)} .app.banca .aura{background:var(--banca)}
+.app.loja .para{color:var(--loja)} .app.loja li svg{color:var(--loja)} .app.loja .aura{background:var(--loja)}
+.app.monitor .para{color:var(--monitor)} .app.monitor li svg{color:var(--monitor)} .app.monitor .aura{background:var(--monitor)}
+.app.banca .bt-tinta{background:var(--banca);box-shadow:0 10px 22px rgba(242,112,15,.3)}
+.app.loja .bt-tinta{background:var(--loja);box-shadow:0 10px 22px rgba(22,163,74,.28)}
+.app.monitor .bt-tinta{background:var(--monitor);box-shadow:0 10px 22px rgba(29,111,242,.3)}
+@media (max-width:860px){
+  .app,.app:nth-of-type(even){grid-template-columns:1fr;gap:28px;padding:44px 0}
+  .app:nth-of-type(even) .app-tela{order:0}
+  .app-tela .tel{width:210px}
+}
+
+/* ---------- Planos ---------- */
+.planos-grade{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:40px;align-items:stretch}
+.plano{background:#fff;border:1px solid var(--linha);border-radius:var(--raio);padding:28px 26px;display:flex;flex-direction:column}
+.plano h3{font-size:24px;font-weight:800}
+.plano .quem{color:var(--tinta2);font-size:15px;margin-top:4px;min-height:2.6em}
+.plano .preco{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:46px;letter-spacing:-.03em;margin-top:18px;line-height:1}
+.plano .preco small{font-family:Figtree,sans-serif;font-size:16px;font-weight:600;color:var(--tinta2);letter-spacing:0}
+.plano .extra{font-size:14.5px;color:#5b6789;margin-top:6px;min-height:1.5em}
+.plano ul{list-style:none;margin:20px 0 26px;display:grid;gap:8px;font-size:15.5px}
+.plano li{display:flex;gap:10px}
+.plano li::before{content:"";width:18px;height:18px;flex-shrink:0;margin-top:4px;border-radius:50%;background:var(--ouro-claro) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12.5l4 4 8-9' fill='none' stroke='%230b1b4d' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px no-repeat}
+.plano .bt{margin-top:auto}
+.plano.destaque{background:var(--tinta);color:#fff;border-color:var(--tinta);box-shadow:0 24px 48px rgba(11,27,77,.25)}
+.plano.destaque .quem,.plano.destaque .extra,.plano.destaque .preco small{color:#c4cde6}
+.plano.destaque .bt-tinta{background:var(--ouro);color:var(--tinta);box-shadow:none}
+.selo{align-self:flex-start;background:var(--ouro);color:var(--tinta);font-weight:700;font-size:13px;border-radius:999px;padding:4px 11px;margin-bottom:12px}
+.pagar{margin-top:22px;color:var(--tinta2);font-size:15.5px}
+@media (max-width:860px){.planos-grade{grid-template-columns:1fr}}
+
+/* ---------- Instalar ---------- */
+.instalar{background:var(--branco)}
+.separadores{display:inline-flex;background:#eef2fa;border-radius:999px;padding:5px;margin-top:30px;gap:4px}
+.separadores button{border:0;background:transparent;font:700 15.5px Figtree,sans-serif;color:var(--tinta2);padding:10px 20px;border-radius:999px;cursor:pointer}
+.separadores button[aria-selected="true"]{background:var(--tinta);color:#fff}
+.passos{list-style:none;counter-reset:p;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:28px}
+.passos li{counter-increment:p;background:var(--papel);border-radius:var(--raio);padding:24px 20px 22px;position:relative}
+.passos li::before{content:counter(p);display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--tinta);color:#fff;font:800 17px "Bricolage Grotesque",sans-serif;margin-bottom:14px}
+.passos b{display:block;font-size:17px;margin-bottom:4px}
+.passos span{color:var(--tinta2);font-size:15.5px}
+[hidden]{display:none!important}
+@media (max-width:860px){.passos{grid-template-columns:1fr 1fr}}
+@media (max-width:520px){.passos{grid-template-columns:1fr}}
+
+/* ---------- Perguntas ---------- */
+.perguntas .envolve{display:grid;grid-template-columns:.8fr 1.2fr;gap:56px}
+.faq details{border-bottom:1px solid var(--linha)}
+.faq details:first-child{border-top:1px solid var(--linha)}
+.faq summary{cursor:pointer;list-style:none;font-weight:700;font-size:18px;padding:20px 40px 20px 0;position:relative}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"";position:absolute;right:6px;top:50%;width:11px;height:11px;margin-top:-8px;border-right:2.5px solid var(--tinta);border-bottom:2.5px solid var(--tinta);transform:rotate(45deg);transition:transform .2s}
+.faq details[open] summary::after{transform:rotate(225deg);margin-top:-2px}
+.faq details p{color:var(--tinta2);padding:0 0 22px;max-width:38em}
+@media (max-width:860px){.perguntas .envolve{grid-template-columns:1fr;gap:20px}}
+
+/* ---------- Contacto e rodapé ---------- */
+.contacto{background:var(--tinta);color:#fff;padding:80px 0}
+.contacto .envolve{display:flex;justify-content:space-between;align-items:center;gap:30px;flex-wrap:wrap}
+.contacto h2{font-size:clamp(30px,4vw,46px);font-weight:800;max-width:16ch}
+.contacto p{color:#c4cde6;margin-top:10px}
+.contacto .acoes{display:flex;gap:12px;flex-wrap:wrap}
+.contacto .bt-linha{color:#fff;border-color:#4a5884}
+.contacto .bt-linha:hover{border-color:#fff}
+.rodape{background:var(--tinta);color:#9fabcc;font-size:14.5px;border-top:1px solid #23336a}
+.rodape .envolve{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:22px 0}
+.rodape a{color:#c4cde6;text-decoration:none}
+</style>
+</head>
+<body>
+
+<header class="cab" id="cab">
+  <div class="envolve">
+    <a class="marca" href="#topo"><img src="img/ssteam-logo.png" alt="">VendasSTEAM</a>
+    <nav aria-label="Secções">
+      <a href="#apps">Apps</a><a href="#planos">Planos</a><a href="#instalar">Como instalar</a><a href="#perguntas">Perguntas</a>
+    </nav>
+    <a class="bt bt-tinta bt-peq bt-cab" href="#apps">Baixar as apps</a>
+  </div>
+</header>
+
+<main id="topo">
+  <section class="heroi" id="heroi" style="padding-bottom:0">
+    <div class="envolve">
+      <div>
+        <h1>Venda mais, da banca à loja.</h1>
+        <p class="lead">Três apps da SSTEAM que trabalham juntas: a <b>Banca</b> e a <b>Loja</b> registam cada venda, e o <b>Monitor</b> mostra ao dono o que se vendeu, o stock e o lucro, em tempo real e em Meticais.</p>
+        <div class="acoes">
+          <a class="bt bt-tinta" href="#apps"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v9.6l3.3-3.3a1 1 0 1 1 1.4 1.4l-5 5a1 1 0 0 1-1.4 0l-5-5a1 1 0 0 1 1.4-1.4l3.3 3.3V4a1 1 0 0 1 1-1zM5 19h14a1 1 0 1 1 0 2H5a1 1 0 1 1 0-2z"/></svg>Baixar as apps</a>
+          <a class="bt bt-linha" href="#planos">Ver planos e preços</a>
+        </div>
+        <div class="nota">
+          <span><i style="background:var(--banca)"></i>Banca</span>
+          <span><i style="background:var(--loja)"></i>Loja</span>
+          <span><i style="background:var(--monitor)"></i>Monitor</span>
+          <span>Android, iPhone e computador</span>
+        </div>
+      </div>
+      <div class="leque" aria-hidden="true">
+        <div class="tel t1"><img src="img/banca.webp" alt=""></div>
+        <div class="tel t2"><img src="img/monitor.webp" alt=""></div>
+        <div class="tel t3"><img src="img/loja.webp" alt=""></div>
+      </div>
+    </div>
+    <div class="capulana" role="presentation"></div>
+  </section>
+
+  <section class="apps" id="apps">
+    <div class="envolve">
+      <h2 class="tit-sec">Escolha a app do seu negócio</h2>
+      <p class="sub-sec">Todas usam a mesma conta. Comece pela app de vendas e junte o Monitor para acompanhar tudo à distância.</p>
+
+      <article class="app banca">
+        <div class="app-tela"><div class="aura"></div><div class="tel"><img src="img/banca.webp" alt="Ecrã de vendas da SPAP Banca com produtos e carrinho" loading="lazy"></div></div>
+        <div>
+          <div class="app-cab"><img src="img/icon-banca.png" alt=""><div><h3>SPAP Banca</h3><div class="para">Para bancas e vendedores pequenos</div></div></div>
+          <p class="desc">Venda só com o telemóvel. Toque nos produtos, receba o dinheiro e a app calcula o troco. No fim do dia, entregue as contas ao dono num toque.</p>
+          <ul>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor" opacity=".15"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Vender com toque ou com a câmara a ler o código de barras</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor" opacity=".15"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Código próprio para cada balconista</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor" opacity=".15"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Entrega do dia, devoluções e despachos do dono</li>
+          </ul>
+          <div class="botoes" data-app="Banca">
+            <a class="bt bt-tinta" data-tipo="android" href="#">Baixar para Android</a>
+            <a class="bt bt-linha" data-tipo="ios" href="#">Instalar no iPhone</a>
+          </div>
+          <a class="web" data-tipo="web" data-app="Banca" href="#">Ou abrir no navegador</a>
+        </div>
+      </article>
+
+      <article class="app loja">
+        <div class="app-tela"><div class="aura"></div><div class="tel"><img src="img/loja.webp" alt="Ponto de venda da SPAP Loja com produtos e carrinho" loading="lazy"></div></div>
+        <div>
+          <div class="app-cab"><img src="img/icon-loja.png" alt=""><div><h3>SPAP Loja</h3><div class="para">Para lojas, mercearias e supermercados</div></div></div>
+          <p class="desc">O ponto de venda completo, no tablet, no telemóvel ou no computador. Continua a registar vendas quando a internet falha e envia tudo quando ela volta.</p>
+          <ul>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor" opacity=".15"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Numerário, cartão e transferência, com recibo impresso</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor" opacity=".15"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Stock, etiquetas e códigos de barras</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor" opacity=".15"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Vários vendedores, cada um com o seu código</li>
+          </ul>
+          <div class="botoes" data-app="Loja">
+            <a class="bt bt-tinta" data-tipo="android" href="#">Baixar para Android</a>
+            <a class="bt bt-linha" data-tipo="ios" href="#">Instalar no iPhone</a>
+          </div>
+          <a class="web" data-tipo="web" data-app="Loja" href="#">Ou abrir no navegador</a>
+        </div>
+      </article>
+
+      <article class="app monitor">
+        <div class="app-tela"><div class="aura"></div><div class="tel"><img src="img/monitor.webp" alt="Painel do SPAP Monitor com total de vendas e lucro do dia" loading="lazy"></div></div>
+        <div>
+          <div class="app-cab"><img src="img/icon-monitor.png" alt=""><div><h3>SPAP Monitor</h3><div class="para">Para o dono do negócio</div></div></div>
+          <p class="desc">Acompanhe a loja e a banca de onde estiver. Cada venda aparece no Monitor no momento em que acontece, com o produto, o código e o valor.</p>
+          <ul>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor" opacity=".15"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Total vendido, lucro e vendas por hora</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor" opacity=".15"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Aviso no telemóvel a cada venda</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor" opacity=".15"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Produtos, stock, funcionários e relatórios</li>
+          </ul>
+          <div class="botoes" data-app="Monitor">
+            <a class="bt bt-tinta" data-tipo="android" href="#">Baixar para Android</a>
+            <a class="bt bt-linha" data-tipo="ios" href="#">Instalar no iPhone</a>
+          </div>
+          <a class="web" data-tipo="web" data-app="Monitor" href="#">Ou abrir no navegador</a>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="planos" id="planos">
+    <div class="envolve">
+      <h2 class="tit-sec">Planos simples, em Meticais</h2>
+      <p class="sub-sec">Pague por mês ou por ano. Pode mudar de plano quando quiser.</p>
+      <div class="planos-grade">
+        <div class="plano">
+          <h3 id="pn-basico">Básico</h3>
+          <div class="quem">Para começar a vender</div>
+          <div class="preco"><span id="pp-basico">1.000</span> <small>MT por mês</small></div>
+          <div class="extra"></div>
+          <ul><li>Ponto de venda completo</li><li>Vendas e recibos</li><li>Gestão de stock</li><li>Suporte básico</li></ul>
+          <a class="bt bt-linha" data-tipo="registo" href="#">Criar conta</a>
+        </div>
+        <div class="plano">
+          <h3 id="pn-pro">Médio</h3>
+          <div class="quem">Para o dono que quer ver tudo</div>
+          <div class="preco"><span id="pp-pro">1.500</span> <small>MT por mês</small></div>
+          <div class="extra"></div>
+          <ul><li>Tudo do Básico</li><li>Monitor do dono</li><li>Inventário e lucro</li><li>Vários utilizadores</li></ul>
+          <a class="bt bt-linha" data-tipo="registo" href="#">Criar conta</a>
+        </div>
+        <div class="plano destaque">
+          <span class="selo">Melhor valor</span>
+          <h3 id="pn-anual">Avançado</h3>
+          <div class="quem">Para quem quer o preço fixo o ano todo</div>
+          <div class="preco"><span id="pp-anual">2.000</span> <small>MT por mês</small></div>
+          <div class="extra" id="pe-anual">MT 22.800 por ano, poupa 5%</div>
+          <ul><li>Tudo do Médio</li><li>Suporte prioritário</li><li>Relatórios avançados</li><li>Preço bloqueado durante 1 ano</li></ul>
+          <a class="bt bt-tinta" data-tipo="registo" href="#">Criar conta</a>
+        </div>
+      </div>
+      <p class="pagar">Pagamento por M-Pesa ou e-Mola. A conta fica ativa assim que o pagamento é confirmado.</p>
+    </div>
+  </section>
+
+  <section class="instalar" id="instalar">
+    <div class="envolve">
+      <h2 class="tit-sec">Como instalar</h2>
+      <p class="sub-sec">Leva um minuto. As apps avisam sozinhas quando há uma versão nova.</p>
+      <div class="separadores" role="tablist" aria-label="Aparelho">
+        <button role="tab" id="tab-and" aria-selected="true" aria-controls="p-and">Android</button>
+        <button role="tab" id="tab-ios" aria-selected="false" aria-controls="p-ios">iPhone</button>
+      </div>
+      <ol class="passos" id="p-and" role="tabpanel" aria-labelledby="tab-and">
+        <li><b>Escolha a app</b><span>Toque em «Baixar para Android» na app que quer.</span></li>
+        <li><b>Abra o ficheiro</b><span>Quando o download terminar, toque no ficheiro SPAP.</span></li>
+        <li><b>Permita a instalação</b><span>Se o telemóvel pedir, ative «Permitir desta origem».</span></li>
+        <li><b>Entre na conta</b><span>Abra a app e entre com o seu e-mail e senha.</span></li>
+      </ol>
+      <ol class="passos" id="p-ios" role="tabpanel" aria-labelledby="tab-ios" hidden>
+        <li><b>Use o Safari</b><span>Abra esta página no Safari do iPhone e toque em «Instalar no iPhone».</span></li>
+        <li><b>Permita o perfil</b><span>Toque em «Permitir» quando o iPhone perguntar.</span></li>
+        <li><b>Instale</b><span>Vá a Definições, toque em «Perfil descarregado» e depois em «Instalar».</span></li>
+        <li><b>Abra a app</b><span>O ícone aparece no ecrã principal. Entre com o seu e-mail e senha.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="perguntas" id="perguntas">
+    <div class="envolve">
+      <h2 class="tit-sec">Perguntas frequentes</h2>
+      <div class="faq">
+        <details><summary>Preciso de computador?</summary><p>Não. Todas as apps funcionam no telemóvel ou no tablet. Se preferir, a Loja e o Monitor também abrem no navegador do computador.</p></details>
+        <details><summary>E se a internet falhar?</summary><p>A Loja continua a registar as vendas e envia-as quando a internet volta. O Monitor mostra as vendas assim que chegam.</p></details>
+        <details><summary>Posso usar a Banca e o Monitor ao mesmo tempo?</summary><p>Sim. Os balconistas vendem na Banca e o dono vê as vendas, o stock e as entregas do dia no Monitor, com a mesma conta.</p></details>
+        <details><summary>Como pago o plano?</summary><p>Por M-Pesa ou e-Mola. Depois de criar a conta, escolha o plano e envie o comprovativo. A conta fica ativa quando o pagamento é confirmado.</p></details>
+        <details><summary>Os meus dados estão seguros?</summary><p>Cada negócio só vê os seus próprios dados. O dono pode fazer cópias de segurança no Monitor, em Backup.</p></details>
+        <details><summary>Como atualizo as apps?</summary><p>Não precisa de fazer nada: as apps avisam quando há uma versão nova e atualizam-se com um toque.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <section class="contacto" id="contacto">
+    <div class="envolve">
+      <div>
+        <h2>Tem dúvidas? Fale com a equipa SSTEAM.</h2>
+        <p>Respondemos pelo WhatsApp e ajudamos a instalar as apps.</p>
+      </div>
+      <div class="acoes">
+        <a class="bt bt-zap" id="lk-zap" href="https://wa.me/258866577722" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3a.5.5 0 0 0 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7a2.8 2.8 0 0 0 1.8-1.3 2.3 2.3 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3z"/></svg>Falar no WhatsApp</a>
+        <a class="bt bt-linha" href="tel:+258866577722">Ligar +258 86 657 7722</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="rodape">
+  <div class="envolve">
+    <span>© <span id="ano">2026</span> SSTEAM, tecnologia varejista de ponta. Moçambique.</span>
+    <span><a href="#apps">Apps</a> &nbsp; <a href="#planos">Planos</a> &nbsp; <a href="#contacto">Contacto</a></span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  // ===== Endereços (mudar aqui se os sites mudarem) =====
+  var SITE = 'https://spapsercriativo2950.vercel.app';
+  var APK = 'https://github.com/newstartnacala-rgb/spapsercriativo/releases/latest/download/SPAP-';
+  var WEB = { Banca: SITE + '/banca', Loja: SITE + '/login.html', Monitor: SITE + '/monitor.html' };
+  var REGISTO = SITE + '/registo.html';
+
+  document.querySelectorAll('[data-tipo]').forEach(function (a) {
+    var app = a.getAttribute('data-app') || (a.parentNode && a.parentNode.getAttribute('data-app'));
+    var t = a.getAttribute('data-tipo');
+    if (t === 'android') a.href = APK + app + '.apk';
+    else if (t === 'ios') a.href = SITE + '/apps/SPAP-' + app + '.mobileconfig';
+    else if (t === 'web') { a.href = WEB[app]; a.target = '_blank'; a.rel = 'noopener'; }
+    else if (t === 'registo') a.href = REGISTO;
+  });
+
+  // No iPhone, o botão principal passa a ser o do iPhone
+  var ua = navigator.userAgent || '';
+  var ios = /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
+  if (ios) {
+    document.querySelectorAll('.app .botoes').forEach(function (b) {
+      var and = b.querySelector('[data-tipo="android"]'), i = b.querySelector('[data-tipo="ios"]');
+      and.className = 'bt bt-linha'; i.className = 'bt bt-tinta'; b.insertBefore(i, and);
+    });
+    mostrar('ios');
+  }
+
+  // Separadores Android / iPhone
+  function mostrar(qual) {
+    var a = qual === 'and';
+    document.getElementById('tab-and').setAttribute('aria-selected', a);
+    document.getElementById('tab-ios').setAttribute('aria-selected', !a);
+    document.getElementById('p-and').hidden = !a;
+    document.getElementById('p-ios').hidden = a;
+  }
+  document.getElementById('tab-and').onclick = function () { mostrar('and'); };
+  document.getElementById('tab-ios').onclick = function () { mostrar('ios'); };
+
+  // Cabeçalho com linha ao rolar; entrada dos telemóveis
+  var cab = document.getElementById('cab');
+  addEventListener('scroll', function () { cab.classList.toggle('rolou', scrollY > 8); }, { passive: true });
+  requestAnimationFrame(function () { document.getElementById('heroi').classList.add('pronto'); });
+  document.getElementById('ano').textContent = new Date().getFullYear();
+
+  // Preços e WhatsApp definidos no painel de administração (se disponíveis)
+  var SB = 'https://kggqshpqydhvtxklixyk.supabase.co', KEY = 'sb_publishable_FLR81R0et5RIFR9WToVjsQ_RoP3RPew';
+  function fmt(n) { return Math.round(n).toLocaleString('pt-PT').replace(/\s/g, '.'); }
+  fetch(SB + '/rest/v1/config_global?select=chave,valor&chave=in.(planos_config,link_suporte_whatsapp)', { headers: { apikey: KEY } })
+    .then(function (r) { return r.ok ? r.json() : []; })
+    .then(function (linhas) {
+      (linhas || []).forEach(function (l) {
+        var v = l.valor; try { v = JSON.parse(v); } catch (e) {}
+        if (l.chave === 'link_suporte_whatsapp' && typeof v === 'string' && /^https?:/.test(v.trim())) document.getElementById('lk-zap').href = v.trim();
+        if (l.chave === 'planos_config' && v && typeof v === 'object') {
+          ['basico', 'pro', 'anual'].forEach(function (k) {
+            var p = v[k]; if (!p) return; var m = parseFloat(p.preco); if (!(m > 0)) return;
+            document.getElementById('pp-' + k).textContent = fmt(m);
+            if (p.nome) document.getElementById('pn-' + k).textContent = p.nome;
+            if (k === 'anual') { var d = parseFloat(p.desconto); if (!(d >= 0)) d = 5; document.getElementById('pe-anual').textContent = 'MT ' + fmt(m * 12 * (1 - d / 100)) + ' por ano, poupa ' + d + '%'; }
+          });
+        }
+      });
+    }).catch(function () {});
+})();
+</script>
+</body>
+</html>
