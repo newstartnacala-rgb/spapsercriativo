@@ -136,7 +136,7 @@
   function instalarIOS() {
     lembrar(); fecharFolha();
     window.location.href = perfilIOS;
-    setTimeout(function () { avisoIOS('✅ App ' + nome + ' descarregada — abra Definições do iPhone e toque em «Instalar».'); }, 900);
+    setTimeout(function () { avisoIOS(ehIOS() ? '✅ App ' + nome + ' descarregada — abra Definições do iPhone e toque em «Instalar».' : '✅ App ' + nome + ' para iPhone descarregada.'); }, 900);
   }
   function folhaIOS(direto) {
     if (jaNoEcraIOS()) {
@@ -171,7 +171,7 @@
   window.spapInstalarApp = function (plataforma) {
     lerVersao().then(function (d) {
       var v = d && d.versao;
-      if (plataforma === 'ios') { if (ehIOS()) folhaIOS(true); else folhaIOSnoutro(); return; }
+      if (plataforma === 'ios') { if (ehIOS()) folhaIOS(true); else instalarIOS(); return; }   // sempre direto: descarrega a app do iPhone
       if (plataforma === 'android') {
         if (naApp()) folhaNaApp(d);
         else if (ehAndroid()) folhaAndroid(v);
