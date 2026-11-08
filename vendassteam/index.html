@@ -41,7 +41,36 @@ h1,h2,h3{font-family:"Bricolage Grotesque",Figtree,sans-serif;line-height:1.08;l
 .cab nav a{text-decoration:none;font-weight:600;font-size:15px;padding:8px 12px;border-radius:999px;color:var(--tinta2)}
 .cab nav a:hover{background:#e8eef9;color:var(--tinta)}
 .cab .bt-cab{margin-left:6px}
-@media (max-width:760px){.cab nav{display:none}.cab .bt-cab{margin-left:auto}}
+.bt-menu{display:none;width:44px;height:44px;border-radius:50%;border:1px solid #c9d4ea;background:#fff;color:var(--tinta);cursor:pointer;place-items:center;flex-shrink:0}
+.bt-menu svg{width:22px;height:22px}
+.cab nav .nav-att{display:inline-flex;align-items:center;gap:6px;color:var(--tinta);font-weight:700}
+.cab nav .nav-att svg{width:17px;height:17px}
+@media (max-width:860px){.cab nav{display:none}.cab .bt-cab{margin-left:auto}.bt-menu{display:grid}}
+.cab .bt-cab{white-space:nowrap}
+@media (max-width:520px){.cab .bt-cab{display:none}.bt-menu{margin-left:auto}.marca{font-size:20px}}
+/* menu do telemóvel */
+.folha-fundo{position:fixed;inset:0;z-index:50;background:rgba(8,20,60,0);visibility:hidden;transition:background-color .2s, visibility 0s .25s;display:flex;align-items:flex-end;justify-content:center}
+.folha-fundo.aberta{visibility:visible;background:rgba(8,20,60,.45);transition:background-color .2s}
+.folha{width:100%;max-width:520px;max-height:88vh;overflow:auto;background:#fff;border-radius:26px 26px 0 0;padding:12px 18px calc(22px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .26s cubic-bezier(.2,.8,.2,1)}
+.folha-fundo.aberta .folha{transform:none}
+@media (min-width:700px){.folha-fundo{align-items:center}.folha{border-radius:26px}}
+.folha .pega{width:44px;height:5px;border-radius:9px;background:#d5dded;margin:0 auto 12px}
+.folha .f-cab{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.folha h2{font-size:24px;font-weight:800}
+.folha .fechar{width:38px;height:38px;border-radius:50%;border:1px solid var(--linha);background:#fff;font-size:16px;cursor:pointer;color:var(--tinta)}
+.menu-links a{display:flex;align-items:center;gap:12px;padding:14px 4px;border-bottom:1px solid var(--linha);text-decoration:none;font-weight:700;font-size:17px}
+.menu-links a:last-child{border-bottom:0}
+.menu-links a svg{width:20px;height:20px}
+.menu-links .m-att{color:var(--tinta)}
+.att-lista{display:grid;gap:10px;margin-top:6px}
+.att-item{display:flex;align-items:center;gap:12px;background:var(--papel);border:1px solid var(--linha);border-radius:18px;padding:12px}
+.att-item img{width:52px;height:52px;border-radius:13px;object-fit:cover;flex-shrink:0}
+.att-item .t{flex:1;min-width:0}
+.att-item b{display:block;font-size:16px}
+.att-item small{color:var(--tinta2);font-size:13.5px;font-weight:600}
+.att-item .bt{padding:9px 14px;font-size:14px;flex-shrink:0}
+.att-estado{font-size:15px;color:var(--tinta2);margin:4px 0 12px}
+.att-nota{font-size:14px;color:#5b6789;margin-top:14px}
 
 /* ---------- Botões ---------- */
 .bt{display:inline-flex;align-items:center;justify-content:center;gap:9px;text-decoration:none;font-weight:700;font-size:16px;border-radius:999px;padding:13px 22px;border:2px solid transparent;cursor:pointer;font-family:inherit;transition:transform .12s, box-shadow .2s}
@@ -141,7 +170,7 @@ section{padding:88px 0}
 .novidades{margin-top:26px;background:var(--papel);border:1px solid var(--linha);border-radius:var(--raio);padding:18px 22px;max-width:760px}
 .novidades b{font-family:"Bricolage Grotesque",sans-serif;font-size:18px}
 .novidades ul{margin:8px 0 0 18px;color:var(--tinta2);font-size:15.5px;display:grid;gap:4px}
-@media (max-width:980px){.grupo.loja .info{grid-template-columns:1fr;gap:20px}.tablet{border-radius:26px;padding:10px}.tablet img{border-radius:16px}.tablet-cena .tel{display:none}}
+@media (max-width:980px){.grupo.loja .info{grid-template-columns:1fr;gap:20px}.tablet{border-radius:26px;padding:10px}.tablet img{border-radius:16px}.tablet-cena{padding-bottom:70px}.tablet-cena .tel{width:120px;right:-4px;bottom:0}}
 @media (max-width:1240px) and (min-width:981px){.tablet-cena{max-width:760px;margin-left:0}.tablet-cena .tel{right:-170px}}
 @media (max-width:980px){
   .grupo,.grupo.banca{grid-template-columns:1fr;gap:30px;padding:48px 0}
@@ -214,10 +243,38 @@ section{padding:88px 0}
     <a class="marca" href="#topo"><img src="img/ssteam-logo.png" alt="">VendasSTEAM</a>
     <nav aria-label="Secções">
       <a href="#loja">Loja</a><a href="#banca">Banca</a><a href="#planos">Planos</a><a href="#instalar">Como instalar</a><a href="#perguntas">Perguntas</a>
+      <a href="#" class="nav-att" data-verificar><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 4a8 8 0 0 1 7.4 5H17a1 1 0 1 0 0 2h4a1 1 0 0 0 1-1V6a1 1 0 1 0-2 0v1.3A10 10 0 0 0 2.1 10.9a1 1 0 0 0 2 .3A8 8 0 0 1 12 4zm9 8.8a1 1 0 0 0-1.1.9A8 8 0 0 1 4.6 15H7a1 1 0 1 0 0-2H3a1 1 0 0 0-1 1v4a1 1 0 1 0 2 0v-1.3a10 10 0 0 0 17.9-3.6 1 1 0 0 0-.9-1.3z"/></svg>Verificar atualizações</a>
     </nav>
     <a class="bt bt-tinta bt-peq bt-cab" href="#apps">Baixar as apps</a>
+    <button class="bt-menu" id="bt-menu" type="button" aria-label="Abrir menu" aria-controls="menu-folha" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 6h16a1 1 0 1 1 0 2H4a1 1 0 0 1 0-2zm0 5h16a1 1 0 1 1 0 2H4a1 1 0 1 1 0-2zm0 5h16a1 1 0 1 1 0 2H4a1 1 0 1 1 0-2z"/></svg></button>
   </div>
 </header>
+
+<div class="folha-fundo" id="menu-folha" role="dialog" aria-modal="true" aria-label="Menu">
+  <div class="folha">
+    <div class="pega"></div>
+    <div class="f-cab"><h2>Menu</h2><button class="fechar" type="button" data-fechar aria-label="Fechar">✕</button></div>
+    <nav class="menu-links">
+      <a href="#" class="m-att" data-verificar><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 4a8 8 0 0 1 7.4 5H17a1 1 0 1 0 0 2h4a1 1 0 0 0 1-1V6a1 1 0 1 0-2 0v1.3A10 10 0 0 0 2.1 10.9a1 1 0 0 0 2 .3A8 8 0 0 1 12 4zm9 8.8a1 1 0 0 0-1.1.9A8 8 0 0 1 4.6 15H7a1 1 0 1 0 0-2H3a1 1 0 0 0-1 1v4a1 1 0 1 0 2 0v-1.3a10 10 0 0 0 17.9-3.6 1 1 0 0 0-.9-1.3z"/></svg>Verificar atualizações</a>
+      <a href="#loja" data-fechar>Loja</a>
+      <a href="#banca" data-fechar>Banca</a>
+      <a href="#planos" data-fechar>Planos</a>
+      <a href="#instalar" data-fechar>Como instalar</a>
+      <a href="#perguntas" data-fechar>Perguntas</a>
+      <a href="#contacto" data-fechar>Contacto</a>
+    </nav>
+  </div>
+</div>
+
+<div class="folha-fundo" id="att-folha" role="dialog" aria-modal="true" aria-labelledby="att-tit">
+  <div class="folha">
+    <div class="pega"></div>
+    <div class="f-cab"><h2 id="att-tit">Atualizações</h2><button class="fechar" type="button" data-fechar aria-label="Fechar">✕</button></div>
+    <p class="att-estado" id="att-estado">A verificar…</p>
+    <div class="att-lista" id="att-lista"></div>
+    <p class="att-nota">Se já tem a app instalada, ela também avisa sozinha quando há uma versão nova.</p>
+  </div>
+</div>
 
 <main id="topo">
   <section class="heroi" id="heroi" style="padding-bottom:0">
@@ -469,6 +526,38 @@ section{padding:88px 0}
       lista.forEach(function (t) { var li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
       document.getElementById('novidades').hidden = false;
     }).catch(function () {});
+
+  // ===== Menu e «Verificar atualizações» =====
+  function abrirF(id) { document.getElementById(id).classList.add('aberta'); if (id === 'menu-folha') document.getElementById('bt-menu').setAttribute('aria-expanded', 'true'); }
+  function fecharF(el) { var f = el.closest ? el.closest('.folha-fundo') : el; if (f) f.classList.remove('aberta'); document.getElementById('bt-menu').setAttribute('aria-expanded', 'false'); }
+  document.getElementById('bt-menu').onclick = function () { abrirF('menu-folha'); };
+  document.querySelectorAll('.folha-fundo').forEach(function (f) { f.addEventListener('click', function (e) { if (e.target === f) fecharF(f); }); });
+  document.querySelectorAll('[data-fechar]').forEach(function (b) { b.addEventListener('click', function () { fecharF(b); }); });
+  addEventListener('keydown', function (e) { if (e.key === 'Escape') document.querySelectorAll('.folha-fundo.aberta').forEach(fecharF); });
+  var APPS = [['SPAP-Loja', 'SPAP Loja', 'icon-loja.png'], ['SPAP-Monitor', 'SPAP Monitor', 'icon-monitor.png'], ['SPAP-Banca', 'SPAP Banca', 'icon-banca.png'], ['SPAP-Banca-Monitor', 'SPAP Banca Monitor', 'icon-bancamonitor.png']];
+  function verificar(e) {
+    if (e) e.preventDefault();
+    document.querySelectorAll('.folha-fundo.aberta').forEach(fecharF);
+    abrirF('att-folha');
+    var est = document.getElementById('att-estado'), lista = document.getElementById('att-lista');
+    est.textContent = 'A verificar…'; lista.innerHTML = '';
+    fetch('https://api.github.com/repos/newstartnacala-rgb/spapsercriativo/releases/latest?t=' + Date.now(), { cache: 'no-store', headers: { Accept: 'application/vnd.github+json' } })
+      .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+      .then(function (rel) {
+        var v = String(rel.tag_name || '').replace(/^apps-v/, ''), nomes = (rel.assets || []).map(function (a) { return a.name; });
+        est.innerHTML = 'Versão mais recente: <b>' + v + '</b>' + (rel.published_at ? ', de ' + dataPT(rel.published_at) : '') + '.';
+        porVersao(v, rel.published_at);
+        APPS.forEach(function (a) {
+          if (nomes.length && nomes.indexOf(a[0] + '.apk') < 0) return;
+          var d = document.createElement('div'); d.className = 'att-item';
+          d.innerHTML = '<img src="img/' + a[2] + '" alt=""><div class="t"><b>' + a[1] + '</b><small>Versão ' + v + '</small></div>'
+            + '<a class="bt bt-tinta" href="' + APK.replace(/SPAP-$/, '') + a[0] + '.apk">Baixar</a>';
+          lista.appendChild(d);
+        });
+      })
+      .catch(function () { est.textContent = 'Não foi possível verificar agora. Confirme a ligação à internet e tente de novo.'; });
+  }
+  document.querySelectorAll('[data-verificar]').forEach(function (b) { b.addEventListener('click', verificar); });
 
   // Preços e WhatsApp definidos no painel de administração (se disponíveis)
   var SB = 'https://kggqshpqydhvtxklixyk.supabase.co', KEY = 'sb_publishable_FLR81R0et5RIFR9WToVjsQ_RoP3RPew';
