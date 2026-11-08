@@ -355,3 +355,54 @@ body.pg-mon .tela.ativa .corpo{background:var(--agua1) repeat-x 0 100% / 360px 1
 .gp-previa b{color:var(--nv);font-size:17px;} .gp-previa b.mais{color:#16a34a;} .gp-previa b.menos{color:#dc2626;}
 .nav a .ic.ic-menu svg.ic-def{color:#64748b;}
 .nav a{font-size:11.5px !important;}
+
+/* ---------- 3.4.0: topo do Monitor (Online, tema, Definições) ---------- */
+.topo .tp-tema,.topo .tp-def{width:42px !important;height:42px !important;padding:0 !important;border-radius:50% !important;justify-content:center;}
+.topo .tp-def svg{width:21px;height:21px;color:var(--nv);}
+.topo .tp-tema img.e3d{width:22px;height:22px;vertical-align:0;}
+.tp-tema .ico-sol{display:none;} html.escuro .tp-tema .ico-sol{display:inline;} html.escuro .tp-tema .ico-lua{display:none;}
+.tp-acoes .tp-net{max-width:none;}
+@media (max-width:380px){ .tp-acoes .tp-net span{display:none;} .tp-acoes{gap:5px;} }
+
+/* Modo escuro (o mesmo método do Monitor principal) */
+html.escuro{filter:invert(1) hue-rotate(180deg);background:#0e1015;}
+html.escuro img:not(.e3d), html.escuro video, html.escuro #leitor-ecra{filter:invert(1) hue-rotate(180deg);}
+html.escuro img.e3d, html.escuro .tp-logo, html.escuro .logo-ssteam{filter:invert(1) hue-rotate(180deg) !important;}
+
+/* Ondas «água» do Monitor da Banca: faixa fina e suave só no fundo dos cartões */
+body.pg-mon .stat, body.pg-mon .stat.wide{background-size:420px 18px,320px 14px,100% 100% !important;background-position:0 100%,0 100%,0 0 !important;padding-bottom:20px !important;}
+body.pg-mon .stat{background-image:var(--agua1),var(--agua2),linear-gradient(170deg,#ffffff,#f7faff) !important;}
+body.pg-mon .stat.wide{background-image:var(--agua1),var(--agua-lj),linear-gradient(170deg,#ffffff,#fffaf4) !important;}
+body.pg-mon .cartao{background-size:420px 16px,320px 12px,100% 100% !important;background-position:0 100%,0 100%,0 0 !important;padding-bottom:10px;}
+body.pg-mon .row{background:#fff !important;}
+@keyframes agua-mar{from{background-position:0 100%,0 100%,0 0}to{background-position:-420px 100%,320px 100%,0 0}}
+body.pg-mon .tela.ativa .corpo{background:var(--agua1) repeat-x 0 100% / 420px 54px, var(--agua2) repeat-x 0 100% / 320px 40px !important;}
+
+/* Leitor de códigos de barras */
+#leitor-ecra{position:fixed;inset:0;z-index:5000;background:#05070d;color:#fff;display:flex;flex-direction:column;font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif;}
+#leitor-ecra .le-topo{display:flex;align-items:center;justify-content:space-between;padding:calc(env(safe-area-inset-top) + 14px) 16px 12px;}
+#leitor-ecra .le-topo b{font-size:18px;}
+#leitor-ecra .le-fechar{width:42px;height:42px;border-radius:50%;border:0;background:rgba(255,255,255,.14);color:#fff;font-size:18px;cursor:pointer;}
+#leitor-ecra .le-video{position:relative;flex:1;overflow:hidden;background:#000;}
+#leitor-ecra video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+#leitor-ecra #le-html5{position:absolute !important;inset:0;width:100% !important;height:100% !important;}
+#leitor-ecra #le-html5 video{position:absolute;inset:0;width:100% !important;height:100% !important;object-fit:cover;}
+#leitor-ecra.le-js video:not(#le-html5 video){display:none;}
+#leitor-ecra.le-js #le-html5 #qr-shaded-region{border-color:rgba(0,0,0,.45) !important;}
+#leitor-ecra .le-mira{position:absolute;left:50%;top:50%;width:min(80vw,340px);height:min(44vw,190px);transform:translate(-50%,-50%);box-shadow:0 0 0 2000px rgba(0,0,0,.45);border-radius:16px;pointer-events:none;}
+#leitor-ecra.le-js .le-mira{box-shadow:none;}
+#leitor-ecra .le-mira i{position:absolute;width:34px;height:34px;border:4px solid #ffa24a;}
+#leitor-ecra .le-mira .c1{left:-2px;top:-2px;border-right:0;border-bottom:0;border-top-left-radius:16px;}
+#leitor-ecra .le-mira .c2{right:-2px;top:-2px;border-left:0;border-bottom:0;border-top-right-radius:16px;}
+#leitor-ecra .le-mira .c3{left:-2px;bottom:-2px;border-right:0;border-top:0;border-bottom-left-radius:16px;}
+#leitor-ecra .le-mira .c4{right:-2px;bottom:-2px;border-left:0;border-top:0;border-bottom-right-radius:16px;}
+#leitor-ecra .le-laser{position:absolute;left:6%;right:6%;top:50%;height:2px;background:linear-gradient(90deg,transparent,#ff3b30,transparent);box-shadow:0 0 12px 2px rgba(255,59,48,.7);animation:le-laser 1.8s ease-in-out infinite;}
+@keyframes le-laser{0%,100%{top:12%}50%{top:88%}}
+#leitor-ecra.le-ok .le-mira i{border-color:#22c55e;} #leitor-ecra.le-ok .le-laser{background:#22c55e;box-shadow:0 0 16px 4px rgba(34,197,94,.8);animation:none;top:50%;}
+#leitor-ecra.le-erro .le-laser{display:none;}
+#leitor-ecra .le-dica{text-align:center;padding:14px 18px 6px;font-size:14.5px;color:#e2e8f0;line-height:1.45;}
+#leitor-ecra .le-botoes{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;padding:8px 16px calc(env(safe-area-inset-bottom) + 18px);}
+#leitor-ecra .le-botoes button{border:0;border-radius:999px;padding:12px 18px;font:800 14.5px inherit;font-family:inherit;color:#fff;background:rgba(255,255,255,.14);cursor:pointer;}
+#leitor-ecra .le-botoes .le-foto{background:linear-gradient(180deg,#ffa24a,#f26a0c);}
+#leitor-ecra .le-luz.on{background:#fbbf24;color:#111;}
+html.escuro #leitor-ecra video{filter:none !important;}

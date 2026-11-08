@@ -110,9 +110,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="SPAP Banca">
-<link rel="stylesheet" href="banca-tema.css?v=3.3.0">
-<script src="banca-tema.js?v=3.3.0" defer></script>
-<script src="app-android.js?v=3.3.0" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.4.0">
+<script src="banca-tema.js?v=3.4.0" defer></script>
+<script src="app-android.js?v=3.4.0" defer></script>
 </head>
 <body>
 
@@ -777,6 +777,7 @@ async function apagarProduto(){
 // ===================== SCANNER =====================
 let scanner=null;
 async function abrirScanner(){
+  if (window.bancaScanner){ bancaScanner((code)=>lerCodigo(code)); return; }
   const area = document.getElementById('scanner-area');
   if (scanner){ fecharScanner(); return; }
   area.style.display='block';
@@ -814,6 +815,7 @@ function _ean(stored, lido){
 // ===================== LEITOR DE CÓDIGO PARA CAMPO =====================
 let _scanCampo=null;
 async function scanCampo(inputId){
+  if (window.bancaScanner){ bancaScanner((code)=>{ const inp=document.getElementById(inputId); if(inp) inp.value=String(code||'').trim(); toast('✅ Código lido','ok'); }); return; }
   const area=document.getElementById('scan-'+inputId);
   if(_scanCampo){ await pararScanCampo(); area.style.display='none'; area.innerHTML=''; return; }
   area.style.display='block'; area.innerHTML='<div id="rd-'+inputId+'" style="width:100%"></div>';

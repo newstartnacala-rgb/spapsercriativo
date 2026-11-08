@@ -12,7 +12,7 @@
     '📅': 'calendar', '🏪': 'store', '📧': 'envelope', '🔑': 'key', '📱': 'telemovel', '🔁': 'refresh',
     '🔐': 'cadeado', '💳': 'card', '📷': 'camera', '💵': 'dinheiro-voa', '✅': 'check', '🖨️': 'page', '🖨': 'page',
     '🗑': 'lixo', '🗑️': 'lixo', '☰': null, '📩': 'envelope', '⏳': 'hourglass', '🚫': 'prohibited', '🔒': 'cadeado',
-    '📋': 'clipboard', '🔄': 'refresh', '⚙️': 'gear', '⚙': 'gear', '🔔': 'bell', '⭐': 'star', '🏆': 'trophy', '📌': 'pin', '🎁': 'gem'
+    '📋': 'clipboard', '🔄': 'refresh', '🌙': 'moon', '☀️': 'sun', '☀': 'sun', '🔦': 'lampada', '⚙️': 'gear', '⚙': 'gear', '🔔': 'bell', '⭐': 'star', '🏆': 'trophy', '📌': 'pin', '🎁': 'gem'
   };
   var chaves = Object.keys(MAPA).sort(function (a, b) { return b.length - a.length; });
   var RE = new RegExp('(' + chaves.map(function (k) { return k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }).join('|') + ')\\uFE0F?', 'g');
@@ -257,6 +257,106 @@
   }
   window.bancaVerificarPlano = verificarPlano;
 
+  // ===== Online / Offline (qualquer botão .tp-net) =====
+  window.bancaNet = function (avisar) {
+    var on = navigator.onLine !== false;
+    document.querySelectorAll('.tp-net').forEach(function (b) { b.classList.toggle('off', !on); var t = b.querySelector('span'); if (t) t.textContent = on ? 'Online' : 'Offline'; });
+    if (avisar && window.toast) toast(on ? '✅ Ligado à internet: tudo sincroniza na hora' : '⚠️ Sem internet: ligue os dados ou o Wi-Fi', on ? 'ok' : 'erro');
+  };
+  addEventListener('online', function () { bancaNet(); });
+  addEventListener('offline', function () { bancaNet(); });
+
+  // ===== Modo escuro (lua) / claro (sol) =====
+  function aplicarTema(escuro) {
+    document.documentElement.classList.toggle('escuro', !!escuro);
+    document.querySelectorAll('.tp-tema').forEach(function (b) { b.setAttribute('aria-label', escuro ? 'Modo claro' : 'Modo escuro'); });
+    var tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.setAttribute('content', escuro ? '#0b1020' : '#f4f8ff');
+  }
+  try { aplicarTema(localStorage.getItem('banca_escuro') === '1'); } catch (e) {}
+  window.bancaTema = function () {
+    var novo = !document.documentElement.classList.contains('escuro');
+    try { localStorage.setItem('banca_escuro', novo ? '1' : '0'); } catch (e) {}
+    aplicarTema(novo);
+    if (window.toast) toast(novo ? '🌙 Modo escuro' : '☀️ Modo claro', 'ok');
+  };
+
+  // ===== Leitor de códigos de barras (ecrã próprio com moldura e linha de leitura) =====
+  var FORMATOS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'code_93', 'itf', 'codabar', 'qr_code'];
+  window.bancaScanner = function (aoLer) {
+    var ant = document.getElementById('leitor-ecra'); if (ant) ant.remove();
+    var ov = document.createElement('div'); ov.id = 'leitor-ecra'; ov.className = 'notranslate';
+    ov.innerHTML = '<div class="le-topo"><b>Ler código de barras</b><button type="button" class="le-fechar" aria-label="Fechar">✕</button></div>'
+      + '<div class="le-video"><video playsinline muted autoplay></video><div id="le-html5"></div>'
+      + '<div class="le-mira"><i class="c1"></i><i class="c2"></i><i class="c3"></i><i class="c4"></i><span class="le-laser"></span></div></div>'
+      + '<div class="le-dica" id="le-dica">Aponte para o código de barras, dentro da moldura</div>'
+      + '<div class="le-botoes"><button type="button" class="le-luz" hidden>🔦 Lanterna</button><button type="button" class="le-foto">📷 Ler a partir de uma foto</button></div>';
+    document.body.appendChild(ov);
+    var video = ov.querySelector('video'), dica = ov.querySelector('#le-dica'), fluxo = null, parar = false, h5 = null, lido = false;
+    function fim() {
+      parar = true;
+      try { if (fluxo) fluxo.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {}
+      try { if (h5) h5.stop().catch(function () {}); } catch (e) {}
+      ov.remove();
+    }
+    function sucesso(code) {
+      if (lido) return; lido = true;
+      try { navigator.vibrate && navigator.vibrate(80); } catch (e) {}
+      try { var ac = new (window.AudioContext || window.webkitAudioContext)(), o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = 1250; g.gain.value = .12; o.connect(g); g.connect(ac.destination); o.start(); setTimeout(function () { o.stop(); ac.close(); }, 120); } catch (e) {}
+      ov.classList.add('le-ok'); setTimeout(function () { fim(); aoLer(String(code).trim()); }, 220);
+    }
+    ov.querySelector('.le-fechar').onclick = fim;
+    ov.querySelector('.le-foto').onclick = function () { fim(); window.bancaLerPorFoto && bancaLerPorFoto(aoLer); };
+    function semCamara(e) {
+      var negado = e && /NotAllowed|Permission|denied/i.test((e.name || '') + (e.message || ''));
+      dica.innerHTML = negado ? '⚠️ A câmara não foi autorizada. Permita a câmara nas definições do telemóvel (ou atualize a app) e tente de novo, ou use a foto.' : '⚠️ Não foi possível abrir a câmara. Use «Ler a partir de uma foto».';
+      ov.classList.add('le-erro');
+    }
+    // 1) leitor nativo do telemóvel (mais rápido e certeiro)
+    function comNativo() {
+      var det;
+      try { det = new BarcodeDetector({ formats: FORMATOS }); } catch (e) { return comHtml5(); }
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false })
+        .then(function (s) {
+          if (parar) { s.getTracks().forEach(function (t) { t.stop(); }); return; }
+          fluxo = s; video.srcObject = s; video.play().catch(function () {});
+          try {
+            var tr = s.getVideoTracks()[0], cap = tr.getCapabilities ? tr.getCapabilities() : {};
+            if (cap.torch) { var bl = ov.querySelector('.le-luz'), on = false; bl.hidden = false; bl.onclick = function () { on = !on; tr.applyConstraints({ advanced: [{ torch: on }] }).catch(function () {}); bl.classList.toggle('on', on); }; }
+            if (cap.focusMode && cap.focusMode.indexOf('continuous') >= 0) tr.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(function () {});
+          } catch (e) {}
+          (function ciclo() {
+            if (parar || lido) return;
+            if (video.readyState >= 2) {
+              det.detect(video).then(function (r) { if (r && r.length) sucesso(r[0].rawValue); else setTimeout(ciclo, 120); }).catch(function () { setTimeout(ciclo, 250); });
+            } else setTimeout(ciclo, 120);
+          })();
+        }).catch(semCamara);
+    }
+    // 2) leitor em JavaScript (para telemóveis sem leitor nativo)
+    function comHtml5() {
+      if (typeof Html5Qrcode === 'undefined') return semCamara();
+      ov.classList.add('le-js');
+      var cfg = { fps: 15, qrbox: function (w, h) { var lw = Math.max(160, Math.min(w * .82, 360)); var lh = Math.max(90, Math.min(h * .5, lw * .55)); return { width: Math.round(Math.min(lw, Math.max(w, 160))), height: Math.round(Math.min(lh, Math.max(h, 90))) }; } };
+      try {
+        var F = window.Html5QrcodeSupportedFormats;
+        h5 = F ? new Html5Qrcode('le-html5', { formatsToSupport: [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.CODE_128, F.CODE_39, F.CODE_93, F.ITF, F.CODABAR, F.QR_CODE], experimentalFeatures: { useBarCodeDetectorIfSupported: true }, verbose: false })
+               : new Html5Qrcode('le-html5');
+      } catch (e) { h5 = new Html5Qrcode('le-html5'); }
+      h5.start({ facingMode: 'environment' }, cfg, sucesso, function () {})
+        .catch(function () {
+          return Html5Qrcode.getCameras().then(function (cams) {
+            if (!cams || !cams.length) throw new Error('sem câmara');
+            var c = cams.filter(function (x) { return /back|rear|traseira|environment/i.test(x.label || ''); })[0] || cams[cams.length - 1];
+            return h5.start(c.id, cfg, sucesso, function () {});
+          });
+        }).catch(semCamara);
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return semCamara();
+    if ('BarcodeDetector' in window && BarcodeDetector.getSupportedFormats) {
+      BarcodeDetector.getSupportedFormats().then(function (f) { if (f && f.indexOf('ean_13') >= 0) comNativo(); else comHtml5(); }).catch(comHtml5);
+    } else comHtml5();
+  };
+
   // ===== Câmara: alternativas quando a câmara ao vivo não abre =====
   window.bancaCamaraAlternativa = function (inst, cfg, onCode) {
     if (typeof Html5Qrcode === 'undefined') return Promise.resolve(false);
@@ -323,6 +423,7 @@
   function iniciar() {
     try { marcaTopo(); menuTresBarras(); numerarMenus(); } catch (e) {}
     marcarNaoTraduzir(document.body);
+    try { bancaNet(); } catch (e) {}
     // a língua escolhida acompanha todas as páginas da Banca
     if (linguaGuardada() !== 'pt') cookieLingua(linguaGuardada());
     carregarTradutor();
