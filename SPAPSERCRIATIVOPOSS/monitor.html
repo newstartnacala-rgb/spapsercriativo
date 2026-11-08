@@ -800,10 +800,22 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   .def-plat svg { width:19px; height:19px; }
   .def-android { background:#e8f8ee; color:#16a34a; }
   .def-ios { background:#f1f5f9; color:#0f172a; }
+  /* Páginas internas: rolar sem partes em branco (camada própria, sem desfoque pesado, animações de fundo pausadas) */
+  .sub-painel.aberto { -webkit-overflow-scrolling:touch; overscroll-behavior:contain; backface-visibility:hidden; -webkit-backface-visibility:hidden; }
+  .sub-painel-topo, .sub-topbar { -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
+  body:has(.sub-painel.aberto) #app, body:has(.sub-painel.aberto) .secao-card, body:has(.sub-painel.aberto) .vazio-vendas,
+  body:has(.sub-painel.aberto) .kpi::after, body:has(.sub-painel.aberto) .kpi *, body:has(.sub-painel.aberto) .cg-card * { animation-play-state:paused !important; }
+  .sub-painel.aberto > div { contain:layout paint; }
+  #painel-meu-perfil > div > div { contain:layout paint; }
   #painel-meu-perfil .pf-logo { display:flex; align-items:center; gap:12px; margin:6px 0 14px; }
-  #painel-meu-perfil .pf-logo-caixa { width:64px; height:64px; border-radius:14px; border:1.5px dashed #cbd5e1; background:#f8fafc; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0; position:relative; }
-  #painel-meu-perfil .pf-logo-caixa img { width:100%; height:100%; object-fit:contain; position:absolute; inset:0; background:#fff; }
-  #painel-meu-perfil .pf-logo-vazio { font-size:24px; opacity:.5; }
+  #painel-meu-perfil .pf-logo-caixa { width:104px; height:104px; border-radius:16px; border:2px dashed #cbd5e1; background:#f8fafc; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0; position:relative; }
+  #painel-meu-perfil .pf-logo-caixa.tem-logo { border:2px solid #22c55e; background:#fff; box-shadow:0 4px 14px rgba(34,197,94,.18); }
+  #painel-meu-perfil #perfil-logo-preview { width:100%; height:100%; object-fit:contain; padding:6px; box-sizing:border-box; background:#fff; position:relative; z-index:2; }
+  #painel-meu-perfil .pf-logo-vazio { font-size:12px; font-weight:700; color:#94a3b8; text-align:center; line-height:1.3; }
+  #painel-meu-perfil .pf-logo-caixa.tem-logo .pf-logo-vazio { display:none; }
+  #painel-meu-perfil .pf-logo-estado { font-size:12.5px; font-weight:800; color:#94a3b8; }
+  #painel-meu-perfil .pf-logo-estado.ok { color:#16a34a; }
+  #painel-meu-perfil .pf-logo-estado.novo { color:#d97706; }
   #painel-meu-perfil .pf-logo-bts { display:flex; flex-direction:column; gap:8px; flex:1; min-width:0; }
   #painel-meu-perfil .pf-logo-esc { display:flex; align-items:center; justify-content:center; height:40px; border-radius:11px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-size:13.5px; font-weight:800; cursor:pointer; white-space:nowrap; }
   #painel-meu-perfil .pf-logo-esc input { display:none; }
@@ -925,7 +937,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.191" defer></script>
+<script src="app-android.js?v=2.9.192" defer></script>
 </head>
 <body>
 <script>
@@ -5469,7 +5481,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.191';
+const MONITOR_VERSAO = '2.9.192';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -5878,7 +5890,7 @@ async function abrirMeuPerfil() {
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   { const el = document.getElementById('perfil-in-descontos'); if (el) el.checked = false; }
   { const el = document.getElementById('perfil-nome-loja'); if (el) el.textContent = 'A carregar…'; }
-  { const el = document.getElementById('perfil-logo-preview'); if (el) { el.src = ''; el.style.display = 'none'; } }
+  _pintarLogoPerfil('');
   _perfilLogoBase64 = null;
   try {
     const { data: sess } = await supabaseClient.auth.getUser();
@@ -5913,8 +5925,7 @@ async function abrirMeuPerfil() {
       var _cd = document.getElementById('perfil-in-descontos'); if (_cd) _cd.checked = !!(data.codigo_desconto && String(data.codigo_desconto).trim());
       var _rp = document.getElementById('perfil-in-rodape'); if (_rp) _rp.value = data.recibo_rodape || '';
       _perfilLogoBase64 = null;
-      var _lp = document.getElementById('perfil-logo-preview');
-      if (_lp) { if (data.logo) { _lp.src = data.logo; _lp.style.display = 'block'; } else { _lp.src = ''; _lp.style.display = 'none'; } }
+      _pintarLogoPerfil(data.logo || '');
     } else {
       document.getElementById('perfil-nome-loja').textContent = 'Sem nome da loja';
 
@@ -5931,6 +5942,17 @@ async function abrirMeuPerfil() {
 }
 
 let _perfilLogoBase64 = null; // null = não mexeu; '' = remover; 'data:...' = novo
+function _pintarLogoPerfil(src, estado) {
+  const img = document.getElementById('perfil-logo-preview'), cx = document.getElementById('pf-logo-caixa'), st = document.getElementById('pf-logo-estado');
+  if (img) { if (src) { img.src = src; img.style.display = 'block'; } else { img.removeAttribute('src'); img.style.display = 'none'; } }
+  if (cx) cx.classList.toggle('tem-logo', !!src);
+  if (st) {
+    st.className = 'pf-logo-estado' + (estado === 'novo' ? ' novo' : (src ? ' ok' : ''));
+    st.textContent = estado === 'novo' ? '⏳ Novo logótipo — toque em «Guardar recibo»'
+      : estado === 'removido' ? '⏳ Vai ser removido — toque em «Guardar recibo»'
+      : (src ? '✅ Logótipo colocado' : 'Sem logótipo');
+  }
+}
 // ===== COMPRESSOR UNIVERSAL DE IMAGENS (resize + qualidade) — usado em todo o lado =====
 function comprimirImagemFile(file, cb, maxW, quality) {
   maxW = maxW || 800; quality = quality || 0.7;
@@ -5955,8 +5977,7 @@ function perfilCarregarLogo(input) {
   const f = input.files && input.files[0]; if (!f) return;
   comprimirImagemFile(f, (dataUrl) => {
     _perfilLogoBase64 = dataUrl;
-    const prev = document.getElementById('perfil-logo-preview');
-    if (prev) { prev.src = dataUrl; prev.style.display = 'block'; }
+    _pintarLogoPerfil(dataUrl, 'novo');
     mostrarNotif('✅ Logótipo pronto. Toque em «Guardar recibo» para gravar.');
   }, 360, 0.75);
 }
@@ -5972,16 +5993,16 @@ async function guardarLogo() {
 }
 function perfilRemoverLogo() {
   _perfilLogoBase64 = '';
-  const img = document.getElementById('perfil-logo-preview'); if (img) { img.src = ''; img.style.display = 'none'; }
+  _pintarLogoPerfil('', 'removido');
   const fi = document.getElementById('perfil-logo-file'); if (fi) fi.value = '';
   mostrarNotif('🗑 Logótipo removido. Toque em «Guardar recibo» para gravar.');
 }
 
 async function guardarDadosPerfil(btn) {
-  const txtBtn = btn ? btn.textContent : '';
+  const htmlBtn = btn ? btn.innerHTML : '';
   if (btn) { btn.disabled = true; btn.textContent = 'A guardar…'; }
   try { await _guardarDadosPerfil(); }
-  finally { if (btn) { btn.disabled = false; btn.textContent = txtBtn; } }
+  finally { if (btn) { btn.disabled = false; btn.innerHTML = htmlBtn; } }
 }
 async function _guardarDadosPerfil() {
   const dados = {
@@ -6006,7 +6027,7 @@ async function _guardarDadosPerfil() {
   }
   if (error) { mostrarNotif('❌ Não gravou: ' + error.message, true); return; }
   if (gravou && Array.isArray(gravou) && gravou.length === 0) { mostrarNotif('❌ Não gravou: sem permissão para alterar esta loja.', true); return; }
-  if (dados.logo !== undefined) _perfilLogoBase64 = null;
+  if (dados.logo !== undefined) { _pintarLogoPerfil(dados.logo || ''); _perfilLogoBase64 = null; }
   document.getElementById('perfil-nome-loja').textContent = dados.nome || dados.nome_empresa || 'Sem nome da loja';
   _pintarLojaTopo(dados.nome);
   try { const l = (todasLojas || []).find(x => x.id === lojaId); if (l) { l.nome = _nomeLojaPerfil(Object.assign({}, l, dados)); nomeLoja = l.nome; } } catch(e) {}
@@ -6745,8 +6766,9 @@ async function carregarContagensEquipa() {
 
       <label style="font-size:13px;color:#64748b;font-weight:600;">🖼️ Logótipo (opcional — aparece no recibo em vez do nome)</label>
       <div class="pf-logo">
-        <div class="pf-logo-caixa"><img id="perfil-logo-preview" src="" alt="" style="display:none;"><span class="pf-logo-vazio">🖼️</span></div>
+        <div class="pf-logo-caixa" id="pf-logo-caixa"><img id="perfil-logo-preview" src="" alt="Logótipo" style="display:none;"><span class="pf-logo-vazio">Sem<br>logótipo</span></div>
         <div class="pf-logo-bts">
+          <div class="pf-logo-estado" id="pf-logo-estado">Sem logótipo</div>
           <label class="pf-logo-esc">📷 Escolher logótipo<input type="file" accept="image/*" id="perfil-logo-file" onchange="perfilCarregarLogo(this)"></label>
           <button type="button" class="pf-logo-rem" onclick="perfilRemoverLogo()">🗑 Remover</button>
         </div>
