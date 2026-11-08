@@ -36,6 +36,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
+import android.webkit.PermissionRequest;
 import android.webkit.URLUtil;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -79,6 +80,9 @@ public class MainActivity extends Activity {
     private static final int REQ_FICHEIRO = 101;
     private static final int REQ_CAMERA = 102;
     private static final int REQ_NOTIF = 103;
+    private static final int REQ_CAMERA_WEB = 104;
+    /** Pedido de câmara da página (leitor de códigos de barras) à espera da autorização do Android. */
+    private PermissionRequest pedidoCamaraWeb;
     private static final String CANAL = "alertas_spap";
     private static final String OFFLINE = "file:///android_asset/offline.html";
 
@@ -369,6 +373,28 @@ public class MainActivity extends Activity {
             }
         }
 
+        /** A página pede a câmara (leitor de códigos de barras): autoriza, pedindo antes a permissão do Android se faltar. */
+        @Override
+        public void onPermissionRequest(final PermissionRequest req) {
+            ui.post(() -> {
+                boolean video = false;
+                for (String r : req.getResources()) if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(r)) video = true;
+                if (!video) { req.deny(); return; }
+                if (Build.VERSION.SDK_INT >= 23 && checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                    if (pedidoCamaraWeb != null) { try { pedidoCamaraWeb.deny(); } catch (Exception ignored) { } }
+                    pedidoCamaraWeb = req;
+                    requestPermissions(new String[]{Manifest.permission.CAMERA}, REQ_CAMERA_WEB);
+                } else {
+                    req.grant(new String[]{PermissionRequest.RESOURCE_VIDEO_CAPTURE});
+                }
+            });
+        }
+
+        @Override
+        public void onPermissionRequestCanceled(PermissionRequest req) {
+            if (req == pedidoCamaraWeb) pedidoCamaraWeb = null;
+        }
+
         @Override
         public boolean onShowFileChooser(WebView v, ValueCallback<Uri[]> cb, FileChooserParams params) {
             if (callbackFicheiro != null) callbackFicheiro.onReceiveValue(null);
@@ -623,7 +649,13 @@ public class MainActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int pedido, String[] perms, int[] res) {
         super.onRequestPermissionsResult(pedido, perms, res);
-        if (pedido == REQ_CAMERA) {
+        if (pedido == REQ_CAMERA_WEB) {
+            PermissionRequest r = pedidoCamaraWeb; pedidoCamaraWeb = null;
+            if (r != null) {
+                boolean ok = res.length > 0 && res[0] == PackageManager.PERMISSION_GRANTED;
+                try { if (ok) r.grant(new String[]{PermissionRequest.RESOURCE_VIDEO_CAPTURE}); else r.deny(); } catch (Exception ignored) { }
+            }
+        } else if (pedido == REQ_CAMERA) {
             abrirEscolhaFicheiro();
         } else if (pedido == REQ_NOTIF) {
             getSharedPreferences("spap", MODE_PRIVATE).edit().putBoolean("notif_pedida", true).apply();

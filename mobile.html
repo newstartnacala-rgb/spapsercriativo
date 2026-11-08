@@ -110,9 +110,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="SPAP Banca">
-<link rel="stylesheet" href="banca-tema.css?v=3.2.1">
-<script src="banca-tema.js?v=3.2.1" defer></script>
-<script src="app-android.js?v=3.2.1" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.3.0">
+<script src="banca-tema.js?v=3.3.0" defer></script>
+<script src="app-android.js?v=3.3.0" defer></script>
 </head>
 <body>
 
@@ -291,7 +291,6 @@
         <div class="mi" onclick="fecharFolha('folha-definicoes');window.spapInstalarApp&&spapInstalarApp('android')"><div class="e">📲</div><div class="t">App para Android</div></div>
         <div class="mi" onclick="fecharFolha('folha-definicoes');window.spapInstalarApp&&spapInstalarApp('ios')"><div class="e">📱</div><div class="t">App para iPhone</div></div>
         <div class="mi" onclick="fecharFolha('folha-definicoes');window.bancaVerificarAtualizacao&&bancaVerificarAtualizacao(true)"><div class="e">🔄</div><div class="t">Verificar atualizações</div></div>
-        <div class="mi" onclick="location.href='planos-banca.html?ver=1'"><div class="e">⭐</div><div class="t">O meu plano</div></div>
         <div class="mi" onclick="fecharFolha('folha-definicoes');suporte()"><div class="e">💬</div><div class="t">Suporte</div></div>
       </div>
     </div>
@@ -787,7 +786,12 @@ async function abrirScanner(){
     await scanner.start({facingMode:'environment'}, {fps:12, qrbox:{width:260,height:150}},
       (code)=>{ lerCodigo(code); },
       ()=>{});
-  }catch(e){ toast('Câmara indisponível','erro'); area.style.display='none'; scanner=null; }
+  }catch(e){
+    // 2.ª tentativa: escolher a câmara traseira pela lista; 3.ª: tirar uma foto ao código
+    if (window.bancaCamaraAlternativa && scanner && await bancaCamaraAlternativa(scanner, {fps:12, qrbox:{width:260,height:150}}, (code)=>{ lerCodigo(code); })) return;
+    area.style.display='none'; scanner=null;
+    if (window.bancaLerPorFoto) bancaLerPorFoto((code)=>lerCodigo(code)); else toast('Câmara indisponível','erro');
+  }
 }
 async function fecharScanner(){
   if(scanner){ try{ await scanner.stop(); scanner.clear(); }catch(e){} scanner=null; }
@@ -818,7 +822,9 @@ async function scanCampo(inputId){
     await s.start({facingMode:'environment'},{fps:12,qrbox:{width:240,height:140}},
       (code)=>{ const inp=document.getElementById(inputId); if(inp) inp.value=String(code||'').trim(); toast('✅ Código lido','ok'); pararScanCampo().then(()=>{area.style.display='none';area.innerHTML='';}); },
       ()=>{});
-  }catch(e){ toast('Câmara indisponível','erro'); area.style.display='none'; _scanCampo=null; }
+  }catch(e){ area.style.display='none'; _scanCampo=null;
+    if (window.bancaLerPorFoto) bancaLerPorFoto((code)=>{ const inp=document.getElementById(inputId); if(inp) inp.value=String(code||'').trim(); toast('✅ Código lido','ok'); });
+    else toast('Câmara indisponível','erro'); }
 }
 async function pararScanCampo(){ if(_scanCampo){ try{ await _scanCampo.stop(); _scanCampo.clear(); }catch(e){} _scanCampo=null; } }
 

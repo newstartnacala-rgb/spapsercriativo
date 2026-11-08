@@ -1,1 +1,1 @@
-{"versao": "2.9.205", "data": "2026-11-08", "novidades": "O sistema passa a funcionar a partir do GitHub.", "melhorias": ["As apps abrem e atualizam-se a partir do GitHub, sem esperar pela Vercel.", "Os downloads das apps vêm sempre da versão mais recente no GitHub."]}
+{"versao": "2.9.206", "data": "2026-11-09", "novidades": "Câmara na app Android.", "melhorias": ["A app Android passa a dar acesso à câmara para ler códigos de barras."]}

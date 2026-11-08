@@ -257,6 +257,32 @@
   }
   window.bancaVerificarPlano = verificarPlano;
 
+  // ===== Câmara: alternativas quando a câmara ao vivo não abre =====
+  window.bancaCamaraAlternativa = function (inst, cfg, onCode) {
+    if (typeof Html5Qrcode === 'undefined') return Promise.resolve(false);
+    return Html5Qrcode.getCameras().then(function (cams) {
+      if (!cams || !cams.length) return false;
+      var c = cams.filter(function (x) { return /back|rear|traseira|environment|trás/i.test(x.label || ''); })[0] || cams[cams.length - 1];
+      return inst.start(c.id, cfg, onCode, function () {}).then(function () { return true; });
+    }).catch(function () { return false; });
+  };
+  window.bancaLerPorFoto = function (cb) {
+    if (typeof Html5Qrcode === 'undefined') { if (window.toast) toast('Câmara indisponível', 'erro'); return; }
+    var inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.setAttribute('capture', 'environment'); inp.style.display = 'none';
+    var caixa = document.getElementById('leitor-foto');
+    if (!caixa) { caixa = document.createElement('div'); caixa.id = 'leitor-foto'; caixa.style.display = 'none'; document.body.appendChild(caixa); }
+    inp.onchange = function () {
+      var f = inp.files && inp.files[0]; inp.remove(); if (!f) return;
+      if (window.toast) toast('🔍 A ler o código…');
+      new Html5Qrcode('leitor-foto').scanFile(f, false)
+        .then(function (code) { cb(code); })
+        .catch(function () { if (window.toast) toast('Não deu para ler o código. Tire outra foto, de perto e com boa luz.', 'erro'); });
+    };
+    document.body.appendChild(inp);
+    if (window.toast) toast('📷 Tire uma foto ao código de barras', 'ok');
+    inp.click();
+  };
+
   // ===== Tradução da página inteira (Português, English, Français, 中文) — o mesmo tradutor da Loja principal =====
   var NAO_TRADUZIR = '.card .n, .item .nn, .row .nn, #nome-loja, .topo .nome, #nome-banca, .tp-lang, .pl-p, #cb-input';
   function marcarNaoTraduzir(raiz) {

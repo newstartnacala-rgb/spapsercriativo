@@ -334,3 +334,24 @@ body.pg-mon .tela.ativa .corpo{background:var(--agua1) repeat-x 0 100% / 360px 1
 .nav a .ic.ic-menu svg{width:26px;height:26px;display:block;color:var(--nv);}
 .nav a.on .ic.ic-menu svg{color:#fff;}
 @media (max-width:360px){.tp-net span{display:none;}}
+
+/* ---------- 3.3.0: gerir produto (Monitor da Banca) ---------- */
+.gp-cab{display:flex;align-items:center;gap:14px;background:#fff;border-radius:18px;padding:12px;box-shadow:var(--sombra);margin-bottom:6px;}
+.gp-img{width:58px;height:58px;border-radius:14px;flex-shrink:0;background:linear-gradient(180deg,#eef4ff,#e3edff);display:grid;place-items:center;font-size:26px;overflow:hidden;}
+.gp-img img:not(.e3d){width:100%;height:100%;object-fit:cover;}
+.gp-img img.e3d{width:34px;height:34px;vertical-align:0;}
+.gp-info b{display:block;font-size:17px;color:var(--nv);}
+.gp-info small{display:block;font-size:13px;color:#64748b;font-weight:600;margin-top:2px;}
+.gp-sec{font-size:13px;font-weight:800;color:var(--nv2);margin:16px 2px 8px;}
+.gp-modo{display:grid;grid-template-columns:1fr 1fr;background:#eef2fa;border-radius:999px;padding:4px;gap:4px;margin-bottom:10px;}
+.gp-modo button{border:0;background:transparent;border-radius:999px;padding:10px;font:800 14px inherit;font-family:inherit;color:var(--nv2);cursor:pointer;}
+.gp-modo button.on{background:var(--lj-grad);color:#fff;box-shadow:var(--sombra-lj);}
+.gp-qtd{display:flex;align-items:center;gap:10px;}
+.gp-qtd button{width:52px;height:52px;border-radius:50%;border:1px solid #dbe6fb;background:linear-gradient(180deg,#fff,#edf3ff);font-size:24px;font-weight:800;color:var(--nv);cursor:pointer;flex-shrink:0;}
+.gp-qtd input{flex:1;min-width:0;text-align:center;font-size:26px;font-weight:800;border:1px solid #dbe6fb;border-radius:16px;padding:10px;color:var(--nv);background:#fff;font-family:inherit;}
+.gp-rapidos{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px;}
+.gp-rapidos button{border:1px solid #ffd9b8;background:var(--lj-claro);color:var(--lj-esc);border-radius:999px;padding:9px 0;font:800 14px inherit;font-family:inherit;cursor:pointer;}
+.gp-previa{text-align:center;margin-top:12px;font-size:15px;color:#475569;font-weight:600;}
+.gp-previa b{color:var(--nv);font-size:17px;} .gp-previa b.mais{color:#16a34a;} .gp-previa b.menos{color:#dc2626;}
+.nav a .ic.ic-menu svg.ic-def{color:#64748b;}
+.nav a{font-size:11.5px !important;}

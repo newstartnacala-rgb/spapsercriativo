@@ -73,9 +73,9 @@
   .menu-grid .mi{background:#f0fdf4;border:1px solid var(--borda);border-radius:14px;padding:16px 10px;text-align:center;}
   .menu-grid .mi .e{font-size:28px;} .menu-grid .mi .t{font-size:12px;font-weight:700;margin-top:6px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.2.1">
-<script src="banca-tema.js?v=3.2.1" defer></script>
-<script src="app-android.js?v=3.2.1" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.3.0">
+<script src="banca-tema.js?v=3.3.0" defer></script>
+<script src="app-android.js?v=3.3.0" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar"><div class="spin"></div><div>A abrir o monitor…</div></div>
@@ -110,6 +110,7 @@
     <a class="on"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true" class="ic-home"><path fill="currentColor" d="M11.3 2.7a1 1 0 0 1 1.4 0l9 8.6a1 1 0 0 1-1.4 1.4l-.8-.7V20a2 2 0 0 1-2 2h-3.5a1 1 0 0 1-1-1v-5h-2v5a1 1 0 0 1-1 1H6.5a2 2 0 0 1-2-2v-8l-.8.7a1 1 0 0 1-1.4-1.4z"/></svg></span>Home</a>
     <a onclick="mostrarTela('produtos')"><span class="ic">📦</span>Stock</a>
     <a onclick="mostrarTela('descontos')"><span class="ic">🏷️</span>Descontos</a>
+    <a onclick="abrirFolha('folha-definicoes')"><span class="ic ic-menu"><svg viewBox="0 0 24 24" aria-hidden="true" class="ic-def"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.47.47 0 0 0-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg></span>Definições</a>
   </div>
 </div>
 
@@ -129,6 +130,7 @@
     <a onclick="mostrarTela('resumo')"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true" class="ic-home"><path fill="currentColor" d="M11.3 2.7a1 1 0 0 1 1.4 0l9 8.6a1 1 0 0 1-1.4 1.4l-.8-.7V20a2 2 0 0 1-2 2h-3.5a1 1 0 0 1-1-1v-5h-2v5a1 1 0 0 1-1 1H6.5a2 2 0 0 1-2-2v-8l-.8.7a1 1 0 0 1-1.4-1.4z"/></svg></span>Home</a>
     <a class="on"><span class="ic">📦</span>Stock</a>
     <a onclick="mostrarTela('descontos')"><span class="ic">🏷️</span>Descontos</a>
+    <a onclick="abrirFolha('folha-definicoes')"><span class="ic ic-menu"><svg viewBox="0 0 24 24" aria-hidden="true" class="ic-def"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.47.47 0 0 0-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg></span>Definições</a>
   </div>
 </div>
 
@@ -148,6 +150,7 @@
     <a onclick="mostrarTela('resumo')"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true" class="ic-home"><path fill="currentColor" d="M11.3 2.7a1 1 0 0 1 1.4 0l9 8.6a1 1 0 0 1-1.4 1.4l-.8-.7V20a2 2 0 0 1-2 2h-3.5a1 1 0 0 1-1-1v-5h-2v5a1 1 0 0 1-1 1H6.5a2 2 0 0 1-2-2v-8l-.8.7a1 1 0 0 1-1.4-1.4z"/></svg></span>Home</a>
     <a onclick="mostrarTela('produtos')"><span class="ic">📦</span>Stock</a>
     <a class="on"><span class="ic">🏷️</span>Descontos</a>
+    <a onclick="abrirFolha('folha-definicoes')"><span class="ic ic-menu"><svg viewBox="0 0 24 24" aria-hidden="true" class="ic-def"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.47.47 0 0 0-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg></span>Definições</a>
   </div>
 </div>
 
@@ -166,16 +169,55 @@
         <div class="mi" onclick="mVendedores()"><div class="e">👤</div><div class="t">Vendedores / Código</div></div>
         <div class="mi" onclick="mDiagnostico()"><div class="e">🔧</div><div class="t">Diagnóstico de Stock</div></div>
         <div class="mi" onclick="mAuditoria()"><div class="e">🔍</div><div class="t">Auditoria de Caixa</div></div>
-        <div class="mi" onclick="mPerfil()"><div class="e">🪪</div><div class="t">Meu Perfil</div></div>
-        <div class="mi" onclick="mBackup()"><div class="e">💾</div><div class="t">Backup / Segurança</div></div>
-        <div class="mi" onclick="fecharFolha('folha-menu');window.spapInstalarApp?spapInstalarApp('android'):mInstalar()"><div class="e">📲</div><div class="t">App para Android</div></div>
-        <div class="mi" onclick="fecharFolha('folha-menu');window.spapInstalarApp?spapInstalarApp('ios'):mInstalar()"><div class="e">📱</div><div class="t">App para iPhone</div></div>
-        <div class="mi" onclick="suporte()"><div class="e">💬</div><div class="t">Suporte</div></div>
-        <div class="mi" onclick="location.href='planos-banca.html?ver=1'"><div class="e">⭐</div><div class="t">O meu plano</div></div>
-        <div class="mi" onclick="fecharFolha('folha-menu');window.bancaVerificarAtualizacao&&bancaVerificarAtualizacao(true)"><div class="e">🔄</div><div class="t">Verificar atualizações</div></div>
         <div class="mi" onclick="sairBanca()" style="background:#fef2f2;"><div class="e">🚪</div><div class="t">Sair</div></div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ===== FOLHA: DEFINIÇÕES (dono) ===== -->
+<div class="folha-fundo" id="folha-definicoes">
+  <div class="folha">
+    <div class="cab"><h3>⚙️ Definições</h3><button onclick="fecharFolha('folha-definicoes')">✕</button></div>
+    <div class="conteudo">
+      <div class="menu-grid">
+        <div class="mi" onclick="fecharFolha('folha-definicoes');mPerfil()"><div class="e">🪪</div><div class="t">Meu Perfil</div></div>
+        <div class="mi" onclick="fecharFolha('folha-definicoes');mBackup()"><div class="e">💾</div><div class="t">Backup / Segurança</div></div>
+        <div class="mi" onclick="fecharFolha('folha-definicoes');window.spapInstalarApp?spapInstalarApp('android'):mInstalar()"><div class="e">📲</div><div class="t">App para Android</div></div>
+        <div class="mi" onclick="fecharFolha('folha-definicoes');window.spapInstalarApp?spapInstalarApp('ios'):mInstalar()"><div class="e">📱</div><div class="t">App para iPhone</div></div>
+        <div class="mi" onclick="fecharFolha('folha-definicoes');suporte()"><div class="e">💬</div><div class="t">Suporte</div></div>
+        <div class="mi" onclick="location.href='planos-banca.html?ver=1'"><div class="e">⭐</div><div class="t">O meu plano</div></div>
+        <div class="mi" onclick="fecharFolha('folha-definicoes');window.bancaVerificarAtualizacao&&bancaVerificarAtualizacao(true)"><div class="e">🔄</div><div class="t">Verificar atualizações</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== FOLHA: GERIR PRODUTO (stock e preços) ===== -->
+<div class="folha-fundo" id="folha-gerir">
+  <div class="folha">
+    <div class="cab"><h3>📦 Gerir produto</h3><button onclick="fecharFolha('folha-gerir')">✕</button></div>
+    <div class="conteudo">
+      <div class="gp-cab"><div class="gp-img" id="gp-img"></div><div class="gp-info"><b id="gp-nome"></b><small id="gp-atual"></small></div></div>
+      <div class="gp-sec">Stock</div>
+      <div class="gp-modo" role="tablist">
+        <button type="button" class="on" id="gp-m-add" onclick="gpModo('add')">Acrescentar</button>
+        <button type="button" id="gp-m-def" onclick="gpModo('def')">Definir total</button>
+      </div>
+      <div class="gp-qtd">
+        <button type="button" onclick="gpPasso(-1)" aria-label="Menos">−</button>
+        <input id="gp-stock" type="number" inputmode="numeric" value="0" oninput="gpPrevia()">
+        <button type="button" onclick="gpPasso(1)" aria-label="Mais">+</button>
+      </div>
+      <div class="gp-rapidos"><button type="button" onclick="gpSoma(5)">+5</button><button type="button" onclick="gpSoma(10)">+10</button><button type="button" onclick="gpSoma(20)">+20</button><button type="button" onclick="gpSoma(50)">+50</button></div>
+      <div class="gp-previa" id="gp-previa"></div>
+      <div class="gp-sec">Preços</div>
+      <div class="linha2">
+        <div class="campo"><label>Preço de venda (MT)</label><input id="gp-preco" type="number" inputmode="decimal"></div>
+        <div class="campo"><label>Preço de compra (MT)</label><input id="gp-compra" type="number" inputmode="decimal"></div>
+      </div>
+    </div>
+    <div class="rodape"><button class="btn" id="gp-guardar" onclick="gpGuardar()">💾 Guardar alterações</button></div>
   </div>
 </div>
 
@@ -312,26 +354,46 @@ function renderProdutos(){
       <div style="color:#94a3b8;font-size:20px;">›</div></div>`;
   }).join('');
 }
-async function gerirProduto(id){
+// ===== GERIR PRODUTO: janela com stock e preços =====
+let _gp=null, _gpModo='add';
+function gerirProduto(id){
   const p=produtos.find(x=>x.id===id); if(!p) return;
-  const opc = prompt('📦 ' + p.nome + '\nStock atual: ' + (parseInt(p.stock)||0) + ' · Preço: ' + fmt(p.preco) +
-    '\n\nEscreve:\n• um número para DEFINIR o stock (ex: 20)\n• +N para ACRESCENTAR (ex: +10)\n• p<preço> para mudar o preço (ex: p150)');
-  if(opc===null) return;
-  const t=opc.trim().toLowerCase();
+  _gp=p;
+  document.getElementById('gp-nome').textContent=p.nome;
+  document.getElementById('gp-img').innerHTML=p.imagem?'<img src="'+p.imagem+'" alt="">':'🛒';
+  document.getElementById('gp-atual').textContent='Stock actual: '+(parseInt(p.stock)||0)+' · Preço: '+fmt(p.preco);
+  document.getElementById('gp-preco').value=p.preco!=null?p.preco:'';
+  document.getElementById('gp-compra').value=p.preco_compra!=null?p.preco_compra:'';
+  gpModo('add');
+  abrirFolha('folha-gerir');
+}
+function gpModo(m){
+  _gpModo=m;
+  document.getElementById('gp-m-add').classList.toggle('on',m==='add');
+  document.getElementById('gp-m-def').classList.toggle('on',m==='def');
+  document.getElementById('gp-stock').value = m==='add' ? 0 : (parseInt(_gp&&_gp.stock)||0);
+  gpPrevia();
+}
+function gpPasso(n){ const i=document.getElementById('gp-stock'); i.value=Math.max(_gpModo==='def'?0:-9999,(parseInt(i.value)||0)+n); gpPrevia(); }
+function gpSoma(n){ if(_gpModo!=='add') gpModo('add'); const i=document.getElementById('gp-stock'); i.value=(parseInt(i.value)||0)+n; gpPrevia(); }
+function gpNovoStock(){ const v=parseInt(document.getElementById('gp-stock').value)||0, at=parseInt(_gp&&_gp.stock)||0; return _gpModo==='add'?at+v:v; }
+function gpPrevia(){
+  if(!_gp) return; const at=parseInt(_gp.stock)||0, n=gpNovoStock();
+  document.getElementById('gp-previa').innerHTML='Stock: <b>'+at+'</b> → <b class="'+(n<at?'menos':'mais')+'">'+n+'</b>';
+}
+async function gpGuardar(){
+  if(!_gp) return;
+  const novo=gpNovoStock(), preco=parseFloat(document.getElementById('gp-preco').value), compra=parseFloat(document.getElementById('gp-compra').value);
+  if(novo<0){ toast('O stock não pode ficar negativo','erro'); return; }
+  if(isNaN(preco)||preco<0){ toast('Escreva o preço de venda','erro'); return; }
+  const dados={ stock:novo, preco:preco, preco_compra:isNaN(compra)?null:compra };
+  const b=document.getElementById('gp-guardar'); b.disabled=true; b.textContent='A guardar…';
   try{
-    if(t.startsWith('p')){
-      const np=parseFloat(t.slice(1).replace(',','.'));
-      if(isNaN(np)){ toast('Preço inválido','erro'); return; }
-      await supabaseClient.from('produtos').update({preco:np}).eq('id',id); p.preco=np; toast('Preço atualizado','ok');
-    } else if(t.startsWith('+')){
-      const add=parseInt(t.slice(1))||0; const novo=(parseInt(p.stock)||0)+add;
-      await supabaseClient.from('produtos').update({stock:novo}).eq('id',id); p.stock=novo; toast('Stock: '+novo,'ok');
-    } else {
-      const novo=parseInt(t); if(isNaN(novo)){ toast('Valor inválido','erro'); return; }
-      await supabaseClient.from('produtos').update({stock:novo}).eq('id',id); p.stock=novo; toast('Stock: '+novo,'ok');
-    }
-    renderProdutos();
+    const { error }=await supabaseClient.from('produtos').update(dados).eq('id',_gp.id);
+    if(error) throw error;
+    Object.assign(_gp,dados); renderProdutos(); fecharFolha('folha-gerir'); toast('✅ '+_gp.nome+': stock '+novo,'ok');
   }catch(e){ toast('Erro: '+(e.message||e),'erro'); }
+  b.disabled=false; b.textContent='💾 Guardar alterações';
 }
 
 // ===== RESUMO / VENDAS =====
@@ -525,7 +587,9 @@ async function scanCampo(inputId){
     await s.start({facingMode:'environment'},{fps:12,qrbox:{width:240,height:140}},
       (code)=>{ const inp=document.getElementById(inputId); if(inp){ inp.value=String(code||'').trim(); } toast('✅ Código lido','ok'); pararScanCampo().then(()=>{area.style.display='none';area.innerHTML='';}); },
       ()=>{});
-  }catch(e){ toast('Câmara indisponível','erro'); area.style.display='none'; _scanCampo=null; }
+  }catch(e){ area.style.display='none'; _scanCampo=null;
+    if (window.bancaLerPorFoto) bancaLerPorFoto((code)=>{ const inp=document.getElementById(inputId); if(inp) inp.value=String(code||'').trim(); toast('✅ Código lido','ok'); });
+    else toast('Câmara indisponível','erro'); }
 }
 async function pararScanCampo(){ if(_scanCampo){ try{ await _scanCampo.stop(); _scanCampo.clear(); }catch(e){} _scanCampo=null; } }
 
