@@ -73,12 +73,29 @@
   .menu-grid .mi{background:#f0fdf4;border:1px solid var(--borda);border-radius:14px;padding:16px 10px;text-align:center;}
   .menu-grid .mi .e{font-size:28px;} .menu-grid .mi .t{font-size:12px;font-weight:700;margin-top:6px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.4.1">
-<script src="banca-tema.js?v=3.4.1" defer></script>
-<script src="app-android.js?v=3.4.1" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.5.0">
+<script src="banca-tema.js?v=3.5.0" defer></script>
+<script src="app-android.js?v=3.5.0" defer></script>
 </head>
 <body>
-<div id="carregando" class="carregar"><div class="spin"></div><div>A abrir o monitor…</div></div>
+<div id="carregando" class="carregar tc-banca">
+  <img src="ssteam-logo.png" alt="SSTEAM" class="tc-logo">
+  <div class="tc-nome">Banca · <b>Monitor</b></div>
+  <div class="tc-cena" aria-hidden="true">
+    <div class="tc-vento"><i></i><i></i><i></i></div>
+    <div class="tc-po"></div><div class="tc-po p2"></div>
+    <div class="tc-carro-wrap">
+      <img class="tc-caixa c1" src="icons3d/package.png" alt="">
+      <img class="tc-caixa c2" src="icons3d/package-azul.png" alt="">
+      <img class="tc-caixa c3" src="icons3d/coin.png" alt="">
+      <img class="tc-carro" src="icons3d/cart.png" alt="">
+    </div>
+    <div class="tc-chao"></div><div class="tc-chao2"></div>
+  </div>
+  <div class="tc-barra"><div class="tc-prog" id="tc-prog"></div></div>
+  <div class="tc-info"><span id="tc-msg">A ligar à banca…</span><b id="tc-pct">0%</b></div>
+  <div class="tc-rodape">SSTEAM · Tecnologia ao serviço do seu negócio</div>
+</div>
 
 <!-- ===== RESUMO ===== -->
 <div id="tela-resumo" class="tela ativa">
@@ -93,11 +110,12 @@
       <button id="pb-semana" onclick="setPeriodo('semana')">Semana</button>
       <button id="pb-mes" onclick="setPeriodo('mes')">Mês</button>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;background:var(--cartao);border:1px solid var(--borda);border-radius:12px;padding:8px 12px;margin-bottom:14px;">
-      <span style="font-size:18px;">📅</span>
-      <span style="font-size:13px;color:var(--suave);font-weight:700;">Ver um dia:</span>
-      <input type="date" id="pb-dia" onchange="setDia(this.value)" style="flex:1;border:1px solid var(--borda);border-radius:9px;padding:8px;font-size:14px;outline:none;">
-    </div>
+    <button type="button" class="data-escolha" id="data-escolha" onclick="abrirCalendario()">
+      <span class="de-ico">📅</span>
+      <span class="de-txt"><small id="data-rotulo">Hoje</small><b id="data-texto">—</b></span>
+      <span class="de-acao">Escolher dia</span>
+    </button>
+    <input type="hidden" id="pb-dia">
     <div class="cards">
       <div class="stat wide"><div class="lbl">💰 Vendido no período</div><div class="val verde" id="s-vendido">MT 0,00</div></div>
       <div class="stat"><div class="lbl">🧾 Nº de vendas</div><div class="val" id="s-nvendas">0</div></div>
@@ -124,6 +142,10 @@
       <div class="stat wide"><div class="lbl">💼 Valor do stock (a preço de venda)</div><div class="val" id="s-valorstock">MT 0,00</div></div>
     </div>
     <h4>Produtos (toca para repor stock ou mudar preço)</h4>
+    <div class="barra-stock">
+      <input id="busca-stock" type="search" placeholder="Procurar produto ou código…" oninput="renderProdutos()" autocomplete="off">
+      <button type="button" onclick="scanStock()" aria-label="Ler código de barras">📷</button>
+    </div>
     <div id="lista-produtos" class="cartao"><div class="vazio">A carregar…</div></div>
   </div>
   <div class="nav">
@@ -188,6 +210,29 @@
         <div class="mi" onclick="fecharFolha('folha-definicoes');suporte()"><div class="e">💬</div><div class="t">Suporte</div></div>
         <div class="mi" onclick="location.href='planos-banca.html?ver=1'"><div class="e">⭐</div><div class="t">O meu plano</div></div>
         <div class="mi" onclick="fecharFolha('folha-definicoes');window.bancaVerificarAtualizacao&&bancaVerificarAtualizacao(true)"><div class="e">🔄</div><div class="t">Verificar atualizações</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== FOLHA: CALENDÁRIO ===== -->
+<div class="folha-fundo" id="folha-calendario">
+  <div class="folha">
+    <div class="cab"><h3>📅 Escolher dia</h3><button onclick="fecharFolha('folha-calendario')">✕</button></div>
+    <div class="conteudo">
+      <div class="cal-cab">
+        <button type="button" class="cal-nav" onclick="calMes(-1)" aria-label="Mês anterior">‹</button>
+        <b id="cal-titulo">—</b>
+        <button type="button" class="cal-nav" id="cal-seg" onclick="calMes(1)" aria-label="Mês seguinte">›</button>
+      </div>
+      <div class="cal-semana"><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span><span>Dom</span></div>
+      <div class="cal-grelha" id="cal-grelha"></div>
+      <div class="cal-legenda"><span><i class="lg-hoje"></i>Hoje</span><span><i class="lg-venda"></i>Dias com vendas</span></div>
+      <div class="cal-rapidos">
+        <button type="button" onclick="calRapido('hoje')">Hoje</button>
+        <button type="button" onclick="calRapido('ontem')">Ontem</button>
+        <button type="button" onclick="calRapido('semana')">Últimos 7 dias</button>
+        <button type="button" onclick="calRapido('mes')">Últimos 30 dias</button>
       </div>
     </div>
   </div>
@@ -327,7 +372,7 @@ async function carregarProdutos(){
   let todos=[],pag=0;
   while(true){
     const { data,error } = await supabaseClient.from('produtos')
-      .select('id,nome,preco,preco_compra,stock,imagem')
+      .select('id,nome,preco,preco_compra,stock,imagem,codbarras,codigo')
       .eq('loja_id',sessao.lojaId).order('nome',{ascending:true}).range(pag*1000,pag*1000+999);
     if(error) break;
     todos=todos.concat(data||[]);
@@ -344,7 +389,10 @@ function renderProdutos(){
   document.getElementById('s-valorstock').textContent = fmt(valor);
   const div=document.getElementById('lista-produtos');
   if(!produtos.length){ div.innerHTML='<div class="vazio">Sem produtos.</div>'; return; }
-  const ord = produtos.slice().sort((a,b)=>(parseInt(a.stock)||0)-(parseInt(b.stock)||0));
+  const termo=((document.getElementById('busca-stock')||{}).value||'').trim().toLowerCase();
+  const lista = termo ? produtos.filter(p=>(p.nome||'').toLowerCase().includes(termo) || (p.codbarras||'').toLowerCase().includes(termo) || (p.codigo||'').toLowerCase().includes(termo)) : produtos;
+  if(!lista.length){ div.innerHTML='<div class="vazio">Nenhum produto com «'+esc(termo)+'».</div>'; return; }
+  const ord = lista.slice().sort((a,b)=>(parseInt(a.stock)||0)-(parseInt(b.stock)||0));
   div.innerHTML = ord.map(p=>{
     const st=parseInt(p.stock)||0;
     const img = p.imagem?`<img src="${p.imagem}">`:`<div class="ph">🛒</div>`;
@@ -354,6 +402,17 @@ function renderProdutos(){
       <div style="color:#94a3b8;font-size:20px;">›</div></div>`;
   }).join('');
 }
+// ===== Stock: procurar ou ler o código de barras =====
+function scanStock(){
+  if(!window.bancaScanner){ toast('Leitor indisponível','erro'); return; }
+  bancaScanner(code=>{
+    const c=String(code||'').trim().toLowerCase(), d=c.replace(/\D/g,'');
+    const p=produtos.find(x=>(x.codbarras||'').toLowerCase()===c || (x.codigo||'').toLowerCase()===c || (d && (String(x.codbarras||'').replace(/\D/g,'')===d || String(x.codbarras||'').replace(/\D/g,'').slice(0,12)===d.slice(0,12))));
+    if(p){ document.getElementById('busca-stock').value=''; renderProdutos(); gerirProduto(p.id); }
+    else { document.getElementById('busca-stock').value=code; renderProdutos(); toast('Código não encontrado na banca: '+code,'erro'); }
+  });
+}
+
 // ===== GERIR PRODUTO: janela com stock e preços =====
 let _gp=null, _gpModo='add';
 function gerirProduto(id){
@@ -401,14 +460,69 @@ function setPeriodo(p){
   periodo=p; window._diaEscolhido=null;
   const pd=document.getElementById('pb-dia'); if(pd) pd.value='';
   ['hoje','ontem','semana','mes'].forEach(x=>{ const b=document.getElementById('pb-'+x); if(b) b.classList.toggle('on',x===p); });
+  rotuloData();
   carregarResumo();
 }
 function setDia(valor){
   if(!valor) return;
   window._diaEscolhido=valor; periodo='dia';
+  const pd=document.getElementById('pb-dia'); if(pd) pd.value=valor;
   ['hoje','ontem','semana','mes'].forEach(x=>{ const b=document.getElementById('pb-'+x); if(b) b.classList.remove('on'); });
+  rotuloData();
   carregarResumo();
 }
+
+// ===== DATA MOSTRADA + CALENDÁRIO =====
+const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const DIAS_SEM=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+function isoDia(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function dataLonga(d){ return DIAS_SEM[d.getDay()]+', '+d.getDate()+' de '+MESES[d.getMonth()]+' de '+d.getFullYear(); }
+function dataCurta(d){ return d.getDate()+' '+MESES[d.getMonth()].slice(0,3); }
+function rotuloData(){
+  const hoje=new Date(); hoje.setHours(0,0,0,0);
+  let rot='Hoje', txt=dataLonga(hoje);
+  if(periodo==='ontem'){ const o=new Date(hoje); o.setDate(o.getDate()-1); rot='Ontem'; txt=dataLonga(o); }
+  else if(periodo==='semana'){ const i=new Date(hoje); i.setDate(i.getDate()-6); rot='Últimos 7 dias'; txt=dataCurta(i)+' – '+dataCurta(hoje)+' de '+hoje.getFullYear(); }
+  else if(periodo==='mes'){ const i=new Date(hoje); i.setDate(i.getDate()-29); rot='Últimos 30 dias'; txt=dataCurta(i)+' – '+dataCurta(hoje)+' de '+hoje.getFullYear(); }
+  else if(periodo==='dia' && window._diaEscolhido){ const d=new Date(window._diaEscolhido+'T00:00:00'); rot='Dia escolhido'; txt=dataLonga(d); }
+  const r=document.getElementById('data-rotulo'), t=document.getElementById('data-texto');
+  if(r) r.textContent=rot; if(t) t.textContent=txt;
+}
+let _calRef=null, _calVendas={};
+function abrirCalendario(){
+  const base = (periodo==='dia' && window._diaEscolhido) ? new Date(window._diaEscolhido+'T00:00:00') : new Date();
+  _calRef=new Date(base.getFullYear(), base.getMonth(), 1);
+  desenharCalendario(); abrirFolha('folha-calendario');
+}
+function calMes(n){ _calRef=new Date(_calRef.getFullYear(), _calRef.getMonth()+n, 1); desenharCalendario(); }
+function calRapido(p){ fecharFolha('folha-calendario'); setPeriodo(p); }
+function calEscolher(iso){ fecharFolha('folha-calendario'); setDia(iso); }
+async function desenharCalendario(){
+  const ano=_calRef.getFullYear(), mes=_calRef.getMonth(), hoje=new Date(); hoje.setHours(0,0,0,0);
+  document.getElementById('cal-titulo').textContent = MESES[mes].charAt(0).toUpperCase()+MESES[mes].slice(1)+' '+ano;
+  document.getElementById('cal-seg').disabled = (ano>hoje.getFullYear() || (ano===hoje.getFullYear() && mes>=hoje.getMonth()));
+  const primeiro=new Date(ano,mes,1), ndias=new Date(ano,mes+1,0).getDate(), vazio=(primeiro.getDay()+6)%7;
+  const sel = (periodo==='dia' && window._diaEscolhido) ? window._diaEscolhido : (periodo==='hoje' ? isoDia(hoje) : null);
+  const chave=ano+'-'+mes, comVendas=_calVendas[chave]||{};
+  let h=''; for(let i=0;i<vazio;i++) h+='<span class="cal-vazio"></span>';
+  for(let d=1; d<=ndias; d++){
+    const dt=new Date(ano,mes,d), iso=isoDia(dt), futuro=dt>hoje;
+    const cls=['cal-dia', iso===isoDia(hoje)?'hoje':'', iso===sel?'sel':'', comVendas[iso]?'venda':'', futuro?'futuro':''].join(' ');
+    h+='<button type="button" class="'+cls+'" '+(futuro?'disabled':'onclick="calEscolher(\''+iso+'\')"')+'>'+d+'</button>';
+  }
+  document.getElementById('cal-grelha').innerHTML=h;
+  // marca os dias com vendas (uma consulta leve por mês)
+  if(!_calVendas[chave] && typeof sessao!=='undefined' && sessao){
+    _calVendas[chave]={};
+    try{
+      const ini=new Date(ano,mes,1), fim=new Date(ano,mes+1,1);
+      const { data }=await supabaseClient.from('vendas').select('criado_em').eq('loja_id',sessao.lojaId).gte('criado_em',ini.toISOString()).lt('criado_em',fim.toISOString()).limit(5000);
+      (data||[]).forEach(v=>{ _calVendas[chave][isoDia(new Date(v.criado_em))]=true; });
+      if(_calRef.getFullYear()===ano && _calRef.getMonth()===mes) desenharCalendario();
+    }catch(e){}
+  }
+}
+rotuloData();
 async function carregarResumo(){
   const r=rangePeriodo(periodo);
   let vendas=[];

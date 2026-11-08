@@ -110,13 +110,30 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="SPAP Banca">
-<link rel="stylesheet" href="banca-tema.css?v=3.4.1">
-<script src="banca-tema.js?v=3.4.1" defer></script>
-<script src="app-android.js?v=3.4.1" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.5.0">
+<script src="banca-tema.js?v=3.5.0" defer></script>
+<script src="app-android.js?v=3.5.0" defer></script>
 </head>
 <body>
 
-<div id="carregando" class="carregar"><div class="spin"></div><div>A abrir a banca…</div></div>
+<div id="carregando" class="carregar tc-banca">
+  <img src="ssteam-logo.png" alt="SSTEAM" class="tc-logo">
+  <div class="tc-nome">Banca · <b>Venda</b></div>
+  <div class="tc-cena" aria-hidden="true">
+    <div class="tc-vento"><i></i><i></i><i></i></div>
+    <div class="tc-po"></div><div class="tc-po p2"></div>
+    <div class="tc-carro-wrap">
+      <img class="tc-caixa c1" src="icons3d/package.png" alt="">
+      <img class="tc-caixa c2" src="icons3d/package-azul.png" alt="">
+      <img class="tc-caixa c3" src="icons3d/coin.png" alt="">
+      <img class="tc-carro" src="icons3d/cart.png" alt="">
+    </div>
+    <div class="tc-chao"></div><div class="tc-chao2"></div>
+  </div>
+  <div class="tc-barra"><div class="tc-prog" id="tc-prog"></div></div>
+  <div class="tc-info"><span id="tc-msg">A ligar à banca…</span><b id="tc-pct">0%</b></div>
+  <div class="tc-rodape">SSTEAM · Tecnologia ao serviço do seu negócio</div>
+</div>
 
 <!-- ======== ECRÃ: CÓDIGO DO BALCONISTA ======== -->
 <div id="tela-codigo" style="display:none;position:fixed;inset:0;z-index:2500;background:var(--verde);color:#fff;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">

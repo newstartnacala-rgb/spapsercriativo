@@ -438,6 +438,44 @@
     var d = document.createElement('div'); d.className = 'def-versao notranslate';
     d.textContent = 'SPAP Banca · versão ' + EU_VERSAO; f.appendChild(d);
   }
+  // ===== Ecrã de carregamento (igual ao das lojas principais): carrinho + contagem em % =====
+  (function carregamento() {
+    var tc = document.getElementById('carregando'); if (!tc || !tc.classList.contains('tc-banca')) return;
+    var t0 = Date.now(), MAX = 6000, MIN = 1600, fechado = false, atual = 0, alvoFim = null, aSair = false;
+    var mon = !!document.getElementById('tela-resumo');
+    var passos = mon ? [[0, 'A ligar à banca…'], [25, 'A contar as vendas…'], [50, 'A preparar o stock…'], [75, 'A abrir o Monitor…']]
+                     : [[0, 'A ligar à banca…'], [25, 'A carregar produtos…'], [50, 'A preparar o carrinho…'], [75, 'A abrir a Venda…']];
+    var prog = document.getElementById('tc-prog'), pct = document.getElementById('tc-pct'), msg = document.getElementById('tc-msg');
+    function pintar(v, texto) {
+      v = Math.max(0, Math.min(100, Math.round(v)));
+      if (prog) prog.style.width = v + '%'; if (pct) pct.textContent = v + '%';
+      if (msg) { if (!texto) { for (var i = passos.length - 1; i >= 0; i--) if (v >= passos[i][0]) { texto = passos[i][1]; break; } } msg.textContent = texto; }
+    }
+    var relogio = setInterval(function () {
+      if (alvoFim) { var k = Math.min(1, (Date.now() - alvoFim.ini) / alvoFim.dur); atual = alvoFim.de + (100 - alvoFim.de) * k; pintar(atual); return; }
+      var t = Date.now() - t0; if (t >= MAX) { pintar(96, 'Quase pronto…'); return; }
+      atual = 96 * (1 - Math.pow(1 - t / MAX, 1.7)); pintar(atual);
+    }, 60);
+    function terminar() {
+      if (fechado) return; fechado = true;
+      var espera = Math.max(400, MIN - (Date.now() - t0));
+      alvoFim = { de: atual, ini: Date.now(), dur: espera };
+      setTimeout(function () {
+        clearInterval(relogio); pintar(100, 'Pronto!');
+        setTimeout(function () { tc.classList.add('tc-partir'); }, 160);
+        setTimeout(function () { tc.classList.add('tc-sair'); }, 560);
+        setTimeout(function () { aSair = true; tc.style.display = 'none'; }, 920);
+      }, espera);
+    }
+    // a página esconde o ecrã quando os dados chegam: em vez de sumir de repente, a barra termina e o carrinho parte
+    new MutationObserver(function () {
+      if (aSair) return;
+      if (tc.style.display === 'none') { tc.style.display = ''; terminar(); }
+    }).observe(tc, { attributes: true, attributeFilter: ['style'] });
+    if (tc.style.display === 'none') { tc.style.display = ''; terminar(); }   // os dados chegaram antes desta animação começar
+    setTimeout(terminar, 12000);
+  })();
+
   function iniciar() {
     try { marcaTopo(); menuTresBarras(); numerarMenus(); } catch (e) {}
     try { versaoNasDefinicoes(); } catch (e) {}
