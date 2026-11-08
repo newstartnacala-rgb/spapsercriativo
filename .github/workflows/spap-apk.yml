@@ -57,7 +57,8 @@ jobs:
           publicar banca-latest "SPAP Banca e Banca Monitor $VB" "versao=$VB" apks-build/SPAP-Banca.apk apks-build/SPAP-Banca-Monitor.apk
       - name: Publicar APKs no site (para cada app se atualizar sozinha)
         run: |
-          cp apks-build/SPAP-*.apk SPAPSERCRIATIVOPOSS/apps/
+          # APKs no site do GitHub Pages (a raiz do repositório): …github.io/spapsercriativo/apps/SPAP-*.apk
+          mkdir -p apps && cp apks-build/SPAP-*.apk apps/
           # (banca/bancamonitor aqui só para as apps da Banca antigas, ≤2.9.202, passarem para a linha 3.x)
           REL="https://github.com/${{ github.repository }}/releases/download"
           # links absolutos para os lançamentos do GitHub: funcionam no GitHub Pages e na Vercel
@@ -68,7 +69,7 @@ jobs:
           cat SPAPSERCRIATIVOPOSS/apps/app-version.json SPAPSERCRIATIVOPOSS/apps/app-banca-version.json
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f SPAPSERCRIATIVOPOSS/apps apps/app-version.json apps/app-banca-version.json
+          git add -f SPAPSERCRIATIVOPOSS/apps apps
           git commit -m "Apps SPAP $VN e Banca $VB publicadas no site" || echo "sem mudanças"
           git pull --rebase --autostash || true
           git push
