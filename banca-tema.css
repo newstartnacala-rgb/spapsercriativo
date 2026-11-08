@@ -179,3 +179,110 @@ h4{color:var(--nv2) !important;font-weight:800;}
   .grelha{grid-template-columns:repeat(auto-fill,minmax(160px,1fr)) !important;}
   .nav,.barra-carrinho{max-width:520px;width:calc(100% - 24px);margin-left:auto !important;margin-right:auto !important;}
 }
+
+/* =====================================================================
+   v2.9.202 — marca, Entrega total do dia, menu, Finalizar venda e animações
+   ===================================================================== */
+.topo .tp-logo{width:46px !important;height:46px !important;filter:drop-shadow(0 4px 8px rgba(120,80,0,.25)) !important;}
+.topo .bt-menu3, .topo button.bt-menu3{width:44px !important;height:44px !important;padding:0 !important;border-radius:50% !important;justify-content:center;}
+.topo .bt-menu3 svg{width:22px;height:22px;}
+
+/* Entrega total do dia (igual ao cartão dourado da Loja) */
+#bt-entrega-dia{position:relative;overflow:hidden;display:flex;align-items:center;gap:12px;margin:8px 12px 2px;width:calc(100% - 24px);padding:11px 14px 11px 12px;
+  border:1px solid rgba(255,224,138,.55);border-radius:18px;background:linear-gradient(135deg,#14244f,#0b1b4d);color:#fff;text-align:left;cursor:pointer;
+  box-shadow:0 10px 22px rgba(11,27,77,.25);font-family:inherit;flex-shrink:0;}
+#bt-entrega-dia::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,#ffe08a,#c8901a);}
+#bt-entrega-dia::after{content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.22),transparent);transform:skewX(-20deg);animation:bt-brilho 4.5s ease-in-out infinite;pointer-events:none;}
+@keyframes bt-brilho{0%,70%{left:-60%}100%{left:140%}}
+#bt-entrega-dia .ed-ico{width:40px;height:40px;flex-shrink:0;border-radius:12px;display:grid;place-items:center;background:linear-gradient(145deg,#f7d46b,#c8901a);color:#1a1405;box-shadow:0 6px 14px rgba(200,144,26,.45);}
+#bt-entrega-dia .ed-ico svg{width:22px;height:22px;}
+#bt-entrega-dia .ed-txt{display:flex;flex-direction:column;flex:1;min-width:0;line-height:1.2;}
+#bt-entrega-dia .ed-txt b{font-size:15.5px;font-weight:800;color:#fff;}
+#bt-entrega-dia .ed-txt small{font-size:12px;font-weight:600;color:rgba(255,244,214,.9);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#bt-entrega-dia .ed-seta{width:9px;height:9px;border-right:2.5px solid #ffe08a;border-top:2.5px solid #ffe08a;transform:rotate(45deg);margin-right:4px;flex-shrink:0;}
+#bt-entrega-dia:active{transform:scale(.98);}
+
+/* Barra do carrinho: total toca para ver a lista; botão Finalizar venda */
+.barra-carrinho .cont{cursor:pointer;}
+.barra-carrinho .itens{text-decoration:underline;text-decoration-color:#c9d4ea;text-underline-offset:3px;}
+#btn-abrir-cart{position:relative;overflow:hidden;}
+#btn-abrir-cart:not(:disabled)::after{content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-20deg);animation:bt-brilho 3.2s ease-in-out infinite;}
+.barra-carrinho.salto{animation:bc-salto .45s cubic-bezier(.3,1.5,.5,1);}
+@keyframes bc-salto{0%{transform:none}35%{transform:translateY(-5px) scale(1.02)}100%{transform:none}}
+#cart-tot.pop{animation:tot-pop .4s cubic-bezier(.3,1.6,.5,1);display:inline-block;}
+@keyframes tot-pop{0%{transform:scale(1)}40%{transform:scale(1.18);color:var(--lj)}100%{transform:scale(1)}}
+
+/* Ondulação (ripple) ao tocar — como na Loja */
+.card,.btn,.barra-carrinho button,#bt-entrega-dia,.menu-grid .mi,.periodo button,.nav a,.teclado button,.notas button{position:relative;overflow:hidden;}
+.bt-ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.55);transform:scale(0);animation:bt-rip .6s ease-out;pointer-events:none;z-index:5;}
+.card .bt-ripple,.menu-grid .mi .bt-ripple,.teclado button .bt-ripple,.periodo button:not(.on) .bt-ripple,.nav a:not(.on) .bt-ripple{background:rgba(242,112,15,.22);}
+@keyframes bt-rip{to{transform:scale(2.6);opacity:0;}}
+
+/* Produtos: entram com animação; ao tocar saltam e voam para o carrinho */
+#grelha .card{animation:card-in .3s ease backwards;}
+#grelha .card:nth-child(2){animation-delay:.03s}#grelha .card:nth-child(3){animation-delay:.06s}#grelha .card:nth-child(4){animation-delay:.09s}
+#grelha .card:nth-child(5){animation-delay:.12s}#grelha .card:nth-child(6){animation-delay:.15s}#grelha .card:nth-child(n+7){animation-delay:.18s}
+@keyframes card-in{from{opacity:0;transform:translateY(12px)}}
+#grelha .card.toque{animation:card-toque .42s cubic-bezier(.3,1.5,.5,1);}
+@keyframes card-toque{0%{transform:scale(1)}30%{transform:scale(.93)}65%{transform:scale(1.04)}100%{transform:none}}
+#grelha .card.toque::after{content:'+1';position:absolute;top:10px;right:10px;background:var(--lj-grad);color:#fff;font-weight:800;font-size:13px;border-radius:999px;padding:3px 9px;animation:mais-um .6s ease-out forwards;pointer-events:none;}
+@keyframes mais-um{0%{opacity:0;transform:translateY(6px) scale(.6)}30%{opacity:1;transform:none}100%{opacity:0;transform:translateY(-16px)}}
+.voar{position:fixed;z-index:3000;border-radius:14px;pointer-events:none;object-fit:cover;background:linear-gradient(180deg,#eef4ff,#e3edff);display:grid;place-items:center;box-shadow:0 10px 24px rgba(11,27,77,.25);
+  transition:transform .55s cubic-bezier(.5,-.2,.6,1), opacity .55s ease-in;}
+.voar img{width:60%;height:60%;object-fit:contain;}
+
+/* Pergunta do recibo */
+.pr-folha{padding:22px 20px calc(env(safe-area-inset-bottom) + 20px) !important;text-align:center;gap:10px;}
+.pr-folha .pr-ico{width:84px;height:84px;margin:4px auto 6px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:var(--sombra);font-size:40px;animation:pr-ico .6s cubic-bezier(.3,1.5,.5,1);}
+.pr-folha .pr-ico img.e3d{width:50px;height:50px;vertical-align:0;}
+@keyframes pr-ico{from{transform:scale(.4) rotate(-14deg);opacity:0}}
+.pr-folha h3{font-size:21px;font-weight:800;color:var(--nv);}
+.pr-folha p{font-size:14px;color:#64748b;margin-bottom:6px;}
+.pr-folha .btn{margin-top:4px;}
+/* pagamento entra como na Loja */
+#folha-pagamento.ativa .folha{animation:pag-in .36s cubic-bezier(.22,1,.36,1) !important;}
+@keyframes pag-in{from{opacity:0;transform:translateY(40px) scale(.985)}}
+
+/* Menus: os cartões entram em cascata e o ícone salta ao tocar (como no Monitor) */
+.folha-fundo.ativa .menu-grid .mi{animation:cg-card-in .45s cubic-bezier(.2,.9,.3,1.2) both;animation-delay:calc(var(--i,0) * 38ms);}
+.folha-fundo.ativa .menu-grid .mi .e img.e3d{animation:cg-ico-in .65s cubic-bezier(.25,1.4,.4,1) both;animation-delay:calc(var(--i,0) * 38ms + 90ms);}
+@keyframes cg-card-in{from{opacity:0;transform:translateY(14px) scale(.94)}to{opacity:1;transform:none}}
+@keyframes cg-ico-in{0%{transform:scale(.3) rotate(-18deg);opacity:0}60%{transform:scale(1.14) rotate(4deg);opacity:1}100%{transform:none}}
+.menu-grid .mi.cg-clique .e img.e3d{animation:cg-saltar .5s cubic-bezier(.3,1.5,.5,1) !important;}
+@keyframes cg-saltar{0%{transform:scale(1)}25%{transform:scale(.82,.9)}55%{transform:translateY(-9px) scale(1.12)}80%{transform:translateY(0) scale(.97)}100%{transform:none}}
+
+/* ---------- Monitor da Banca: animações do Monitor principal ---------- */
+:root{--agua1:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 90' preserveAspectRatio='none'%3E%3Cpath d='M0 34 Q50 14 100 34 T200 34 L200 90 L0 90 Z' fill='%23d6e7ff' fill-opacity='.75'/%3E%3C/svg%3E");
+  --agua2:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 90' preserveAspectRatio='none'%3E%3Cpath d='M0 52 Q50 70 100 52 T200 52 L200 90 L0 90 Z' fill='%23a9cbff' fill-opacity='.55'/%3E%3C/svg%3E");
+  --agua-lj:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 90' preserveAspectRatio='none'%3E%3Cpath d='M0 52 Q50 70 100 52 T200 52 L200 90 L0 90 Z' fill='%23ffd2a8' fill-opacity='.6'/%3E%3C/svg%3E");}
+@keyframes agua-mar{from{background-position:0 100%,0 100%,0 0}to{background-position:-360px 100%,280px 100%,0 0}}
+body.pg-mon .stat{background-image:var(--agua1),var(--agua2),linear-gradient(170deg,#ffffff,#f5f9ff) !important;background-repeat:repeat-x,repeat-x,no-repeat !important;
+  background-size:360px 54px,280px 46px,100% 100% !important;animation:agua-mar 14s linear infinite, stat-in .5s cubic-bezier(.2,.9,.3,1.2) both;}
+body.pg-mon .stat.wide{background-image:var(--agua1),var(--agua-lj),linear-gradient(170deg,#ffffff,#fff8f1) !important;}
+@keyframes stat-in{from{opacity:0;transform:translateY(12px) scale(.96)}}
+body.pg-mon .cards .stat:nth-child(2){animation-delay:0s,.07s}body.pg-mon .cards .stat:nth-child(3){animation-delay:0s,.14s}
+body.pg-mon .stat .lbl img.e3d{width:30px !important;height:30px !important;will-change:transform;}
+body.pg-mon .stat .lbl img[src*="moneybag"],body.pg-mon .stat .lbl img[src*="bank"]{animation:kpi-moeda 2.6s ease-in-out infinite;}
+body.pg-mon .stat .lbl img[src*="receipt"]{animation:kpi-etiqueta 2.6s ease-in-out infinite;transform-origin:70% 15%;}
+body.pg-mon .stat .lbl img[src*="chartup"]{animation:kpi-grafico 2.4s ease-in-out infinite;transform-origin:50% 100%;}
+body.pg-mon .stat .lbl img[src*="package"]{animation:kpi-caixa 2.2s cubic-bezier(.3,1.4,.5,1) infinite;transform-origin:50% 100%;}
+body.pg-mon .stat .lbl img[src*="warning"]{animation:kpi-etiqueta 2.2s ease-in-out infinite;transform-origin:50% 90%;}
+body.pg-mon .stat .lbl img[src*="dinheiro-voa"]{animation:kpi-moeda-2 2.6s ease-in-out infinite;}
+@keyframes kpi-moeda{0%,100%{transform:translateY(0) rotateY(0)}30%{transform:translateY(-5px) rotateY(180deg)}60%{transform:translateY(0) rotateY(360deg)}}
+@keyframes kpi-moeda-2{0%,45%,100%{transform:translateY(0)}65%{transform:translateY(-7px) rotate(-8deg)}82%{transform:translateY(0) rotate(0)}}
+@keyframes kpi-etiqueta{0%,100%{transform:rotate(0)}25%{transform:rotate(12deg)}55%{transform:rotate(-8deg)}75%{transform:rotate(3deg)}}
+@keyframes kpi-caixa{0%,55%,100%{transform:translateY(0) scale(1)}65%{transform:translateY(0) scale(1.08,.9)}78%{transform:translateY(-7px) scale(.96,1.05)}90%{transform:translateY(0) scale(1.03,.97)}}
+@keyframes kpi-grafico{0%,100%{transform:scaleY(1)}40%{transform:scaleY(.78)}70%{transform:scaleY(1.08)}}
+body.pg-mon .stat .val{animation:val-in .6s cubic-bezier(.3,1.4,.5,1) both;animation-delay:.15s;}
+@keyframes val-in{from{opacity:0;transform:translateY(6px)}}
+body.pg-mon .cartao{background-image:var(--agua1),var(--agua2),linear-gradient(#fff,#fff) !important;background-repeat:repeat-x,repeat-x,no-repeat !important;background-size:360px 50px,280px 42px,100% 100% !important;animation:agua-mar 16s linear infinite;}
+body.pg-mon .row{animation:card-in .35s ease backwards;background:rgba(255,255,255,.75);}
+body.pg-mon .row:nth-child(2){animation-delay:.04s}body.pg-mon .row:nth-child(3){animation-delay:.08s}body.pg-mon .row:nth-child(n+4){animation-delay:.12s}
+body.pg-mon .row .ph img.e3d{animation:kpi-etiqueta 3s ease-in-out infinite;transform-origin:50% 20%;}
+body.pg-mon .tela.ativa .corpo{background:var(--agua1) repeat-x 0 100% / 360px 110px, var(--agua2) repeat-x 0 100% / 280px 90px !important;animation:agua-fundo 16s linear infinite;}
+@keyframes agua-fundo{from{background-position:0 100%,0 100%}to{background-position:-360px 100%,280px 100%}}
+.nav a.on .ic img.e3d{animation:nav-ico 2.6s ease-in-out infinite;}
+@keyframes nav-ico{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px) scale(1.06)}}
+@media (prefers-reduced-motion:reduce){
+  body.pg-mon .stat,body.pg-mon .cartao,body.pg-mon .tela.ativa .corpo,body.pg-mon .stat .lbl img,#bt-entrega-dia::after,#btn-abrir-cart::after,.nav a.on .ic img{animation:none !important;}
+}

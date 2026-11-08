@@ -111,9 +111,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="SPAP Banca">
-<link rel="stylesheet" href="banca-tema.css?v=2.9.201">
-<script src="banca-tema.js?v=2.9.201" defer></script>
-<script src="app-android.js?v=2.9.201" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=2.9.202">
+<script src="banca-tema.js?v=2.9.202" defer></script>
+<script src="app-android.js?v=2.9.202" defer></script>
 </head>
 <body>
 
@@ -138,26 +138,28 @@
       <div class="nome" id="nome-loja">Banca</div>
       <div class="sub">Mobile POSS · vender</div>
     </div>
-    <div style="display:flex;gap:8px;">
-      <button onclick="abrirEntregar()">📦 Dia</button>
-      <button onclick="abrirMenu()">☰ Menu</button>
-    </div>
+    <button class="bt-menu3" onclick="abrirMenu()" aria-label="Menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 6h16a1 1 0 1 1 0 2H4a1 1 0 0 1 0-2zm0 5h16a1 1 0 1 1 0 2H4a1 1 0 1 1 0-2zm0 5h16a1 1 0 1 1 0 2H4a1 1 0 1 1 0-2z"/></svg></button>
   </div>
   <div class="barra">
     <input id="busca" type="text" placeholder="Procurar produto…" oninput="renderProdutos()" autocomplete="off">
     <button onclick="abrirScanner()">📷</button>
   </div>
+  <button type="button" id="bt-entrega-dia" onclick="abrirEntregar()">
+    <span class="ed-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21 7.3 12.6 2.6a1.3 1.3 0 0 0-1.2 0L3 7.3a1.2 1.2 0 0 0-.6 1v7.4c0 .4.2.8.6 1l8.4 4.7c.4.2.8.2 1.2 0l8.4-4.7c.4-.2.6-.6.6-1V8.3c0-.4-.2-.8-.6-1zM12 4.6l6.6 3.7-2.5 1.4-6.6-3.7L12 4.6zm-1 14.6-6.6-3.7V9.9l6.6 3.7v5.6zm1-7.3L5.4 8.3l2.4-1.3 6.6 3.7-2.4 1.2zm7.6 3.6L13 19.2v-5.6l2.6-1.5v2.4a1 1 0 1 0 2 0V11l2-1.1v5.6z"/></svg></span>
+    <span class="ed-txt"><b>Entrega total do dia</b><small>Fechar o dia e entregar o dinheiro ao dono</small></span>
+    <span class="ed-seta" aria-hidden="true"></span>
+  </button>
   <div id="scanner-area"></div>
   <div class="corpo">
     <div id="grelha" class="grelha"></div>
     <div id="sem-produtos" class="vazio" style="display:none;">Ainda não há produtos.<br>Vai a <b>Produtos</b> e adiciona o primeiro.</div>
   </div>
   <div class="barra-carrinho">
-    <div class="cont">
-      <div class="itens"><span id="cart-n">0</span> item(s)</div>
+    <div class="cont" onclick="abrirCarrinho()" role="button" aria-label="Ver os produtos do carrinho">
+      <div class="itens"><span id="cart-n">0</span> item(s), ver lista</div>
       <div class="tot" id="cart-tot">MT 0,00</div>
     </div>
-    <button id="btn-abrir-cart" onclick="abrirCarrinho()" disabled>Ver carrinho ›</button>
+    <button id="btn-abrir-cart" onclick="abrirPagamento()" disabled>Finalizar venda</button>
   </div>
   <div class="nav">
     <a class="on"><span class="ic">🛒</span>Vender</a>
@@ -557,7 +559,30 @@ function notaRapida(v){ pagVirgem=false; pagBuf=String(v); pagRender(); }
 function pagExato(){ const t=carrinho.reduce((s,i)=>s+i.preco*i.qtd,0); pagVirgem=false; pagBuf=t.toFixed(2); pagRender(); }
 
 let aConfirmar=false;
-async function confirmarVenda(){
+// Antes de gravar, pergunta se o cliente quer recibo
+let _querRecibo = true;
+function confirmarVenda(){
+  if(aConfirmar) return;
+  if(!carrinho.length){ toast('Carrinho vazio','erro'); return; }
+  const total = carrinho.reduce((s,i)=>s+i.preco*i.qtd,0);
+  const recebido = parseFloat(pagBuf)||0;
+  if (recebido < total){ toast('Falta MT ' + (total-recebido).toFixed(2),'erro'); return; }
+  perguntarRecibo(function(sim){ _querRecibo = sim; _gravarVenda(); });
+}
+function perguntarRecibo(cb){
+  let ov=document.getElementById('folha-pergunta-recibo'); if(ov) ov.remove();
+  ov=document.createElement('div'); ov.className='folha-fundo ativa'; ov.id='folha-pergunta-recibo';
+  ov.innerHTML='<div class="folha pr-folha"><div class="pr-ico">🧾</div><h3>Deseja tirar recibo?</h3>'
+    +'<p>A venda será gravada nos dois casos.</p>'
+    +'<button class="btn" id="pr-sim" type="button">Sim, tirar recibo</button>'
+    +'<button class="btn cinza" id="pr-nao" type="button">Não, só gravar</button></div>';
+  document.body.appendChild(ov);
+  const fim=(sim)=>{ ov.remove(); cb(sim); };
+  ov.querySelector('#pr-sim').onclick=()=>fim(true);
+  ov.querySelector('#pr-nao').onclick=()=>fim(false);
+  ov.addEventListener('click',e=>{ if(e.target===ov) ov.remove(); });
+}
+async function _gravarVenda(){
   if(aConfirmar) return;
   if(!carrinho.length){ toast('Carrinho vazio','erro'); return; }
   const total = carrinho.reduce((s,i)=>s+i.preco*i.qtd,0);
@@ -598,7 +623,7 @@ async function confirmarVenda(){
     carrinho = []; descontosLote = [];
     atualizarBarraCarrinho(); renderProdutos();
     fecharFolha('folha-pagamento');
-    mostrarRecibo();
+    if (_querRecibo) mostrarRecibo();
   } catch(e){
     toast('Erro: ' + (e.message||e), 'erro');
   }
@@ -797,9 +822,9 @@ function suporte(){ fecharFolha('folha-menu'); window.open('https://wa.me/258866
 function sobre(){ fecharFolha('folha-menu'); alert('ℹ️ Mobile POSS — Banca\nSpap-Sercriativo\n\nLoja: ' + (sessao?sessao.nomeLoja:'') + '\nVersão 2.9.149'); }
 // ===== IDIOMA (Português / Inglês / Francês) =====
 const I18N={
-  pt:{nome:'Português',ph:'Procurar produto…',cart:'Ver carrinho ›',confirmar:'✅ Confirmar venda',pagar:'💳 Receber / Pagar',sub:'vender',t_vender:'Vender',t_prod:'Produtos'},
-  en:{nome:'English',ph:'Search product…',cart:'View cart ›',confirmar:'✅ Confirm sale',pagar:'💳 Receive / Pay',sub:'sell',t_vender:'Sell',t_prod:'Products'},
-  fr:{nome:'Français',ph:'Chercher un produit…',cart:'Voir le panier ›',confirmar:'✅ Confirmer la vente',pagar:'💳 Encaisser / Payer',sub:'vendre',t_vender:'Vendre',t_prod:'Produits'}
+  pt:{nome:'Português',ph:'Procurar produto…',cart:'Finalizar venda',confirmar:'✅ Confirmar venda',pagar:'💳 Receber / Pagar',sub:'vender',t_vender:'Vender',t_prod:'Produtos'},
+  en:{nome:'English',ph:'Search product…',cart:'Checkout',confirmar:'✅ Confirm sale',pagar:'💳 Receive / Pay',sub:'sell',t_vender:'Sell',t_prod:'Products'},
+  fr:{nome:'Français',ph:'Chercher un produit…',cart:'Finaliser la vente',confirmar:'✅ Confirmer la vente',pagar:'💳 Encaisser / Payer',sub:'vendre',t_vender:'Vendre',t_prod:'Produits'}
 };
 function aplicarIdioma(l){
   const d=I18N[l]||I18N.pt; try{ localStorage.setItem('banca_lang',l); }catch(e){}
