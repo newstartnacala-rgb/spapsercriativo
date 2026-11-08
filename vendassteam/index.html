@@ -127,6 +127,22 @@ section{padding:88px 0}
 .duo .tel:last-child{right:0;top:0;transform:rotate(4deg)}
 .duo .aura{position:absolute;inset:60px 20px 20px;border-radius:50%;filter:blur(50px);opacity:.3}
 .grupo.loja .aura{background:var(--loja)} .grupo.banca .aura{background:var(--banca)}
+/* Loja: tablet grande com o ponto de venda completo */
+.grupo.loja{grid-template-columns:1fr;gap:44px}
+.grupo.loja .info{display:grid;grid-template-columns:.8fr 1.2fr;gap:40px;align-items:start}
+.grupo.loja .desc{margin-bottom:0}
+.tablet-cena{position:relative;max-width:880px;width:100%;margin:0 auto;padding-bottom:30px}
+.tablet{position:relative;border-radius:38px;background:#0d1530;padding:18px;box-shadow:0 40px 80px rgba(11,27,77,.28)}
+.tablet img{width:100%;aspect-ratio:16/10;object-fit:cover;object-position:top left;border-radius:22px}
+.tablet::before{content:"";position:absolute;left:50%;top:7px;width:8px;height:8px;margin-left:-4px;border-radius:50%;background:#2a355a}
+.tablet-cena .tel{position:absolute;right:-150px;bottom:-10px;width:190px;transform:rotate(4deg);z-index:2}
+.tablet-cena .aura{position:absolute;inset:10% 10% 0;border-radius:50%;filter:blur(60px);opacity:.28;background:var(--loja)}
+.versao{margin-top:10px;font-size:13.5px;color:#5b6789;font-weight:600;min-height:1.4em}
+.novidades{margin-top:26px;background:var(--papel);border:1px solid var(--linha);border-radius:var(--raio);padding:18px 22px;max-width:760px}
+.novidades b{font-family:"Bricolage Grotesque",sans-serif;font-size:18px}
+.novidades ul{margin:8px 0 0 18px;color:var(--tinta2);font-size:15.5px;display:grid;gap:4px}
+@media (max-width:980px){.grupo.loja .info{grid-template-columns:1fr;gap:20px}.tablet{border-radius:26px;padding:10px}.tablet img{border-radius:16px}.tablet-cena .tel{display:none}}
+@media (max-width:1240px) and (min-width:981px){.tablet-cena{max-width:760px;margin-left:0}.tablet-cena .tel{right:-170px}}
 @media (max-width:980px){
   .grupo,.grupo.banca{grid-template-columns:1fr;gap:30px;padding:48px 0}
   .grupo.banca .duo{order:0}
@@ -232,18 +248,27 @@ section{padding:88px 0}
     <div class="envolve">
       <h2 class="tit-sec">Escolha as apps do seu negócio</h2>
       <p class="sub-sec">Cada negócio tem duas apps separadas: uma para vender e outra para o dono acompanhar tudo. Instale as duas com a mesma conta.</p>
+      <div class="novidades" id="novidades" hidden><b id="nov-tit">Novidades</b><ul id="nov-lista"></ul></div>
 
       <div class="grupo loja" id="loja">
-        <div>
-          <h3>Loja</h3>
-          <div class="para">Para lojas, mercearias e supermercados</div>
-          <p class="desc">O ponto de venda fica no balcão e o Monitor fica com o dono. Cada venda feita na Loja aparece no Monitor no mesmo momento.</p>
+        <div class="tablet-cena" aria-hidden="true">
+          <div class="aura"></div>
+          <div class="tablet"><img src="img/loja-tablet.webp" alt="" loading="lazy"></div>
+          <div class="tel"><img src="img/monitor.webp" alt="" loading="lazy"></div>
+        </div>
+        <div class="info">
+          <div>
+            <h3>Loja</h3>
+            <div class="para">Para lojas, mercearias e supermercados</div>
+            <p class="desc">O ponto de venda fica no balcão, no tablet ou no computador, e o Monitor fica com o dono. Cada venda feita na Loja aparece no Monitor no mesmo momento.</p>
+          </div>
           <div class="baixar">
         <div class="cartao-app" data-app="Loja">
           <div class="topo-app"><img src="img/icon-loja.png" alt="Ícone da app SPAP Loja"><div><b>SPAP Loja</b><span class="funcao">Ponto de venda</span></div></div>
           <p>Vender no balcão, com recibo, stock, códigos de barras e vários vendedores. Continua a vender quando a internet falha.</p>
           <a class="bt bt-tinta" data-tipo="android" data-f="SPAP-Loja" href="#"><img class="ico-app" src="img/icon-loja.png" alt=""><span class="rot">Baixar para Android<small>SPAP Loja · ficheiro APK</small></span></a>
           <a class="bt bt-linha" data-tipo="ios" data-f="SPAP-Loja" href="#"><span class="ico-plat"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg></span><span class="rot">Instalar no iPhone<small>SPAP Loja</small></span></a>
+          <div class="versao" data-versao></div>
           <a class="web" data-tipo="web" data-f="SPAP-Loja" href="#">Ou abrir no navegador</a>
         </div>
         <div class="cartao-app" data-app="Monitor">
@@ -251,11 +276,11 @@ section{padding:88px 0}
           <p>Total vendido, lucro, stock e um aviso no telemóvel a cada venda, de onde estiver.</p>
           <a class="bt bt-tinta" data-tipo="android" data-f="SPAP-Monitor" href="#"><img class="ico-app" src="img/icon-monitor.png" alt=""><span class="rot">Baixar para Android<small>SPAP Monitor · ficheiro APK</small></span></a>
           <a class="bt bt-linha" data-tipo="ios" data-f="SPAP-Monitor" href="#"><span class="ico-plat"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg></span><span class="rot">Instalar no iPhone<small>SPAP Monitor</small></span></a>
+          <div class="versao" data-versao></div>
           <a class="web" data-tipo="web" data-f="SPAP-Monitor" href="#">Ou abrir no navegador</a>
         </div>
           </div>
         </div>
-        <div class="duo" aria-hidden="true"><div class="aura"></div><div class="tel"><img src="img/loja.webp" alt="" loading="lazy"></div><div class="tel"><img src="img/monitor.webp" alt="" loading="lazy"></div></div>
       </div>
 
       <div class="grupo banca" id="banca">
@@ -269,6 +294,7 @@ section{padding:88px 0}
           <p>Tocar nos produtos, receber e dar o troco. No fim do dia, entregar as contas num toque.</p>
           <a class="bt bt-tinta" data-tipo="android" data-f="SPAP-Banca" href="#"><img class="ico-app" src="img/icon-banca.png" alt=""><span class="rot">Baixar para Android<small>SPAP Banca · ficheiro APK</small></span></a>
           <a class="bt bt-linha" data-tipo="ios" data-f="SPAP-Banca" href="#"><span class="ico-plat"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg></span><span class="rot">Instalar no iPhone<small>SPAP Banca</small></span></a>
+          <div class="versao" data-versao></div>
           <a class="web" data-tipo="web" data-f="SPAP-Banca" href="#">Ou abrir no navegador</a>
         </div>
         <div class="cartao-app" data-app="BancaMonitor">
@@ -276,6 +302,7 @@ section{padding:88px 0}
           <p>Vendas do dia, lucro, stock, descontos e despachos para a banca.</p>
           <a class="bt bt-tinta" data-tipo="android" data-f="SPAP-Banca-Monitor" href="#"><img class="ico-app" src="img/icon-bancamonitor.png" alt=""><span class="rot">Baixar para Android<small>SPAP Banca Monitor · ficheiro APK</small></span></a>
           <a class="bt bt-linha" data-tipo="ios" data-f="SPAP-Banca-Monitor" href="#"><span class="ico-plat"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg></span><span class="rot">Instalar no iPhone<small>SPAP Banca Monitor</small></span></a>
+          <div class="versao" data-versao></div>
           <a class="web" data-tipo="web" data-f="SPAP-Banca-Monitor" href="#">Ou abrir no navegador</a>
         </div>
           </div>
@@ -421,6 +448,27 @@ section{padding:88px 0}
   addEventListener('scroll', function () { cab.classList.toggle('rolou', scrollY > 8); }, { passive: true });
   requestAnimationFrame(function () { document.getElementById('heroi').classList.add('pronto'); });
   document.getElementById('ano').textContent = new Date().getFullYear();
+
+  // Versão atual das apps: lida a cada visita (o download é sempre a versão mais recente)
+  function dataPT(d) { var p = String(d || '').slice(0, 10).split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : ''; }
+  function porVersao(v, data) {
+    document.querySelectorAll('[data-versao]').forEach(function (e) { e.textContent = 'Versão ' + v + (data ? ', de ' + dataPT(data) : ''); });
+  }
+  fetch('https://api.github.com/repos/newstartnacala-rgb/spapsercriativo/releases/latest', { headers: { Accept: 'application/vnd.github+json' } })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (rel) { if (rel && rel.tag_name) porVersao(rel.tag_name.replace(/^apps-v/, ''), rel.published_at); })
+    .catch(function () {});
+  fetch('https://newstartnacala-rgb.github.io/spapsercriativo/version.json?t=' + Date.now(), { cache: 'no-store' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (v) {
+      if (!v || !v.versao) return;
+      if (!document.querySelector('[data-versao]').textContent) porVersao(v.versao, v.data);
+      var lista = (v.melhorias || []).slice(0, 4); if (!lista.length) return;
+      document.getElementById('nov-tit').textContent = 'Novidades da versão ' + v.versao;
+      var ul = document.getElementById('nov-lista');
+      lista.forEach(function (t) { var li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
+      document.getElementById('novidades').hidden = false;
+    }).catch(function () {});
 
   // Preços e WhatsApp definidos no painel de administração (se disponíveis)
   var SB = 'https://kggqshpqydhvtxklixyk.supabase.co', KEY = 'sb_publishable_FLR81R0et5RIFR9WToVjsQ_RoP3RPew';
