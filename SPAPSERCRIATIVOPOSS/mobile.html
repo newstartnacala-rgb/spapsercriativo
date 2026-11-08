@@ -110,9 +110,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="SPAP Banca">
-<link rel="stylesheet" href="banca-tema.css?v=3.1.1">
-<script src="banca-tema.js?v=3.1.1" defer></script>
-<script src="app-android.js?v=3.1.1" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.2.0">
+<script src="banca-tema.js?v=3.2.0" defer></script>
+<script src="app-android.js?v=3.2.0" defer></script>
 </head>
 <body>
 
@@ -137,7 +137,10 @@
       <div class="nome" id="nome-loja">Banca</div>
       <div class="sub">Mobile POSS · vender</div>
     </div>
-    <button class="bt-menu3" onclick="abrirMenu()" aria-label="Menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 6h16a1 1 0 1 1 0 2H4a1 1 0 0 1 0-2zm0 5h16a1 1 0 1 1 0 2H4a1 1 0 1 1 0-2zm0 5h16a1 1 0 1 1 0 2H4a1 1 0 1 1 0-2z"/></svg></button>
+    <div class="tp-acoes">
+      <button type="button" class="tp-net" id="tp-net" onclick="estadoNet(true)" aria-live="polite"><i></i><span>Online</span></button>
+      <button type="button" class="tp-lang" onclick="idioma()" aria-label="Idioma">🌐<span id="tp-lang-txt">PT</span></button>
+    </div>
   </div>
   <button type="button" id="bt-entrega-dia" onclick="abrirEntregar()">
     <span class="ed-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21 7.3 12.6 2.6a1.3 1.3 0 0 0-1.2 0L3 7.3a1.2 1.2 0 0 0-.6 1v7.4c0 .4.2.8.6 1l8.4 4.7c.4.2.8.2 1.2 0l8.4-4.7c.4-.2.6-.6.6-1V8.3c0-.4-.2-.8-.6-1zM12 4.6l6.6 3.7-2.5 1.4-6.6-3.7L12 4.6zm-1 14.6-6.6-3.7V9.9l6.6 3.7v5.6zm1-7.3L5.4 8.3l2.4-1.3 6.6 3.7-2.4 1.2zm7.6 3.6L13 19.2v-5.6l2.6-1.5v2.4a1 1 0 1 0 2 0V11l2-1.1v5.6z"/></svg></span>
@@ -162,7 +165,7 @@
   </div>
   <div class="nav">
     <a class="on"><span class="ic">🛒</span>Vender</a>
-    <a onclick="mostrarTela('produtos')"><span class="ic">📦</span>Produtos</a>
+    <a onclick="abrirMenu()"><span class="ic ic-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 6h16a1 1 0 1 1 0 2H4a1 1 0 0 1 0-2zm0 5h16a1 1 0 1 1 0 2H4a1 1 0 1 1 0-2zm0 5h16a1 1 0 1 1 0 2H4a1 1 0 1 1 0-2z"/></svg></span>Menu</a>
   </div>
 </div>
 
@@ -180,7 +183,7 @@
   </div>
   <div class="nav">
     <a onclick="mostrarTela('vender')"><span class="ic">🛒</span>Vender</a>
-    <a class="on"><span class="ic">📦</span>Produtos</a>
+    <a onclick="abrirMenu()"><span class="ic ic-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 6h16a1 1 0 1 1 0 2H4a1 1 0 0 1 0-2zm0 5h16a1 1 0 1 1 0 2H4a1 1 0 1 1 0-2zm0 5h16a1 1 0 1 1 0 2H4a1 1 0 1 1 0-2z"/></svg></span>Menu</a>
   </div>
 </div>
 
@@ -272,13 +275,25 @@
         <div class="mi" onclick="reimprimirRecibo()"><div class="e">🧾</div><div class="t">Recibo de venda</div></div>
         <div class="mi" onclick="abrirRetornar()"><div class="e">↩️</div><div class="t">Retorno (devolver)</div></div>
         <div class="mi" onclick="avisoDespacho()"><div class="e">🚚</div><div class="t">Aviso de despacho</div></div>
-        <div class="mi" onclick="idioma()"><div class="e">🌐</div><div class="t">Idioma</div></div>
-        <div class="mi" onclick="suporte()"><div class="e">💬</div><div class="t">Suporte</div></div>
-        <div class="mi" onclick="fecharFolha('folha-menu');window.spapInstalarApp&&spapInstalarApp('android')"><div class="e">📲</div><div class="t">App para Android</div></div>
-        <div class="mi" onclick="fecharFolha('folha-menu');window.spapInstalarApp&&spapInstalarApp('ios')"><div class="e">📱</div><div class="t">App para iPhone</div></div>
-        <div class="mi" onclick="location.href='planos-banca.html?ver=1'"><div class="e">⭐</div><div class="t">O meu plano</div></div>
-        <div class="mi" onclick="fecharFolha('folha-menu');window.bancaVerificarAtualizacao&&bancaVerificarAtualizacao(true)"><div class="e">🔄</div><div class="t">Verificar atualizações</div></div>
+        <div class="mi" onclick="fecharFolha('folha-menu');mostrarTela('produtos')"><div class="e">📦</div><div class="t">Produtos</div></div>
+        <div class="mi" onclick="fecharFolha('folha-menu');abrirFolha('folha-definicoes')"><div class="e">⚙️</div><div class="t">Definições</div></div>
         <div class="mi" onclick="sairBanca()" style="background:#fef2f2;"><div class="e">🚪</div><div class="t">Sair</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======== FOLHA: DEFINIÇÕES ======== -->
+<div class="folha-fundo" id="folha-definicoes">
+  <div class="folha">
+    <div class="cab"><h3>⚙️ Definições</h3><button onclick="fecharFolha('folha-definicoes')">✕</button></div>
+    <div class="conteudo">
+      <div class="menu-grid">
+        <div class="mi" onclick="fecharFolha('folha-definicoes');window.spapInstalarApp&&spapInstalarApp('android')"><div class="e">📲</div><div class="t">App para Android</div></div>
+        <div class="mi" onclick="fecharFolha('folha-definicoes');window.spapInstalarApp&&spapInstalarApp('ios')"><div class="e">📱</div><div class="t">App para iPhone</div></div>
+        <div class="mi" onclick="fecharFolha('folha-definicoes');window.bancaVerificarAtualizacao&&bancaVerificarAtualizacao(true)"><div class="e">🔄</div><div class="t">Verificar atualizações</div></div>
+        <div class="mi" onclick="location.href='planos-banca.html?ver=1'"><div class="e">⭐</div><div class="t">O meu plano</div></div>
+        <div class="mi" onclick="fecharFolha('folha-definicoes');suporte()"><div class="e">💬</div><div class="t">Suporte</div></div>
       </div>
     </div>
   </div>
@@ -830,9 +845,20 @@ const I18N={
 function aplicarIdioma(l){
   const d=I18N[l]||I18N.pt; try{ localStorage.setItem('banca_lang',l); }catch(e){}
   const b=document.getElementById('busca'); if(b) b.placeholder=d.ph;
+  const lt=document.getElementById('tp-lang-txt'); if(lt) lt.textContent=(I18N[l]?l:'pt').toUpperCase();
   const c=document.getElementById('btn-abrir-cart'); if(c) c.textContent=d.cart;
   const cf=document.getElementById('btn-confirmar'); if(cf) cf.textContent=d.confirmar;
 }
+// Indicador de internet no topo (Online / Offline)
+function estadoNet(avisar){
+  const on = navigator.onLine !== false, b = document.getElementById('tp-net');
+  if (b){ b.classList.toggle('off', !on); b.querySelector('span').textContent = on ? 'Online' : 'Offline'; }
+  if (avisar) toast(on ? '✅ Ligado à internet: as vendas vão logo para o Monitor' : '⚠️ Sem internet: ligue os dados ou o Wi-Fi', on ? 'ok' : 'erro');
+}
+window.addEventListener('online', ()=>{ estadoNet(); toast('✅ Internet de volta','ok'); });
+window.addEventListener('offline', ()=>{ estadoNet(); toast('⚠️ Sem internet','erro'); });
+document.addEventListener('DOMContentLoaded', ()=>estadoNet());
+estadoNet();
 function idiomaAtual(){ try{ return localStorage.getItem('banca_lang')||'pt'; }catch(e){ return 'pt'; } }
 function idioma(){ fecharFolha('folha-menu'); mostrarEscolhaIdioma(idiomaAtual()); }
 function mostrarEscolhaIdioma(atual){

@@ -12,7 +12,7 @@
     '📅': 'calendar', '🏪': 'store', '📧': 'envelope', '🔑': 'key', '📱': 'telemovel', '🔁': 'refresh',
     '🔐': 'cadeado', '💳': 'card', '📷': 'camera', '💵': 'dinheiro-voa', '✅': 'check', '🖨️': 'page', '🖨': 'page',
     '🗑': 'lixo', '🗑️': 'lixo', '☰': null, '📩': 'envelope', '⏳': 'hourglass', '🚫': 'prohibited', '🔒': 'cadeado',
-    '📋': 'clipboard', '🔄': 'refresh', '🔔': 'bell', '⭐': 'star', '🏆': 'trophy', '📌': 'pin', '🎁': 'gem'
+    '📋': 'clipboard', '🔄': 'refresh', '⚙️': 'gear', '⚙': 'gear', '🔔': 'bell', '⭐': 'star', '🏆': 'trophy', '📌': 'pin', '🎁': 'gem'
   };
   var chaves = Object.keys(MAPA).sort(function (a, b) { return b.length - a.length; });
   var RE = new RegExp('(' + chaves.map(function (k) { return k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }).join('|') + ')\\uFE0F?', 'g');

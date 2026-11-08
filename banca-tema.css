@@ -321,3 +321,16 @@ body.pg-mon .tela.ativa .corpo{background:var(--agua1) repeat-x 0 100% / 360px 1
 .plano-aviso{display:flex;align-items:center;gap:10px;margin:8px 12px 0;padding:9px 12px;border-radius:14px;background:#fff7ef;border:1px solid #ffd9b8;color:var(--lj-esc);font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0;}
 .plano-aviso b{color:var(--nv);}
 .plano-aviso .pa-btn{margin-left:auto;background:var(--lj-grad);color:#fff;border-radius:999px;padding:5px 11px;font-size:12px;white-space:nowrap;}
+
+/* ---------- 3.2.0: topo com idioma + online/offline; Menu em baixo ---------- */
+.tp-acoes{display:flex;align-items:center;gap:7px;flex-shrink:0;}
+.topo .tp-net{padding:7px 11px !important;gap:6px !important;font-size:12.5px !important;}
+.tp-net i{width:9px;height:9px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.18);animation:net-pulso 2s ease-in-out infinite;}
+.tp-net.off i{background:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.18);}
+.topo .tp-net.off{color:#b91c1c !important;border-color:#fecaca !important;background:linear-gradient(180deg,#fff,#fff1f1) !important;}
+@keyframes net-pulso{50%{box-shadow:0 0 0 6px rgba(34,197,94,0)}}
+.topo .tp-lang{padding:6px 10px 6px 7px !important;font-size:12.5px !important;gap:4px !important;}
+.topo .tp-lang img.e3d{width:22px;height:22px;vertical-align:0;}
+.nav a .ic.ic-menu svg{width:26px;height:26px;display:block;color:var(--nv);}
+.nav a.on .ic.ic-menu svg{color:#fff;}
+@media (max-width:360px){.tp-net span{display:none;}}
