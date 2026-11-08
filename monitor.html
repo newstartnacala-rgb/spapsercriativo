@@ -909,7 +909,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.187" defer></script>
+<script src="app-android.js?v=2.9.188" defer></script>
 </head>
 <body>
 <script>
@@ -2909,12 +2909,18 @@ async function salvarEdicaoProduto(id, tinhaImg) {
   if (!dados.nome) { mostrarNotif('❌ O nome é obrigatório.', true); return; }
 
   const precoAntigo = parseFloat(p.preco) || 0;
-  const { error } = await supabaseClient.from('produtos').update(dados).eq('id', id);
+  const antes = Object.assign({}, p);
+  // MOSTRA LOGO a alteração; o servidor grava em paralelo (se falhar, volta atrás)
   { var _oe = document.getElementById('overlay-editar-prod'); if (_oe) _oe.remove(); }
-  if (error) { mostrarNotif('❌ Erro: ' + error.message, true); return; }
-  // Regista mudança de preço (para a aba de Rastreio)
+  Object.assign(p, dados);
+  if (dados.imagem) { const mapa = _imagensLojas.get(_chaveLojaAtual()); if (mapa) mapa[id] = dados.imagem; }
+  renderProdutosSubPainel();
+  try { const ps = document.getElementById('painel-stock'); if (ps && ps.classList.contains('aberto')) renderStockSubPainel(); } catch(e){}
+  const { error } = await supabaseClient.from('produtos').update(dados).eq('id', id);
+  if (error) { Object.assign(p, antes); renderProdutosSubPainel(); mostrarNotif('❌ Não gravou: ' + error.message, true); return; }
+  // Regista mudança de preço (para a aba de Rastreio) — em segundo plano
   if (Math.abs((parseFloat(dados.preco)||0) - precoAntigo) > 0.001) {
-    try { await supabaseClient.from('produto_precos').insert({ produto_id: id, loja_id: lojaId, preco_antigo: precoAntigo, preco_novo: parseFloat(dados.preco)||0 }); } catch(e) {}
+    supabaseClient.from('produto_precos').insert({ produto_id: id, loja_id: lojaId, preco_antigo: precoAntigo, preco_novo: parseFloat(dados.preco)||0 }).then(() => {}, () => {});
   }
   // Rastreio: descreve o que mudou
   try {
@@ -2925,9 +2931,7 @@ async function salvarEdicaoProduto(id, tinhaImg) {
     if ((p.categoria||'') !== (dados.categoria||'')) mud.push('categoria: '+(p.categoria||'—')+' → '+(dados.categoria||'—'));
     registarAtividade('Editou produto', dados.nome + (mud.length ? ' ('+mud.join('; ')+')' : ''));
   } catch(e) {}
-  Object.assign(p, dados);
-  renderProdutosSubPainel();
-  mostrarNotif('✅ "' + dados.nome + '" atualizado! O PDV vê ao sincronizar (⟳).');
+  mostrarNotif('✅ "' + dados.nome + '" atualizado — já está na Loja!');
 }
 
 // ===== MUDAR CATEGORIA DE UM PRODUTO =====
@@ -3207,22 +3211,16 @@ async function salvarNovoProduto() {
   // AVISO DE CÓDIGO DUPLICADO: se já existe um produto com este código/código de barras nesta loja,
   // mostra qual é e pede confirmação (evita lançar o mesmo produto duas vezes).
   if (codigo) {
-    try {
-      const { data: jaExiste } = await supabaseClient.from('produtos')
-        .select('nome,preco,codigo,codbarras')
-        .eq('loja_id', lojaId)
-        .or('codigo.eq.' + codigo + ',codbarras.eq.' + codigo)
-        .limit(1);
-      if (jaExiste && jaExiste.length) {
-        const ex = jaExiste[0];
-        const ok = confirm('⚠️ JÁ EXISTE um produto com o código "' + codigo + '":\n\n'
-          + '📦 ' + (ex.nome||'(sem nome)') + '\n'
-          + '💰 MT ' + (parseFloat(ex.preco)||0).toFixed(2) + '\n\n'
-          + 'Queres mesmo gravar OUTRO produto com o mesmo código?\n'
-          + '(OK = gravar na mesma · Cancelar = voltar para corrigir)');
-        if (!ok) { msg.textContent = 'Verifica o código — já existe "' + (ex.nome||'') + '".'; msg.style.color='#d97706'; return; }
-      }
-    } catch(e) { /* se a verificação falhar, continua o save normal */ }
+    // verificação instantânea na lista já carregada (sem ir ao servidor)
+    const ex = (todosProdutos || []).find(x => x && (String(x.codigo || '') === codigo || String(x.codbarras || '') === codigo));
+    if (ex) {
+      const ok = confirm('⚠️ JÁ EXISTE um produto com o código "' + codigo + '":\n\n'
+        + '📦 ' + (ex.nome||'(sem nome)') + '\n'
+        + '💰 MT ' + (parseFloat(ex.preco)||0).toFixed(2) + '\n\n'
+        + 'Queres mesmo gravar OUTRO produto com o mesmo código?\n'
+        + '(OK = gravar na mesma · Cancelar = voltar para corrigir)');
+      if (!ok) { msg.textContent = 'Verifica o código — já existe "' + (ex.nome||'') + '".'; msg.style.color='#d97706'; return; }
+    }
   }
 
   const _unEl = document.getElementById('np-unidade');
@@ -3232,13 +3230,15 @@ async function salvarNovoProduto() {
   msg.textContent = '⏳ A guardar "'+nome+'"...'; msg.style.color='#d97706';
 
   try {
-    let { error } = await supabaseClient.from('produtos').insert(dados);
+    const COLS_NOVO = 'id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em,unidade';
+    let { data: novoRow, error } = await supabaseClient.from('produtos').insert(dados).select(COLS_NOVO);
+    let imagemFicou = !!dados.imagem;
     // GRAVAÇÃO ROBUSTA: se falhou E tinha imagem, tenta gravar SEM imagem (a imagem pode ser o problema).
     if (error && dados.imagem) {
       const semImg = Object.assign({}, dados, { imagem: null });
-      const r2 = await supabaseClient.from('produtos').insert(semImg);
+      const r2 = await supabaseClient.from('produtos').insert(semImg).select(COLS_NOVO);
       if (!r2.error) {
-        error = null;
+        error = null; novoRow = r2.data; imagemFicou = false;
         try { mostrarNotif('⚠️ Produto guardado, mas a imagem falhou. Edita o produto e tenta a foto de novo.', true); } catch(e){}
       } else { error = r2.error; }
     }
@@ -3250,11 +3250,20 @@ async function salvarNovoProduto() {
     document.getElementById('np-imagem-preview').style.display = 'none';
     document.getElementById('np-img-thumb').src = '';
     imagemBase64 = null;
-    msg.textContent = '✅ "'+nome+'" guardado com stock '+stock+'!'; msg.style.color='#16a34a';
+    msg.textContent = '✅ "'+nome+'" guardado com stock '+stock+' — já está na Loja!'; msg.style.color='#16a34a';
     setTimeout(() => { if (msg) msg.textContent = ''; }, 2500);
     registarAtividade('Cadastrou produto', nome + ' — stock ' + stock + ', venda MT ' + preco + (precoCompra? (', compra MT ' + precoCompra):''));
-    await carregarTudo();       // recarrega a lista real do servidor
+    // MOSTRA LOGO: junta o produto novo à lista (sem esperar por recarregar tudo)
+    const novo = (novoRow && novoRow[0]) ? novoRow[0] : Object.assign({ id: 'tmp-' + Date.now(), criado_em: new Date().toISOString() }, dados);
+    if (imagemFicou && dados.imagem) {
+      novo.imagem = dados.imagem;
+      const mapa = _imagensLojas.get(_chaveLojaAtual()); if (mapa) mapa[novo.id] = dados.imagem;
+    }
+    todosProdutos = [novo].concat((todosProdutos || []).filter(x => x.id !== novo.id));
+    const _c = _cacheLojas.get(_chaveLojaAtual()); if (_c) _c.produtos = todosProdutos;
     renderProdutosSubPainel();
+    try { const ps = document.getElementById('painel-stock'); if (ps && ps.classList.contains('aberto')) renderStockSubPainel(); } catch(e){}
+    setTimeout(() => { carregarTudo().catch(() => {}); }, 1500);   // confirma com o servidor em segundo plano
   } catch (e) {
     const m = (e.message || '').toLowerCase();
     if (!navigator.onLine || m.includes('fetch') || m.includes('network') || m.includes('timeout')) {
@@ -5444,7 +5453,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.187';
+const MONITOR_VERSAO = '2.9.188';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });

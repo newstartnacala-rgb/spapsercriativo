@@ -349,7 +349,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
   [tabindex]:focus-visible { outline: 2px solid #1a56a0; outline-offset: 1px; }
 </style>
-<script src="app-android.js?v=2.9.187" defer></script>
+<script src="app-android.js?v=2.9.188" defer></script>
 </head>
 <body>
 
@@ -1732,6 +1732,53 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
     // Carrega as imagens em 2º plano, só se houver rede (não bloqueia nada)
     carregarImagensEmSegundoPlano();
+    if (!window._produtosAoVivoLigado) { window._produtosAoVivoLigado = true; ligarProdutosAoVivo(); }
+  }
+
+  // ===== PRODUTOS AO VIVO: o que o dono cadastra/altera no Monitor aparece logo na Venda =====
+  let _assinProdutos = null, _aAtualizarProd = false, _canalProdutos = null, _esperaProd = null;
+  async function atualizarProdutosAoVivo() {
+    if (!navigator.onLine || !sessaoAtual || _aAtualizarProd) return;
+    if ((filaVendas || []).length) return;   // espera as vendas pendentes subirem (não mexe no stock local)
+    _aAtualizarProd = true;
+    try {
+      const cols = 'id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em,unidade';
+      let todos = [], pg = 0;
+      while (true) {
+        const { data, error } = await supabaseClient.from('produtos').select(cols).eq('loja_id', sessaoAtual.lojaId)
+          .order('criado_em', { ascending: true }).range(pg * 1000, pg * 1000 + 999);
+        if (error) return;
+        todos = todos.concat(data || []);
+        if (!data || data.length < 1000) break;
+        if (++pg > 50) break;
+      }
+      const assin = todos.map(p => [p.id, p.nome, p.preco, p.preco_compra, p.stock, p.codigo, p.codbarras, p.categoria, p.subcategoria, p.unidade].join('|')).join('\n');
+      if (assin === _assinProdutos) return;
+      _assinProdutos = assin;
+      const velhos = new Map((produtos || []).map(p => [p.id, p]));
+      produtos = todos.map(r => {
+        const n = mapearProdutoDoSupabase(r), v = velhos.get(n.id);
+        if (v) { const img = v.imagem; Object.assign(v, n); if (!v.imagem && img) v.imagem = img; return v; }
+        return n;
+      });
+      guardarCacheLeve();
+      try { renderCategorias(); } catch(e) {}
+      try { renderProdutos(); } catch(e) {}
+      try { if (document.body.classList.contains('modo2')) renderM2Grid(); } catch(e) {}
+      try { carregarImagensEmSegundoPlano(); } catch(e) {}
+    } catch(e) {} finally { _aAtualizarProd = false; }
+  }
+  function ligarProdutosAoVivo() {
+    setInterval(atualizarProdutosAoVivo, 10000);              // reserva, se o tempo real não estiver ligado
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) atualizarProdutosAoVivo(); });
+    try {
+      if (_canalProdutos || !supabaseClient.channel || !sessaoAtual) return;
+      _canalProdutos = supabaseClient.channel('loja-produtos-' + sessaoAtual.lojaId)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'produtos', filter: 'loja_id=eq.' + sessaoAtual.lojaId }, () => {
+          clearTimeout(_esperaProd); _esperaProd = setTimeout(atualizarProdutosAoVivo, 300);
+        })
+        .subscribe();
+    } catch(e) {}
   }
 
   function guardarCacheLeve() {
@@ -5803,7 +5850,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.187';
+  const VERSAO_ATUAL = '2.9.188';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
