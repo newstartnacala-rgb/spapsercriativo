@@ -824,7 +824,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   #painel-meu-perfil .pf-tit { display:flex; align-items:center; gap:12px; margin:-2px 0 16px; padding-bottom:12px; border-bottom:1px solid #eef2f7; }
   #painel-meu-perfil .pf-ico { width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0;
     background:linear-gradient(145deg,#eef4ff,#dfe9ff); box-shadow:inset 0 0 0 1px #d6e4fb; }
-  #painel-meu-perfil .pf-tit b { display:block; font-family:'Barlow Condensed','Oswald','Arial Narrow',Arial,sans-serif; font-size:19px; font-weight:900; letter-spacing:.9px; text-transform:uppercase; color:#0b1b4d; line-height:1.15; }
+  #painel-meu-perfil .pf-tit b { display:block; font-family:'EB Garamond',Garamond,Georgia,'Times New Roman',serif; font-size:18.5px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:#0b1b4d; line-height:1.15; }
   #painel-meu-perfil .pf-tit small { display:block; font-family:'Montserrat','Segoe UI',Arial,sans-serif; font-size:11.5px; font-weight:700; color:#64748b; margin-top:3px; letter-spacing:.2px; }
   #painel-meu-perfil > div > div[style*="border-radius:12px"] { border-radius:16px !important; box-shadow:0 2px 10px rgba(15,23,42,.05); }
   #painel-meu-perfil label { letter-spacing:.2px; }
@@ -937,9 +937,9 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.196" defer></script>
+<script src="app-android.js?v=2.9.197" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
 <body>
 <script>
@@ -5483,7 +5483,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.196';
+const MONITOR_VERSAO = '2.9.197';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
