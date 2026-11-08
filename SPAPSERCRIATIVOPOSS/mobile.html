@@ -111,9 +111,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="SPAP Banca">
-<link rel="stylesheet" href="banca-tema.css?v=2.9.202">
-<script src="banca-tema.js?v=2.9.202" defer></script>
-<script src="app-android.js?v=2.9.202" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.0.0">
+<script src="banca-tema.js?v=3.0.0" defer></script>
+<script src="app-android.js?v=3.0.0" defer></script>
 </head>
 <body>
 
@@ -277,6 +277,7 @@
         <div class="mi" onclick="suporte()"><div class="e">💬</div><div class="t">Suporte</div></div>
         <div class="mi" onclick="fecharFolha('folha-menu');window.spapInstalarApp&&spapInstalarApp('android')"><div class="e">📲</div><div class="t">App para Android</div></div>
         <div class="mi" onclick="fecharFolha('folha-menu');window.spapInstalarApp&&spapInstalarApp('ios')"><div class="e">📱</div><div class="t">App para iPhone</div></div>
+        <div class="mi" onclick="fecharFolha('folha-menu');window.bancaVerificarAtualizacao&&bancaVerificarAtualizacao(true)"><div class="e">🔄</div><div class="t">Verificar atualizações</div></div>
         <div class="mi" onclick="sairBanca()" style="background:#fef2f2;"><div class="e">🚪</div><div class="t">Sair</div></div>
       </div>
     </div>
@@ -892,7 +893,7 @@ async function rejeitarDespacho(i){
   try{ await supabaseClient.from('despachos').update({estado:'rejeitado'}).eq('id',d.id); toast('Despacho rejeitado','ok'); avisoDespacho(); }
   catch(e){ toast('Erro: '+(e.message||e),'erro'); }
 }
-async function sairBanca(){ if(!confirm('Terminar sessão?')) return; try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='banca/login'; }
+async function sairBanca(){ try{ sessionStorage.removeItem('banca_vend_ok'); }catch(e){} try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='banca/login'; }
 
 // ===== PERDA =====
 function abrirPerda(){ fecharFolha('folha-menu'); const b=document.getElementById('pd-busca'); if(b)b.value=''; const r=document.getElementById('pd-result'); if(r)r.innerHTML=''; abrirFolha('folha-perda'); }

@@ -74,9 +74,9 @@
   .menu-grid .mi{background:#f0fdf4;border:1px solid var(--borda);border-radius:14px;padding:16px 10px;text-align:center;}
   .menu-grid .mi .e{font-size:28px;} .menu-grid .mi .t{font-size:12px;font-weight:700;margin-top:6px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=2.9.202">
-<script src="banca-tema.js?v=2.9.202" defer></script>
-<script src="app-android.js?v=2.9.202" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.0.0">
+<script src="banca-tema.js?v=3.0.0" defer></script>
+<script src="app-android.js?v=3.0.0" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar"><div class="spin"></div><div>A abrir o monitor…</div></div>
@@ -84,7 +84,7 @@
 <!-- ===== RESUMO ===== -->
 <div id="tela-resumo" class="tela ativa">
   <div class="topo">
-    <div><div class="nome" id="nome-loja">Banca</div><div class="sub">Monitor · resumo</div></div>
+    <div><div class="nome" id="nome-loja">Banca</div><div class="sub">Monitor da banca</div></div>
     <button onclick="abrirMenu()">☰ Menu</button>
   </div>
   <div class="corpo">
@@ -108,7 +108,7 @@
     <div id="lista-vendas" class="cartao"><div class="vazio">A carregar…</div></div>
   </div>
   <div class="nav">
-    <a class="on"><span class="ic">📊</span>Resumo</a>
+    <a class="on"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true" class="ic-home"><path fill="currentColor" d="M11.3 2.7a1 1 0 0 1 1.4 0l9 8.6a1 1 0 0 1-1.4 1.4l-.8-.7V20a2 2 0 0 1-2 2h-3.5a1 1 0 0 1-1-1v-5h-2v5a1 1 0 0 1-1 1H6.5a2 2 0 0 1-2-2v-8l-.8.7a1 1 0 0 1-1.4-1.4z"/></svg></span>Home</a>
     <a onclick="mostrarTela('produtos')"><span class="ic">📦</span>Stock</a>
     <a onclick="mostrarTela('descontos')"><span class="ic">🏷️</span>Descontos</a>
   </div>
@@ -127,7 +127,7 @@
     <div id="lista-produtos" class="cartao"><div class="vazio">A carregar…</div></div>
   </div>
   <div class="nav">
-    <a onclick="mostrarTela('resumo')"><span class="ic">📊</span>Resumo</a>
+    <a onclick="mostrarTela('resumo')"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true" class="ic-home"><path fill="currentColor" d="M11.3 2.7a1 1 0 0 1 1.4 0l9 8.6a1 1 0 0 1-1.4 1.4l-.8-.7V20a2 2 0 0 1-2 2h-3.5a1 1 0 0 1-1-1v-5h-2v5a1 1 0 0 1-1 1H6.5a2 2 0 0 1-2-2v-8l-.8.7a1 1 0 0 1-1.4-1.4z"/></svg></span>Home</a>
     <a class="on"><span class="ic">📦</span>Stock</a>
     <a onclick="mostrarTela('descontos')"><span class="ic">🏷️</span>Descontos</a>
   </div>
@@ -146,7 +146,7 @@
     <div id="lista-descontos" class="cartao"><div class="vazio">A carregar…</div></div>
   </div>
   <div class="nav">
-    <a onclick="mostrarTela('resumo')"><span class="ic">📊</span>Resumo</a>
+    <a onclick="mostrarTela('resumo')"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true" class="ic-home"><path fill="currentColor" d="M11.3 2.7a1 1 0 0 1 1.4 0l9 8.6a1 1 0 0 1-1.4 1.4l-.8-.7V20a2 2 0 0 1-2 2h-3.5a1 1 0 0 1-1-1v-5h-2v5a1 1 0 0 1-1 1H6.5a2 2 0 0 1-2-2v-8l-.8.7a1 1 0 0 1-1.4-1.4z"/></svg></span>Home</a>
     <a onclick="mostrarTela('produtos')"><span class="ic">📦</span>Stock</a>
     <a class="on"><span class="ic">🏷️</span>Descontos</a>
   </div>
@@ -172,6 +172,7 @@
         <div class="mi" onclick="fecharFolha('folha-menu');window.spapInstalarApp?spapInstalarApp('android'):mInstalar()"><div class="e">📲</div><div class="t">App para Android</div></div>
         <div class="mi" onclick="fecharFolha('folha-menu');window.spapInstalarApp?spapInstalarApp('ios'):mInstalar()"><div class="e">📱</div><div class="t">App para iPhone</div></div>
         <div class="mi" onclick="suporte()"><div class="e">💬</div><div class="t">Suporte</div></div>
+        <div class="mi" onclick="fecharFolha('folha-menu');window.bancaVerificarAtualizacao&&bancaVerificarAtualizacao(true)"><div class="e">🔄</div><div class="t">Verificar atualizações</div></div>
         <div class="mi" onclick="sairBanca()" style="background:#fef2f2;"><div class="e">🚪</div><div class="t">Sair</div></div>
       </div>
     </div>
@@ -417,7 +418,7 @@ function abrirMenu(){ abrirFolha('folha-menu'); }
 function suporte(){ fecharFolha('folha-menu'); window.open('https://wa.me/258866577722?text='+encodeURIComponent('Olá, preciso de ajuda com o monitor da minha banca.'),'_blank'); }
 function sobre(){ fecharFolha('folha-menu'); alert('ℹ️ Mobile POSS — Monitor\nSpap-Sercriativo\n\nBanca: '+(sessao?sessao.nomeLoja:'')+'\nVersão 2.9.149'); }
 async function atualizarDados(){ fecharFolha('folha-menu'); toast('🔄 A atualizar…'); await carregarProdutos(); await Promise.all([carregarResumo(), carregarDescontos()]); toast('✅ Atualizado','ok'); }
-async function sairBanca(){ if(!confirm('Terminar sessão?')) return; try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='banca/login'; }
+async function sairBanca(){ try{ sessionStorage.removeItem('banca_vend_ok'); }catch(e){} try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='banca/login'; }
 
 // ===== ADICIONAR PRODUTO =====
 let apImg=undefined;

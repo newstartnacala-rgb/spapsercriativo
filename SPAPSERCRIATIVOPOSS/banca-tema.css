@@ -286,3 +286,15 @@ body.pg-mon .tela.ativa .corpo{background:var(--agua1) repeat-x 0 100% / 360px 1
 @media (prefers-reduced-motion:reduce){
   body.pg-mon .stat,body.pg-mon .cartao,body.pg-mon .tela.ativa .corpo,body.pg-mon .stat .lbl img,#bt-entrega-dia::after,#btn-abrir-cart::after,.nav a.on .ic img{animation:none !important;}
 }
+
+/* ---------- v3.0.0: Home com ícone e atualizações da Banca ---------- */
+.nav a .ic svg.ic-home{width:25px;height:25px;display:block;color:#f26a0c;filter:drop-shadow(0 2px 3px rgba(242,112,15,.3));}
+.nav a.on .ic svg.ic-home{color:#fff;filter:none;}
+.att-folha{padding:22px 20px calc(env(safe-area-inset-bottom) + 20px) !important;text-align:center;}
+.att-folha .att-ico{width:84px;height:84px;margin:4px auto 8px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:var(--sombra);font-size:40px;}
+.att-folha .att-ico img.e3d{width:50px;height:50px;vertical-align:0;animation:att-girar 2.4s linear infinite;}
+@keyframes att-girar{to{transform:rotate(360deg)}}
+.att-folha h3{font-size:21px;font-weight:800;color:var(--nv);}
+.att-folha .att-v{font-weight:800;color:var(--lj);margin:4px 0 10px;}
+.att-folha ul{text-align:left;margin:0 0 14px 18px;color:#475569;font-size:14px;display:grid;gap:6px;}
+.att-folha .btn{margin-top:8px;}

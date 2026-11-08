@@ -765,7 +765,8 @@ public class MainActivity extends Activity {
         new Thread(() -> {
             java.net.HttpURLConnection c = null;
             try {
-                c = (java.net.HttpURLConnection) new java.net.URL(base + "/apps/app-version.json?t=" + System.currentTimeMillis()).openConnection();
+                String ficheiroVersao = BuildConfig.APP_TIPO.startsWith("banca") ? "/apps/app-banca-version.json" : "/apps/app-version.json";
+                c = (java.net.HttpURLConnection) new java.net.URL(base + ficheiroVersao + "?t=" + System.currentTimeMillis()).openConnection();
                 c.setConnectTimeout(8000); c.setReadTimeout(8000); c.setUseCaches(false);
                 if (c.getResponseCode() != 200) return;
                 StringBuilder sb = new StringBuilder();

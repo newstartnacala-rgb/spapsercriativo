@@ -2,7 +2,7 @@ name: SPAP Apps Android (Monitor + Loja + Banca + Banca Monitor)
 on:
   push:
     branches: [ main ]
-    paths: [ 'spap-android/**', '.github/workflows/spap-apk.yml', 'SPAPSERCRIATIVOPOSS/version.json' ]
+    paths: [ 'spap-android/**', '.github/workflows/spap-apk.yml', 'SPAPSERCRIATIVOPOSS/version.json', 'SPAPSERCRIATIVOPOSS/banca-version.json' ]
   workflow_dispatch:
 permissions:
   contents: write
@@ -29,37 +29,45 @@ jobs:
         working-directory: spap-android
         run: |
           chmod +x gradlew
-          # A app tem a MESMA versão do sistema (version.json) → sobe em cada atualização
+          code() { python3 -c "v='$1'.split('.')+['0','0'];print(int(v[0])*1000000+int(v[1])*10000+int(v[2]))"; }
+          # Loja + Monitor seguem a versão principal (version.json)
           VN=$(python3 -c "import json;print(json.load(open('../SPAPSERCRIATIVOPOSS/version.json'))['versao'])")
-          VC=$(python3 -c "v='$VN'.split('.')+['0','0'];print(int(v[0])*1000000+int(v[1])*10000+int(v[2]))")
-          echo "Versão da app: $VN (code $VC)"
-          echo "VN=$VN" >> $GITHUB_ENV
-          ./gradlew assembleMonitorRelease assembleLojaRelease assembleBancaRelease assembleBancamonitorRelease --no-daemon --stacktrace -PappVersionName="$VN" -PappVersionCode="$VC"
-      - name: Publicar APKs no site (para a app se atualizar sozinha)
+          # Banca + Banca Monitor têm versões próprias (banca-version.json)
+          VB=$(python3 -c "import json;print(json.load(open('../SPAPSERCRIATIVOPOSS/banca-version.json'))['versao'])")
+          echo "Principal: $VN  |  Banca: $VB"
+          echo "VN=$VN" >> $GITHUB_ENV; echo "VB=$VB" >> $GITHUB_ENV
+          ./gradlew assembleMonitorRelease assembleLojaRelease --no-daemon --stacktrace -PappVersionName="$VN" -PappVersionCode="$(code $VN)"
+          ./gradlew assembleBancaRelease assembleBancamonitorRelease --no-daemon --stacktrace -PappVersionName="$VB" -PappVersionCode="$(code $VB)"
+      - name: Publicar APKs no site (para cada app se atualizar sozinha)
         run: |
           mkdir -p apks-build SPAPSERCRIATIVOPOSS/apps
           cp spap-android/app/build/outputs/apk/monitor/release/app-monitor-release.apk apks-build/SPAP-Monitor.apk
           cp spap-android/app/build/outputs/apk/loja/release/app-loja-release.apk apks-build/SPAP-Loja.apk
           cp spap-android/app/build/outputs/apk/banca/release/app-banca-release.apk apks-build/SPAP-Banca.apk
           cp spap-android/app/build/outputs/apk/bancamonitor/release/app-bancamonitor-release.apk apks-build/SPAP-Banca-Monitor.apk
-          cp apks-build/SPAP-Monitor.apk apks-build/SPAP-Loja.apk apks-build/SPAP-Banca.apk apks-build/SPAP-Banca-Monitor.apk SPAPSERCRIATIVOPOSS/apps/
+          cp apks-build/SPAP-*.apk SPAPSERCRIATIVOPOSS/apps/
+          # (banca/bancamonitor aqui só para as apps da Banca antigas, ≤2.9.202, passarem para a linha 3.x)
           printf '{"versao":"%s","data":"%s","monitor":"apps/SPAP-Monitor.apk","loja":"apps/SPAP-Loja.apk","banca":"apps/SPAP-Banca.apk","bancamonitor":"apps/SPAP-Banca-Monitor.apk"}\n' "$VN" "$(date -u +%Y-%m-%d)" > SPAPSERCRIATIVOPOSS/apps/app-version.json
-          cat SPAPSERCRIATIVOPOSS/apps/app-version.json
+          printf '{"versao":"%s","data":"%s","banca":"apps/SPAP-Banca.apk","bancamonitor":"apps/SPAP-Banca-Monitor.apk"}\n' "$VB" "$(date -u +%Y-%m-%d)" > SPAPSERCRIATIVOPOSS/apps/app-banca-version.json
+          cat SPAPSERCRIATIVOPOSS/apps/app-version.json SPAPSERCRIATIVOPOSS/apps/app-banca-version.json
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -f SPAPSERCRIATIVOPOSS/apps
-          git commit -m "Apps SPAP $VN publicadas no site" || echo "sem mudanças"
+          git commit -m "Apps SPAP $VN e Banca $VB publicadas no site" || echo "sem mudanças"
           git pull --rebase --autostash || true
           git push
-      - name: Publicar em Releases (link fixo de download)
+      - name: Publicar em Releases (links fixos de download)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="apps-v$VN"
-          gh release create "$TAG" apks-build/SPAP-Monitor.apk apks-build/SPAP-Loja.apk apks-build/SPAP-Banca.apk apks-build/SPAP-Banca-Monitor.apk \
-            --title "SPAP Apps $VN" \
-            --notes "SPAP Monitor, SPAP Loja, SPAP Banca e SPAP Banca Monitor (Android). Instalar: descarregar o APK e abrir no telemóvel." \
-            --latest || gh release upload "$TAG" apks-build/SPAP-Monitor.apk apks-build/SPAP-Loja.apk apks-build/SPAP-Banca.apk apks-build/SPAP-Banca-Monitor.apk --clobber
+          # Canal principal: loja-latest (Loja + Monitor). Canal da Banca: banca-latest (Banca + Banca Monitor).
+          publicar() {
+            TAG="$1"; TIT="$2"; NOTA="$3"; shift 3
+            gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+            gh release create "$TAG" "$@" --title "$TIT" --notes "$NOTA" --latest=false
+          }
+          publicar loja-latest "SPAP Loja e Monitor $VN" "versao=$VN" apks-build/SPAP-Loja.apk apks-build/SPAP-Monitor.apk
+          publicar banca-latest "SPAP Banca e Banca Monitor $VB" "versao=$VB" apks-build/SPAP-Banca.apk apks-build/SPAP-Banca-Monitor.apk
       - name: Voltar a verificar o site (com a app nova)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -34,7 +34,7 @@
     return 0;
   }
   function lerVersao() {
-    return fetch('apps/app-version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+    return fetch('apps/' + (tipo.indexOf('banca') === 0 ? 'app-banca-version.json' : 'app-version.json') + '?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
   }
 
   var css = '#apk-convite{position:fixed;inset:0;z-index:100001;background:rgba(2,6,23,.55);display:flex;align-items:flex-end;justify-content:center;animation:apkF .2s ease;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}'

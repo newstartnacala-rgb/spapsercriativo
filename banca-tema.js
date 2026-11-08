@@ -1,6 +1,9 @@
 /* SPAP Banca — tema moderno: troca os emojis por ícones 3D (os mesmos da
    plataforma principal) e monta a marca no cabeçalho. Não muda funções. */
 (function () {
+  // Versão da Banca desta página (vem do ?v= do próprio ficheiro)
+  var EU_VERSAO = '0';
+  try { EU_VERSAO = new URL(document.currentScript.src).searchParams.get('v') || '0'; } catch (e) {}
   var MAPA = {
     '🛒': 'cart', '📦': 'package', '🧾': 'receipt', '↩️': 'refresh', '↩': 'refresh', '🚚': 'truck', '🌐': 'globe',
     '💬': 'chat', '🚪': 'door', '📊': 'barchart', '🏷️': 'label', '🏷': 'label', '📈': 'chartup', '📉': 'chartdown',
@@ -9,7 +12,7 @@
     '📅': 'calendar', '🏪': 'store', '📧': 'envelope', '🔑': 'key', '📱': 'telemovel', '🔁': 'refresh',
     '🔐': 'cadeado', '💳': 'card', '📷': 'camera', '💵': 'dinheiro-voa', '✅': 'check', '🖨️': 'page', '🖨': 'page',
     '🗑': 'lixo', '🗑️': 'lixo', '☰': null, '📩': 'envelope', '⏳': 'hourglass', '🚫': 'prohibited', '🔒': 'cadeado',
-    '📋': 'clipboard', '🔔': 'bell', '⭐': 'star', '🏆': 'trophy', '📌': 'pin'
+    '📋': 'clipboard', '🔄': 'refresh', '🔔': 'bell', '⭐': 'star', '🏆': 'trophy', '📌': 'pin'
   };
   var chaves = Object.keys(MAPA).sort(function (a, b) { return b.length - a.length; });
   var RE = new RegExp('(' + chaves.map(function (k) { return k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }).join('|') + ')\\uFE0F?', 'g');
@@ -94,6 +97,61 @@
     document.querySelectorAll('.menu-grid').forEach(function (g) { Array.prototype.forEach.call(g.children, function (m, i) { m.style.setProperty('--i', i); }); });
   }
 
+  // ===== Atualizações da Banca (separadas da Loja/Monitor principal) =====
+  function cmpV(a, b) {
+    var x = String(a || '').split('.'), y = String(b || '').split('.');
+    for (var i = 0; i < Math.max(x.length, y.length); i++) { var d = (parseInt(x[i], 10) || 0) - (parseInt(y[i], 10) || 0); if (d) return d; }
+    return 0;
+  }
+  function ocupado() {
+    // não interromper uma venda: carrinho com produtos ou alguma folha aberta
+    try { if (typeof carrinho !== 'undefined' && carrinho.length) return true; } catch (e) {}
+    return !!document.querySelector('.folha-fundo.ativa');
+  }
+  function aplicarAtualizacao() {
+    var feito = function () { location.reload(); };
+    try {
+      if ('caches' in window) caches.keys().then(function (k) { return Promise.all(k.map(function (n) { return caches.delete(n); })); }).then(feito, feito);
+      else feito();
+    } catch (e) { feito(); }
+  }
+  function folhaAtualizacao(v, nova) {
+    var ov = document.getElementById('folha-att-banca'); if (ov) ov.remove();
+    ov = document.createElement('div'); ov.className = 'folha-fundo ativa'; ov.id = 'folha-att-banca';
+    var lista = (v.melhorias || []).slice(0, 5).map(function (t) { return '<li>' + String(t).replace(/</g, '&lt;') + '</li>'; }).join('');
+    ov.innerHTML = '<div class="folha att-folha"><div class="att-ico">🔄</div>'
+      + '<h3>' + (nova ? 'Nova atualização da Banca' : 'A Banca está atualizada') + '</h3>'
+      + '<div class="att-v">Versão ' + v.versao + (nova ? ' (tem a ' + EU_VERSAO + ')' : '') + '</div>'
+      + (lista ? '<ul>' + lista + '</ul>' : '')
+      + (nova ? '<button class="btn" type="button" id="att-sim">Atualizar agora</button><button class="btn cinza" type="button" id="att-nao">Mais tarde</button>'
+              : '<button class="btn" type="button" id="att-nao">Fechar</button>')
+      + '</div>';
+    document.body.appendChild(ov);
+    var s1 = ov.querySelector('#att-sim'); if (s1) s1.onclick = function () { s1.disabled = true; s1.textContent = 'A atualizar…'; aplicarAtualizacao(); };
+    ov.querySelector('#att-nao').onclick = function () { ov.remove(); };
+    ov.addEventListener('click', function (e) { if (e.target === ov) ov.remove(); });
+  }
+  var avisada = '';
+  function verificarAtualizacao(manual) {
+    return fetch('banca-version.json?t=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (v) {
+        if (!v || !v.versao) { if (manual && window.toast) toast('Não foi possível verificar agora', 'erro'); return; }
+        var nova = cmpV(v.versao, EU_VERSAO) > 0;
+        if (manual) { folhaAtualizacao(v, nova); return; }
+        if (!nova || avisada === v.versao) return;
+        avisada = v.versao;
+        // sem venda a decorrer: atualiza sozinha; com venda: pergunta
+        // proteção: só tenta recarregar sozinha uma vez por versão (evita ciclos)
+        var chave = 'banca_att_' + v.versao, ja = false;
+        try { ja = sessionStorage.getItem(chave) === '1'; sessionStorage.setItem(chave, '1'); } catch (e) {}
+        if (ja) return;
+        if (!ocupado()) { if (window.toast) toast('🔄 A atualizar a Banca para a versão ' + v.versao + '…', 'ok'); setTimeout(aplicarAtualizacao, 1800); }
+        else folhaAtualizacao(v, true);
+      }).catch(function () { if (manual && window.toast) toast('Sem internet para verificar', 'erro'); });
+  }
+  window.bancaVerificarAtualizacao = verificarAtualizacao;
+
   function iniciar() {
     try { marcaTopo(); menuTresBarras(); numerarMenus(); } catch (e) {}
     if (document.getElementById('tela-resumo')) document.body.classList.add('pg-mon');
@@ -109,6 +167,9 @@
         });
       }).observe(document.body, { childList: true, subtree: true, characterData: true });
     } catch (e) {}
+    setTimeout(function () { verificarAtualizacao(false); }, 6000);
+    setInterval(function () { verificarAtualizacao(false); }, 60000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) verificarAtualizacao(false); });
     var tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.setAttribute('content', '#f4f8ff');
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar); else iniciar();
