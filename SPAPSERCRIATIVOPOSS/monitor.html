@@ -909,7 +909,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.188" defer></script>
+<script src="app-android.js?v=2.9.189" defer></script>
 </head>
 <body>
 <script>
@@ -1843,7 +1843,7 @@ function pedirPinMonitor(onOk) {
         style="width:100%;padding:14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:20px;text-align:center;letter-spacing:6px;box-sizing:border-box;">
       <div id="pin-erro" style="color:#dc2626;font-size:13px;min-height:18px;margin:8px 0;"></div>
       <button onclick="validarPinMonitor()" style="width:100%;padding:14px;background:#1a56a0;border:none;border-radius:10px;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;">Entrar</button>
-      <button onclick="fazerLogout()" style="width:100%;padding:10px;background:none;border:none;color:#94a3b8;font-size:13px;cursor:pointer;margin-top:8px;">Sair</button>
+      <button onclick="sair()" style="width:100%;padding:10px;background:none;border:none;color:#94a3b8;font-size:13px;cursor:pointer;margin-top:8px;">Sair</button>
     </div>`;
   document.body.appendChild(ov);
   const inp = document.getElementById('pin-input');
@@ -5453,7 +5453,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.188';
+const MONITOR_VERSAO = '2.9.189';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -5486,9 +5486,8 @@ setTimeout(verificarAtualizacaoMonitor, 8000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) verificarAtualizacaoMonitor(); });
 
 async function sair() {
-  if (!confirm('Terminar sessão?')) return;
-  clearInterval(intervalo);
-  await supabaseClient.auth.signOut();
+  try { clearInterval(intervalo); } catch(e) {}
+  try { await supabaseClient.auth.signOut(); } catch(e) {}
   localStorage.setItem('pdv_login_destino','monitor.html'); window.location.href = 'login.html';
 }
 
@@ -5896,8 +5895,7 @@ async function abrirMeuPerfil() {
         'anual':  { nome: 'Anual', desc: 'Plano anual com desconto' }
       };
       const p = planos[data.plano] || { nome: data.plano || '—', desc: '' };
-      document.getElementById('perfil-plano-badge').textContent = 'Plano ' + p.nome;
-      document.getElementById('perfil-plano-info').textContent = p.desc;
+      { const _b = document.getElementById('perfil-plano-badge'); if (_b) _b.textContent = 'Plano ' + p.nome; const _i = document.getElementById('perfil-plano-info'); if (_i) _i.textContent = p.desc; }
     }
   } catch(e) { mostrarNotif('❌ Erro ao carregar perfil: ' + (e.message||e), true); }
 }
@@ -5968,29 +5966,46 @@ async function guardarDadosPerfil() {
   mostrarNotif('✅ Dados guardados!');
 }
 
+// Troca o e-mail DIRETAMENTE na base de dados (função segura no Supabase: só mexe na conta de quem está ligado).
 async function trocarEmail() {
-  const novo = document.getElementById('perfil-in-email').value.trim();
-  if (!novo || !novo.includes('@')) { mostrarNotif('❌ Escreve um e-mail válido.', true); return; }
-  if (!confirm('Trocar o e-mail para ' + novo + '?\nVais receber um link de confirmação no e-mail NOVO. A conta só muda depois de clicares nesse link.')) return;
-  const { error } = await supabaseClient.auth.updateUser(
-    { email: novo },
-    { emailRedirectTo: window.location.origin + '/monitor.html' }
-  );
-  if (error) { mostrarNotif('❌ ' + error.message, true); return; }
-  mostrarNotif('✅ Link enviado para ' + novo + '. Abre o email e clica no link para confirmar a troca.');
-  document.getElementById('perfil-in-email').value = '';
+  const inp = document.getElementById('perfil-in-email');
+  const novo = (inp.value || '').trim().toLowerCase();
+  if (!novo || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(novo)) { mostrarNotif('❌ Escreve um e-mail válido.', true); return; }
+  const btn = document.getElementById('btn-trocar-email');
+  if (btn) { btn.disabled = true; btn.textContent = 'A trocar…'; }
+  try {
+    const { error } = await supabaseClient.rpc('trocar_email_conta', { novo_email: novo });
+    if (error) {
+      const m = (error.message || '');
+      if (/email_em_uso/i.test(m)) { mostrarNotif('❌ Esse e-mail já pertence a outra conta.', true); return; }
+      if (/function|does not exist|schema cache/i.test(m)) {
+        // SQL ainda não instalado → método normal do Supabase (envia link de confirmação)
+        const r = await supabaseClient.auth.updateUser({ email: novo }, { emailRedirectTo: window.location.origin + '/monitor.html' });
+        if (r.error) { mostrarNotif('❌ ' + r.error.message, true); return; }
+        mostrarNotif('✉️ Link enviado para ' + novo + ' (corre o SQL da v2.9.189 para trocar sem link).'); inp.value = ''; return;
+      }
+      mostrarNotif('❌ ' + m, true); return;
+    }
+    try { await supabaseClient.auth.refreshSession(); } catch(e) {}
+    const pe = document.getElementById('perfil-email'); if (pe) pe.textContent = novo;
+    inp.value = '';
+    mostrarNotif('✅ E-mail trocado para ' + novo + '. Da próxima vez entra com este e-mail.');
+  } finally { if (btn) { btn.disabled = false; btn.textContent = '✉️ Trocar e-mail'; } }
 }
 
+// Troca a senha diretamente (Supabase); se o Supabase pedir nova autenticação, usa a função segura da base de dados.
 async function trocarSenha() {
-  const nova = document.getElementById('perfil-in-senha').value;
+  const inp = document.getElementById('perfil-in-senha');
+  const nova = inp.value;
   if (!nova || nova.length < 6) { mostrarNotif('❌ A senha deve ter pelo menos 6 caracteres.', true); return; }
-  if (!confirm('Trocar a tua senha agora?')) return;
-  const { error } = await supabaseClient.auth.updateUser({ password: nova });
-  if (error) { mostrarNotif('❌ ' + error.message, true); return; }
-  mostrarNotif('✅ Senha trocada com sucesso!');
-  document.getElementById('perfil-in-senha').value = '';
+  let { error } = await supabaseClient.auth.updateUser({ password: nova });
+  if (error) {
+    const r = await supabaseClient.rpc('trocar_senha_conta', { nova_senha: nova });
+    if (r.error) { mostrarNotif('❌ ' + (error.message || r.error.message), true); return; }
+  }
+  inp.value = '';
+  mostrarNotif('✅ Senha trocada! Da próxima vez entra com a nova senha.');
 }
-
 
 // ===== INVENTARIO COLABORATIVO (Contar em Equipa) =====
 // ===== NOTIFICAÇÃO FLUTUANTE (toast) =====
@@ -6642,23 +6657,12 @@ async function carregarContagensEquipa() {
     <div style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:white;border-radius:14px;padding:20px;margin-bottom:18px;">
       <div style="font-size:22px;font-weight:bold;" id="perfil-nome-loja">—</div>
       <div style="font-size:14px;opacity:0.9;margin-top:4px;" id="perfil-email">—</div>
-      <div style="display:inline-block;margin-top:10px;background:rgba(255,255,255,0.25);border-radius:20px;padding:5px 14px;font-size:13px;font-weight:bold;" id="perfil-plano-badge">Plano —</div>
     </div>
 
-    <!-- Plano e upgrade -->
-    <div style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:16px;">
-      <div style="font-weight:bold;font-size:15px;margin-bottom:10px;color:#334155;">📦 O meu plano</div>
-      <div id="perfil-plano-info" style="font-size:14px;color:#64748b;margin-bottom:12px;">—</div>
-      <button onclick="window.open('planos.html','_blank')" style="width:100%;padding:12px;background:#7c3aed;border:none;border-radius:10px;color:white;font-weight:bold;cursor:pointer;">⬆️ Ver planos / Fazer upgrade</button>
-    </div>
-
-    <!-- Dados pessoais -->
-    <div style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:16px;">
-      <div style="font-weight:bold;font-size:15px;margin-bottom:12px;color:#334155;">✏️ Dados da loja</div>
-
-      <label style="font-size:13px;color:#64748b;font-weight:600;">Nome da loja</label>
-      <input type="text" id="perfil-in-nome" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:15px;margin:5px 0 12px;box-sizing:border-box;">
-
+    <!-- Recibos: tudo o que aparece no recibo, num só sítio -->
+    <div id="perfil-recibos" style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:16px;">
+      <div style="font-weight:bold;font-size:15px;margin-bottom:4px;color:#334155;">🧾 Recibos</div>
+      <div style="font-size:12px;color:#94a3b8;margin-bottom:12px;">Tudo o que aparece no recibo impresso.</div>
       <label style="font-size:13px;color:#64748b;font-weight:600;">Nome da empresa (no recibo)</label>
       <input type="text" id="perfil-in-empresa" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:15px;margin:5px 0 12px;box-sizing:border-box;">
 
@@ -6668,16 +6672,26 @@ async function carregarContagensEquipa() {
         <input type="file" accept="image/*" id="perfil-logo-file" onchange="perfilCarregarLogo(this)" style="flex:1;font-size:12px;">
         <button type="button" onclick="perfilRemoverLogo()" style="padding:8px 10px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;cursor:pointer;font-size:12px;">Remover</button>
       </div>
-      <button type="button" onclick="guardarLogo()" style="width:100%;padding:11px;background:#16a34a;color:white;border:none;border-radius:9px;font-weight:bold;cursor:pointer;font-size:14px;margin-bottom:14px;">💾 Guardar só o logótipo</button>
+      
+
+      <label style="font-size:13px;color:#64748b;font-weight:600;">🧾 Rodapé do recibo (o texto no fundo)</label>
+      <textarea id="perfil-in-rodape" rows="2" placeholder="Ex: Obrigado pela preferência!" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:14px;margin:5px 0 14px;box-sizing:border-box;resize:vertical;"></textarea>
+
+      <button onclick="guardarDadosPerfil()" style="width:100%;padding:12px;background:#16a34a;border:none;border-radius:10px;color:white;font-weight:bold;cursor:pointer;">💾 Guardar recibo</button>
+    </div>
+
+    <!-- Dados pessoais -->
+    <div style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:16px;">
+      <div style="font-weight:bold;font-size:15px;margin-bottom:12px;color:#334155;">✏️ Dados da loja</div>
+
+      <label style="font-size:13px;color:#64748b;font-weight:600;">Nome da loja</label>
+      <input type="text" id="perfil-in-nome" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:15px;margin:5px 0 12px;box-sizing:border-box;">
 
       <label style="font-size:13px;color:#64748b;font-weight:600;">Telefone / Contacto</label>
       <input type="text" id="perfil-in-telefone" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:15px;margin:5px 0 12px;box-sizing:border-box;">
 
       <label style="font-size:13px;color:#64748b;font-weight:600;">Endereço</label>
       <input type="text" id="perfil-in-endereco" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:15px;margin:5px 0 14px;box-sizing:border-box;">
-
-      <label style="font-size:13px;color:#64748b;font-weight:600;">🧾 Rodapé do recibo (o texto no fundo)</label>
-      <textarea id="perfil-in-rodape" rows="2" placeholder="Ex: Obrigado pela preferência!" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:14px;margin:5px 0 14px;box-sizing:border-box;resize:vertical;"></textarea>
 
       <label style="font-size:13px;color:#64748b;font-weight:600;">🔑 Código de acesso do balconista (loja)</label>
       <input type="text" id="perfil-in-codigo" placeholder="ex: 1234" style="width:100%;padding:11px;border:1.5px solid #fdba74;border-radius:9px;font-size:15px;margin:5px 0 4px;box-sizing:border-box;">
@@ -6720,7 +6734,7 @@ async function carregarContagensEquipa() {
     </div>
 
     <div style="font-size:12px;color:#94a3b8;text-align:center;padding:8px;">
-      Ao trocar o e-mail, vais receber um link de confirmação no e-mail novo. A conta só muda depois de confirmares.
+      O e-mail e a senha mudam na hora. Da próxima vez, entra com os novos dados.
     </div>
   </div>
 </div>
