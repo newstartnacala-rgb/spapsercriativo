@@ -73,9 +73,9 @@
   .menu-grid .mi{background:#f0fdf4;border:1px solid var(--borda);border-radius:14px;padding:16px 10px;text-align:center;}
   .menu-grid .mi .e{font-size:28px;} .menu-grid .mi .t{font-size:12px;font-weight:700;margin-top:6px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.5.1">
-<script src="banca-tema.js?v=3.5.1" defer></script>
-<script src="app-android.js?v=3.5.1" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.6.0">
+<script src="banca-tema.js?v=3.6.0" defer></script>
+<script src="app-android.js?v=3.6.0" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -145,7 +145,7 @@
       <div class="stat"><div class="lbl">⚠️ Sem/baixo stock</div><div class="val" id="s-baixo" style="color:#dc2626">0</div></div>
       <div class="stat wide"><div class="lbl">💼 Valor do stock (a preço de venda)</div><div class="val" id="s-valorstock">MT 0,00</div></div>
     </div>
-    <h4>Produtos (toca para repor stock ou mudar preço)</h4>
+    <h4>Produtos <small class="h4-dica">· toque para gerir, carregue uns instantes para selecionar e eliminar</small></h4>
     <div class="barra-stock">
       <input id="busca-stock" type="search" placeholder="Procurar produto ou código…" oninput="renderProdutos()" autocomplete="off">
       <button type="button" onclick="scanStock()" aria-label="Ler código de barras">📷</button>
@@ -216,6 +216,26 @@
         <div class="mi" onclick="fecharFolha('folha-definicoes');window.bancaVerificarAtualizacao&&bancaVerificarAtualizacao(true)"><div class="e">🔄</div><div class="t">Verificar atualizações</div></div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ===== BARRA DE SELEÇÃO (eliminar produtos) ===== -->
+<div class="sel-barra" id="sel-barra">
+  <button type="button" class="sel-x" onclick="sairSelecao()" aria-label="Cancelar">✕</button>
+  <span id="sel-n">0 selecionados</span>
+  <button type="button" class="sel-tudo" onclick="selTudo()">Todos</button>
+  <button type="button" class="sel-cancelar" onclick="sairSelecao()">Cancelar</button>
+  <button type="button" class="sel-eliminar" id="sel-eliminar" onclick="pedirEliminar()" disabled>Eliminar</button>
+</div>
+
+<!-- ===== FOLHA: CONFIRMAR ELIMINAR ===== -->
+<div class="folha-fundo" id="folha-eliminar">
+  <div class="folha el-folha">
+    <div class="el-ico">🗑</div>
+    <h3>Eliminar produtos?</h3>
+    <p id="el-txt"></p>
+    <button class="btn el-sim" id="el-sim" type="button" onclick="confirmarEliminar()">Eliminar</button>
+    <button class="btn cinza" type="button" onclick="fecharFolha('folha-eliminar')">Cancelar</button>
   </div>
 </div>
 
@@ -353,7 +373,7 @@ let sessao=null, produtos=[], periodo='hoje', periodoDesc='hoje';
 
 function fmt(v){ return 'MT ' + (parseFloat(v)||0).toLocaleString('pt-PT',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function esc(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function mostrarTela(t){ document.querySelectorAll('.tela').forEach(e=>e.classList.remove('ativa')); document.getElementById('tela-'+t).classList.add('ativa'); window.scrollTo(0,0); }
+function mostrarTela(t){ if(typeof sairSelecao==='function' && t!=='produtos' && _modoSel) sairSelecao(); document.querySelectorAll('.tela').forEach(e=>e.classList.remove('ativa')); document.getElementById('tela-'+t).classList.add('ativa'); window.scrollTo(0,0); }
 function irLoja(){ location.href='mobile.html'; }
 
 // Intervalo (início e fim) de cada período. fim=null significa "até agora".
@@ -401,11 +421,61 @@ function renderProdutos(){
     const st=parseInt(p.stock)||0;
     const img = p.imagem?`<img src="${p.imagem}">`:`<div class="ph">🛒</div>`;
     const pill = st<=0?'<span class="pill r">esgotado</span>':(st<=5?'<span class="pill a">baixo</span>':'<span class="pill v">ok</span>');
-    return `<div class="row" onclick="gerirProduto('${p.id}')">${img}
+    const marcado=_sel.has(p.id);
+    return `<div class="row prod-row${marcado?' marcado':''}" data-id="${p.id}">${img}
       <div class="in"><div class="nn">${esc(p.nome)}</div><div class="mt">${fmt(p.preco)} · stock ${st} ${pill}</div></div>
-      <div style="color:#94a3b8;font-size:20px;">›</div></div>`;
+      <span class="sel-check" aria-hidden="true"></span><div class="seta-row">›</div></div>`;
   }).join('');
 }
+// ===== Stock: carregar uns instantes num produto para selecionar e eliminar =====
+let _sel=new Set(), _modoSel=false, _toqueT=null, _toqueXY=null, _foiLongo=false;
+function _atualizarSel(){
+  document.body.classList.toggle('modo-sel', _modoSel);
+  document.querySelectorAll('#lista-produtos .prod-row').forEach(r=>r.classList.toggle('marcado', _sel.has(r.dataset.id)));
+  const n=_sel.size, b=document.getElementById('sel-barra');
+  if(b){ b.classList.toggle('on', _modoSel); document.getElementById('sel-n').textContent = n+' selecionado'+(n===1?'':'s'); document.getElementById('sel-eliminar').disabled = !n; }
+}
+function entrarSelecao(id){ _modoSel=true; _sel.add(id); try{ navigator.vibrate && navigator.vibrate(35); }catch(e){} _atualizarSel(); }
+function sairSelecao(){ _modoSel=false; _sel.clear(); _atualizarSel(); }
+function selTudo(){ const vis=[...document.querySelectorAll('#lista-produtos .prod-row')].map(r=>r.dataset.id); const todos=vis.every(id=>_sel.has(id)); vis.forEach(id=> todos?_sel.delete(id):_sel.add(id)); if(!_sel.size) _modoSel=true; _atualizarSel(); }
+(function ligarToques(){
+  const lista=document.getElementById('lista-produtos'); if(!lista) return;
+  lista.addEventListener('pointerdown', e=>{
+    const r=e.target.closest('.prod-row'); if(!r) return;
+    _foiLongo=false; _toqueXY=[e.clientX,e.clientY]; clearTimeout(_toqueT);
+    r.classList.add('a-premir');
+    _toqueT=setTimeout(()=>{ _foiLongo=true; r.classList.remove('a-premir'); if(!_modoSel) entrarSelecao(r.dataset.id); else { _sel.has(r.dataset.id)?_sel.delete(r.dataset.id):_sel.add(r.dataset.id); _atualizarSel(); } }, 480);
+  });
+  const cancelar=()=>{ clearTimeout(_toqueT); document.querySelectorAll('.prod-row.a-premir').forEach(x=>x.classList.remove('a-premir')); };
+  lista.addEventListener('pointermove', e=>{ if(_toqueXY && (Math.abs(e.clientX-_toqueXY[0])>10 || Math.abs(e.clientY-_toqueXY[1])>10)) cancelar(); });
+  lista.addEventListener('pointerup', cancelar); lista.addEventListener('pointercancel', cancelar); lista.addEventListener('pointerleave', cancelar);
+  lista.addEventListener('contextmenu', e=>{ if(e.target.closest('.prod-row')) e.preventDefault(); });
+  lista.addEventListener('click', e=>{
+    const r=e.target.closest('.prod-row'); if(!r) return;
+    if(_foiLongo){ _foiLongo=false; return; }
+    if(_modoSel){ const id=r.dataset.id; _sel.has(id)?_sel.delete(id):_sel.add(id); _atualizarSel(); return; }
+    gerirProduto(r.dataset.id);
+  });
+})();
+function pedirEliminar(){
+  const n=_sel.size; if(!n) return;
+  const nomes=produtos.filter(p=>_sel.has(p.id)).slice(0,4).map(p=>esc(p.nome)).join(', ')+(n>4?' e mais '+(n-4):'');
+  document.getElementById('el-txt').innerHTML='Vai eliminar <b>'+n+' produto'+(n===1?'':'s')+'</b>: '+nomes+'.<br>Esta ação não pode ser desfeita.';
+  abrirFolha('folha-eliminar');
+}
+async function confirmarEliminar(){
+  const ids=[..._sel]; if(!ids.length) return;
+  const b=document.getElementById('el-sim'); b.disabled=true; b.textContent='A eliminar…';
+  try{
+    const { error }=await supabaseClient.from('produtos').delete().in('id',ids);
+    if(error) throw error;
+    produtos=produtos.filter(p=>!_sel.has(p.id));
+    fecharFolha('folha-eliminar'); sairSelecao(); renderProdutos();
+    toast('🗑 '+ids.length+' produto'+(ids.length===1?' eliminado':'s eliminados'),'ok');
+  }catch(e){ toast('Não foi possível eliminar: '+(e.message||e),'erro'); }
+  b.disabled=false; b.textContent='Eliminar';
+}
+
 // ===== Stock: procurar ou ler o código de barras =====
 function scanStock(){
   if(!window.bancaScanner){ toast('Leitor indisponível','erro'); return; }

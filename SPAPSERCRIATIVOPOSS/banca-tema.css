@@ -529,3 +529,32 @@ body:has(.folha-fundo.ativa) #bt-entrega-dia::after, body:has(.folha-fundo.ativa
 .gb.agora .gb-rot{color:var(--nv);}
 .gb-val{position:absolute;top:-16px;font-size:10.5px;font-weight:800;color:var(--lj-esc);white-space:nowrap;}
 .graf-vazio{width:100%;align-self:center;text-align:center;color:#94a3b8;font-size:13.5px;font-weight:600;}
+
+/* ---------- 3.6.0: selecionar e eliminar produtos (Monitor da Banca) ---------- */
+.prod-row{transition:background-color .15s, transform .15s;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
+.prod-row.a-premir{transform:scale(.98);background:#fff7ef !important;}
+.prod-row .sel-check{display:none;width:24px;height:24px;border-radius:50%;border:2.5px solid #c9d4ea;flex-shrink:0;}
+.prod-row .seta-row{color:#94a3b8;font-size:20px;}
+body.modo-sel .prod-row .sel-check{display:block;}
+body.modo-sel .prod-row .seta-row{display:none;}
+body.pg-mon .prod-row.marcado, .prod-row.marcado{background:#fff3e8 !important;box-shadow:inset 4px 0 0 #f26a0c;}
+.prod-row.marcado .sel-check{border-color:transparent;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12.5l4 4 8-9' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/16px no-repeat, linear-gradient(180deg,#ffa24a,#f26a0c);box-shadow:0 3px 8px rgba(242,112,15,.35);}
+.sel-barra{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 86px);z-index:800;display:flex;align-items:center;gap:8px;padding:8px 8px 8px 10px;border-radius:20px;
+  background:rgba(11,27,77,.96);color:#fff;box-shadow:0 14px 34px rgba(11,27,77,.35);transform:translateY(calc(100% + 140px));visibility:hidden;transition:transform .26s cubic-bezier(.2,.8,.2,1), visibility 0s linear .26s;max-width:520px;margin:0 auto;}
+.sel-barra.on{transform:none;visibility:visible;transition:transform .26s cubic-bezier(.2,.8,.2,1);}
+.sel-barra #sel-n{flex:1;font-weight:800;font-size:14px;white-space:nowrap;}
+.sel-barra button{white-space:nowrap;border:0;border-radius:999px;font:800 13.5px inherit;font-family:inherit;cursor:pointer;padding:10px 12px;}
+.sel-barra .sel-x{width:36px;height:36px;padding:0;background:rgba(255,255,255,.14);color:#fff;}
+.sel-barra .sel-tudo,.sel-barra .sel-cancelar{background:rgba(255,255,255,.14);color:#fff;}
+.sel-barra .sel-eliminar{background:linear-gradient(180deg,#f87171,#dc2626);color:#fff;box-shadow:0 6px 14px rgba(220,38,38,.35);}
+.sel-barra .sel-eliminar:disabled{opacity:.45;box-shadow:none;}
+.sel-barra img.e3d{width:18px;height:18px;vertical-align:-3px;}
+@media (max-width:370px){.sel-barra .sel-x{display:none;}}
+.el-folha{padding:24px 20px calc(env(safe-area-inset-bottom) + 20px) !important;text-align:center;}
+.el-folha .el-ico{width:80px;height:80px;margin:2px auto 8px;border-radius:50%;background:#fff1f1;display:grid;place-items:center;font-size:36px;}
+.el-folha .el-ico img.e3d{width:46px;height:46px;vertical-align:0;}
+.el-folha h3{font-size:21px;font-weight:800;color:var(--nv);}
+.el-folha p{font-size:14px;color:#475569;margin:6px 0 14px;line-height:1.5;}
+.el-folha .btn{margin-top:8px;}
+.el-folha .el-sim{background:linear-gradient(180deg,#f87171,#dc2626) !important;box-shadow:0 10px 22px rgba(220,38,38,.3) !important;}
+.h4-dica{text-transform:none;font-weight:700;color:#94a3b8;letter-spacing:0;}
