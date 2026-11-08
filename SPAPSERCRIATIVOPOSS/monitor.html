@@ -476,12 +476,16 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   .bn-item.ativo .bn-icon { filter:none; }
 
   /* ---------- Definições ---------- */
-  #def-sheet { display:none; position:fixed; inset:0; z-index:3000; background:rgba(8,20,60,.42); align-items:flex-end; justify-content:center;
-               -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
-  #def-sheet.aberto { display:flex; }
+  /* Sempre montada (sem display:none) para abrir sem piscar: só muda opacidade e posição */
+  #def-sheet { display:flex; position:fixed; inset:0; z-index:3000; background:rgba(8,20,60,0); align-items:flex-end; justify-content:center;
+               visibility:hidden; pointer-events:none; transition:background-color .22s ease, visibility 0s linear .26s; contain:layout paint; }
+  #def-sheet.aberto { visibility:visible; pointer-events:auto; background:rgba(8,20,60,.42); transition:background-color .22s ease; }
+  #def-sheet .def-box { transform:translateY(105%); transition:transform .26s cubic-bezier(.2,.8,.2,1); will-change:transform; backface-visibility:hidden; -webkit-backface-visibility:hidden; }
+  #def-sheet.aberto .def-box { transform:none; }
+  body:has(#def-sheet.aberto) #app, body:has(#def-sheet.aberto) .secao-card, body:has(#def-sheet.aberto) .vazio-vendas,
+  body:has(#def-sheet.aberto) .kpi::after, body:has(#def-sheet.aberto) .kpi *, body:has(#def-sheet.aberto) .cg-card * { animation-play-state:paused !important; }
   .def-box { width:100%; max-width:480px; max-height:88vh; overflow:auto; background:linear-gradient(180deg,#f7faff,#edf3ff); border-radius:26px 26px 0 0;
-             padding:10px 16px calc(18px + env(safe-area-inset-bottom)); box-shadow:0 -14px 40px rgba(8,30,90,.25); animation:def-subir .26s cubic-bezier(.2,.8,.2,1); }
-  @keyframes def-subir { from { transform:translateY(40px); opacity:.4; } }
+             padding:10px 16px calc(18px + env(safe-area-inset-bottom)); box-shadow:0 -14px 40px rgba(8,30,90,.25); }
   .def-pega { width:44px; height:5px; border-radius:9px; background:#c9d6ee; margin:2px auto 12px; }
   .def-topo { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
   .def-topo img { width:46px; height:46px; object-fit:contain; }
@@ -937,7 +941,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.197" defer></script>
+<script src="app-android.js?v=2.9.198" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -5276,6 +5280,8 @@ function abrirDefinicoes() {
   document.getElementById('def-sheet').classList.add('aberto');
 }
 function fecharDefinicoes() { document.getElementById('def-sheet').classList.remove('aberto'); }
+// Pré-descodifica os ícones da folha para não aparecerem a piscar na 1.ª abertura
+window.addEventListener('load', function(){ document.querySelectorAll('#def-sheet img').forEach(function(i){ try { i.decode && i.decode().catch(function(){}); } catch(e) {} }); });
 function _defSync() {
   const on = document.documentElement.classList.contains('escuro');
   const sw = document.getElementById('def-escuro-sw'); if (sw) sw.classList.toggle('on', on);
@@ -5483,7 +5489,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.197';
+const MONITOR_VERSAO = '2.9.198';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
