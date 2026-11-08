@@ -1,23 +1,101 @@
 {
   "rewrites": [
-    { "source": "/monitor", "destination": "/monitor.html" },
-    { "source": "/mobile", "destination": "/mobile.html" },
-    { "source": "/mobile-monitor", "destination": "/mobile-monitor.html" },
-    { "source": "/banca", "destination": "/mobile.html" },
-    { "source": "/banca/monitor", "destination": "/mobile-monitor.html" },
-    { "source": "/banca/login", "destination": "/login-banca.html" },
-    { "source": "/banca/registo", "destination": "/registo-banca.html" },
-    { "source": "/login", "destination": "/login.html" },
-    { "source": "/registo", "destination": "/registo.html" },
-    { "source": "/reset-senha", "destination": "/reset-senha.html" },
-    { "source": "/admin", "destination": "/admin.html" }
+    {
+      "source": "/monitor",
+      "destination": "/monitor.html"
+    },
+    {
+      "source": "/mobile",
+      "destination": "/mobile.html"
+    },
+    {
+      "source": "/mobile-monitor",
+      "destination": "/mobile-monitor.html"
+    },
+    {
+      "source": "/banca",
+      "destination": "/mobile.html"
+    },
+    {
+      "source": "/banca/monitor",
+      "destination": "/mobile-monitor.html"
+    },
+    {
+      "source": "/banca/login",
+      "destination": "/login-banca.html"
+    },
+    {
+      "source": "/banca/registo",
+      "destination": "/registo-banca.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/login.html"
+    },
+    {
+      "source": "/registo",
+      "destination": "/registo.html"
+    },
+    {
+      "source": "/reset-senha",
+      "destination": "/reset-senha.html"
+    },
+    {
+      "source": "/admin",
+      "destination": "/admin.html"
+    }
   ],
   "cleanUrls": false,
   "trailingSlash": false,
   "headers": [
-    { "source": "/sw.js", "headers": [ { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate, max-age=0" } ] },
-    { "source": "/version.json", "headers": [ { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate, max-age=0" } ] },
-    { "source": "/(.*\\.html)", "headers": [ { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate, max-age=0" } ] },
-    { "source": "/", "headers": [ { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate, max-age=0" } ] }
+    {
+      "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, no-cache, must-revalidate, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/version.json",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, no-cache, must-revalidate, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/(.*\\.html)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, no-cache, must-revalidate, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, no-cache, must-revalidate, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/apps/(.*)\\.mobileconfig",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/x-apple-aspen-config"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
+    }
   ]
 }

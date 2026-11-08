@@ -124,36 +124,32 @@
   // ---- iPhone / iPad: instalar no ecrã principal (app do sistema, sem App Store)
   var SVG_PARTILHAR = '<svg viewBox="0 0 24 24" width="20" height="20" style="vertical-align:-4px"><path fill="none" stroke="#0a84ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12M8 7l4-4 4 4M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>';
   var SVG_MAIS = '<svg viewBox="0 0 24 24" width="20" height="20" style="vertical-align:-4px"><rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="none" stroke="#0f172a" stroke-width="2"/><path d="M12 8v8M8 12h8" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/></svg>';
-  function folhaIOS() {
+  // iPhone: instala logo a app (perfil do iPhone com o ícone no ecrã principal) — sem explicações
+  var perfilIOS = 'apps/' + (tipo === 'monitor' ? 'SPAP-Monitor' : 'SPAP-Loja') + '.mobileconfig';
+  function avisoIOS(txt) {
+    var t = document.getElementById('apk-aviso-ios'); if (t) t.remove();
+    t = document.createElement('div'); t.id = 'apk-aviso-ios';
+    t.style.cssText = 'position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:100002;background:#0f172a;color:#fff;font:600 14px/1.35 system-ui,-apple-system,sans-serif;padding:12px 16px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.3);max-width:calc(100vw - 32px);text-align:center';
+    t.textContent = txt; document.body.appendChild(t);
+    setTimeout(function () { if (t.parentNode) t.remove(); }, 6000);
+  }
+  function instalarIOS() {
+    lembrar(); fecharFolha();
+    window.location.href = perfilIOS;
+    setTimeout(function () { avisoIOS('✅ App ' + nome + ' descarregada — abra Definições do iPhone e toque em «Instalar».'); }, 900);
+  }
+  function folhaIOS(direto) {
     if (jaNoEcraIOS()) {
-      var e0 = abrirFolha('<h3>A app ' + nome + ' já está instalada ✅</h3><p>Está a usar a app a partir do ecrã principal. Atualiza-se sozinha.</p><button class="ak-sim" type="button">Fechar</button>');
+      var e0 = abrirFolha('<h3>A app ' + nome + ' já está instalada ✅</h3><button class="ak-sim" type="button">Fechar</button>');
       e0.querySelector('.ak-sim').onclick = fecharFolha; return;
     }
-    var noSafari = /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua);
-    var aparelho = /iPhone|iPod/i.test(ua) ? 'iPhone' : 'iPad';
-    var el = abrirFolha('<h3>Instale a app ' + nome + ' no ' + aparelho + '</h3>'
-      + '<p>Fica com um ícone no ecrã principal e abre em ecrã inteiro, como uma app.</p>'
-      + '<ol>'
-      + '<li><span>Toque no botão <b>Partilhar</b> ' + SVG_PARTILHAR + ' ' + (noSafari ? 'na barra do Safari (em baixo).' : 'do navegador (no Chrome fica ao lado do endereço).') + '</span></li>'
-      + '<li><span>Deslize e escolha <b>«Adicionar ao Ecrã Principal»</b> ' + SVG_MAIS + '</span></li>'
-      + '<li><span>Toque em <b>Adicionar</b>. A app <b>' + nome + '</b> aparece no ecrã principal.</span></li>'
-      + '</ol>'
-      + '<button class="ak-sim" type="button">Entendi</button><button class="ak-nao" type="button">Agora não</button>');
-    el.querySelector('.ak-sim').onclick = function () { lembrar(); fecharFolha(); };
+    if (direto) { instalarIOS(); return; }
+    var el = abrirFolha('<h3>App ' + nome + ' para iPhone</h3>'
+      + '<button class="ak-sim" type="button">Instalar no iPhone</button><button class="ak-nao" type="button">Agora não</button>');
+    el.querySelector('.ak-sim').onclick = instalarIOS;
     el.querySelector('.ak-nao').onclick = function () { lembrar(); fecharFolha(); };
   }
 
-  // ---- Computador: explicar e permitir baixar
-  function folhaComputador(versao) {
-    var endereco = location.origin + (tipo === 'monitor' ? '/monitor.html' : '/login.html');
-    var el = abrirFolha('<h3>App ' + nome + ' para Android</h3>'
-      + '<p>A app nativa funciona em <b>telemóveis e tablets Android</b>' + (versao ? ' (versão ' + versao + ')' : '') + '.<br>Abra no Android o endereço <code>' + endereco + '</code> e toque em «Instalar app».</p>'
-      + '<a class="ak-sim" href="' + apk + '" download>Baixar o APK aqui</a>'
-      + '<button class="ak-nao" type="button">Fechar</button>');
-    el.querySelector('.ak-nao').onclick = fecharFolha;
-  }
-
-  // Botão «Instalar app (APK)» — funciona sempre
   // ---- Pedido para a OUTRA plataforma (ex.: «App iPhone» tocado num Android ou no computador)
   function folhaIOSnoutro() {
     var endereco = location.origin + (tipo === 'monitor' ? '/monitor.html' : '/login.html');
@@ -175,7 +171,7 @@
   window.spapInstalarApp = function (plataforma) {
     lerVersao().then(function (d) {
       var v = d && d.versao;
-      if (plataforma === 'ios') { if (ehIOS()) folhaIOS(); else folhaIOSnoutro(); return; }
+      if (plataforma === 'ios') { if (ehIOS()) folhaIOS(true); else folhaIOSnoutro(); return; }
       if (plataforma === 'android') {
         if (naApp()) folhaNaApp(d);
         else if (ehAndroid()) folhaAndroid(v);
@@ -183,7 +179,7 @@
         return;
       }
       if (naApp()) folhaNaApp(d);
-      else if (ehIOS()) folhaIOS();
+      else if (ehIOS()) folhaIOS(true);
       else if (ehAndroid()) folhaAndroid(v);
       else folhaComputador(v);
     });
