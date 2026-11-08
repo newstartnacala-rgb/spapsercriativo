@@ -188,7 +188,7 @@ h4{color:var(--nv2) !important;font-weight:800;}
 .topo .bt-menu3 svg{width:22px;height:22px;}
 
 /* Entrega total do dia (igual ao cartão dourado da Loja) */
-#bt-entrega-dia{position:relative;overflow:hidden;display:flex;align-items:center;gap:12px;margin:8px 12px 2px;width:calc(100% - 24px);padding:11px 14px 11px 12px;
+#bt-entrega-dia{position:relative;overflow:hidden;display:flex;align-items:center;gap:12px;margin:10px 12px 0;width:calc(100% - 24px);padding:11px 14px 11px 12px;
   border:1px solid rgba(255,224,138,.55);border-radius:18px;background:linear-gradient(135deg,#14244f,#0b1b4d);color:#fff;text-align:left;cursor:pointer;
   box-shadow:0 10px 22px rgba(11,27,77,.25);font-family:inherit;flex-shrink:0;}
 #bt-entrega-dia::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,#ffe08a,#c8901a);}
