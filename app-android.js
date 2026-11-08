@@ -154,9 +154,34 @@
   }
 
   // Botão «Instalar app (APK)» — funciona sempre
-  window.spapInstalarApp = function () {
+  // ---- Pedido para a OUTRA plataforma (ex.: «App iPhone» tocado num Android ou no computador)
+  function folhaIOSnoutro() {
+    var endereco = location.origin + (tipo === 'monitor' ? '/monitor.html' : '/login.html');
+    var el = abrirFolha('<h3>App ' + nome + ' para iPhone / iPad</h3>'
+      + '<p>No iPhone a app instala-se pelo <b>Safari</b>. Abra este endereço no iPhone:</p>'
+      + '<p><code>' + endereco + '</code></p>'
+      + '<ol><li><span>Toque em <b>Partilhar</b> ' + SVG_PARTILHAR + '</span></li>'
+      + '<li><span>Escolha <b>«Adicionar ao Ecrã Principal»</b> ' + SVG_MAIS + '</span></li>'
+      + '<li><span>Toque em <b>Adicionar</b>.</span></li></ol>'
+      + '<button class="ak-sim" type="button">Copiar endereço</button><button class="ak-nao" type="button">Fechar</button>');
+    el.querySelector('.ak-nao').onclick = fecharFolha;
+    el.querySelector('.ak-sim').onclick = function () {
+      var b = this;
+      try { navigator.clipboard.writeText(endereco).then(function () { b.textContent = 'Endereço copiado ✅'; }, function () { b.textContent = endereco; }); } catch (e) { b.textContent = endereco; }
+    };
+  }
+
+  // plataforma: 'android' | 'ios' | (vazio = automático pelo aparelho)
+  window.spapInstalarApp = function (plataforma) {
     lerVersao().then(function (d) {
       var v = d && d.versao;
+      if (plataforma === 'ios') { if (ehIOS()) folhaIOS(); else folhaIOSnoutro(); return; }
+      if (plataforma === 'android') {
+        if (naApp()) folhaNaApp(d);
+        else if (ehAndroid()) folhaAndroid(v);
+        else folhaComputador(v);    // iPhone ou computador: explica e deixa baixar o APK para o Android
+        return;
+      }
       if (naApp()) folhaNaApp(d);
       else if (ehIOS()) folhaIOS();
       else if (ehAndroid()) folhaAndroid(v);
