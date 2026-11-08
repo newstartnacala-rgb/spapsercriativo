@@ -211,7 +211,7 @@ public class MainActivity extends Activity {
         s.setBuiltInZoomControls(false);
         s.setAllowFileAccess(false);
         s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-        s.setUserAgentString(s.getUserAgentString() + " SPAPApp/" + (BuildConfig.IS_MONITOR ? "monitor" : "loja") + "/" + BuildConfig.VERSION_NAME);
+        s.setUserAgentString(s.getUserAgentString() + " SPAPApp/" + BuildConfig.APP_TIPO + "/" + BuildConfig.VERSION_NAME);
 
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(w, true);
@@ -758,7 +758,7 @@ public class MainActivity extends Activity {
         }).start();
     }
 
-    /** App Loja: verifica se há APK novo e mostra o aviso para atualizar. */
+    /** Apps Loja e Banca: verifica se há APK novo e mostra o aviso para atualizar. */
     private void verificarAppLoja() {
         if (avisoAppMostrado || isFinishing()) return;
         final String base = bases[baseAtual];
@@ -774,7 +774,8 @@ public class MainActivity extends Activity {
                 }
                 org.json.JSONObject j = new org.json.JSONObject(sb.toString());
                 String v = j.optString("versao", "");
-                String caminho = j.optString("loja", "apps/SPAP-Loja.apk");
+                String tipo = BuildConfig.APP_TIPO;
+                String caminho = j.optString(tipo, "apps/SPAP-" + Character.toUpperCase(tipo.charAt(0)) + tipo.substring(1) + ".apk");
                 if (v.isEmpty() || compararVersoes(v, BuildConfig.VERSION_NAME) <= 0) return;
                 final String url = caminho.startsWith("http") ? caminho : base + "/" + caminho.replaceFirst("^/", "");
                 ui.post(() -> {
@@ -782,7 +783,7 @@ public class MainActivity extends Activity {
                     avisoAppMostrado = true;
                     new android.app.AlertDialog.Builder(this)
                             .setTitle("Nova versão da app")
-                            .setMessage("A app SPAP Loja " + v + " já está disponível.\n\nQuer baixar e instalar agora?")
+                            .setMessage("A app " + getString(R.string.app_name) + " " + v + " já está disponível.\n\nQuer baixar e instalar agora?")
                             .setPositiveButton("Atualizar", (d, w) -> {
                                 Toast.makeText(this, "A baixar a atualização…", Toast.LENGTH_SHORT).show();
                                 instalarApp(url);
@@ -903,7 +904,7 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface public String versaoApp() { return BuildConfig.VERSION_NAME; }
 
-        @JavascriptInterface public String tipoApp() { return BuildConfig.IS_MONITOR ? "monitor" : "loja"; }
+        @JavascriptInterface public String tipoApp() { return BuildConfig.APP_TIPO; }
 
         @JavascriptInterface public void instalarApp(String url) { ui.post(() -> MainActivity.this.instalarApp(url)); }
     }

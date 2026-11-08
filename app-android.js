@@ -6,9 +6,12 @@
       • computador → explica e permite baixar o APK. */
 (function () {
   var ua = navigator.userAgent || '';
-  var tipo = /monitor/i.test(location.pathname) ? 'monitor' : 'loja';
-  var nome = tipo === 'monitor' ? 'SPAP Monitor' : 'SPAP Loja';
-  var ficheiro = tipo === 'monitor' ? 'SPAP-Monitor.apk' : 'SPAP-Loja.apk';
+  // Banca (/banca, mobile*.html, login/registo da banca) tem app própria; depois Monitor; o resto é Loja
+  var tipo = /banca|mobile/i.test(location.pathname) ? 'banca' : (/monitor/i.test(location.pathname) ? 'monitor' : 'loja');
+  var NOMES = { monitor: 'SPAP Monitor', loja: 'SPAP Loja', banca: 'SPAP Banca' };
+  var FICH = { monitor: 'SPAP-Monitor', loja: 'SPAP-Loja', banca: 'SPAP-Banca' };
+  var nome = NOMES[tipo];
+  var ficheiro = FICH[tipo] + '.apk';
   var apk = 'apps/' + ficheiro;
   var chave = 'spap_apk_convite_' + tipo;
 
@@ -78,7 +81,7 @@
   // ---- Android no navegador: baixar e instalar
   function folhaAndroid(versao) {
     var el = abrirFolha('<h3>Instale a app ' + nome + '</h3>'
-      + '<p>Use o ' + (tipo === 'monitor' ? 'Monitor' : 'sistema da Loja') + ' como uma app no seu telemóvel ou tablet' + (versao ? ' (versão ' + versao + ')' : '') + '.</p>'
+      + '<p>Use o ' + (tipo === 'monitor' ? 'Monitor' : tipo === 'banca' ? 'sistema da Banca' : 'sistema da Loja') + ' como uma app no seu telemóvel ou tablet' + (versao ? ' (versão ' + versao + ')' : '') + '.</p>'
       + '<div class="ak-van"><span>⚡ Mais rápida</span><span>📲 Ícone no ecrã</span><span>🔄 Atualiza sozinha</span></div>'
       + '<a class="ak-sim" href="' + apk + '" download>Baixar e instalar</a>'
       + '<button class="ak-nao" type="button">Agora não</button>');
@@ -125,7 +128,7 @@
   var SVG_PARTILHAR = '<svg viewBox="0 0 24 24" width="20" height="20" style="vertical-align:-4px"><path fill="none" stroke="#0a84ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12M8 7l4-4 4 4M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>';
   var SVG_MAIS = '<svg viewBox="0 0 24 24" width="20" height="20" style="vertical-align:-4px"><rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="none" stroke="#0f172a" stroke-width="2"/><path d="M12 8v8M8 12h8" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/></svg>';
   // iPhone: instala logo a app (perfil do iPhone com o ícone no ecrã principal) — sem explicações
-  var perfilIOS = 'apps/' + (tipo === 'monitor' ? 'SPAP-Monitor' : 'SPAP-Loja') + '.mobileconfig';
+  var perfilIOS = 'apps/' + FICH[tipo] + '.mobileconfig';
   function avisoIOS(txt) {
     var t = document.getElementById('apk-aviso-ios'); if (t) t.remove();
     t = document.createElement('div'); t.id = 'apk-aviso-ios';
@@ -152,7 +155,7 @@
 
   // ---- Pedido para a OUTRA plataforma (ex.: «App iPhone» tocado num Android ou no computador)
   function folhaIOSnoutro() {
-    var endereco = new URL(tipo === 'monitor' ? 'monitor.html' : 'login.html', location.href).href;
+    var endereco = new URL(tipo === 'monitor' ? 'monitor.html' : tipo === 'banca' ? 'banca' : 'login.html', location.href).href;
     var el = abrirFolha('<h3>App ' + nome + ' para iPhone / iPad</h3>'
       + '<p>No iPhone a app instala-se pelo <b>Safari</b>. Abra este endereço no iPhone:</p>'
       + '<p><code>' + endereco + '</code></p>'
@@ -165,6 +168,15 @@
       var b = this;
       try { navigator.clipboard.writeText(endereco).then(function () { b.textContent = 'Endereço copiado ✅'; }, function () { b.textContent = endereco; }); } catch (e) { b.textContent = endereco; }
     };
+  }
+
+  // ---- Computador ou iPhone a pedir a app Android: explica e deixa baixar o APK
+  function folhaComputador(versao) {
+    var el = abrirFolha('<h3>App ' + nome + ' para Android</h3>'
+      + '<p>A app Android instala-se no telemóvel ou tablet Android' + (versao ? ' (versão ' + versao + ')' : '') + '. Abra este sistema no Android e toque em «App para Android», ou baixe o ficheiro aqui e passe-o para o telemóvel.</p>'
+      + '<a class="ak-sim" href="' + apk + '" download>Baixar o APK</a>'
+      + '<button class="ak-nao" type="button">Fechar</button>');
+    el.querySelector('.ak-nao').onclick = fecharFolha;
   }
 
   // plataforma: 'android' | 'ios' | (vazio = automático pelo aparelho)

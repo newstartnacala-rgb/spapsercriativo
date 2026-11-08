@@ -109,6 +109,11 @@
   .spin{width:40px;height:40px;border:4px solid #e2e8f0;border-top-color:var(--verde);border-radius:50%;animation:g 1s linear infinite;}
   @keyframes g{to{transform:rotate(360deg);}}
 </style>
+<link rel="apple-touch-icon" href="ios-banca-180.png">
+<meta name="apple-mobile-web-app-title" content="SPAP Banca">
+<link rel="stylesheet" href="banca-tema.css?v=2.9.200">
+<script src="banca-tema.js?v=2.9.200" defer></script>
+<script src="app-android.js?v=2.9.200" defer></script>
 </head>
 <body>
 
@@ -268,6 +273,8 @@
         <div class="mi" onclick="avisoDespacho()"><div class="e">🚚</div><div class="t">Aviso de despacho</div></div>
         <div class="mi" onclick="idioma()"><div class="e">🌐</div><div class="t">Idioma</div></div>
         <div class="mi" onclick="suporte()"><div class="e">💬</div><div class="t">Suporte</div></div>
+        <div class="mi" onclick="fecharFolha('folha-menu');window.spapInstalarApp&&spapInstalarApp('android')"><div class="e">📲</div><div class="t">App para Android</div></div>
+        <div class="mi" onclick="fecharFolha('folha-menu');window.spapInstalarApp&&spapInstalarApp('ios')"><div class="e">📱</div><div class="t">App para iPhone</div></div>
         <div class="mi" onclick="sairBanca()" style="background:#fef2f2;"><div class="e">🚪</div><div class="t">Sair</div></div>
       </div>
     </div>

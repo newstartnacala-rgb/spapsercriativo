@@ -74,6 +74,9 @@
   .menu-grid .mi{background:#f0fdf4;border:1px solid var(--borda);border-radius:14px;padding:16px 10px;text-align:center;}
   .menu-grid .mi .e{font-size:28px;} .menu-grid .mi .t{font-size:12px;font-weight:700;margin-top:6px;}
 </style>
+<link rel="stylesheet" href="banca-tema.css?v=2.9.200">
+<script src="banca-tema.js?v=2.9.200" defer></script>
+<script src="app-android.js?v=2.9.200" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar"><div class="spin"></div><div>A abrir o monitor…</div></div>
@@ -166,7 +169,8 @@
         <div class="mi" onclick="mAuditoria()"><div class="e">🔍</div><div class="t">Auditoria de Caixa</div></div>
         <div class="mi" onclick="mPerfil()"><div class="e">🪪</div><div class="t">Meu Perfil</div></div>
         <div class="mi" onclick="mBackup()"><div class="e">💾</div><div class="t">Backup / Segurança</div></div>
-        <div class="mi" onclick="mInstalar()"><div class="e">📲</div><div class="t">Instalar App</div></div>
+        <div class="mi" onclick="fecharFolha('folha-menu');window.spapInstalarApp?spapInstalarApp('android'):mInstalar()"><div class="e">📲</div><div class="t">App para Android</div></div>
+        <div class="mi" onclick="fecharFolha('folha-menu');window.spapInstalarApp?spapInstalarApp('ios'):mInstalar()"><div class="e">📱</div><div class="t">App para iPhone</div></div>
         <div class="mi" onclick="suporte()"><div class="e">💬</div><div class="t">Suporte</div></div>
         <div class="mi" onclick="sairBanca()" style="background:#fef2f2;"><div class="e">🚪</div><div class="t">Sair</div></div>
       </div>

@@ -1,0 +1,181 @@
+/* =====================================================================
+   SPAP Banca — tema moderno (mesmo design da plataforma principal,
+   com cor de destaque própria: LARANJA). Carregado depois do estilo
+   de cada página da Banca; não muda nenhuma função.
+   ===================================================================== */
+:root{
+  --nv:#0b1b4d; --nv2:#22305e;
+  --lj:#f2700f; --lj-esc:#d9570a; --lj-claro:#fff3e8;
+  --lj-grad:linear-gradient(180deg,#ffa24a 0%,#f26a0c 100%);
+  --vd-grad:linear-gradient(180deg,#34d07a 0%,#16a34a 100%);
+  --sombra:0 10px 26px rgba(29,85,190,.10), 0 2px 6px rgba(29,85,190,.06);
+  --sombra-lj:0 10px 22px rgba(242,112,15,.32);
+  --linha:#e3ebfa;
+}
+html,body{background:linear-gradient(180deg,#f4f8ff 0%,#ecf3ff 60%,#e4eeff 100%) fixed !important;}
+body{font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif !important;color:var(--nv) !important;}
+img.e3d{width:1.25em;height:1.25em;object-fit:contain;vertical-align:-.28em;display:inline-block;}
+
+/* ---------- Carregamento ---------- */
+.carregar{background:linear-gradient(180deg,#f4f8ff,#e4eeff) !important;color:var(--nv2) !important;font-weight:700;}
+.carregar .spin{border-color:#dbe6fb !important;border-top-color:var(--lj) !important;}
+
+/* ---------- Cabeçalho ---------- */
+.topo{background:linear-gradient(180deg,rgba(244,248,255,.97),rgba(240,246,255,.93)) !important;color:var(--nv) !important;
+  box-shadow:0 6px 18px rgba(29,85,190,.07);padding:calc(env(safe-area-inset-top) + 12px) 14px 10px !important;position:relative;z-index:5;}
+.topo .tp-marca{display:flex;align-items:center;gap:10px;min-width:0;flex:1;}
+.topo .tp-logo{width:40px;height:40px;object-fit:contain;flex-shrink:0;filter:drop-shadow(0 4px 8px rgba(242,112,15,.28));}
+.topo .tp-txt{min-width:0;}
+.topo .nome{font-size:19px !important;font-weight:800 !important;color:var(--nv) !important;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:7px;}
+.topo .sub{font-size:12.5px !important;color:var(--nv2) !important;opacity:1 !important;font-weight:700;margin-top:2px;}
+.topo .sub::before{content:'BANCA';display:inline-block;margin-right:6px;font-size:10px;font-weight:800;letter-spacing:.8px;color:#fff;background:var(--lj-grad);border-radius:999px;padding:2px 7px;vertical-align:1px;box-shadow:0 3px 8px rgba(242,112,15,.28);}
+.tp-chip{display:none;flex-shrink:0;font-size:10.5px;font-weight:800;letter-spacing:.8px;color:#fff;background:var(--lj-grad);border-radius:999px;padding:3px 8px;box-shadow:0 4px 10px rgba(242,112,15,.3);}
+.topo > div:last-child, .topo > button{flex-shrink:0;}
+.topo button{background:linear-gradient(180deg,#ffffff,#edf3ff) !important;border:1px solid #dbe6fb !important;color:var(--nv) !important;
+  border-radius:999px !important;padding:8px 12px !important;font-size:13px !important;font-weight:800 !important;
+  box-shadow:0 4px 10px rgba(29,85,190,.12), inset 0 1px 0 #fff;display:inline-flex;align-items:center;gap:5px;font-family:inherit;}
+.topo button:active{transform:scale(.94);}
+
+/* ---------- Pesquisa ---------- */
+.barra{background:transparent !important;border-bottom:none !important;padding:10px 12px 4px !important;}
+.barra input{background:#fff url("icons3d/lupa-r.png") no-repeat 12px center / 20px 20px !important;border:1px solid #dbe6fb !important;border-radius:16px !important;
+  padding:13px 14px 13px 42px !important;color:var(--nv);box-shadow:var(--sombra);font-family:inherit;}
+.barra input:focus{border-color:var(--lj) !important;box-shadow:0 0 0 3px rgba(242,112,15,.15), var(--sombra);}
+.barra button img.e3d{width:26px;height:26px;vertical-align:0;}
+.barra button{background:var(--lj-grad) !important;border-radius:16px !important;width:52px !important;box-shadow:var(--sombra-lj);}
+
+/* ---------- Corpo e grelha de produtos ---------- */
+.corpo{background:transparent !important;}
+.card{background:#fff !important;border:1px solid #fff !important;border-radius:18px !important;box-shadow:var(--sombra);padding:9px 9px 11px !important;transition:transform .12s;}
+.card .img{border-radius:13px !important;background:linear-gradient(180deg,#eef4ff,#e3edff) !important;}
+div.card .img img.e3d, .row .ph img.e3d{width:46%;height:auto;opacity:.9;}
+.card .n{color:var(--nv);font-size:13.5px !important;}
+.card .p{color:var(--lj) !important;font-size:16px !important;}
+.card .st{color:#64748b !important;font-weight:600;}
+.card .st.zero{color:#dc2626 !important;}
+
+/* ---------- Barra do carrinho ---------- */
+.barra-carrinho{margin:0 10px 8px;border:1px solid #fff !important;border-radius:20px;background:rgba(255,255,255,.94) !important;
+  box-shadow:0 12px 30px rgba(29,85,190,.18) !important;padding:10px 10px 10px 16px !important;}
+.barra-carrinho .itens{color:var(--nv2) !important;font-weight:700;}
+.barra-carrinho .tot{color:var(--nv);}
+.barra-carrinho button{background:var(--lj-grad) !important;border-radius:999px !important;padding:14px 22px !important;box-shadow:var(--sombra-lj);font-family:inherit;}
+.barra-carrinho button:disabled{background:#cbd5e1 !important;box-shadow:none;}
+
+/* ---------- Barra inferior (igual ao Monitor) ---------- */
+.nav{margin:0 12px calc(env(safe-area-inset-bottom) + 10px) !important;padding:7px !important;gap:4px;border:1px solid #fff !important;border-radius:24px;
+  background:rgba(255,255,255,.92) !important;box-shadow:0 12px 30px rgba(29,85,190,.18);}
+.nav a{border-radius:18px;padding:8px 0 7px !important;color:var(--nv) !important;font-size:12px !important;font-weight:700 !important;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;}
+.nav a .ic{font-size:24px !important;margin:0 !important;line-height:1;}
+.nav a .ic img.e3d{width:26px;height:26px;vertical-align:0;}
+.nav a.on{background:var(--lj-grad);color:#fff !important;box-shadow:var(--sombra-lj);}
+
+/* ---------- Folhas (carrinho, pagamento, menu…) ---------- */
+.folha-fundo{background:rgba(8,20,60,.42) !important;}
+.folha-fundo.ativa{animation:bt-fundo .2s ease;}
+.folha-fundo.ativa .folha{animation:bt-subir .26s cubic-bezier(.2,.8,.2,1);}
+@keyframes bt-fundo{from{background:rgba(8,20,60,0);}}
+@keyframes bt-subir{from{transform:translateY(60px);}}
+.folha{background:linear-gradient(180deg,#f7faff,#edf3ff) !important;border-radius:26px 26px 0 0 !important;box-shadow:0 -14px 40px rgba(8,30,90,.25);max-width:520px;margin:0 auto;}
+.folha .cab{border-bottom:none !important;padding:16px 16px 8px !important;position:relative;}
+.folha .cab::before{content:'';position:absolute;top:6px;left:50%;width:44px;height:5px;margin-left:-22px;border-radius:9px;background:#c9d6ee;}
+.folha .cab h3{font-size:18px !important;font-weight:800;color:var(--nv);display:flex;align-items:center;gap:8px;}
+.folha .cab button{width:36px !important;height:36px !important;border-radius:50% !important;border:1px solid #dbe6fb !important;background:#fff !important;color:var(--nv);font-size:15px !important;}
+.folha .rodape{border-top:none !important;background:transparent;}
+.folha .conteudo{padding-top:6px !important;}
+
+/* linhas do carrinho e listas */
+.item{background:#fff;border:1px solid var(--linha) !important;border-radius:16px;padding:11px 12px !important;margin-bottom:8px;}
+.item .in .nn{color:var(--nv);}
+.item .in .pp b{color:var(--lj) !important;}
+.item .passo button{width:36px !important;height:36px !important;border-radius:50% !important;border:1px solid #dbe6fb !important;background:linear-gradient(180deg,#fff,#edf3ff) !important;color:var(--nv);box-shadow:0 3px 8px rgba(29,85,190,.1);}
+
+/* campos */
+.campo label{color:var(--nv2) !important;font-size:12.5px !important;}
+.campo input,.campo select{background:#fff;border:1px solid #dbe6fb !important;border-radius:14px !important;color:var(--nv);font-family:inherit;}
+.campo input:focus,.campo select:focus{border-color:var(--lj) !important;box-shadow:0 0 0 3px rgba(242,112,15,.15);}
+
+/* botões */
+.btn{background:var(--lj-grad) !important;border-radius:999px !important;box-shadow:var(--sombra-lj);font-family:inherit;}
+.btn.cinza{background:#fff !important;color:var(--nv) !important;border:1px solid #dbe6fb !important;box-shadow:var(--sombra);}
+.btn:disabled{background:#cbd5e1 !important;box-shadow:none;}
+#btn-confirmar,#btn-entregar{background:var(--vd-grad) !important;box-shadow:0 10px 22px rgba(22,163,74,.3);}
+
+/* pagamento */
+.display-num{background:linear-gradient(180deg,#14244f,#0b1b4d) !important;border-radius:18px !important;box-shadow:0 10px 22px rgba(11,27,77,.25);}
+.troco{color:#16a34a !important;}
+.notas button{background:var(--lj-claro) !important;color:var(--lj-esc) !important;border:1px solid #ffd9b8 !important;border-radius:999px !important;}
+.teclado button{background:#fff !important;border:1px solid var(--linha) !important;color:var(--nv) !important;border-radius:16px !important;box-shadow:0 3px 8px rgba(29,85,190,.07);font-family:inherit;}
+.teclado button:active{background:#eef4ff !important;}
+
+/* menus em grelha */
+.menu-grid .mi{background:#fff !important;border:1px solid var(--linha) !important;border-radius:18px !important;box-shadow:var(--sombra);padding:16px 8px !important;cursor:pointer;}
+.menu-grid .mi .e{font-size:30px !important;line-height:1;}
+.menu-grid .mi .e img.e3d{width:38px;height:38px;vertical-align:0;}
+.menu-grid .mi .t{color:var(--nv);font-size:12.5px !important;font-weight:800 !important;}
+.menu-grid .mi[onclick^="sair"]{background:#fff5f5 !important;border-color:#fde2e2 !important;}
+.menu-grid .mi[onclick^="sair"] .t{color:#dc2626;}
+
+/* toast */
+.toast{border-radius:999px !important;box-shadow:0 12px 30px rgba(8,30,90,.3) !important;}
+.toast.ok{background:var(--vd-grad) !important;}
+
+/* ---------- Código do balconista ---------- */
+#tela-codigo{background:linear-gradient(180deg,#f4f8ff 0%,#e4eeff 100%) !important;color:var(--nv) !important;}
+#tela-codigo > div:first-child{width:96px;height:96px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--sombra);font-size:48px !important;}
+#tela-codigo > div:first-child img.e3d{width:56px;height:56px;vertical-align:0;}
+#tela-codigo > div:nth-child(2){color:var(--nv);font-size:22px !important;}
+#tela-codigo > div:nth-child(3){color:var(--nv2);opacity:1 !important;font-weight:600;}
+#cb-input{background:#fff;border:1px solid #dbe6fb !important;box-shadow:var(--sombra);border-radius:18px !important;}
+#cb-input:focus{box-shadow:0 0 0 3px rgba(242,112,15,.18), var(--sombra);}
+#cb-erro{background:#fef2f2 !important;color:#dc2626;}
+#tela-codigo > button{background:var(--lj-grad) !important;color:#fff !important;border-radius:999px !important;box-shadow:var(--sombra-lj);}
+#tela-codigo > div:last-child{color:#64748b;opacity:1 !important;}
+
+/* ---------- Entregar o dia ---------- */
+#ent-resumo{background:linear-gradient(135deg,#fff7ef,#ffe9d4) !important;border:1px solid #ffd9b8 !important;border-radius:20px !important;box-shadow:var(--sombra);}
+#ent-nvendas{color:var(--lj-esc) !important;}
+#ent-total{color:var(--nv) !important;font-size:28px !important;}
+
+/* ---------- Monitor da Banca ---------- */
+.periodo button{background:#fff !important;border:1px solid #dbe6fb !important;border-radius:999px !important;color:var(--nv) !important;box-shadow:var(--sombra);font-family:inherit;}
+.periodo button.on{background:var(--lj-grad) !important;color:#fff !important;border-color:transparent !important;box-shadow:var(--sombra-lj);}
+.stat{background:#fff !important;border:1px solid #fff !important;border-radius:20px !important;box-shadow:var(--sombra);}
+.stat .lbl{color:var(--nv2) !important;font-size:12px !important;display:flex;align-items:center;gap:6px;}
+.stat .lbl img.e3d{width:22px;height:22px;vertical-align:0;}
+.stat .val{color:var(--nv);}
+.stat .val.verde{color:#16a34a !important;}
+.stat .val.laranja{color:var(--lj) !important;}
+h4{color:var(--nv2) !important;font-weight:800;}
+.cartao{background:#fff !important;border:1px solid #fff !important;border-radius:20px !important;box-shadow:var(--sombra);}
+.row{border-bottom:1px solid #eef3fb !important;}
+.row .nn{color:var(--nv);}
+.row .vv{color:var(--nv);}
+.row .ph{background:linear-gradient(180deg,#eef4ff,#e3edff) !important;border-radius:12px !important;}
+.row .ph img.e3d{width:26px;height:26px;vertical-align:0;}
+.row img:not(.e3d){border-radius:12px !important;}
+/* barra "ver um dia" do monitor */
+#tela-resumo .corpo > div[style*="Ver um dia"], #tela-resumo .corpo > div:nth-child(2){background:#fff !important;border:1px solid #fff !important;border-radius:16px !important;box-shadow:var(--sombra);}
+
+/* ---------- Entrar / Criar conta ---------- */
+.box{background:rgba(255,255,255,.96) !important;border:1px solid #fff;border-radius:28px !important;box-shadow:0 18px 50px rgba(29,85,190,.16) !important;}
+.box .logo .ic{display:flex;justify-content:center;}
+.box .logo .ic img.e3d{width:74px;height:74px;vertical-align:0;filter:drop-shadow(0 8px 14px rgba(242,112,15,.3));}
+.box .logo h1{color:var(--nv) !important;font-weight:800;letter-spacing:-.3px;}
+.box .logo p{color:var(--lj) !important;}
+.box .sub{color:#64748b !important;}
+.box label{color:var(--nv2) !important;display:flex !important;align-items:center;gap:6px;}
+.box label img.e3d{width:18px;height:18px;vertical-align:0;}
+.box input{background:#fff;border:1px solid #dbe6fb !important;border-radius:14px !important;color:var(--nv);box-shadow:0 2px 6px rgba(29,85,190,.05);font-family:inherit;}
+.box input:focus{border-color:var(--lj) !important;box-shadow:0 0 0 3px rgba(242,112,15,.15);}
+.box .btn{border-radius:999px !important;}
+.box .rodape a, .box .dica a{color:var(--lj) !important;}
+.box .ok{background:#ecfdf5 !important;}
+.box .erro{background:#fef2f2 !important;border-radius:14px !important;}
+.box .otp input{border-radius:14px !important;}
+
+/* ---------- Ecrã largo (tablet/computador) ---------- */
+@media (min-width:700px){
+  .grelha{grid-template-columns:repeat(auto-fill,minmax(160px,1fr)) !important;}
+  .nav,.barra-carrinho{max-width:520px;width:calc(100% - 24px);margin-left:auto !important;margin-right:auto !important;}
+}

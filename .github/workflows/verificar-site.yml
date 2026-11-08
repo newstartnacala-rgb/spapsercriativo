@@ -23,7 +23,9 @@ jobs:
             A=$(curl -s -m 20 "https://$d/apps/app-version.json?t=$(date +%s)" | grep -oE '"versao" *: *"[^"]*"' | head -1)
             K=$(curl -s -m 30 -o /dev/null -w '%{http_code} %{size_download} %{content_type}' "https://$d/apps/SPAP-Monitor.apk")
             P=$(curl -s -m 20 -o /dev/null -w '%{http_code} %{content_type}' "https://$d/apps/SPAP-Loja.mobileconfig")
-            echo "$d | http=$V | $VS | monitor: $M | loja: $I | app: $A apk=$K | iphone=$P" | tee -a out/resultado.txt
+            B=$(curl -s -m 30 -o /dev/null -w '%{http_code} %{size_download}' "https://$d/apps/SPAP-Banca.apk")
+            BT=$(curl -s -m 20 "https://$d/mobile.html?t=$(date +%s)" | grep -oE 'banca-tema' | head -1)
+            echo "$d | http=$V | $VS | monitor: $M | loja: $I | app: $A apk=$K | iphone=$P | banca: apk=$B tema=$BT" | tee -a out/resultado.txt
           done
       - name: Gravar resultado
         run: |

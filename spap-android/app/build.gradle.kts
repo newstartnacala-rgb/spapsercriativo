@@ -43,6 +43,7 @@ android {
             resValue("string", "app_name", "SPAP Monitor")
             buildConfigField("String", "START_PATH", "\"/monitor.html\"")
             buildConfigField("boolean", "IS_MONITOR", "true")
+            buildConfigField("String", "APP_TIPO", "\"monitor\"")
         }
         create("loja") {
             dimension = "app"
@@ -50,6 +51,15 @@ android {
             resValue("string", "app_name", "SPAP Loja")
             buildConfigField("String", "START_PATH", "\"/login.html\"")
             buildConfigField("boolean", "IS_MONITOR", "false")
+            buildConfigField("String", "APP_TIPO", "\"loja\"")
+        }
+        create("banca") {
+            dimension = "app"
+            applicationId = "com.spapsercriativo.banca"
+            resValue("string", "app_name", "SPAP Banca")
+            buildConfigField("String", "START_PATH", "\"/banca\"")
+            buildConfigField("boolean", "IS_MONITOR", "false")
+            buildConfigField("String", "APP_TIPO", "\"banca\"")
         }
     }
 
