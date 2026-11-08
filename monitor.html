@@ -800,6 +800,15 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   .def-plat svg { width:19px; height:19px; }
   .def-android { background:#e8f8ee; color:#16a34a; }
   .def-ios { background:#f1f5f9; color:#0f172a; }
+  #painel-meu-perfil .pf-logo { display:flex; align-items:center; gap:12px; margin:6px 0 14px; }
+  #painel-meu-perfil .pf-logo-caixa { width:64px; height:64px; border-radius:14px; border:1.5px dashed #cbd5e1; background:#f8fafc; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0; position:relative; }
+  #painel-meu-perfil .pf-logo-caixa img { width:100%; height:100%; object-fit:contain; position:absolute; inset:0; background:#fff; }
+  #painel-meu-perfil .pf-logo-vazio { font-size:24px; opacity:.5; }
+  #painel-meu-perfil .pf-logo-bts { display:flex; flex-direction:column; gap:8px; flex:1; min-width:0; }
+  #painel-meu-perfil .pf-logo-esc { display:flex; align-items:center; justify-content:center; height:40px; border-radius:11px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-size:13.5px; font-weight:800; cursor:pointer; white-space:nowrap; }
+  #painel-meu-perfil .pf-logo-esc input { display:none; }
+  #painel-meu-perfil .pf-logo-rem { height:36px; border-radius:11px; background:#fff; color:#dc2626; border:1px solid #fecaca; font-size:13px; font-weight:800; cursor:pointer; white-space:nowrap; font-family:inherit; }
+  #painel-meu-perfil .pf-rodape { font-family:inherit !important; }
   #painel-meu-perfil .pf-tit { display:flex; align-items:center; gap:12px; margin:-2px 0 16px; padding-bottom:12px; border-bottom:1px solid #eef2f7; }
   #painel-meu-perfil .pf-ico { width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0;
     background:linear-gradient(145deg,#eef4ff,#dfe9ff); box-shadow:inset 0 0 0 1px #d6e4fb; }
@@ -916,7 +925,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.190" defer></script>
+<script src="app-android.js?v=2.9.191" defer></script>
 </head>
 <body>
 <script>
@@ -5460,7 +5469,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.190';
+const MONITOR_VERSAO = '2.9.191';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -5862,8 +5871,15 @@ function verificarLembreteBackup() {
 
 
 async function abrirMeuPerfil() {
-  if (modoGeral) { alert('Escolhe uma loja específica no seletor do topo.'); return; }
+  if (modoGeral) { mostrarNotif('Escolhe primeiro uma loja (Super Admin → loja) para ver o perfil.', true); return; }
   document.getElementById('painel-meu-perfil').classList.add('aberto'); try{history.pushState({subpainel:'painel-meu-perfil'},'');}catch(e){}
+  // limpa tudo antes de carregar (nunca mostra dados de outra loja)
+  ['perfil-in-nome','perfil-in-empresa','perfil-in-telefone','perfil-in-endereco','perfil-in-codigo','perfil-in-pingerente','perfil-in-rodape','perfil-in-pin','perfil-in-email','perfil-in-senha']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  { const el = document.getElementById('perfil-in-descontos'); if (el) el.checked = false; }
+  { const el = document.getElementById('perfil-nome-loja'); if (el) el.textContent = 'A carregar…'; }
+  { const el = document.getElementById('perfil-logo-preview'); if (el) { el.src = ''; el.style.display = 'none'; } }
+  _perfilLogoBase64 = null;
   try {
     const { data: sess } = await supabaseClient.auth.getUser();
     const emailSessao = sess && sess.user ? sess.user.email : '';
@@ -5871,8 +5887,13 @@ async function abrirMeuPerfil() {
     const eLojaDeOutro = isSuperAdmin && lojaId !== window._lojaTesteId;
     const seg = document.getElementById('perfil-seguranca'); if (seg) seg.style.display = eLojaDeOutro ? 'none' : '';
 
-    const { data } = await supabaseClient.from('lojas')
+    let { data, error: erroPerfil } = await supabaseClient.from('lojas')
       .select('nome, nome_empresa, telefone, endereco, plano, pin_monitor, codigo_agente, pin_gerente, logo, recibo_rodape, codigo_desconto, email_dono').eq('id', lojaId).maybeSingle();
+    if (erroPerfil) {   // alguma coluna nova ainda não existe → carrega o essencial (o perfil nunca fica vazio)
+      const r2 = await supabaseClient.from('lojas').select('*').eq('id', lojaId).maybeSingle();
+      data = r2.data;
+      if (r2.error) { mostrarNotif('❌ Não foi possível carregar o perfil: ' + r2.error.message, true); return; }
+    }
     // E-mail mostrado = o e-mail com que a LOJA foi registada
     document.getElementById('perfil-email').textContent = (data && data.email_dono) || (eLojaDeOutro ? '—' : emailSessao) || '—';
     if (data) {
@@ -5882,7 +5903,7 @@ async function abrirMeuPerfil() {
         else { estPin.innerHTML = '🔓 Sem PIN. O monitor abre sem pedir código.'; estPin.style.color = '#64748b'; }
       }
       window._lojaPin = data.pin_monitor || '';
-      document.getElementById('perfil-nome-loja').textContent = data.nome || 'Minha Loja';
+      document.getElementById('perfil-nome-loja').textContent = _nomeLojaPerfil(data) === 'Loja sem nome' ? 'Sem nome da loja' : _nomeLojaPerfil(data);
       document.getElementById('perfil-in-nome').value = data.nome || '';
       document.getElementById('perfil-in-empresa').value = data.nome_empresa || '';
       document.getElementById('perfil-in-telefone').value = data.telefone || '';
@@ -5894,6 +5915,8 @@ async function abrirMeuPerfil() {
       _perfilLogoBase64 = null;
       var _lp = document.getElementById('perfil-logo-preview');
       if (_lp) { if (data.logo) { _lp.src = data.logo; _lp.style.display = 'block'; } else { _lp.src = ''; _lp.style.display = 'none'; } }
+    } else {
+      document.getElementById('perfil-nome-loja').textContent = 'Sem nome da loja';
 
       const planos = {
         'basico': { nome: 'Básico', desc: 'Apenas PDV (loja do vendedor)' },
@@ -5934,7 +5957,7 @@ function perfilCarregarLogo(input) {
     _perfilLogoBase64 = dataUrl;
     const prev = document.getElementById('perfil-logo-preview');
     if (prev) { prev.src = dataUrl; prev.style.display = 'block'; }
-    mostrarNotif('✅ Logótipo pronto (otimizado). Clica em "Guardar só o logótipo".');
+    mostrarNotif('✅ Logótipo pronto. Toque em «Guardar recibo» para gravar.');
   }, 360, 0.75);
 }
 
@@ -5951,6 +5974,7 @@ function perfilRemoverLogo() {
   _perfilLogoBase64 = '';
   const img = document.getElementById('perfil-logo-preview'); if (img) { img.src = ''; img.style.display = 'none'; }
   const fi = document.getElementById('perfil-logo-file'); if (fi) fi.value = '';
+  mostrarNotif('🗑 Logótipo removido. Toque em «Guardar recibo» para gravar.');
 }
 
 async function guardarDadosPerfil(btn) {
@@ -5983,7 +6007,7 @@ async function _guardarDadosPerfil() {
   if (error) { mostrarNotif('❌ Não gravou: ' + error.message, true); return; }
   if (gravou && Array.isArray(gravou) && gravou.length === 0) { mostrarNotif('❌ Não gravou: sem permissão para alterar esta loja.', true); return; }
   if (dados.logo !== undefined) _perfilLogoBase64 = null;
-  document.getElementById('perfil-nome-loja').textContent = dados.nome || 'Sem nome da loja';
+  document.getElementById('perfil-nome-loja').textContent = dados.nome || dados.nome_empresa || 'Sem nome da loja';
   _pintarLojaTopo(dados.nome);
   try { const l = (todasLojas || []).find(x => x.id === lojaId); if (l) { l.nome = _nomeLojaPerfil(Object.assign({}, l, dados)); nomeLoja = l.nome; } } catch(e) {}
   mostrarNotif('✅ Guardado!');
@@ -6677,7 +6701,7 @@ async function carregarContagensEquipa() {
   <div style="padding:16px;max-width:600px;">
 
     <!-- Cabeçalho do perfil -->
-    <div style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:white;border-radius:14px;padding:20px;margin-bottom:18px;">
+    <div id="perfil-cabecalho" data-keep-color style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:white;border-radius:14px;padding:20px;margin-bottom:18px;">
       <div style="font-size:22px;font-weight:bold;" id="perfil-nome-loja">—</div>
       <div style="font-size:14px;opacity:0.9;margin-top:4px;" id="perfil-email">—</div>
     </div>
@@ -6719,16 +6743,18 @@ async function carregarContagensEquipa() {
       <label style="font-size:13px;color:#64748b;font-weight:600;">Nome da empresa (no recibo)</label>
       <input type="text" id="perfil-in-empresa" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:15px;margin:5px 0 12px;box-sizing:border-box;">
 
-      <label style="font-size:13px;color:#64748b;font-weight:600;">🖼️ Logótipo / banner (opcional — aparece no recibo em vez do nome)</label>
-      <div style="display:flex;gap:10px;align-items:center;margin:5px 0 12px;">
-        <img id="perfil-logo-preview" src="" style="width:56px;height:56px;object-fit:contain;border:1px solid #e2e8f0;border-radius:8px;display:none;background:#f8fafc;">
-        <input type="file" accept="image/*" id="perfil-logo-file" onchange="perfilCarregarLogo(this)" style="flex:1;font-size:12px;">
-        <button type="button" onclick="perfilRemoverLogo()" style="padding:8px 10px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;cursor:pointer;font-size:12px;">Remover</button>
+      <label style="font-size:13px;color:#64748b;font-weight:600;">🖼️ Logótipo (opcional — aparece no recibo em vez do nome)</label>
+      <div class="pf-logo">
+        <div class="pf-logo-caixa"><img id="perfil-logo-preview" src="" alt="" style="display:none;"><span class="pf-logo-vazio">🖼️</span></div>
+        <div class="pf-logo-bts">
+          <label class="pf-logo-esc">📷 Escolher logótipo<input type="file" accept="image/*" id="perfil-logo-file" onchange="perfilCarregarLogo(this)"></label>
+          <button type="button" class="pf-logo-rem" onclick="perfilRemoverLogo()">🗑 Remover</button>
+        </div>
       </div>
       
 
       <label style="font-size:13px;color:#64748b;font-weight:600;">🧾 Rodapé do recibo (o texto no fundo)</label>
-      <textarea id="perfil-in-rodape" rows="2" placeholder="Ex: Obrigado pela preferência!" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:14px;margin:5px 0 14px;box-sizing:border-box;resize:vertical;"></textarea>
+      <textarea id="perfil-in-rodape" rows="2" class="pf-rodape" placeholder="Ex: Obrigado pela preferência!" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:14px;margin:5px 0 14px;box-sizing:border-box;resize:vertical;"></textarea>
 
       <button class="pf-guardar" onclick="guardarDadosPerfil(this)" style="width:100%;padding:12px;background:#16a34a;border:none;border-radius:10px;color:white;font-weight:bold;cursor:pointer;">💾 Guardar recibo</button>
     </div>
