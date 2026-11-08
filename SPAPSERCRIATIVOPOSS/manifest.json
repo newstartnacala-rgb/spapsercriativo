@@ -3,7 +3,7 @@
   "short_name": "Spap PDV",
   "description": "Sistema de Ponto de Venda Profissional — Tecnologia Varejista de Ponta",
   "id": "/loja",
-  "start_url": "/index.html",
+  "start_url": "index.html",
   "display": "standalone",
   "background_color": "#f5f1e8",
   "theme_color": "#1e1e1b",
@@ -27,6 +27,6 @@
     "productivity"
   ],
   "lang": "pt-PT",
-  "scope": "/",
+  "scope": "./",
   "prefer_related_applications": false
 }

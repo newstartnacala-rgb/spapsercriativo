@@ -39,7 +39,7 @@
   .link-esqueci { display: block; margin-top: 10px; font-size: 14px; color: #999; text-align: right; cursor: pointer; }
   .link-esqueci:hover { color: #1a56a0; }
 </style>
-<script src="app-android.js?v=2.9.198" defer></script>
+<script src="app-android.js?v=2.9.199" defer></script>
 </head>
 <body>
 <div class="box">
@@ -129,7 +129,7 @@
           try {
             const { data: mb } = await supabaseClient.from('membros_loja')
               .select('lojas(tipo_loja)').eq('user_id', data.session.user.id).limit(1);
-            if (mb && mb[0] && mb[0].lojas && mb[0].lojas.tipo_loja === 'banca') { window.location.href = '/banca'; return; }
+            if (mb && mb[0] && mb[0].lojas && mb[0].lojas.tipo_loja === 'banca') { window.location.href = 'banca'; return; }
           } catch(e) {}
         }
         window.location.href = destinoAposLogin(); return;
@@ -210,7 +210,7 @@
 
       // Banca → vai para a app Mobile POSS (a não ser que haja um destino específico guardado)
       if (tipoLoja === 'banca' && !localStorage.getItem('pdv_login_destino')) {
-        window.location.href = '/banca';
+        window.location.href = 'banca';
         return;
       }
     }
@@ -222,7 +222,7 @@
     try {
       const { error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: window.location.origin + '/login.html' }
+        options: { redirectTo: new URL('login.html', location.href).href }
       });
       if (error) mostrarErro('O Google ainda não está ligado no Supabase (Authentication → Providers → Google). ' + error.message);
     } catch(e) { mostrarErro('Erro: ' + (e.message || e)); }

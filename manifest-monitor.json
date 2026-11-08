@@ -3,7 +3,7 @@
   "short_name": "Spap Monitor",
   "description": "Monitor e gestão do Spap-Sercriativo",
   "id": "/monitor",
-  "start_url": "/monitor.html",
+  "start_url": "monitor.html",
   "display": "standalone",
   "background_color": "#12315e",
   "theme_color": "#12315e",
@@ -14,6 +14,6 @@
   ],
   "categories": ["business", "productivity"],
   "lang": "pt-PT",
-  "scope": "/",
+  "scope": "./",
   "prefer_related_applications": false
 }

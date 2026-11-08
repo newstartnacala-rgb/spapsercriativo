@@ -3,7 +3,7 @@
   "short_name": "Mobile POSS",
   "description": "Ponto de venda simples para bancas — Spap-Sercriativo",
   "id": "/banca",
-  "start_url": "/banca",
+  "start_url": "banca",
   "display": "standalone",
   "background_color": "#16a34a",
   "theme_color": "#16a34a",
@@ -14,5 +14,5 @@
   ],
   "categories": ["business", "productivity"],
   "lang": "pt-PT",
-  "scope": "/"
+  "scope": "./"
 }

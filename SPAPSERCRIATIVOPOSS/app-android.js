@@ -152,7 +152,7 @@
 
   // ---- Pedido para a OUTRA plataforma (ex.: «App iPhone» tocado num Android ou no computador)
   function folhaIOSnoutro() {
-    var endereco = location.origin + (tipo === 'monitor' ? '/monitor.html' : '/login.html');
+    var endereco = new URL(tipo === 'monitor' ? 'monitor.html' : 'login.html', location.href).href;
     var el = abrirFolha('<h3>App ' + nome + ' para iPhone / iPad</h3>'
       + '<p>No iPhone a app instala-se pelo <b>Safari</b>. Abra este endereço no iPhone:</p>'
       + '<p><code>' + endereco + '</code></p>'

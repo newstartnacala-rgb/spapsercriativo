@@ -937,11 +937,11 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 <meta name="theme-color" content="#12315e">
 <script>
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(()=>{}); });
+    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(()=>{}); });
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.198" defer></script>
+<script src="app-android.js?v=2.9.199" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -5489,7 +5489,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.198';
+const MONITOR_VERSAO = '2.9.199';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -6056,7 +6056,7 @@ async function trocarEmail() {
       if (/email_em_uso/i.test(m)) { mostrarNotif('❌ Esse e-mail já pertence a outra conta.', true); return; }
       if (/function|does not exist|schema cache/i.test(m)) {
         // SQL ainda não instalado → método normal do Supabase (envia link de confirmação)
-        const r = await supabaseClient.auth.updateUser({ email: novo }, { emailRedirectTo: window.location.origin + '/monitor.html' });
+        const r = await supabaseClient.auth.updateUser({ email: novo }, { emailRedirectTo: new URL('monitor.html', location.href).href });
         if (r.error) { mostrarNotif('❌ ' + r.error.message, true); return; }
         mostrarNotif('✉️ Link enviado para ' + novo + ' (corre o SQL da v2.9.189 para trocar sem link).'); inp.value = ''; return;
       }
@@ -6284,7 +6284,7 @@ async function adicionarGerente() {
     const token = 'g' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
     const { error } = await supabaseClient.from('gerente_convites').insert({ token, loja_id: lojaId });
     if (error) throw error;
-    const link = location.origin + '/monitor.html?g=' + token;
+    const link = new URL('monitor.html', location.href).href + '?g=' + token;
     prompt('✅ Link do gerente criado! Copia e envia ao gerente (ele entra sem criar conta):', link);
   } catch (e) { mostrarNotif('❌ ' + (e.message || e) + ' (corre o SQL do gerente?)', true); }
 }

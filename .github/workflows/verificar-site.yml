@@ -15,7 +15,7 @@ jobs:
       - name: Ler versões publicadas
         run: |
           mkdir -p out
-          for d in spapsercriativo.vercel.app spapsercriativo-spapcercruativoteam.vercel.app spapsercriativo2950.vercel.app spapsercriativo2950-spapcercruativoteam.vercel.app spapsercriativo-git-main-spapcercruativoteam.vercel.app spapsercriativo2950-git-main-spapcercruativoteam.vercel.app; do
+          for d in spapsercriativo.vercel.app spapsercriativo-spapcercruativoteam.vercel.app spapsercriativo2950.vercel.app spapsercriativo2950-spapcercruativoteam.vercel.app spapsercriativo-git-main-spapcercruativoteam.vercel.app spapsercriativo2950-git-main-spapcercruativoteam.vercel.app newstartnacala-rgb.github.io/spapsercriativo; do
             V=$(curl -s -m 20 -o /tmp/v.json -w '%{http_code}' "https://$d/version.json?t=$(date +%s)")
             VS=$(grep -oE '"versao" *: *"[^"]*"' /tmp/v.json 2>/dev/null | head -1)
             M=$(curl -s -m 20 "https://$d/monitor.html?t=$(date +%s)" | grep -oE "MONITOR_VERSAO = '[^']*'|agua-mar|topbar-titulo" | sort -u | tr '\n' ' ')

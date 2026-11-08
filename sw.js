@@ -1,23 +1,23 @@
-const CACHE_NAME = 'spap-pdv-v272';
+const CACHE_NAME = 'spap-pdv-v273';
 const FICHEIROS = [
-  '/',
-  '/index.html',
-  '/login.html',
-  '/registo.html',
-  '/monitor.html',
-  '/mobile.html',
-  '/mobile-monitor.html',
-  '/login-banca.html',
-  '/registo-banca.html',
-  '/planos.html',
-  '/supabase-config.js',
-  '/sw.js',
-  '/manifest.json',
-  '/manifest-mobile.json',
-  '/logo.png',
-  '/ssteam-logo.png',
-  '/icon-192.png',
-  '/icon-512.png',
+  './',
+  './index.html',
+  './login.html',
+  './registo.html',
+  './monitor.html',
+  './mobile.html',
+  './mobile-monitor.html',
+  './login-banca.html',
+  './registo-banca.html',
+  './planos.html',
+  './supabase-config.js',
+  './sw.js',
+  './manifest.json',
+  './manifest-mobile.json',
+  './logo.png',
+  './ssteam-logo.png',
+  './icon-192.png',
+  './icon-512.png',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
   'https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js'
 ];
@@ -73,7 +73,7 @@ self.addEventListener('fetch', e => {
   }
 
   // Apps Android (APK + versão) — sempre da rede, nunca da cache
-  if (url.pathname.startsWith('/apps/')) {
+  if (url.pathname.includes('/apps/')) {
     e.respondWith(fetch(e.request, { cache: 'no-store' }));
     return;
   }
@@ -87,7 +87,7 @@ self.addEventListener('fetch', e => {
   // HTML (navegações) — REDE primeiro (mostra sempre a versão mais recente quando
   // há internet); cai para a cache só quando está offline. Isto garante que as
   // atualizações chegam logo ao ecrã, em vez de ficar preso numa versão antiga.
-  const ehHTML = e.request.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname === '/';
+  const ehHTML = e.request.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname.endsWith('/');
   if (ehHTML) {
     e.respondWith(
       fetch(e.request).then(response => {
