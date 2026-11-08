@@ -894,9 +894,10 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   @media (prefers-reduced-motion:reduce) { #app, .secao-card, .vazio-vendas, .att-hero, .kpi::after { animation:none !important; } }
 </style>
 <link rel="manifest" href="manifest-monitor.json">
-<link rel="apple-touch-icon" href="icon-monitor-192.png">
+<link rel="apple-touch-icon" href="ios-monitor-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Spap Monitor">
+<meta name="apple-mobile-web-app-title" content="SPAP Monitor">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#12315e">
 <script>
   if ('serviceWorker' in navigator) {
@@ -904,7 +905,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.183" defer></script>
+<script src="app-android.js?v=2.9.184" defer></script>
 </head>
 <body>
 <script>
@@ -5438,7 +5439,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.183';
+const MONITOR_VERSAO = '2.9.184';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });

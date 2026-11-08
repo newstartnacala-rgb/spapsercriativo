@@ -1,4 +1,4 @@
-/* SPAP — app Android nativa (APK)
+/* SPAP — app Android nativa (APK) e app no iPhone (ecrã principal)
    1) Convite automático: só no Android (telemóvel/tablet) no navegador; nunca no computador nem dentro da app.
    2) window.spapInstalarApp(): botão «Instalar app (APK)» — funciona sempre:
       • dentro da app → verifica e instala a versão mais recente;
@@ -12,8 +12,11 @@
   var apk = 'apps/' + ficheiro;
   var chave = 'spap_apk_convite_' + tipo;
 
+  // iPhone / iPad (os iPad recentes dizem que são «Macintosh», mas têm ecrã tátil)
+  function ehIOS() { return /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && (navigator.maxTouchPoints || 0) > 1); }
+  function jaNoEcraIOS() { return window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches); }
   function naApp() { return /SPAPApp/i.test(ua) || !!(window.SPAP_APP_NATIVA && window.SPAPNative); }
-  function ehComputadorOuIos() { return /Windows|Macintosh|Mac OS X|CrOS|iPhone|iPad|iPod/i.test(ua) && !/android/i.test(ua); }
+  function ehComputadorOuIos() { return ehIOS() || (/Windows|Macintosh|Mac OS X|CrOS/i.test(ua) && !/android/i.test(ua)); }
   function ehAndroid() {
     if (ehComputadorOuIos()) return false;
     var plat = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
@@ -118,6 +121,28 @@
     };
   }
 
+  // ---- iPhone / iPad: instalar no ecrã principal (app do sistema, sem App Store)
+  var SVG_PARTILHAR = '<svg viewBox="0 0 24 24" width="20" height="20" style="vertical-align:-4px"><path fill="none" stroke="#0a84ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12M8 7l4-4 4 4M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>';
+  var SVG_MAIS = '<svg viewBox="0 0 24 24" width="20" height="20" style="vertical-align:-4px"><rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="none" stroke="#0f172a" stroke-width="2"/><path d="M12 8v8M8 12h8" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/></svg>';
+  function folhaIOS() {
+    if (jaNoEcraIOS()) {
+      var e0 = abrirFolha('<h3>A app ' + nome + ' já está instalada ✅</h3><p>Está a usar a app a partir do ecrã principal. Atualiza-se sozinha.</p><button class="ak-sim" type="button">Fechar</button>');
+      e0.querySelector('.ak-sim').onclick = fecharFolha; return;
+    }
+    var noSafari = /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua);
+    var aparelho = /iPhone|iPod/i.test(ua) ? 'iPhone' : 'iPad';
+    var el = abrirFolha('<h3>Instale a app ' + nome + ' no ' + aparelho + '</h3>'
+      + '<p>Fica com um ícone no ecrã principal e abre em ecrã inteiro, como uma app.</p>'
+      + '<ol>'
+      + '<li><span>Toque no botão <b>Partilhar</b> ' + SVG_PARTILHAR + ' ' + (noSafari ? 'na barra do Safari (em baixo).' : 'do navegador (no Chrome fica ao lado do endereço).') + '</span></li>'
+      + '<li><span>Deslize e escolha <b>«Adicionar ao Ecrã Principal»</b> ' + SVG_MAIS + '</span></li>'
+      + '<li><span>Toque em <b>Adicionar</b>. A app <b>' + nome + '</b> aparece no ecrã principal.</span></li>'
+      + '</ol>'
+      + '<button class="ak-sim" type="button">Entendi</button><button class="ak-nao" type="button">Agora não</button>');
+    el.querySelector('.ak-sim').onclick = function () { lembrar(); fecharFolha(); };
+    el.querySelector('.ak-nao').onclick = function () { lembrar(); fecharFolha(); };
+  }
+
   // ---- Computador: explicar e permitir baixar
   function folhaComputador(versao) {
     var endereco = location.origin + (tipo === 'monitor' ? '/monitor.html' : '/login.html');
@@ -133,6 +158,7 @@
     lerVersao().then(function (d) {
       var v = d && d.versao;
       if (naApp()) folhaNaApp(d);
+      else if (ehIOS()) folhaIOS();
       else if (ehAndroid()) folhaAndroid(v);
       else folhaComputador(v);
     });
@@ -140,8 +166,15 @@
 
   // Convite automático (só Android no navegador)
   try {
-    if (naApp() || !ehAndroid()) return;
+    if (naApp()) return;
+    var paraIOS = ehIOS() && !jaNoEcraIOS();
+    if (!paraIOS && !ehAndroid()) return;
     try { var t = +localStorage.getItem(chave) || 0; if (Date.now() - t < 3 * 864e5) return; } catch (e) {}
+    if (paraIOS) {
+      var iniIOS = function () { setTimeout(function () { if (!document.getElementById('apk-convite')) folhaIOS(); }, 2500); };
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniIOS); else iniIOS();
+      return;
+    }
     var iniciar = function () {
       setTimeout(function () {
         lerVersao().then(function (d) { if (d && d.versao && !document.getElementById('apk-convite')) folhaAndroid(d.versao); });
