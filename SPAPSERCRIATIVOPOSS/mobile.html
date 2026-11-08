@@ -110,9 +110,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="SPAP Banca">
-<link rel="stylesheet" href="banca-tema.css?v=3.2.0">
-<script src="banca-tema.js?v=3.2.0" defer></script>
-<script src="app-android.js?v=3.2.0" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.2.1">
+<script src="banca-tema.js?v=3.2.1" defer></script>
+<script src="app-android.js?v=3.2.1" defer></script>
 </head>
 <body>
 
@@ -275,7 +275,6 @@
         <div class="mi" onclick="reimprimirRecibo()"><div class="e">🧾</div><div class="t">Recibo de venda</div></div>
         <div class="mi" onclick="abrirRetornar()"><div class="e">↩️</div><div class="t">Retorno (devolver)</div></div>
         <div class="mi" onclick="avisoDespacho()"><div class="e">🚚</div><div class="t">Aviso de despacho</div></div>
-        <div class="mi" onclick="fecharFolha('folha-menu');mostrarTela('produtos')"><div class="e">📦</div><div class="t">Produtos</div></div>
         <div class="mi" onclick="fecharFolha('folha-menu');abrirFolha('folha-definicoes')"><div class="e">⚙️</div><div class="t">Definições</div></div>
         <div class="mi" onclick="sairBanca()" style="background:#fef2f2;"><div class="e">🚪</div><div class="t">Sair</div></div>
       </div>
@@ -842,12 +841,14 @@ const I18N={
   en:{nome:'English',ph:'Search product…',cart:'Checkout',confirmar:'✅ Confirm sale',pagar:'💳 Receive / Pay',sub:'sell',t_vender:'Sell',t_prod:'Products'},
   fr:{nome:'Français',ph:'Chercher un produit…',cart:'Finaliser la vente',confirmar:'✅ Confirmer la vente',pagar:'💳 Encaisser / Payer',sub:'vendre',t_vender:'Vendre',t_prod:'Produits'}
 };
+const IDIOMAS={pt:'Português',en:'English',fr:'Français',zh:'中文'};
 function aplicarIdioma(l){
-  const d=I18N[l]||I18N.pt; try{ localStorage.setItem('banca_lang',l); }catch(e){}
+  // os textos ficam em português e o tradutor traduz a página inteira para a língua escolhida
+  const d=I18N.pt;
   const b=document.getElementById('busca'); if(b) b.placeholder=d.ph;
-  const lt=document.getElementById('tp-lang-txt'); if(lt) lt.textContent=(I18N[l]?l:'pt').toUpperCase();
   const c=document.getElementById('btn-abrir-cart'); if(c) c.textContent=d.cart;
   const cf=document.getElementById('btn-confirmar'); if(cf) cf.textContent=d.confirmar;
+  const lt=document.getElementById('tp-lang-txt'); if(lt) lt.textContent=(IDIOMAS[l]?l:'pt').toUpperCase();
 }
 // Indicador de internet no topo (Online / Offline)
 function estadoNet(avisar){
@@ -859,19 +860,19 @@ window.addEventListener('online', ()=>{ estadoNet(); toast('✅ Internet de volt
 window.addEventListener('offline', ()=>{ estadoNet(); toast('⚠️ Sem internet','erro'); });
 document.addEventListener('DOMContentLoaded', ()=>estadoNet());
 estadoNet();
-function idiomaAtual(){ try{ return localStorage.getItem('banca_lang')||'pt'; }catch(e){ return 'pt'; } }
+function idiomaAtual(){ try{ const l=localStorage.getItem('banca_lang')||'pt'; return IDIOMAS[l]?l:'pt'; }catch(e){ return 'pt'; } }
 function idioma(){ fecharFolha('folha-menu'); mostrarEscolhaIdioma(idiomaAtual()); }
 function mostrarEscolhaIdioma(atual){
   let ov=document.getElementById('folha-idioma'); if(ov) ov.remove();
   ov=document.createElement('div'); ov.className='folha-fundo ativa'; ov.id='folha-idioma';
   ov.innerHTML=`<div class="folha"><div class="cab"><h3>🌐 Idioma</h3><button onclick="document.getElementById('folha-idioma').remove()">✕</button></div>
   <div class="conteudo"><div class="menu-grid">
-    ${['pt','en','fr'].map(l=>`<div class="mi" style="${l===atual?'border:2px solid var(--verde);':''}" onclick="escolherIdioma('${l}')"><div class="e">${l==='pt'?'🇲🇿':l==='en'?'🇬🇧':'🇫🇷'}</div><div class="t">${I18N[l].nome}${l===atual?' ✓':''}</div></div>`).join('')}
-  </div><div style="font-size:11px;color:var(--suave);text-align:center;margin-top:12px;">Português está sempre disponível. Tradução a crescer.</div></div></div>`;
+    ${['pt','en','fr','zh'].map(l=>`<div class="mi notranslate" translate="no" style="${l===atual?'border:2px solid var(--lj);':''}" onclick="escolherIdioma('${l}')"><div class="e">${{pt:'🇲🇿',en:'🇬🇧',fr:'🇫🇷',zh:'🇨🇳'}[l]}</div><div class="t">${IDIOMAS[l]}${l===atual?' ✓':''}</div></div>`).join('')}
+  </div><div style="font-size:11px;color:var(--suave);text-align:center;margin-top:12px;">A página inteira é traduzida para a língua escolhida.</div></div></div>`;
   ov.addEventListener('click',e=>{ if(e.target===ov) ov.remove(); });
   document.body.appendChild(ov);
 }
-function escolherIdioma(l){ aplicarIdioma(l); const ov=document.getElementById('folha-idioma'); if(ov) ov.remove(); toast('🌐 '+(I18N[l]||I18N.pt).nome,'ok'); }
+function escolherIdioma(l){ try{ localStorage.setItem('banca_lang', l); }catch(e){} aplicarIdioma(l); const ov=document.getElementById('folha-idioma'); if(ov) ov.remove(); if(window.bancaTraduzir) bancaTraduzir(l); }
 // Aviso de despacho: o balconista VÊ o que o dono enviou e confirma/rejeita.
 async function avisoDespacho(){
   fecharFolha('folha-menu');

@@ -257,8 +257,49 @@
   }
   window.bancaVerificarPlano = verificarPlano;
 
+  // ===== Tradução da página inteira (Português, English, Français, 中文) — o mesmo tradutor da Loja principal =====
+  var NAO_TRADUZIR = '.card .n, .item .nn, .row .nn, #nome-loja, .topo .nome, #nome-banca, .tp-lang, .pl-p, #cb-input';
+  function marcarNaoTraduzir(raiz) {
+    try {
+      var lista = raiz.querySelectorAll ? raiz.querySelectorAll(NAO_TRADUZIR) : [];
+      Array.prototype.forEach.call(lista, function (e) { e.classList.add('notranslate'); e.setAttribute('translate', 'no'); });
+      if (raiz.matches && raiz.matches(NAO_TRADUZIR)) { raiz.classList.add('notranslate'); raiz.setAttribute('translate', 'no'); }
+    } catch (e) {}
+  }
+  function linguaGuardada() { try { var l = localStorage.getItem('banca_lang') || 'pt'; return /^(pt|en|fr|zh)$/.test(l) ? l : 'pt'; } catch (e) { return 'pt'; } }
+  function cookieLingua(l) {
+    var val = (!l || l === 'pt') ? '' : '/pt/' + (l === 'zh' ? 'zh-CN' : l);
+    var exp = val ? '' : ';expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie = 'googtrans=' + val + ';path=/' + exp;
+    try { document.cookie = 'googtrans=' + val + ';path=/;domain=.' + location.hostname + exp; } catch (e) {}
+    return val;
+  }
+  function carregarTradutor() {
+    if (window._bancaTradutor) return; window._bancaTradutor = true;
+    var d = document.createElement('div'); d.id = 'google_translate_element'; d.style.display = 'none'; document.body.appendChild(d);
+    var st = document.createElement('style');
+    st.textContent = '.goog-te-banner-frame.skiptranslate,.goog-te-gadget{display:none!important}body{top:0!important}.goog-logo-link,.goog-te-gadget span{display:none!important}#goog-gt-tt,.goog-te-balloon-frame{display:none!important}font.goog-text-highlight{background:none!important;box-shadow:none!important}.skiptranslate iframe{visibility:hidden!important;height:0!important}';
+    document.head.appendChild(st);
+    window.googleTranslateElementInit = function () {
+      try { new google.translate.TranslateElement({ pageLanguage: 'pt', includedLanguages: 'pt,en,fr,zh-CN', autoDisplay: false }, 'google_translate_element'); } catch (e) {}
+    };
+    var sc = document.createElement('script'); sc.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit'; sc.async = true;
+    document.body.appendChild(sc);
+  }
+  window.bancaTraduzir = function (l) {
+    try { localStorage.setItem('banca_lang', l); } catch (e) {}
+    var val = cookieLingua(l);
+    var combo = document.querySelector('.goog-te-combo');
+    if (combo && val) { combo.value = (l === 'zh' ? 'zh-CN' : l); combo.dispatchEvent(new Event('change')); if (window.toast) toast('🌐 ' + ({ en: 'English', fr: 'Français', zh: '中文' }[l] || l), 'ok'); }
+    else location.reload();   // voltar ao Português (ou o tradutor ainda a carregar): recarrega já na língua certa
+  };
+
   function iniciar() {
     try { marcaTopo(); menuTresBarras(); numerarMenus(); } catch (e) {}
+    marcarNaoTraduzir(document.body);
+    // a língua escolhida acompanha todas as páginas da Banca
+    if (linguaGuardada() !== 'pt') cookieLingua(linguaGuardada());
+    carregarTradutor();
     if (document.getElementById('tela-resumo')) document.body.classList.add('pg-mon');
     if (document.getElementById('tela-vender')) document.body.classList.add('pg-vender');
     document.addEventListener('pointerdown', ripple, true);
@@ -268,7 +309,7 @@
       new MutationObserver(function (lista) {
         lista.forEach(function (m) {
           if (m.type === 'characterData') trocarNo(m.target);
-          else { m.addedNodes.forEach(varrer); if (m.addedNodes.length) { try { numerarMenus(); } catch (e) {} } }
+          else { m.addedNodes.forEach(function (n) { varrer(n); if (n.nodeType === 1) marcarNaoTraduzir(n); }); if (m.addedNodes.length) { try { numerarMenus(); } catch (e) {} } }
         });
       }).observe(document.body, { childList: true, subtree: true, characterData: true });
     } catch (e) {}
