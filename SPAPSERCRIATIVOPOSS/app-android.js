@@ -7,9 +7,10 @@
 (function () {
   var ua = navigator.userAgent || '';
   // Banca (/banca, mobile*.html, login/registo da banca) tem app própria; depois Monitor; o resto é Loja
-  var tipo = /banca|mobile/i.test(location.pathname) ? 'banca' : (/monitor/i.test(location.pathname) ? 'monitor' : 'loja');
-  var NOMES = { monitor: 'SPAP Monitor', loja: 'SPAP Loja', banca: 'SPAP Banca' };
-  var FICH = { monitor: 'SPAP-Monitor', loja: 'SPAP-Loja', banca: 'SPAP-Banca' };
+  var pth = location.pathname;
+  var tipo = /banca\/monitor|mobile-monitor/i.test(pth) ? 'bancamonitor' : /banca|mobile/i.test(pth) ? 'banca' : (/monitor/i.test(pth) ? 'monitor' : 'loja');
+  var NOMES = { monitor: 'SPAP Monitor', loja: 'SPAP Loja', banca: 'SPAP Banca', bancamonitor: 'SPAP Banca Monitor' };
+  var FICH = { monitor: 'SPAP-Monitor', loja: 'SPAP-Loja', banca: 'SPAP-Banca', bancamonitor: 'SPAP-Banca-Monitor' };
   var nome = NOMES[tipo];
   var ficheiro = FICH[tipo] + '.apk';
   var apk = 'apps/' + ficheiro;
@@ -81,7 +82,7 @@
   // ---- Android no navegador: baixar e instalar
   function folhaAndroid(versao) {
     var el = abrirFolha('<h3>Instale a app ' + nome + '</h3>'
-      + '<p>Use o ' + (tipo === 'monitor' ? 'Monitor' : tipo === 'banca' ? 'sistema da Banca' : 'sistema da Loja') + ' como uma app no seu telemóvel ou tablet' + (versao ? ' (versão ' + versao + ')' : '') + '.</p>'
+      + '<p>Use o ' + (tipo === 'monitor' ? 'Monitor' : tipo === 'bancamonitor' ? 'Monitor da Banca' : tipo === 'banca' ? 'sistema da Banca' : 'sistema da Loja') + ' como uma app no seu telemóvel ou tablet' + (versao ? ' (versão ' + versao + ')' : '') + '.</p>'
       + '<div class="ak-van"><span>⚡ Mais rápida</span><span>📲 Ícone no ecrã</span><span>🔄 Atualiza sozinha</span></div>'
       + '<a class="ak-sim" href="' + apk + '" download>Baixar e instalar</a>'
       + '<button class="ak-nao" type="button">Agora não</button>');
@@ -155,7 +156,7 @@
 
   // ---- Pedido para a OUTRA plataforma (ex.: «App iPhone» tocado num Android ou no computador)
   function folhaIOSnoutro() {
-    var endereco = new URL(tipo === 'monitor' ? 'monitor.html' : tipo === 'banca' ? 'banca' : 'login.html', location.href).href;
+    var endereco = new URL({ monitor: 'monitor.html', banca: 'banca', bancamonitor: 'banca/monitor', loja: 'login.html' }[tipo], location.href).href;
     var el = abrirFolha('<h3>App ' + nome + ' para iPhone / iPad</h3>'
       + '<p>No iPhone a app instala-se pelo <b>Safari</b>. Abra este endereço no iPhone:</p>'
       + '<p><code>' + endereco + '</code></p>'

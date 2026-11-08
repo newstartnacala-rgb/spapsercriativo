@@ -151,7 +151,7 @@ public class MainActivity extends Activity {
             String u = instalacaoPendente; instalacaoPendente = null;
             instalarApp(u);
         }
-        if (!BuildConfig.IS_MONITOR) ui.postDelayed(this::verificarAppLoja, 4000);
+        if (!BuildConfig.IS_MONITOR || "bancamonitor".equals(BuildConfig.APP_TIPO)) ui.postDelayed(this::verificarAppLoja, 4000);
     }
 
     @Override
@@ -396,7 +396,7 @@ public class MainActivity extends Activity {
                 if (BuildConfig.IS_MONITOR) {
                     String p = uri.getPath() == null ? "/" : uri.getPath();
                     String novo = null;
-                    if (p.equals("/") || p.equals("/index.html") || p.equals("/index")) novo = "/monitor.html";
+                    if (p.equals("/") || p.equals("/index.html") || p.equals("/index")) novo = "bancamonitor".equals(BuildConfig.APP_TIPO) ? "/mobile-monitor.html" : "/monitor.html";
                     else if (p.equals("/banca") || p.equals("/mobile.html") || p.equals("/mobile")) novo = "/mobile-monitor.html";
                     if (novo != null) { v.loadUrl(uri.getScheme() + "://" + host + novo); return true; }
                 }
@@ -775,7 +775,8 @@ public class MainActivity extends Activity {
                 org.json.JSONObject j = new org.json.JSONObject(sb.toString());
                 String v = j.optString("versao", "");
                 String tipo = BuildConfig.APP_TIPO;
-                String caminho = j.optString(tipo, "apps/SPAP-" + Character.toUpperCase(tipo.charAt(0)) + tipo.substring(1) + ".apk");
+                String caminho = j.optString(tipo, "");
+                if (caminho.isEmpty()) return;
                 if (v.isEmpty() || compararVersoes(v, BuildConfig.VERSION_NAME) <= 0) return;
                 final String url = caminho.startsWith("http") ? caminho : base + "/" + caminho.replaceFirst("^/", "");
                 ui.post(() -> {

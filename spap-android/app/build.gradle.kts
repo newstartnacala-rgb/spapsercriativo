@@ -61,6 +61,14 @@ android {
             buildConfigField("boolean", "IS_MONITOR", "false")
             buildConfigField("String", "APP_TIPO", "\"banca\"")
         }
+        create("bancamonitor") {
+            dimension = "app"
+            applicationId = "com.spapsercriativo.bancamonitor"
+            resValue("string", "app_name", "SPAP Banca Monitor")
+            buildConfigField("String", "START_PATH", "\"/banca/monitor\"")
+            buildConfigField("boolean", "IS_MONITOR", "true")
+            buildConfigField("String", "APP_TIPO", "\"bancamonitor\"")
+        }
     }
 
     buildTypes {
