@@ -18,7 +18,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.208"></script>
+<script src="spap-leitor.js?v=2.9.209"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -267,8 +267,8 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   .sa-pill img { width:19px; height:19px; }
   .sa-chev { width:6px; height:6px; border-right:2px solid #5c3d00; border-bottom:2px solid #5c3d00; transform:rotate(45deg) translateY(-2px); margin-left:3px; }
   .sa-loja { font-size:12px; color:var(--nv2); overflow:hidden; text-overflow:ellipsis; }
-  #sa-menu { display:none; position:fixed; inset:0; z-index:3000; background:rgba(8,20,60,.25); }
-  #sa-menu.aberto { display:block; }
+  #sa-menu { display:block; visibility:hidden; opacity:0; pointer-events:none; position:fixed; inset:0; z-index:3000; background:rgba(8,20,60,.25); transition:opacity .16s, visibility 0s .16s; }
+  #sa-menu.aberto { visibility:visible; opacity:1; pointer-events:auto; transition:opacity .16s; }
   .sa-box { position:absolute; top:74px; left:50%; transform:translateX(-50%); width:min(92vw,380px); max-height:72vh; overflow:auto;
             background:#fff; border-radius:20px; padding:8px; box-shadow:0 22px 50px rgba(8,30,90,.28); animation:sa-entrar .18s ease; }
   @keyframes sa-entrar { from { opacity:0; transform:translate(-50%,-8px); } }
@@ -826,33 +826,40 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   body:has(.sub-painel.aberto) .kpi::after, body:has(.sub-painel.aberto) .kpi *, body:has(.sub-painel.aberto) .cg-card * { animation-play-state:paused !important; }
   .sub-painel.aberto > div { contain:layout paint; }
   #painel-meu-perfil > div > div { contain:layout paint; }
-  #sa-cod { position:fixed; inset:0; z-index:99990; background:rgba(8,15,35,.55); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; padding:16px; opacity:0; transition:opacity .2s; }
+  #sa-cod { position:fixed; left:0; right:0; top:0; height:100%; z-index:99990; background:rgba(8,15,35,.55); display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; overflow:auto; opacity:0; transition:opacity .16s; }
   #sa-cod.ativo { opacity:1; }
-  #sa-cod .sc-caixa { position:relative; width:100%; max-width:370px; background:#fff; border-radius:24px; padding:26px 22px 18px; text-align:center; box-shadow:0 30px 70px rgba(8,15,35,.4); transform:translateY(16px) scale(.97); transition:transform .22s cubic-bezier(.2,.9,.3,1.2); }
-  #sa-cod.ativo .sc-caixa { transform:none; }
+  #sa-cod .sc-caixa { position:relative; width:100%; max-width:370px; margin:auto; background:#fff; border-radius:24px; padding:24px 22px 16px; text-align:center; box-shadow:0 30px 70px rgba(8,15,35,.4); }
   #sa-cod .sc-caixa.treme { animation:sc-treme .38s; }
   @keyframes sc-treme { 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }
   #sa-cod .sc-x { position:absolute; top:12px; right:12px; width:34px; height:34px; border-radius:50%; border:0; background:#f1f5f9; color:#475569; font-size:14px; cursor:pointer; }
-  #sa-cod .sc-cad { width:68px; height:68px; margin:0 auto 12px; border-radius:20px; background:linear-gradient(135deg,#1d4ed8,#7c3aed); color:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 12px 26px rgba(79,70,229,.4); transition:background .2s; }
-  #sa-cod .sc-cad svg { width:34px; height:34px; }
+  #sa-cod .sc-cad { width:62px; height:62px; margin:0 auto 10px; border-radius:18px; background:linear-gradient(135deg,#1d4ed8,#7c3aed); color:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 12px 26px rgba(79,70,229,.4); transition:background .2s; }
+  #sa-cod .sc-cad svg { width:30px; height:30px; }
   #sa-cod .sc-cad.aberto { background:linear-gradient(135deg,#16a34a,#22c55e); box-shadow:0 12px 26px rgba(22,163,74,.4); }
   #sa-cod h3 { margin:0; font-size:20px; font-weight:800; color:#0f172a; }
-  #sa-cod .sc-sub { margin:6px 0 14px; font-size:13.5px; color:#64748b; }
-  #sa-cod .sc-loja { display:flex; align-items:center; gap:10px; text-align:left; background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:10px 12px; margin-bottom:18px; }
+  #sa-cod .sc-sub { margin:6px 0 12px; font-size:13.5px; color:#64748b; }
+  #sa-cod .sc-loja { display:flex; align-items:center; gap:10px; text-align:left; background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:10px 12px; margin-bottom:14px; }
   #sa-cod .sc-loja img { width:34px; height:34px; flex:none; }
   #sa-cod .sc-loja div { min-width:0; } #sa-cod .sc-loja b { display:block; font-size:14.5px; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #sa-cod .sc-loja small { display:block; font-size:12.5px; color:#2563eb; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  #sa-cod .sc-pin { display:flex; justify-content:center; gap:12px; cursor:text; }
-  #sa-cod .sc-pin i { width:50px; height:58px; border-radius:14px; border:2px solid #e2e8f0; background:#f8fafc; position:relative; transition:all .15s; }
-  #sa-cod .sc-pin i.on { border-color:#4f46e5; background:#eef2ff; }
-  #sa-cod .sc-pin i.on::after { content:""; position:absolute; left:50%; top:50%; width:14px; height:14px; margin:-7px 0 0 -7px; border-radius:50%; background:#1e1b4b; }
-  #sa-cod #sc-in { position:absolute; opacity:0; width:1px; height:1px; pointer-events:none; }
-  #sa-cod .sc-erro { min-height:20px; margin:10px 0 4px; font-size:13px; font-weight:700; color:#dc2626; }
+  #sa-cod .sc-form { margin:0; }
+  #sa-cod .sc-in { display:block; width:100%; box-sizing:border-box; height:62px; border:2px solid #c7d2fe; border-radius:16px; background:#f8fafc; text-align:center; font-size:28px; font-weight:800; letter-spacing:14px; text-indent:14px; color:#1e1b4b; outline:none; -webkit-appearance:none; appearance:none; transition:border-color .15s, box-shadow .15s; }
+  #sa-cod .sc-in::placeholder { color:#cbd5e1; letter-spacing:10px; font-size:22px; }
+  #sa-cod .sc-in:focus { border-color:#4f46e5; background:#fff; box-shadow:0 0 0 4px rgba(79,70,229,.15); }
+  #sa-cod .sc-erro { min-height:20px; margin:8px 0 4px; font-size:13px; font-weight:700; color:#dc2626; }
   #sa-cod .sc-bts { display:flex; gap:10px; }
   #sa-cod .sc-bts button { flex:1; padding:13px; border-radius:14px; font-weight:800; font-size:15px; cursor:pointer; border:0; }
   #sa-cod .sc-can { background:#f1f5f9; color:#334155; }
   #sa-cod .sc-ok { background:linear-gradient(135deg,#1d4ed8,#4f46e5); color:#fff; box-shadow:0 8px 20px rgba(79,70,229,.35); }
-  #sa-cod .sc-nota { margin-top:12px; font-size:11.5px; color:#94a3b8; }
+  #sa-cod .sc-nota { margin-top:10px; font-size:11.5px; color:#94a3b8; }
+  /* troca de loja suave: véu + barra de progresso por cima dos números, sem piscar */
+  #sa-troca { position:fixed; left:0; right:0; top:0; height:3px; z-index:99980; pointer-events:none; opacity:0; transition:opacity .2s; overflow:hidden; }
+  #sa-troca::before { content:""; position:absolute; top:0; bottom:0; width:40%; left:-40%; background:linear-gradient(90deg,transparent,#2563eb,#7c3aed,transparent); animation:sa-barra 1s ease-in-out infinite; }
+  @keyframes sa-barra { to { left:100%; } }
+  body.sa-trocando #sa-troca { opacity:1; }
+  body.sa-trocando #app > :not(#topbar-loja):not(.topbar):not(nav) { transition:opacity .18s; }
+  #sa-veu { position:fixed; left:50%; top:92px; transform:translateX(-50%); z-index:99981; display:flex; align-items:center; gap:10px; background:#0f172a; color:#fff; padding:10px 16px; border-radius:999px; font-size:13.5px; font-weight:700; box-shadow:0 12px 30px rgba(15,23,42,.35); opacity:0; pointer-events:none; transition:opacity .2s; white-space:nowrap; max-width:92vw; overflow:hidden; text-overflow:ellipsis; }
+  #sa-veu i { width:16px; height:16px; border-radius:50%; border:2.5px solid rgba(255,255,255,.3); border-top-color:#fff; animation:spin .8s linear infinite; flex:none; }
+  body.sa-trocando #sa-veu { opacity:1; }
   .nb-caixa { background:linear-gradient(180deg,#fffbeb,#fff7ed); border:2px solid #f59e0b; border-radius:14px; padding:14px; margin-bottom:14px; box-shadow:0 6px 18px rgba(245,158,11,.18); }
   .nb-tit { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
   .nb-tit > span { width:42px; height:42px; border-radius:12px; background:#f59e0b; display:flex; align-items:center; justify-content:center; font-size:22px; flex:none; box-shadow:0 4px 10px rgba(245,158,11,.35); }
@@ -1013,7 +1020,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.208" defer></script>
+<script src="app-android.js?v=2.9.209" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -1873,7 +1880,7 @@ async function iniciarMonitor() {
   atualizarDataHoje();
   await carregarTudo();
   aplicarModoGerente();
-  intervalo = setInterval(carregarTudo, 30000);
+  intervalo = setInterval(() => { if (!window._saCodAberto) carregarTudo(); }, 30000);
   verificarNotifStatus();
   ligarVendasTempoReal();
 }
@@ -1897,6 +1904,7 @@ async function _recarregarVendasJa(novaVenda) {
   }
 }
 async function _vigiarVendasNovas() {
+  if (window._saCodAberto) return;   // não mexe no ecrã enquanto escreves o código
   if (document.hidden || !supabaseClient) return;
   try {
     let q = supabaseClient.from('vendas').select('id').order('criado_em', { ascending: false }).limit(1);
@@ -2023,10 +2031,11 @@ function _renderSuperMenu() {
   const box = document.getElementById('sa-box'); if (!box) return;
   const item = (val, nome, ico, eAtual, email) => '<button class="sa-item' + (eAtual ? ' atual' : '') + '" type="button" onclick="trocarLojaSuper(\'' + val + '\')">'
     + '<img src="icons3d/' + ico + '.png" alt=""><span class="sa-txt"><b>' + _escMon(nome) + '</b>' + (email ? '<small>' + _escMon(email) + '</small>' : '') + '</span>' + (eAtual ? '<i class="sa-ok">✓</i>' : '') + '</button>';
-  box.innerHTML = '<button class="sa-item sa-admin" type="button" onclick="window.location.href=\'admin.html\'"><img src="icons3d/shield.png" alt=""><span>Painel de Administração</span><i class="sa-chev-r"></i></button>'
+  const _html = '<button class="sa-item sa-admin" type="button" onclick="window.location.href=\'admin.html\'"><img src="icons3d/shield.png" alt=""><span>Painel de Administração</span><i class="sa-chev-r"></i></button>'
     + '<div class="sa-sec">Ver loja</div>'
     + item('geral', 'Todas as Lojas', 'globe', modoGeral)
     + (todasLojas || []).map(l => item(l.id, l.nome, 'store', !modoGeral && l.id === lojaId, l.email_dono)).join('');
+  if (box._html !== _html) { box._html = _html; box.innerHTML = _html; }
 }
 function _esconderSuperAdmin() {
   const da = document.getElementById('def-admin'); if (da) da.style.display = 'none';
@@ -2041,39 +2050,52 @@ function fecharSuperMenu() { document.getElementById('sa-menu').classList.remove
 function pedirCodigoSuper(nome, email) {
   return new Promise(res => {
     { const a = document.getElementById('sa-cod'); if (a) a.remove(); }
-    const ov = document.createElement('div'); ov.id = 'sa-cod';
+    const ov = document.createElement('div'); ov.id = 'sa-cod'; ov.className = 'ativo';
     ov.innerHTML = `<div class="sc-caixa" role="dialog" aria-modal="true" aria-labelledby="sc-tit">
       <button type="button" class="sc-x" aria-label="Fechar">✕</button>
       <div class="sc-cad"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V11a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5zm-3 8V6a3 3 0 1 1 6 0v3H9zm3 4a2 2 0 0 1 1 3.73V19h-2v-2.27A2 2 0 0 1 12 13z"/></svg></div>
       <h3 id="sc-tit">Acesso de Super Admin</h3>
       <p class="sc-sub">Escreve o código para ver as vendas desta loja.</p>
       <div class="sc-loja"><img src="icons3d/store.png" alt=""><div><b>${_escNota(nome)}</b>${email ? '<small>' + _escNota(email) + '</small>' : ''}</div></div>
-      <div class="sc-pin" id="sc-pin"><i></i><i></i><i></i><i></i></div>
-      <input id="sc-in" type="password" inputmode="numeric" autocomplete="one-time-code" maxlength="8" aria-label="Código">
+      <form class="sc-form" autocomplete="off" onsubmit="return false">
+        <input id="sc-in" class="sc-in" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="go" placeholder="• • • •" aria-label="Código">
+      </form>
       <div class="sc-erro" id="sc-erro"></div>
       <div class="sc-bts"><button type="button" class="sc-can">Cancelar</button><button type="button" class="sc-ok">Entrar</button></div>
       <div class="sc-nota">🔒 Só é pedido uma vez nesta sessão.</div>
     </div>`;
     document.body.appendChild(ov);
-    requestAnimationFrame(() => ov.classList.add('ativo'));
-    const inp = ov.querySelector('#sc-in'), pin = ov.querySelectorAll('#sc-pin i'), er = ov.querySelector('#sc-erro'), caixa = ov.querySelector('.sc-caixa');
-    const pintar = () => { const n = inp.value.length; pin.forEach((d, i) => d.classList.toggle('on', i < n)); ov.querySelector('#sc-pin').classList.toggle('mais', n > 4); };
-    const fechar = (v) => { ov.classList.remove('ativo'); setTimeout(() => ov.remove(), 200); res(v); };
+    window._saCodAberto = true;
+    const inp = ov.querySelector('#sc-in'), er = ov.querySelector('#sc-erro'), caixa = ov.querySelector('.sc-caixa');
+    let fechado = false, toqueFora = 0;
+    // Acompanha o teclado: a janela fica sempre visível por cima dele (Android e iPhone)
+    const vv = window.visualViewport;
+    const ajustar = () => { if (!vv || fechado) return; ov.style.height = vv.height + 'px'; ov.style.top = vv.offsetTop + 'px'; };
+    if (vv) { vv.addEventListener('resize', ajustar); vv.addEventListener('scroll', ajustar); ajustar(); }
+    const fechar = (v) => {
+      if (fechado) return; fechado = true; window._saCodAberto = false;
+      if (vv) { vv.removeEventListener('resize', ajustar); vv.removeEventListener('scroll', ajustar); }
+      try { inp.blur(); } catch (e) {}
+      ov.classList.remove('ativo'); setTimeout(() => ov.remove(), 180); res(v);
+    };
     const tentar = () => {
-      if (inp.value === '0210') { ov.querySelector('.sc-cad').classList.add('aberto'); setTimeout(() => fechar(true), 260); return; }
+      if (inp.value === '0210') { ov.querySelector('.sc-cad').classList.add('aberto'); setTimeout(() => fechar(true), 220); return; }
       er.textContent = inp.value ? 'Código errado. Tenta de novo.' : 'Escreve o código.';
       caixa.classList.remove('treme'); void caixa.offsetWidth; caixa.classList.add('treme');
       try { navigator.vibrate && navigator.vibrate([60, 40, 60]); } catch (e) {}
-      inp.value = ''; pintar(); inp.focus();
+      inp.value = ''; inp.focus({ preventScroll: true });
     };
-    inp.addEventListener('input', () => { inp.value = inp.value.replace(/\D/g, ''); er.textContent = ''; pintar(); if (inp.value.length === 4 && inp.value === '0210') tentar(); });
-    inp.addEventListener('keydown', e => { if (e.key === 'Enter') tentar(); if (e.key === 'Escape') fechar(false); });
-    ov.querySelector('#sc-pin').onclick = () => inp.focus();
-    ov.querySelector('.sc-ok').onclick = tentar;
+    inp.addEventListener('input', () => { const v = inp.value.replace(/\D/g, ''); if (v !== inp.value) inp.value = v; er.textContent = ''; if (v === '0210') tentar(); });
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); tentar(); } if (e.key === 'Escape') fechar(false); });
+    // Se o teclado fechar sozinho (o ecrã por trás atualizou), volta a abrir — só não o faz se TU tocaste fora do campo
+    caixa.addEventListener('pointerdown', e => { if (e.target !== inp) toqueFora = Date.now(); });
+    inp.addEventListener('blur', () => { setTimeout(() => { if (!fechado && Date.now() - toqueFora > 400 && document.activeElement !== inp) inp.focus({ preventScroll: true }); }, 60); });
+    ov.querySelector('.sc-ok').addEventListener('click', () => { tentar(); });
     ov.querySelector('.sc-can').onclick = () => fechar(false);
     ov.querySelector('.sc-x').onclick = () => fechar(false);
     ov.addEventListener('click', e => { if (e.target === ov) fechar(false); });
-    setTimeout(() => inp.focus(), 120);
+    // foco no mesmo toque que abriu a janela (assim o teclado abre e fica aberto, também no iPhone)
+    inp.focus({ preventScroll: true });
   });
 }
 
@@ -2087,15 +2109,28 @@ async function trocarLojaSuper(valor) {
     const ok = await pedirCodigoSuper(lj.nome || 'Loja', lj.email_dono || '');
     if (!ok) return;
     window._lojasDesbloqueadas = true;
-    setTimeout(prepararLojasSuper, 50);
+    window._prepararDepois = true;
   }
   if (valor === 'geral') { lojaId = null; modoGeral = true; nomeLoja = 'Todas as Lojas'; }
   else { lojaId = valor; modoGeral = false; const l = todasLojas.find(x => x.id === lojaId); nomeLoja = (l && l.nome) || ''; }
   renderSelectorLojas();
   _ultimaVendaVista = null;
+  const meuPedido = (window._trocaN = (window._trocaN || 0) + 1);
+  const temCache = !!_cacheLojas.get(_chaveLojaAtual());
+  if (!temCache) _trocaInicio(nomeLoja);   // sem dados guardados: mostra «A abrir…» por cima, em vez de zeros a piscar
   mostrarLojaEmCache();          // instantâneo: dados desta loja (se já aberta) ou ecrã limpo — nunca os da loja anterior
   try { await carregarTudo(); } catch (e) { mostrarNotif('⚠️ Sem ligação para carregar esta loja.', true); }
+  if (meuPedido === window._trocaN) _trocaFim();
+  if (window._prepararDepois) { window._prepararDepois = false; setTimeout(prepararLojasSuper, 400); }   // as outras lojas só depois desta abrir
 }
+function _trocaInicio(nome) {
+  if (!document.getElementById('sa-troca')) { const t = document.createElement('div'); t.id = 'sa-troca'; document.body.appendChild(t); }
+  let v = document.getElementById('sa-veu'); if (!v) { v = document.createElement('div'); v.id = 'sa-veu'; document.body.appendChild(v); }
+  v.innerHTML = '<i></i><span>A abrir ' + _escNota(nome || 'loja') + '…</span>';
+  document.body.classList.add('sa-trocando');
+  clearTimeout(window._trocaTimer); window._trocaTimer = setTimeout(_trocaFim, 15000);
+}
+function _trocaFim() { clearTimeout(window._trocaTimer); document.body.classList.remove('sa-trocando'); }
 // O título do topo mostra o nome da loja registada pelo dono (1.ª palavra escura, resto a azul);
 // por baixo fica só a palavra "Loja".
 function _pintarTituloLoja(nome) {
@@ -5704,7 +5739,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.208';
+const MONITOR_VERSAO = '2.9.209';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
