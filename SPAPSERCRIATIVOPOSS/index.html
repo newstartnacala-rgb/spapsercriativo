@@ -352,7 +352,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
   [tabindex]:focus-visible { outline: 2px solid #1a56a0; outline-offset: 1px; }
 </style>
-<script src="app-android.js?v=2.9.226" defer></script>
+<script src="app-android.js?v=2.9.227" defer></script>
 <style>/* a interface antiga nunca aparece: o ecrã antigo fica invisível até o novo abrir (sem piscar) */ body:not(.modo2) #tela-pdv { visibility:hidden !important; }</style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
@@ -5940,7 +5940,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.226';
+  const VERSAO_ATUAL = '2.9.227';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -6217,6 +6217,19 @@ body.modo2.m2-escuro #m2-topbar .m2-user span.m2-edit-nome:hover { background:#1
 #m2-subrow input { flex:1; padding:11px 14px; border:1px solid #e5e9ef; border-radius:10px; font-size:14px; background:#f8fafc; }
 
 #m2-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:14px; flex:1; min-height:0; overflow-y:auto; align-content:start; padding:2px 8px 10px 2px; }
+.m2-card { position:relative; }
+.m2-card.toque { animation:m2-card-toque .42s cubic-bezier(.3,1.5,.5,1); }
+@keyframes m2-card-toque { 0%{transform:scale(1)} 30%{transform:scale(.93)} 65%{transform:scale(1.04)} 100%{transform:none} }
+.m2-card.toque::after { content:'+1'; position:absolute; top:10px; right:10px; background:linear-gradient(135deg,#22c55e,#16a34a); color:#fff; font-weight:800; font-size:13px; border-radius:999px; padding:3px 9px; animation:m2-mais-um .6s ease-out forwards; pointer-events:none; z-index:3; }
+@keyframes m2-mais-um { 0%{opacity:0;transform:translateY(6px) scale(.6)} 30%{opacity:1;transform:none} 100%{opacity:0;transform:translateY(-16px)} }
+.m2-voar { position:fixed; z-index:9000; border-radius:14px; pointer-events:none; overflow:hidden; background:linear-gradient(180deg,#f0fdf4,#dcfce7); display:grid; place-items:center; box-shadow:0 10px 24px rgba(15,23,42,.25);
+  transition:transform .55s cubic-bezier(.5,-.2,.6,1), opacity .55s ease-in; font-size:30px; }
+.m2-voar img { width:100%; height:100%; object-fit:cover; }
+.m2-pop { animation:m2-pop .4s cubic-bezier(.3,1.6,.5,1); display:inline-block; }
+@keyframes m2-pop { 0%{transform:scale(1)} 40%{transform:scale(1.22);color:#16a34a} 100%{transform:scale(1)} }
+#m2-cart.m2-salto { animation:m2-salto .45s cubic-bezier(.3,1.5,.5,1); }
+@keyframes m2-salto { 0%{transform:none} 35%{transform:translateY(-4px) scale(1.01)} 100%{transform:none} }
+@media (prefers-reduced-motion: reduce) { .m2-card.toque, .m2-pop, #m2-cart.m2-salto { animation:none; } .m2-voar { display:none; } }
 .m2-card { border:1px solid #eef2f6; border-radius:14px; padding:12px; text-align:center; background:#fff; transition:.15s; }
 .m2-card:hover { border-color:#16a34a; box-shadow:0 8px 20px rgba(0,0,0,.08); }
 .m2-card .m2-img { width:100%; height:110px; border-radius:10px; object-fit:contain; background:#f8fafc; display:flex; align-items:center; justify-content:center; font-size:40px; }
@@ -7111,7 +7124,35 @@ document.addEventListener('click', function(e){
   }
   function m2AddProduto(nome){
     var p = (produtos||[]).find(function(x){ return x.nome===nome; });
-    if (p) { try { m2Vibrar(14); } catch(e){} try { cliqueNoProduto(p); } catch(e){} }
+    var ev = window.event, card = ev && ev.target && ev.target.closest ? ev.target.closest('.m2-card') : null;
+    if (!p) return;
+    var grelha = card && card.parentNode, idx = grelha ? Array.prototype.indexOf.call(grelha.children, card) : -1;
+    try { m2Vibrar(14); } catch(e){} try { m2AnimarProduto(card, p); } catch(e){} try { cliqueNoProduto(p); } catch(e){}
+    // a grelha pode ser redesenhada depois do clique: repete o salto no cartão novo
+    if (grelha && idx >= 0) setTimeout(function(){ var c2 = grelha.children[idx]; if (c2 && c2 !== card && c2.classList && c2.classList.contains('m2-card')) { c2.classList.add('toque'); setTimeout(function(){ c2.classList.remove('toque'); }, 650); } }, 0);
+  }
+  // Animação ao tocar no produto (igual à Banca): o cartão salta, aparece «+1» e o produto voa para o carrinho
+  function m2AnimarProduto(card, p){
+    if (!card) return;
+    card.classList.remove('toque'); void card.offsetWidth; card.classList.add('toque');
+    setTimeout(function(){ card.classList.remove('toque'); }, 650);
+    var alvo = null;
+    ['m2-cart-n','m2-total','m2-mob-cart','m2-cart'].some(function(id){ var e = document.getElementById(id); if (e && e.offsetParent !== null && e.getBoundingClientRect().width) { alvo = e; return true; } return false; });
+    var r0 = (card.querySelector('.m2-img') || card).getBoundingClientRect();
+    var tam = Math.min(86, r0.width, r0.height || 86);
+    var v = document.createElement('div'); v.className = 'm2-voar';
+    v.style.width = v.style.height = tam + 'px';
+    v.style.left = (r0.left + r0.width/2 - tam/2) + 'px'; v.style.top = (r0.top + (r0.height||tam)/2 - tam/2) + 'px';
+    v.innerHTML = p && p.imagem ? '<img src="' + String(p.imagem).replace(/"/g,'&quot;') + '" alt="">' : '<span>🛒</span>';
+    document.body.appendChild(v);
+    var r1 = alvo ? alvo.getBoundingClientRect() : { left: innerWidth - 60, top: innerHeight - 60, width: 30, height: 30 };
+    var dx = (r1.left + r1.width/2) - (r0.left + r0.width/2), dy = (r1.top + r1.height/2) - (r0.top + (r0.height||tam)/2);
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){ v.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(.22)'; v.style.opacity = '.35'; }); });
+    setTimeout(function(){
+      v.remove();
+      ['m2-cart-n','m2-total'].forEach(function(id){ var e = document.getElementById(id); if (e) { e.classList.remove('m2-pop'); void e.offsetWidth; e.classList.add('m2-pop'); } });
+      var c = document.getElementById('m2-cart'); if (c) { c.classList.remove('m2-salto'); void c.offsetWidth; c.classList.add('m2-salto'); }
+    }, 560);
   }
 
   function renderM2Cart(){
