@@ -73,9 +73,9 @@
   .menu-grid .mi{background:#f0fdf4;border:1px solid var(--borda);border-radius:14px;padding:16px 10px;text-align:center;}
   .menu-grid .mi .e{font-size:28px;} .menu-grid .mi .t{font-size:12px;font-weight:700;margin-top:6px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.6.0">
-<script src="banca-tema.js?v=3.6.0" defer></script>
-<script src="app-android.js?v=3.6.0" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.6.1">
+<script src="banca-tema.js?v=3.6.1" defer></script>
+<script src="app-android.js?v=3.6.1" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -146,6 +146,7 @@
       <div class="stat wide"><div class="lbl">💼 Valor do stock (a preço de venda)</div><div class="val" id="s-valorstock">MT 0,00</div></div>
     </div>
     <h4>Produtos <small class="h4-dica">· toque para gerir, carregue uns instantes para selecionar e eliminar</small></h4>
+    <div class="stock-acoes"><button type="button" class="bt-selecionar" onclick="_modoSel?sairSelecao():(_modoSel=true,_atualizarSel())">☑️ Selecionar</button></div>
     <div class="barra-stock">
       <input id="busca-stock" type="search" placeholder="Procurar produto ou código…" oninput="renderProdutos()" autocomplete="off">
       <button type="button" onclick="scanStock()" aria-label="Ler código de barras">📷</button>
@@ -447,9 +448,17 @@ function selTudo(){ const vis=[...document.querySelectorAll('#lista-produtos .pr
     _toqueT=setTimeout(()=>{ _foiLongo=true; r.classList.remove('a-premir'); if(!_modoSel) entrarSelecao(r.dataset.id); else { _sel.has(r.dataset.id)?_sel.delete(r.dataset.id):_sel.add(r.dataset.id); _atualizarSel(); } }, 480);
   });
   const cancelar=()=>{ clearTimeout(_toqueT); document.querySelectorAll('.prod-row.a-premir').forEach(x=>x.classList.remove('a-premir')); };
-  lista.addEventListener('pointermove', e=>{ if(_toqueXY && (Math.abs(e.clientX-_toqueXY[0])>10 || Math.abs(e.clientY-_toqueXY[1])>10)) cancelar(); });
-  lista.addEventListener('pointerup', cancelar); lista.addEventListener('pointercancel', cancelar); lista.addEventListener('pointerleave', cancelar);
-  lista.addEventListener('contextmenu', e=>{ if(e.target.closest('.prod-row')) e.preventDefault(); });
+  lista.addEventListener('pointermove', e=>{ if(_toqueXY && (Math.abs(e.clientX-_toqueXY[0])>14 || Math.abs(e.clientY-_toqueXY[1])>14)) cancelar(); });
+  lista.addEventListener('pointerup', cancelar);
+  lista.addEventListener('touchend', cancelar, {passive:true});
+  lista.addEventListener('touchmove', e=>{ const t=e.touches&&e.touches[0]; if(t && _toqueXY && (Math.abs(t.clientX-_toqueXY[0])>14 || Math.abs(t.clientY-_toqueXY[1])>14)) cancelar(); }, {passive:true});
+  // no Android, carregar e manter dispara «contextmenu»: usamos esse sinal para selecionar
+  lista.addEventListener('contextmenu', e=>{
+    const r=e.target.closest('.prod-row'); if(!r) return;
+    e.preventDefault(); clearTimeout(_toqueT); r.classList.remove('a-premir');
+    if(_foiLongo) return; _foiLongo=true;
+    if(!_modoSel) entrarSelecao(r.dataset.id); else { _sel.has(r.dataset.id)?_sel.delete(r.dataset.id):_sel.add(r.dataset.id); _atualizarSel(); }
+  });
   lista.addEventListener('click', e=>{
     const r=e.target.closest('.prod-row'); if(!r) return;
     if(_foiLongo){ _foiLongo=false; return; }
@@ -467,12 +476,28 @@ async function confirmarEliminar(){
   const ids=[..._sel]; if(!ids.length) return;
   const b=document.getElementById('el-sim'); b.disabled=true; b.textContent='A eliminar…';
   try{
-    const { error }=await supabaseClient.from('produtos').delete().in('id',ids);
+    // apaga na base de dados e pede de volta a lista do que foi mesmo apagado
+    const { data, error }=await supabaseClient.from('produtos').delete().in('id',ids).eq('loja_id',sessao.lojaId).select('id');
     if(error) throw error;
-    produtos=produtos.filter(p=>!_sel.has(p.id));
-    fecharFolha('folha-eliminar'); sairSelecao(); renderProdutos();
-    toast('🗑 '+ids.length+' produto'+(ids.length===1?' eliminado':'s eliminados'),'ok');
-  }catch(e){ toast('Não foi possível eliminar: '+(e.message||e),'erro'); }
+    const apagados=new Set((data||[]).map(x=>x.id));
+    // confirmação: volta a ler da base de dados se algum ainda existe
+    const { data: resto }=await supabaseClient.from('produtos').select('id,nome').in('id',ids);
+    const ficaram=(resto||[]).map(x=>x.id);
+    ficaram.forEach(id=>apagados.delete(id));
+    produtos=produtos.filter(p=>!apagados.has(p.id));
+    fecharFolha('folha-eliminar');
+    if(ficaram.length){
+      _sel=new Set(ficaram); _atualizarSel(); renderProdutos();
+      toast('⚠️ '+ficaram.length+' produto(s) não foram eliminados na base de dados (sem permissão). Os outros foram.','erro');
+    } else {
+      sairSelecao(); renderProdutos();
+      toast('🗑 '+apagados.size+' produto'+(apagados.size===1?' eliminado':'s eliminados')+' da base de dados','ok');
+    }
+    try{ await carregarProdutos(); }catch(e){}
+  }catch(e){
+    const m=String(e.message||e);
+    toast(/foreign key|23503/i.test(m+(e.code||'')) ? 'Não foi possível eliminar: o produto ainda está ligado a outros registos (inventário ou preços).' : 'Não foi possível eliminar: '+m,'erro');
+  }
   b.disabled=false; b.textContent='Eliminar';
 }
 
