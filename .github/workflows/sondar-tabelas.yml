@@ -6,8 +6,6 @@ jobs:
     steps:
       - run: |
           U=https://kggqshpqydhvtxklixyk.supabase.co
-          K=$(curl -s https://newstartnacala-rgb.github.io/spapsercriativo/supabase-config.js | grep -o "eyJ[A-Za-z0-9._-]*" | head -1)
-          for t in descontos inventario_sessao inventario_contagem venda_itens vendas perdas; do echo "$t $(curl -s -H "apikey: $K" -H "Authorization: Bearer $K" "$U/rest/v1/$t?select=*&limit=0" -o /tmp/o -w '%{http_code}') $(head -c 200 /tmp/o)"; done
-          curl -s -H "apikey: $K" "$U/rest/v1/" | python3 -c "import sys,json;d=json.load(sys.stdin);
-          for t in ['venda_itens','vendas','descontos','inventario_sessao','inventario_contagem','produtos']:
-            print(t, list((d.get('definitions',{}).get(t,{}).get('properties',{})).keys()))" || true
+          K=sb_publishable_FLR81R0et5RIFR9WToVjsQ_RoP3RPew
+          for t in descontos balancos entregas perdas venda_itens vendas caixa_sobras; do echo "$t $(curl -s -H "apikey: $K" "$U/rest/v1/$t?select=*&limit=0" -o /tmp/o -w '%{http_code}') $(head -c 200 /tmp/o)"; done
+          for c in "venda_itens?select=preco_original" "venda_itens?select=desconto" "vendas?select=desconto" "vendas?select=vendedor_codigo" "descontos?select=venda_id" "balancos?select=detalhe" "entregas?select=descontos"; do echo "$c $(curl -s -H "apikey: $K" "$U/rest/v1/$c&limit=0" -o /tmp/o -w '%{http_code}') $(head -c 160 /tmp/o)"; done
