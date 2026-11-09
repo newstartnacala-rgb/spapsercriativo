@@ -87,9 +87,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.11">
-<script src="banca-tema.js?v=3.7.11" defer></script>
-<script src="app-android.js?v=3.7.11" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.12">
+<script src="banca-tema.js?v=3.7.12" defer></script>
+<script src="app-android.js?v=3.7.12" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -1136,7 +1136,6 @@ async function mPerfil(){
     +'<div class="campo"><label>📱 Telefone</label><input id="pf-tel" type="tel" value="'+esc(window._lojaTelefone||'')+'"></div>'
     +'<button class="btn" type="button" onclick="pfGuardar()" style="margin:4px 0 18px;">💾 Guardar dados da banca</button>'
     +'<div class="seg-caixa"><div class="seg-tit">🛡️ Segurança <small>E-mail e código (senha) de acesso</small></div>'
-    +'<div class="seg-atual"><span>✉️</span><div><small>E-mail de acesso atual</small><b id="seg-email" class="notranslate">'+esc(email||'—')+'</b></div></div>'
     +'<div class="campo"><label>Novo e-mail</label><input id="seg-novo-email" type="email" inputmode="email" placeholder="novo@email.com" autocomplete="off"></div>'
     +'<button class="btn cinza" type="button" id="seg-bt-email" onclick="segTrocarEmail()">✉️ Trocar e-mail</button>'
     +'<div class="campo" style="margin-top:14px;"><label>Novo código (senha) — mínimo 6 caracteres</label><input id="seg-nova-senha" type="password" placeholder="••••••" autocomplete="new-password"></div>'
@@ -1162,7 +1161,7 @@ async function segTrocarEmail(){
       toast(m,'erro'); return;
     }
     try{ await supabaseClient.auth.refreshSession(); }catch(e){}
-    document.getElementById('seg-email').textContent=novo; inp.value='';
+    inp.value='';
     toast('✅ E-mail trocado para '+novo,'ok');
   }finally{ b.disabled=false; b.textContent='✉️ Trocar e-mail'; }
 }
