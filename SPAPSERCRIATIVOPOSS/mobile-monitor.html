@@ -72,10 +72,17 @@
   .menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
   .menu-grid .mi{background:#f0fdf4;border:1px solid var(--borda);border-radius:14px;padding:16px 10px;text-align:center;}
   .menu-grid .mi .e{font-size:28px;} .menu-grid .mi .t{font-size:12px;font-weight:700;margin-top:6px;}
+  .au-item{padding:12px 2px;border-bottom:1px solid var(--linha,#eef2f7);}
+  .au-item:last-child{border-bottom:0;}
+  .au-nota{margin-top:9px;background:#fef3c7;border-left:5px solid #f59e0b;border-radius:10px;padding:10px 12px;color:#451a03;}
+  .au-rot{font-size:11.5px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px;}
+  .au-txt{font-size:16px;font-weight:600;line-height:1.45;white-space:pre-wrap;word-break:break-word;}
+  .au-nota.au-falta{background:#fef2f2;border-left-color:#dc2626;color:#991b1b;font-size:13.5px;font-weight:700;}
+  .au-sem{margin-top:6px;font-size:12px;color:var(--suave,#94a3b8);font-style:italic;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.1">
-<script src="banca-tema.js?v=3.7.1" defer></script>
-<script src="app-android.js?v=3.7.1" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.2">
+<script src="banca-tema.js?v=3.7.2" defer></script>
+<script src="app-android.js?v=3.7.2" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -1064,7 +1071,10 @@ async function mAuditoria(){
   let html='';
   if(!ent.length){ html='<div class="vazio">Ainda não há entregas registadas. O balconista usa 📦 Dia na loja para entregar o caixa.</div>'; }
   else html='<div class="cartao">'+ent.map(e=>{ const d=new Date(e.criado_em); const dia=d.toISOString().slice(0,10); const vend=porDia[dia]||0; const entregue=parseFloat(e.total_entregue)||0; const gastos=parseFloat(e.gastos)||0; const dif=Math.round((entregue-(vend-gastos))*100)/100;
-    return '<div class="row"><div class="in"><div class="nn">'+d.toLocaleDateString('pt-PT')+'</div><div class="mt">Vendas '+fmt(vend)+' · Entregue '+fmt(entregue)+(gastos?(' · Gastos '+fmt(gastos)):'')+'</div></div><div class="vv" style="color:'+(dif<0?'#dc2626':(dif>0?'#c2410c':'#16a34a'))+'">'+(dif>0?'+':'')+fmt(dif)+'</div></div>'; }).join('')+'</div><div style="font-size:11px;color:var(--suave);margin-top:8px;">Diferença = dinheiro entregue − (vendas − gastos). Vermelho = falta; laranja = sobra.</div>';
+    const nota=(e.gastos_nota||'').trim(); const hora=d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});
+    const notaHtml = nota ? '<div class="au-nota"><div class="au-rot">📝 Nota de quem entregou</div><div class="au-txt">'+esc(nota)+'</div></div>'
+      : (gastos>0 ? '<div class="au-nota au-falta">⚠️ Declarou '+fmt(gastos)+' de gastos mas não escreveu nenhuma nota.</div>' : '<div class="au-sem">Sem nota · sem gastos</div>');
+    return '<div class="au-item"><div class="row" style="border:0;padding:0"><div class="in"><div class="nn">'+d.toLocaleDateString('pt-PT')+' · '+hora+'</div><div class="mt">👤 '+esc(e.vendedor_codigo||'Balconista')+' · Vendas '+fmt(vend)+' · Entregue '+fmt(entregue)+(gastos?(' · Gastos '+fmt(gastos)):'')+'</div></div><div class="vv" style="color:'+(dif<0?'#dc2626':(dif>0?'#c2410c':'#16a34a'))+'">'+(dif>0?'+':'')+fmt(dif)+'</div></div>'+notaHtml+'</div>'; }).join('')+'</div><div style="font-size:11px;color:var(--suave);margin-top:8px;">Diferença = dinheiro entregue − (vendas − gastos). Vermelho = falta; laranja = sobra.</div>';
   document.getElementById('info-conteudo').innerHTML=html;
 }
 

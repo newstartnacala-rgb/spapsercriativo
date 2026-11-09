@@ -18,7 +18,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.207"></script>
+<script src="spap-leitor.js?v=2.9.208"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -666,10 +666,24 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   #overlay-visao-geral .vg-fbtn { border:1px solid #dbe7fb !important; background:#fff !important; color:var(--nv2) !important; border-radius:999px !important; padding:10px 16px !important;
                box-shadow:0 2px 8px rgba(29,85,190,.07); font-weight:700 !important; }
   #overlay-visao-geral .vg-fbtn.ativo { background:var(--az-grad) !important; color:#fff !important; border-color:transparent !important; box-shadow:0 8px 18px rgba(13,95,240,.32); }
-  #lista-produtos-painel .prod-item { flex-wrap:wrap; gap:10px; }
-  #lista-produtos-painel .prod-item .prod-info { min-width:0; }
-  #lista-produtos-painel .prod-item::after { content:""; flex-basis:100%; order:1; height:0; }
-  #lista-produtos-painel .prod-item > button { flex:1 1 40%; order:2; margin:0 !important; justify-content:center; padding:10px 12px !important; }
+  #lista-produtos-painel .prod-item { cursor:pointer; position:relative; -webkit-tap-highlight-color:transparent; user-select:none; transition:transform .12s, border-color .15s, background .15s, box-shadow .15s; }
+  #lista-produtos-painel .prod-item:active { transform:scale(.985); }
+  #lista-produtos-painel .prod-item .prod-info { min-width:0; flex:1; }
+  #lista-produtos-painel .prod-marca { width:24px; height:24px; border-radius:50%; border:2px solid #cbd5e1; background:#fff; flex:none; display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px; font-weight:900; transition:all .15s; }
+  #lista-produtos-painel .prod-item.sel { border-color:#2563eb !important; background:#eff6ff; box-shadow:0 0 0 2px rgba(37,99,235,.25), 0 6px 16px rgba(29,85,190,.12); }
+  #lista-produtos-painel .prod-item.sel .prod-marca { background:#2563eb; border-color:#2563eb; }
+  #lista-produtos-painel .prod-item.sel .prod-marca::after { content:"✓"; }
+  .prod-dica { margin:0 14px 10px; font-size:12.5px; color:#64748b; text-align:center; }
+  #prod-acoes { position:sticky; bottom:0; z-index:20; margin:0; padding:10px 14px calc(env(safe-area-inset-bottom) + 12px); background:linear-gradient(180deg,rgba(255,255,255,0),#fff 28%);
+                transform:translateY(110%); opacity:0; pointer-events:none; transition:transform .22s ease, opacity .22s ease; }
+  #prod-acoes.ativo { transform:none; opacity:1; pointer-events:auto; }
+  #prod-acoes .pa-caixa { background:#0f172a; color:#fff; border-radius:18px; padding:10px; display:flex; align-items:center; gap:8px; box-shadow:0 14px 34px rgba(15,23,42,.35); }
+  #prod-acoes .pa-n { flex:1; min-width:60px; padding-left:6px; font-size:13.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #prod-acoes .pa-n small { display:block; font-size:11px; color:#94a3b8; font-weight:600; }
+  #prod-acoes button { border:0; border-radius:12px; padding:11px 12px; font-weight:800; font-size:13.5px; white-space:nowrap; cursor:pointer; display:flex; align-items:center; gap:6px; }
+  #prod-acoes .pa-ed { background:#2563eb; color:#fff; } #prod-acoes .pa-ed:disabled { opacity:.4; }
+  #prod-acoes .pa-el { background:#dc2626; color:#fff; }
+  #prod-acoes .pa-x { background:rgba(255,255,255,.12); color:#fff; padding:11px 12px; }
   #painel-add-produto > :not(.sub-topbar):not(.form-wrap) { margin-left:16px !important; margin-right:16px !important; }
   #painel-add-produto > button, #painel-add-produto > .btn-salvar { width:calc(100% - 32px) !important; }
   .pb img.e3d { width:22px !important; height:22px !important; }
@@ -812,6 +826,50 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   body:has(.sub-painel.aberto) .kpi::after, body:has(.sub-painel.aberto) .kpi *, body:has(.sub-painel.aberto) .cg-card * { animation-play-state:paused !important; }
   .sub-painel.aberto > div { contain:layout paint; }
   #painel-meu-perfil > div > div { contain:layout paint; }
+  #sa-cod { position:fixed; inset:0; z-index:99990; background:rgba(8,15,35,.55); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; padding:16px; opacity:0; transition:opacity .2s; }
+  #sa-cod.ativo { opacity:1; }
+  #sa-cod .sc-caixa { position:relative; width:100%; max-width:370px; background:#fff; border-radius:24px; padding:26px 22px 18px; text-align:center; box-shadow:0 30px 70px rgba(8,15,35,.4); transform:translateY(16px) scale(.97); transition:transform .22s cubic-bezier(.2,.9,.3,1.2); }
+  #sa-cod.ativo .sc-caixa { transform:none; }
+  #sa-cod .sc-caixa.treme { animation:sc-treme .38s; }
+  @keyframes sc-treme { 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }
+  #sa-cod .sc-x { position:absolute; top:12px; right:12px; width:34px; height:34px; border-radius:50%; border:0; background:#f1f5f9; color:#475569; font-size:14px; cursor:pointer; }
+  #sa-cod .sc-cad { width:68px; height:68px; margin:0 auto 12px; border-radius:20px; background:linear-gradient(135deg,#1d4ed8,#7c3aed); color:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 12px 26px rgba(79,70,229,.4); transition:background .2s; }
+  #sa-cod .sc-cad svg { width:34px; height:34px; }
+  #sa-cod .sc-cad.aberto { background:linear-gradient(135deg,#16a34a,#22c55e); box-shadow:0 12px 26px rgba(22,163,74,.4); }
+  #sa-cod h3 { margin:0; font-size:20px; font-weight:800; color:#0f172a; }
+  #sa-cod .sc-sub { margin:6px 0 14px; font-size:13.5px; color:#64748b; }
+  #sa-cod .sc-loja { display:flex; align-items:center; gap:10px; text-align:left; background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:10px 12px; margin-bottom:18px; }
+  #sa-cod .sc-loja img { width:34px; height:34px; flex:none; }
+  #sa-cod .sc-loja div { min-width:0; } #sa-cod .sc-loja b { display:block; font-size:14.5px; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #sa-cod .sc-loja small { display:block; font-size:12.5px; color:#2563eb; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #sa-cod .sc-pin { display:flex; justify-content:center; gap:12px; cursor:text; }
+  #sa-cod .sc-pin i { width:50px; height:58px; border-radius:14px; border:2px solid #e2e8f0; background:#f8fafc; position:relative; transition:all .15s; }
+  #sa-cod .sc-pin i.on { border-color:#4f46e5; background:#eef2ff; }
+  #sa-cod .sc-pin i.on::after { content:""; position:absolute; left:50%; top:50%; width:14px; height:14px; margin:-7px 0 0 -7px; border-radius:50%; background:#1e1b4b; }
+  #sa-cod #sc-in { position:absolute; opacity:0; width:1px; height:1px; pointer-events:none; }
+  #sa-cod .sc-erro { min-height:20px; margin:10px 0 4px; font-size:13px; font-weight:700; color:#dc2626; }
+  #sa-cod .sc-bts { display:flex; gap:10px; }
+  #sa-cod .sc-bts button { flex:1; padding:13px; border-radius:14px; font-weight:800; font-size:15px; cursor:pointer; border:0; }
+  #sa-cod .sc-can { background:#f1f5f9; color:#334155; }
+  #sa-cod .sc-ok { background:linear-gradient(135deg,#1d4ed8,#4f46e5); color:#fff; box-shadow:0 8px 20px rgba(79,70,229,.35); }
+  #sa-cod .sc-nota { margin-top:12px; font-size:11.5px; color:#94a3b8; }
+  .nb-caixa { background:linear-gradient(180deg,#fffbeb,#fff7ed); border:2px solid #f59e0b; border-radius:14px; padding:14px; margin-bottom:14px; box-shadow:0 6px 18px rgba(245,158,11,.18); }
+  .nb-tit { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .nb-tit > span { width:42px; height:42px; border-radius:12px; background:#f59e0b; display:flex; align-items:center; justify-content:center; font-size:22px; flex:none; box-shadow:0 4px 10px rgba(245,158,11,.35); }
+  .nb-tit b { display:block; font-size:17px; color:#78350f; } .nb-tit small { display:block; font-size:12px; color:#92400e; margin-top:2px; }
+  .nb-item { background:#fff; border:1px solid #fde68a; border-radius:12px; padding:12px; margin-top:10px; }
+  .nb-cab { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+  .nb-quem { font-weight:800; font-size:15px; color:#1e293b; } .nb-hora { font-size:12px; color:#64748b; font-weight:600; }
+  .nb-valores { display:grid; grid-template-columns:repeat(auto-fit,minmax(90px,1fr)); gap:6px; margin-bottom:10px; }
+  .nb-valores > div { background:#f8fafc; border-radius:9px; padding:7px 9px; } .nb-valores small { display:block; font-size:10.5px; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
+  .nb-valores b { font-size:14.5px; color:#0f172a; } .nb-valores .nb-g { background:#fff7ed; } .nb-valores .nb-g b { color:#c2410c; }
+  .nb-texto { background:#fef3c7; border-left:5px solid #f59e0b; border-radius:10px; padding:12px 14px; font-size:16.5px; line-height:1.5; color:#451a03; font-weight:600; }
+  .nb-texto p { margin:0; white-space:pre-wrap; word-break:break-word; } .nb-texto ul { margin:0; padding-left:20px; } .nb-texto li { margin:2px 0; }
+  .nb-rot { font-size:12px; font-weight:800; color:#92400e; text-transform:uppercase; letter-spacing:.03em; margin-bottom:6px; }
+  .nb-texto.nb-falta { background:#fef2f2; border-left-color:#dc2626; color:#991b1b; font-size:14.5px; }
+  .nb-sem { font-size:13px; color:#64748b; font-style:italic; }
+  .nb-mini { background:#fef3c7; border-left:4px solid #f59e0b; border-radius:8px; padding:8px 10px; margin:-2px 0 8px; font-size:13.5px; color:#78350f; }
+  .nb-mini span { font-weight:700; } .nb-mini i { color:#b91c1c; }
   #perfil-codigo-balc .cb-atual { display:flex; align-items:center; justify-content:space-between; gap:12px; background:linear-gradient(135deg,#f5f3ff,#eef2ff); border:1.5px solid #c4b5fd; border-radius:12px; padding:12px 14px; margin-bottom:10px; }
   #perfil-codigo-balc .cb-atual small { display:block; font-size:11.5px; font-weight:700; color:#6d28d9; text-transform:uppercase; letter-spacing:.04em; }
   #perfil-codigo-balc .cb-atual b { display:block; font-size:24px; letter-spacing:6px; color:#1e1b4b; margin-top:2px; font-variant-numeric:tabular-nums; }
@@ -955,7 +1013,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.207" defer></script>
+<script src="app-android.js?v=2.9.208" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -1283,9 +1341,16 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     </div>
     <div id="prod-scanner-area" style="display:none;margin-top:8px;background:#000;border-radius:12px;overflow:hidden;position:relative;"></div>
   </div>
+  <div class="prod-dica">👆 Toca num produto para o marcar e aparecem as opções Editar e Eliminar.</div>
   <div id="lista-produtos-painel">
     <div class="estado-vazio"><div class="estado-vazio-icon">📦</div>A carregar...</div>
   </div>
+  <div id="prod-acoes"><div class="pa-caixa">
+    <div class="pa-n" id="pa-n">1 selecionado</div>
+    <button type="button" class="pa-ed" id="pa-ed" onclick="prodSelEditar()">✏️ Editar</button>
+    <button type="button" class="pa-el" onclick="prodSelEliminar()">🗑️ Eliminar</button>
+    <button type="button" class="pa-x" onclick="prodSelLimpar()" aria-label="Cancelar">✕</button>
+  </div></div>
 </div>
 
 <!-- ADD PRODUTO -->
@@ -1972,14 +2037,55 @@ function _esconderSuperAdmin() {
 function abrirSuperMenu() { if (!isSuperAdmin) return; _abrirSuperMenu(); }
 function _abrirSuperMenu() { _renderSuperMenu(); document.getElementById('sa-menu').classList.add('aberto'); }
 function fecharSuperMenu() { document.getElementById('sa-menu').classList.remove('aberto'); }
+// ===== Janela profissional do código do Super Admin =====
+function pedirCodigoSuper(nome, email) {
+  return new Promise(res => {
+    { const a = document.getElementById('sa-cod'); if (a) a.remove(); }
+    const ov = document.createElement('div'); ov.id = 'sa-cod';
+    ov.innerHTML = `<div class="sc-caixa" role="dialog" aria-modal="true" aria-labelledby="sc-tit">
+      <button type="button" class="sc-x" aria-label="Fechar">✕</button>
+      <div class="sc-cad"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V11a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5zm-3 8V6a3 3 0 1 1 6 0v3H9zm3 4a2 2 0 0 1 1 3.73V19h-2v-2.27A2 2 0 0 1 12 13z"/></svg></div>
+      <h3 id="sc-tit">Acesso de Super Admin</h3>
+      <p class="sc-sub">Escreve o código para ver as vendas desta loja.</p>
+      <div class="sc-loja"><img src="icons3d/store.png" alt=""><div><b>${_escNota(nome)}</b>${email ? '<small>' + _escNota(email) + '</small>' : ''}</div></div>
+      <div class="sc-pin" id="sc-pin"><i></i><i></i><i></i><i></i></div>
+      <input id="sc-in" type="password" inputmode="numeric" autocomplete="one-time-code" maxlength="8" aria-label="Código">
+      <div class="sc-erro" id="sc-erro"></div>
+      <div class="sc-bts"><button type="button" class="sc-can">Cancelar</button><button type="button" class="sc-ok">Entrar</button></div>
+      <div class="sc-nota">🔒 Só é pedido uma vez nesta sessão.</div>
+    </div>`;
+    document.body.appendChild(ov);
+    requestAnimationFrame(() => ov.classList.add('ativo'));
+    const inp = ov.querySelector('#sc-in'), pin = ov.querySelectorAll('#sc-pin i'), er = ov.querySelector('#sc-erro'), caixa = ov.querySelector('.sc-caixa');
+    const pintar = () => { const n = inp.value.length; pin.forEach((d, i) => d.classList.toggle('on', i < n)); ov.querySelector('#sc-pin').classList.toggle('mais', n > 4); };
+    const fechar = (v) => { ov.classList.remove('ativo'); setTimeout(() => ov.remove(), 200); res(v); };
+    const tentar = () => {
+      if (inp.value === '0210') { ov.querySelector('.sc-cad').classList.add('aberto'); setTimeout(() => fechar(true), 260); return; }
+      er.textContent = inp.value ? 'Código errado. Tenta de novo.' : 'Escreve o código.';
+      caixa.classList.remove('treme'); void caixa.offsetWidth; caixa.classList.add('treme');
+      try { navigator.vibrate && navigator.vibrate([60, 40, 60]); } catch (e) {}
+      inp.value = ''; pintar(); inp.focus();
+    };
+    inp.addEventListener('input', () => { inp.value = inp.value.replace(/\D/g, ''); er.textContent = ''; pintar(); if (inp.value.length === 4 && inp.value === '0210') tentar(); });
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') tentar(); if (e.key === 'Escape') fechar(false); });
+    ov.querySelector('#sc-pin').onclick = () => inp.focus();
+    ov.querySelector('.sc-ok').onclick = tentar;
+    ov.querySelector('.sc-can').onclick = () => fechar(false);
+    ov.querySelector('.sc-x').onclick = () => fechar(false);
+    ov.addEventListener('click', e => { if (e.target === ov) fechar(false); });
+    setTimeout(() => inp.focus(), 120);
+  });
+}
+
 async function trocarLojaSuper(valor) {
   if (!isSuperAdmin) return;
   fecharSuperMenu();
   // Ver outras lojas / todas exige o código 0210 (uma vez por sessão) — igual ao comportamento anterior
   const _joaoId = window._lojaTesteId;
   if (!window._lojasDesbloqueadas && valor !== _joaoId) {
-    const cod = prompt('🔒 Para ver as vendas de outras lojas, escreve o código:');
-    if (cod !== '0210') { mostrarNotif('❌ Código errado.', true); return; }
+    const lj = valor === 'geral' ? { nome: 'Todas as Lojas', email_dono: '' } : ((todasLojas || []).find(x => x.id === valor) || {});
+    const ok = await pedirCodigoSuper(lj.nome || 'Loja', lj.email_dono || '');
+    if (!ok) return;
     window._lojasDesbloqueadas = true;
     setTimeout(prepararLojasSuper, 50);
   }
@@ -2773,37 +2879,63 @@ function renderProdutosSubPainel() {
     const s = p.stock;
     const cls = s < 0 ? 'sb-zero' : s === 0 ? 'sb-zero' : s <= 5 ? 'sb-baixo' : 'sb-ok';
     const stxt = s < 0 ? 'Negativo' : s === 0 ? 'Esgotado' : s <= 5 ? 'Baixo: '+s : s;
-    return `<div class="prod-item">
-      ${p.imagem ? `<img class="prod-img" src="${p.imagem}" onclick="abrirImagemGrande('${p.imagem}')" style="cursor:zoom-in" onerror="this.style.display='none'">` : '<div class="prod-img" style="display:flex;align-items:center;justify-content:center;font-size:20px">📦</div>'}
+    const marcado = _prodSel.has(String(p.id));
+    return `<div class="prod-item${marcado?' sel':''}" data-id="${p.id}" onclick="prodToggleSel('${p.id}')">
+      <span class="prod-marca"></span>
+      ${p.imagem ? `<img class="prod-img" src="${p.imagem}" onclick="event.stopPropagation();abrirImagemGrande('${p.imagem}')" style="cursor:zoom-in" onerror="this.style.display='none'">` : '<div class="prod-img" style="display:flex;align-items:center;justify-content:center;font-size:20px">📦</div>'}
       <div class="prod-info"><div class="prod-nome">${p.nome}</div><div class="prod-cat">${p.categoria}${p.subcategoria?' › '+p.subcategoria:''} · ${p.codigo||'—'}</div></div>
       <div style="text-align:right">
         <div class="prod-preco">MT ${parseFloat(p.preco).toFixed(2)}</div>
         <span class="prod-stock-badge ${cls}">${stxt}</span>
       </div>
-      <button onclick="editarProdutoCompleto('${p.id}')" title="Editar produto" style="margin-left:8px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 12px;cursor:pointer;font-size:13px;font-weight:bold;color:#1a56a0;flex-shrink:0;">✏️ Editar</button>
-      <button onclick="eliminarProdutoMonitor('${p.id}')" title="Eliminar produto" style="margin-left:6px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;cursor:pointer;font-size:13px;font-weight:bold;color:#dc2626;flex-shrink:0;">🗑️ Eliminar</button>
     </div>`;
   }).join(''));
+  prodSelBarra();
 }
 
+// ===== SELECIONAR PRODUTOS (toca para marcar → Editar / Eliminar) =====
+const _prodSel = new Set();
+function prodToggleSel(id) {
+  id = String(id);
+  if (_prodSel.has(id)) _prodSel.delete(id); else _prodSel.add(id);
+  const el = document.querySelector('#lista-produtos-painel .prod-item[data-id="' + id.replace(/"/g,'') + '"]');
+  if (el) el.classList.toggle('sel', _prodSel.has(id));
+  try { navigator.vibrate && navigator.vibrate(15); } catch(e) {}
+  prodSelBarra();
+}
+function prodSelBarra() {
+  [..._prodSel].forEach(id => { if (!todosProdutos.some(p => String(p.id) === id)) _prodSel.delete(id); });
+  const n = _prodSel.size, bar = document.getElementById('prod-acoes'); if (!bar) return;
+  bar.classList.toggle('ativo', n > 0);
+  if (!n) return;
+  const p1 = todosProdutos.find(p => String(p.id) === [..._prodSel][0]);
+  document.getElementById('pa-n').innerHTML = n === 1 ? (_escNota(p1 ? p1.nome : '1 produto') + '<small>1 selecionado</small>') : (n + ' produtos<small>selecionados</small>');
+  const ed = document.getElementById('pa-ed'); ed.disabled = n !== 1; ed.title = n === 1 ? 'Editar produto' : 'Para editar, marca só um produto';
+}
+function prodSelLimpar() { _prodSel.clear(); document.querySelectorAll('#lista-produtos-painel .prod-item.sel').forEach(e => e.classList.remove('sel')); prodSelBarra(); }
+function prodSelEditar() { if (_prodSel.size !== 1) { mostrarNotif('Para editar, marca só um produto.', true); return; } const id = [..._prodSel][0]; prodSelLimpar(); editarProdutoCompleto(id); }
+function prodSelEliminar() { if (!_prodSel.size) return; eliminarProdutoMonitor([..._prodSel]); }
+
 // ===== ELIMINAR PRODUTO (pergunta de confirmação própria) =====
-function eliminarProdutoMonitor(id) {
-  const p = todosProdutos.find(x => x.id === id);
-  if (!p) return;
+function eliminarProdutoMonitor(ids) {
+  ids = (Array.isArray(ids) ? ids : [ids]).map(String);
+  const prods = todosProdutos.filter(x => ids.includes(String(x.id)));
+  if (!prods.length) return;
   { var _o = document.getElementById('overlay-elim-prod'); if (_o) _o.remove(); }
-  const nomeSeguro = (p.nome || '').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  const um = prods.length === 1;
+  const nomes = prods.slice(0, 5).map(p => '<li>' + _escNota(p.nome) + '</li>').join('') + (prods.length > 5 ? '<li>… e mais ' + (prods.length - 5) + '</li>' : '');
   const ov = document.createElement('div');
   ov.id = 'overlay-elim-prod';
-  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9600;display:flex;align-items:center;justify-content:center;padding:16px;';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:9600;display:flex;align-items:center;justify-content:center;padding:16px;';
   ov.innerHTML = `
-    <div style="background:#fff;border-radius:16px;padding:22px;width:360px;max-width:95%;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,0.3);">
-      <div style="font-size:42px;">🗑️</div>
-      <div style="font-weight:bold;font-size:17px;margin:8px 0 4px;color:#0f172a;">Eliminar produto?</div>
-      <div style="font-size:14px;color:#475569;margin-bottom:6px;">Desejas eliminar <b>"${nomeSeguro}"</b>?</div>
+    <div style="background:#fff;border-radius:18px;padding:22px;width:380px;max-width:95%;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,0.3);">
+      <div style="width:60px;height:60px;margin:0 auto;border-radius:50%;background:#fef2f2;display:flex;align-items:center;justify-content:center;font-size:30px;">🗑️</div>
+      <div style="font-weight:800;font-size:18px;margin:10px 0 6px;color:#0f172a;">${um ? 'Eliminar produto?' : 'Eliminar ' + prods.length + ' produtos?'}</div>
+      <ul style="text-align:left;margin:0 auto 8px;padding:10px 14px 10px 30px;background:#f8fafc;border-radius:12px;font-size:14px;color:#334155;max-height:150px;overflow:auto;">${nomes}</ul>
       <div style="font-size:12px;color:#94a3b8;margin-bottom:18px;">Esta ação não pode ser desfeita.</div>
       <div style="display:flex;gap:10px;">
-        <button id="elim-cancelar" style="flex:1;padding:12px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:11px;font-weight:bold;font-size:14px;cursor:pointer;color:#334155;">Cancelar</button>
-        <button id="elim-confirmar" style="flex:1;padding:12px;background:#dc2626;border:none;border-radius:11px;font-weight:bold;font-size:14px;cursor:pointer;color:#fff;">🗑️ Eliminar</button>
+        <button id="elim-cancelar" style="flex:1;padding:12px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:12px;font-weight:bold;font-size:14px;cursor:pointer;color:#334155;">Cancelar</button>
+        <button id="elim-confirmar" style="flex:1;padding:12px;background:#dc2626;border:none;border-radius:12px;font-weight:bold;font-size:14px;cursor:pointer;color:#fff;">🗑️ Eliminar</button>
       </div>
     </div>`;
   document.body.appendChild(ov);
@@ -2813,16 +2945,21 @@ function eliminarProdutoMonitor(id) {
     const btn = document.getElementById('elim-confirmar');
     btn.disabled = true; btn.textContent = 'A eliminar…';
     try {
-      let q = supabaseClient.from('produtos').delete().eq('id', id);
-      if (p.loja_id) q = q.eq('loja_id', p.loja_id);
-      const { error } = await q;
-      if (error) { try { mostrarNotif('Erro ao eliminar: ' + error.message, true); } catch(e){} btn.disabled = false; btn.textContent = '🗑️ Eliminar'; return; }
-      todosProdutos = todosProdutos.filter(x => x.id !== id);
+      const lid = prods[0].loja_id || lojaId;
+      let q = supabaseClient.from('produtos').delete().in('id', prods.map(p => p.id));
+      if (lid) q = q.eq('loja_id', lid);
+      const { data, error } = await q.select('id');
+      if (error) throw error;
+      const apagados = (data || []).map(r => String(r.id));
+      if (!apagados.length) throw new Error('a base de dados não eliminou (sem permissão?)');
+      todosProdutos = todosProdutos.filter(x => !apagados.includes(String(x.id)));
+      apagados.forEach(id => _prodSel.delete(id));
       ov.remove();
       renderProdutosSubPainel();
-      try { mostrarNotif('🗑️ Produto "' + p.nome + '" eliminado.'); } catch(e){}
+      const falta = prods.length - apagados.length;
+      mostrarNotif(falta ? '⚠️ Eliminados ' + apagados.length + ', ' + falta + ' não foram eliminados.' : (um ? '🗑️ Produto "' + prods[0].nome + '" eliminado.' : '🗑️ ' + apagados.length + ' produtos eliminados.'), !!falta);
     } catch (e) {
-      try { mostrarNotif('Erro ao eliminar: ' + e.message, true); } catch(_){}
+      try { mostrarNotif('Erro ao eliminar: ' + (e.message || e), true); } catch(_){}
       btn.disabled = false; btn.textContent = '🗑️ Eliminar';
     }
   };
@@ -3869,10 +4006,11 @@ async function calcularAuditoria() {
       window._audDescontos = data.reduce((s,e)=>s+parseFloat(e.descontos||0),0);
       window._audGastos = data.reduce((s,e)=>s+parseFloat(e.gastos||0),0);
       window._audGastosNota = data.map(e=>e.gastos_nota).filter(Boolean).join(' · ');
+      window._audEntregas = data.slice().sort((a,b)=>new Date(a.criado_em)-new Date(b.criado_em));
     } else {
-      window._audDescontos = 0; window._audGastos = 0; window._audGastosNota = '';
+      window._audDescontos = 0; window._audGastos = 0; window._audGastosNota = ''; window._audEntregas = [];
     }
-  } catch(e) { window._audDescontos = 0; window._audGastos = 0; window._audGastosNota = ''; }
+  } catch(e) { window._audDescontos = 0; window._audGastos = 0; window._audGastosNota = ''; window._audEntregas = []; }
 
   div.innerHTML = `
     <div style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:14px;">
@@ -3889,9 +4027,10 @@ async function calcularAuditoria() {
       <div style="display:flex;justify-content:space-between;padding:3px 0;"><span>📦 Dinheiro entregue:</span><b>MT ${entregaRegistada.toFixed(2)}</b></div>
       ${window._audDescontos>0?`<div style="display:flex;justify-content:space-between;padding:3px 0;color:#9a3412;"><span>🏷️ Descontos do dia:</span><b>MT ${window._audDescontos.toFixed(2)}</b></div>`:''}
       ${window._audGastos>0?`<div style="display:flex;justify-content:space-between;padding:3px 0;color:#9a3412;"><span>🧾 Gastos do dia:</span><b>MT ${window._audGastos.toFixed(2)}</b></div>`:''}
-      ${window._audGastosNota?`<div style="font-size:12px;color:#64748b;margin-top:4px;">Nota: ${window._audGastosNota}</div>`:''}
       ${(window._audDescontos>0||window._audGastos>0)?`<div style="display:flex;justify-content:space-between;padding:8px 0 2px;border-top:1px dashed #bfdbfe;margin-top:6px;font-weight:bold;"><span>💰 Total contabilizado:</span><b style="color:#1a56a0;">MT ${(entregaRegistada+window._audDescontos+window._audGastos).toFixed(2)}</b></div><div style="font-size:11px;color:#64748b;">(dinheiro + descontos + gastos = o que devia estar no caixa)</div>`:''}
     </div>` : ''}
+
+    ${entregaRegistada !== null ? notasEntregaHTML(window._audEntregas) : ''}
 
     <div style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:16px;">
       <label style="font-size:13px;font-weight:bold;color:#374151;">💵 Quanto o balconista entregou de verdade? (MT)</label>
@@ -3902,6 +4041,35 @@ async function calcularAuditoria() {
     </div>`;
 
   if (entregaRegistada !== null) compararAuditoria(esperado);
+}
+
+// ===== Nota do balconista (bem visível e detalhada) =====
+function _escNota(t){ return String(t==null?'':t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function notasEntregaHTML(entregas) {
+  entregas = entregas || [];
+  if (!entregas.length) return '';
+  const fm = n => 'MT ' + (parseFloat(n)||0).toFixed(2);
+  const itens = entregas.map(e => {
+    const hora = new Date(e.criado_em).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});
+    const gastos = parseFloat(e.gastos)||0, desc = parseFloat(e.descontos)||0;
+    const nota = (e.gastos_nota||'').trim();
+    const linhas = nota ? nota.split(/\s*[,;\n]\s*|\s+·\s+/).filter(Boolean) : [];
+    return `<div class="nb-item">
+      <div class="nb-cab"><span class="nb-quem">👤 ${_escNota(e.vendedor_codigo||'Balconista')}</span><span class="nb-hora">🕒 ${hora} · ${e.num_vendas||0} venda(s)</span></div>
+      <div class="nb-valores">
+        <div><small>Dinheiro entregue</small><b>${fm(e.total_entregue)}</b></div>
+        <div class="${gastos>0?'nb-g':''}"><small>Gastos</small><b>${fm(gastos)}</b></div>
+        ${desc>0?`<div class="nb-g"><small>Descontos</small><b>${fm(desc)}</b></div>`:''}
+      </div>
+      ${nota ? `<div class="nb-texto"><div class="nb-rot">📝 O que o balconista escreveu:</div>${linhas.length>1?'<ul>'+linhas.map(l=>'<li>'+_escNota(l)+'</li>').join('')+'</ul>':'<p>'+_escNota(nota)+'</p>'}</div>`
+             : (gastos>0 ? `<div class="nb-texto nb-falta">⚠️ Declarou <b>${fm(gastos)}</b> de gastos mas <b>não escreveu nenhuma nota</b> a explicar. Pede-lhe a explicação.</div>`
+                         : `<div class="nb-sem">Sem nota — não declarou gastos.</div>`)}
+    </div>`;
+  }).join('');
+  return `<div class="nb-caixa">
+    <div class="nb-tit"><span>📝</span><div><b>Nota do balconista</b><small>${entregas.length} entrega(s) neste dia — o que ele explicou sobre os gastos</small></div></div>
+    ${itens}
+  </div>`;
 }
 
 function compararAuditoria(esperado) {
@@ -4131,7 +4299,7 @@ async function abrirEntregas() {
         return `<div style="display:flex;justify-content:space-between;align-items:center;background:white;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:6px;">
           <div><span style="font-size:15px;font-weight:bold;">👤 ${e.vendedor_codigo || 'Vendedor'}</span> <span style="font-size:11px;color:#94a3b8;">${hora} · ${e.num_vendas} venda(s)</span></div>
           <strong style="font-size:16px;color:#16a34a;">MT ${parseFloat(e.total_entregue).toFixed(2)}</strong>
-        </div>`;
+        </div>${(e.gastos_nota||parseFloat(e.gastos)>0)?`<div class="nb-mini">🧾 Gastos <b>MT ${(parseFloat(e.gastos)||0).toFixed(2)}</b>${e.gastos_nota?` — <span>📝 ${_escNota(e.gastos_nota)}</span>`:' — <i>sem nota</i>'}</div>`:''}`;
       }).join('')}
     </div>`;
   }).join('');
@@ -5536,7 +5704,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.207';
+const MONITOR_VERSAO = '2.9.208';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
