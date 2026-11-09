@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <script src="spap-migrar.js?v=1"></script>
+<script src="spap-dialogo.js?v=1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Spap-Sercriativo — PDV</title>
 <script>
@@ -350,7 +351,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
   [tabindex]:focus-visible { outline: 2px solid #1a56a0; outline-offset: 1px; }
 </style>
-<script src="app-android.js?v=2.9.224" defer></script>
+<script src="app-android.js?v=2.9.225" defer></script>
 <style>/* a interface antiga nunca aparece: o ecrã antigo fica invisível até o novo abrir (sem piscar) */ body:not(.modo2) #tela-pdv { visibility:hidden !important; }</style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
@@ -1878,10 +1879,18 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     return { id: p.id, nome: p.nome, codigo: p.codigo, codbarras: p.codbarras, categoria: p.categoria, subcategoria: p.subcategoria, preco: parseFloat(p.preco), stock: p.stock, imagem: p.imagem, unidade: p.unidade || 'un' };
   }
 
-  function fazerLogout() {
-    if (confirm('Tens a certeza que queres sair?')) {
-      supabaseClient.auth.signOut().then(() => { window.location.href = 'login.html'; });
-    }
+  async function fazerLogout() {
+    const pend = (typeof filaVendas !== 'undefined' && filaVendas) ? filaVendas.length : 0;
+    const loja = (typeof sessaoAtual !== 'undefined' && sessaoAtual) ? (sessaoAtual.nomeEmpresa || sessaoAtual.nomeLoja || '') : '';
+    const quem = (typeof sessaoAtual !== 'undefined' && sessaoAtual && sessaoAtual.vendedorCodigo) ? ('Balconista ' + sessaoAtual.vendedorCodigo) : '';
+    const extra = '<div style="display:flex;align-items:center;gap:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:10px 12px;text-align:left;">'
+      + '<img src="ssteam-logo.png" alt="" style="width:40px;height:40px;border-radius:50%;flex:none;">'
+      + '<div style="min-width:0;"><b style="display:block;font-size:14.5px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (loja || 'Loja').replace(/</g,'&lt;') + '</b>'
+      + (quem ? '<small style="display:block;font-size:12.5px;color:#64748b;font-weight:600;">' + quem.replace(/</g,'&lt;') + '</small>' : '') + '</div></div>'
+      + (pend ? '<div style="margin-top:10px;background:#fffbeb;border:1px solid #fcd34d;color:#92400e;border-radius:12px;padding:10px 12px;font-size:13px;font-weight:600;text-align:left;">⏳ Ainda há ' + pend + ' venda(s) por enviar. Ficam guardadas neste aparelho e são enviadas quando voltares a entrar com internet.</div>' : '');
+    const ok = await spapConfirmar('Sair da Loja?', 'Vais terminar a sessão neste aparelho. Para voltar a vender, entra de novo com o e-mail e a senha.', { icone:'👋', ok:'Sair', cancelar:'Ficar', perigo:true, extraHtml: extra });
+    if (!ok) return;
+    supabaseClient.auth.signOut().then(() => { window.location.href = 'login.html'; });
   }
 
   document.querySelectorAll('.modal-fundo').forEach(modalFundo => {
@@ -2741,7 +2750,7 @@ async function scannerFechar() {
     const permitido = !!(sessaoAtual && sessaoAtual.codigoDesconto);
     if (!permitido) { mostrarNotif('🔒 Descontos desligados. O dono tem de ligar em Monitor → Meu Perfil → "Permitir descontos" e Guardar. Depois toca aqui outra vez.', true); return; }
     const atual = (item.precoOriginal || item.preco);
-    const novoStr = prompt('Novo preço por unidade de "' + item.nome + '":\n(preço normal: MT ' + atual + ')', item.preco);
+    const novoStr = await spapPedir('Novo preço de «' + item.nome + '»', 'Preço normal: MT ' + atual + '. Escreve o novo preço por unidade.', item.preco, { icone:'🏷️', numero:true, ok:'Aplicar' });
     if (novoStr === null) return;
     const novo = parseFloat(String(novoStr).replace(',', '.'));
     if (isNaN(novo) || novo < 0) { mostrarNotif('Preço inválido.', true); return; }
@@ -2791,7 +2800,7 @@ async function scannerFechar() {
     renderCarrinho(); renderProdutos();
   }
   function removerItem(i) { carrinho.splice(i,1); renderCarrinho(); renderProdutos(); }
-  function limparCarrinho() { if(carrinho.length===0) return; if(confirm('Limpar todo o carrinho?')) { carrinho=[]; renderCarrinho(); renderProdutos(); } }
+  async function limparCarrinho() { if(carrinho.length===0) return; if(await spapConfirmar('Limpar o carrinho?', 'Todos os produtos do carrinho vão ser retirados.', { icone:'🛒', ok:'Limpar', perigo:true })) { carrinho=[]; renderCarrinho(); renderProdutos(); } }
 
   const campoBusca = document.getElementById('campo-busca');
   const buscaResultadosDiv = document.getElementById('busca-resultados');
@@ -3069,7 +3078,7 @@ async function scannerFechar() {
       const nums = (gastosNota.match(/\d+(?:[.,]\d+)?/g) || []).map(n => parseFloat(n.replace(',', '.')) || 0);
       const detetado = nums.reduce((s, n) => s + n, 0);
       if (detetado > 0) {
-        if (confirm('⚠️ Escreveste gastos na nota, mas o campo do VALOR dos gastos está a 0.\n\nSem o valor, estes gastos NÃO vão contar na auditoria (vai parecer que falta dinheiro).\n\nDetetei MT ' + detetado + ' na nota. Queres usar MT ' + detetado + ' como valor dos gastos?')) {
+        if (await spapConfirmar('Gastos sem valor', '⚠️ Escreveste gastos na nota, mas o campo do VALOR dos gastos está a 0.\n\nSem o valor, estes gastos NÃO vão contar na auditoria (vai parecer que falta dinheiro).\n\nDetetei MT ' + detetado + ' na nota. Queres usar MT ' + detetado + ' como valor dos gastos?')) {
           gastos = detetado;
           const campo = document.getElementById('ent-gastos'); if (campo) campo.value = detetado;
         }
@@ -3126,7 +3135,7 @@ async function scannerFechar() {
         if (data && data.valor) link = data.valor;
       }
     } catch(e) {}
-    if (confirm('💬 Precisas de ajuda?\n\nVais falar diretamente com a equipa Spap-Sercriativo pelo WhatsApp.\n\nAbrir agora?')) {
+    if (await spapConfirmar('Precisas de ajuda?', 'Vais falar diretamente com a equipa Spap-Sercriativo pelo WhatsApp.', { icone:'💬', ok:'Abrir WhatsApp' })) {
       window.open(link, '_blank');
     }
   }
@@ -3263,7 +3272,7 @@ async function scannerFechar() {
   // Mostra o estado e o ERRO exato das vendas por sincronizar (para diagnóstico)
   function verErroSync() {
     if (!filaVendas || filaVendas.length === 0) {
-      alert('✅ Não há vendas por sincronizar — está tudo enviado ao servidor.');
+      spapAviso('Tudo enviado', 'Não há vendas por sincronizar — está tudo enviado ao servidor.', { icone:'✅', classe:'ok' });
       return;
     }
     let msg = '⏳ ' + filaVendas.length + ' venda(s) por sincronizar:\n';
@@ -3275,7 +3284,7 @@ async function scannerFechar() {
       if (v.erro) msg += '❌ ERRO: ' + v.erro + '\n';
     });
     msg += '\n(Tira uma foto deste ecrã e envia para o suporte.)';
-    alert(msg);
+    spapAviso('Vendas por sincronizar', msg, { icone:'⏳', classe:'aviso' });
   }
 
   async function sincronizarFila() {
@@ -4109,8 +4118,8 @@ async function scannerFechar() {
     document.getElementById('modal-impressora').classList.remove('ativo');
     try { abrirModalEtiquetadora(); } catch(e) { mostrarNotif('Abre Menu → Criar Código de Barras.', true); }
   }
-  function limparCacheRecarregar() {
-    if (!confirm('Limpar a cache e recarregar esta máquina?\n\nResolve produtos (ex: por kg) ou novidades que não aparecem. Não perde dados — só recarrega.')) return;
+  async function limparCacheRecarregar() {
+    if (!(await spapConfirmar('Limpar e recarregar?', 'Limpar a cache e recarregar esta máquina?\n\nResolve produtos (ex: por kg) ou novidades que não aparecem. Não perde dados — só recarrega.'))) return;
     try { Object.keys(localStorage).forEach(k => { if (k.indexOf('pdv_cache_') === 0) localStorage.removeItem(k); }); } catch(e){}
     try { if ('caches' in window) caches.keys().then(ks => ks.forEach(k => caches.delete(k))); } catch(e){}
     mostrarNotif('🔄 A recarregar...');
@@ -4812,7 +4821,7 @@ async function scannerFechar() {
     if (_confirmandoLote) return;
     const lote = window._perdaLotes && window._perdaLotes[gi];
     if (!lote) return;
-    if (!confirm('Confirmar este lançamento de perdas?\n\nO stock vai descontar todos os produtos deste lançamento.')) return;
+    if (!(await spapConfirmar('Confirmar o lançamento?', 'Confirmar este lançamento de perdas?\n\nO stock vai descontar todos os produtos deste lançamento.'))) return;
     _confirmandoLote = true;
     try {
       let q = supabaseClient.from('perdas').select('id, produto_id, quantidade').eq('loja_id', sessaoAtual.lojaId).eq('estado', 'pendente');
@@ -4853,7 +4862,7 @@ async function scannerFechar() {
 
   async function confirmarPerda(id, qtd, produtoId) {
     if (_perdasEmProcesso[id]) return;
-    if (!confirm('Confirmar esta perda?\n\nO stock vai baixar ' + qtd + ' unidade(s).')) return;
+    if (!(await spapConfirmar('Confirmar a perda?', 'Confirmar esta perda?\n\nO stock vai baixar ' + qtd + ' unidade(s).'))) return;
     _perdasEmProcesso[id] = true;
     try {
       const ok = await _confirmarPerdaInterna(id, qtd, produtoId);
@@ -4867,7 +4876,7 @@ async function scannerFechar() {
   let _confirmandoTodasPerdas = false;
   async function confirmarTodasPerdas() {
     if (_confirmandoTodasPerdas) return;
-    if (!confirm('Confirmar TODAS as perdas pendentes?\n\nO stock vai descontar todas de uma vez.')) return;
+    if (!(await spapConfirmar('Confirmar todas?', 'Confirmar TODAS as perdas pendentes?\n\nO stock vai descontar todas de uma vez.'))) return;
     _confirmandoTodasPerdas = true;
     try {
       const { data: pend } = await supabaseClient.from('perdas')
@@ -4884,7 +4893,7 @@ async function scannerFechar() {
 
   async function cancelarPerda(id) {
     if (_perdasEmProcesso[id]) return;
-    if (!confirm('Cancelar esta perda?\n\nO stock NÃO será alterado.')) return;
+    if (!(await spapConfirmar('Cancelar a perda?', 'Cancelar esta perda?\n\nO stock NÃO será alterado.'))) return;
     _perdasEmProcesso[id] = true;
     try {
       const { error } = await supabaseClient.from('perdas')
@@ -5031,7 +5040,7 @@ async function scannerFechar() {
   async function cancelarRecebimentoDespacho(btn) {
     if (!despachoAtual || despachoAtual.estado !== 'enviado') return;
     if (_cancelandoDespacho) return;
-    if (!confirm('Cancelar este despacho?\n\nA mercadoria NÃO entra no stock. Usa isto se recebeste mercadoria errada.')) return;
+    if (!(await spapConfirmar('Cancelar o despacho?', 'Cancelar este despacho?\n\nA mercadoria NÃO entra no stock. Usa isto se recebeste mercadoria errada.'))) return;
     _cancelandoDespacho = true;
     if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
     try {
@@ -5141,7 +5150,7 @@ async function scannerFechar() {
     if (!destino) { mostrarNotif('❌ Escolhe a loja de destino.', true); return; }
     if (!trItens.length) { mostrarNotif('❌ Adiciona pelo menos um produto.', true); return; }
     for (const it of trItens) { if (it.qtd > it.stockAtual) { mostrarNotif('❌ '+it.nome+': não tens '+it.qtd+' (só '+it.stockAtual+').', true); return; } }
-    if (!confirm('Enviar '+trItens.length+' produto(s) para a outra loja?\nO stock sai daqui agora; a outra loja confirma para receber.')) return;
+    if (!(await spapConfirmar('Enviar transferência?', 'Enviar '+trItens.length+' produto(s) para a outra loja?\nO stock sai daqui agora; a outra loja confirma para receber.'))) return;
     _enviandoTransf = true;
     if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; btn.textContent = '⏳ A enviar...'; }
     try {
@@ -5225,7 +5234,7 @@ async function scannerFechar() {
 
   async function rejeitarTransferencia(id, btn) {
     if (_transfEmProcesso[id]) return;
-    if (!confirm('Rejeitar esta transferência? A mercadoria volta ao stock da loja que enviou.')) return;
+    if (!(await spapConfirmar('Rejeitar a transferência?', 'Rejeitar esta transferência? A mercadoria volta ao stock da loja que enviou.'))) return;
     _transfEmProcesso[id] = true;
     if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
     try {
@@ -5262,7 +5271,7 @@ async function scannerFechar() {
   }
 
   async function enviarEmergencia() {
-    if (!confirm('🆘 Enviar ALERTA DE EMERGÊNCIA ao dono?\n\nO dono vai ouvir um alarme no monitor dele. Usa só em caso real.')) return;
+    if (!(await spapConfirmar('Alerta de emergência', 'Enviar ALERTA DE EMERGÊNCIA ao dono?\n\nO dono vai ouvir um alarme no monitor dele. Usa só em caso real.'))) return;
     acionarEmergencia();
   }
 
@@ -5901,10 +5910,10 @@ async function scannerFechar() {
   }
 
   // Antipago: marca a venda como não paga (anulada) — cria um retorno total
-  function antipagoDoRecibo(idx) {
+  async function antipagoDoRecibo(idx) {
     const venda = vendas[idx];
     if (!venda) return;
-    if (!confirm('Marcar a venda #' + (venda.numeroDoDia||'?') + ' de MT ' + venda.total.toFixed(2) + ' como ANTIPAGO (anulada)?\nO valor será retirado e os produtos voltam ao stock.')) return;
+    if (!(await spapConfirmar('Anular a venda?', 'Marcar a venda #' + (venda.numeroDoDia||'?') + ' de MT ' + venda.total.toFixed(2) + ' como ANTIPAGO (anulada)?\nO valor será retirado e os produtos voltam ao stock.'))) return;
     fecharPainelVendas();
     // Carrega os produtos e confirma o retorno automaticamente
     devDevolve = venda.itens.map(it => {
@@ -5930,7 +5939,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.224';
+  const VERSAO_ATUAL = '2.9.225';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
