@@ -1,1 +1,1 @@
-{"versao": "3.7.10", "data": "2026-11-09", "novidades": "Mudança de endereço automática e sem se notar.", "melhorias": ["Quem abre a Banca pelo endereço antigo passa sozinho para o endereço principal, com a sessão aberta e as vendas por enviar."]}
+{"versao": "3.7.11", "data": "2026-11-09", "novidades": "Segurança no Meu Perfil do Monitor da Banca.", "melhorias": ["Definições → Meu Perfil → Segurança: mostra o e-mail de acesso atual e deixa trocar o e-mail e o código (senha)."]}

@@ -80,10 +80,16 @@
   .au-txt{font-size:16px;font-weight:600;line-height:1.45;white-space:pre-wrap;word-break:break-word;}
   .au-nota.au-falta{background:#fef2f2;border-left-color:#dc2626;color:#991b1b;font-size:13.5px;font-weight:700;}
   .au-sem{margin-top:6px;font-size:12px;color:var(--suave,#94a3b8);font-style:italic;}
+  .seg-caixa{background:#fff;border:1px solid #e3ebfa;border-radius:18px;padding:14px;box-shadow:0 4px 12px rgba(29,85,190,.06);}
+  .seg-tit{font-weight:800;font-size:16px;color:var(--nv);margin-bottom:10px;} .seg-tit small{display:block;font-size:12px;color:#64748b;font-weight:600;margin-top:2px;}
+  .seg-atual{display:flex;align-items:center;gap:10px;background:#f8fbff;border:1px solid #e3ebfa;border-radius:12px;padding:10px 12px;margin-bottom:12px;}
+  .seg-atual span{font-size:20px;} .seg-atual small{display:block;font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.03em;}
+  .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
+  .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.10">
-<script src="banca-tema.js?v=3.7.10" defer></script>
-<script src="app-android.js?v=3.7.10" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.11">
+<script src="banca-tema.js?v=3.7.11" defer></script>
+<script src="app-android.js?v=3.7.11" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -1123,10 +1129,53 @@ async function mRastreioGerente(){
 }
 
 // ===== MEU PERFIL =====
-function mPerfil(){
+async function mPerfil(){
+  let email='';
+  try{ const { data }=await supabaseClient.auth.getUser(); email=(data&&data.user&&data.user.email)||''; }catch(e){}
   const html='<div class="campo"><label>🏪 Nome da banca</label><input id="pf-nome" type="text" value="'+esc(sessao.nomeLoja)+'"></div>'
-    +'<div class="campo"><label>📱 Telefone</label><input id="pf-tel" type="tel" value="'+esc(window._lojaTelefone||'')+'"></div>';
-  mostrarInfo('🪪 Meu Perfil', html, '<button class="btn" onclick="pfGuardar()">💾 Guardar</button>');
+    +'<div class="campo"><label>📱 Telefone</label><input id="pf-tel" type="tel" value="'+esc(window._lojaTelefone||'')+'"></div>'
+    +'<button class="btn" type="button" onclick="pfGuardar()" style="margin:4px 0 18px;">💾 Guardar dados da banca</button>'
+    +'<div class="seg-caixa"><div class="seg-tit">🛡️ Segurança <small>E-mail e código (senha) de acesso</small></div>'
+    +'<div class="seg-atual"><span>✉️</span><div><small>E-mail de acesso atual</small><b id="seg-email" class="notranslate">'+esc(email||'—')+'</b></div></div>'
+    +'<div class="campo"><label>Novo e-mail</label><input id="seg-novo-email" type="email" inputmode="email" placeholder="novo@email.com" autocomplete="off"></div>'
+    +'<button class="btn cinza" type="button" id="seg-bt-email" onclick="segTrocarEmail()">✉️ Trocar e-mail</button>'
+    +'<div class="campo" style="margin-top:14px;"><label>Novo código (senha) — mínimo 6 caracteres</label><input id="seg-nova-senha" type="password" placeholder="••••••" autocomplete="new-password"></div>'
+    +'<button class="btn cinza" type="button" id="seg-bt-senha" onclick="segTrocarSenha()">🔑 Trocar código (senha)</button>'
+    +'<div class="seg-nota">Mudam na hora. Da próxima vez, entra com os dados novos.</div></div>';
+  mostrarInfo('🪪 Meu Perfil', html);
+}
+async function segTrocarEmail(){
+  const inp=document.getElementById('seg-novo-email'), novo=(inp.value||'').trim().toLowerCase();
+  if(!novo||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(novo)){ toast('Escreve um e-mail válido','erro'); return; }
+  if(navigator.onLine===false){ toast('📵 Precisa de internet','erro'); return; }
+  const b=document.getElementById('seg-bt-email'); b.disabled=true; b.textContent='A trocar…';
+  try{
+    const { error }=await supabaseClient.rpc('trocar_email_conta',{ novo_email: novo });
+    if(error){
+      const m=error.message||'';
+      if(/email_em_uso/i.test(m)){ toast('Esse e-mail já pertence a outra conta','erro'); return; }
+      if(/function|does not exist|schema cache/i.test(m)){
+        const r=await supabaseClient.auth.updateUser({ email: novo },{ emailRedirectTo: new URL('login-banca.html', location.href).href });
+        if(r.error){ toast(r.error.message,'erro'); return; }
+        toast('✉️ Enviámos um link de confirmação para '+novo,'ok'); inp.value=''; return;
+      }
+      toast(m,'erro'); return;
+    }
+    try{ await supabaseClient.auth.refreshSession(); }catch(e){}
+    document.getElementById('seg-email').textContent=novo; inp.value='';
+    toast('✅ E-mail trocado para '+novo,'ok');
+  }finally{ b.disabled=false; b.textContent='✉️ Trocar e-mail'; }
+}
+async function segTrocarSenha(){
+  const inp=document.getElementById('seg-nova-senha'), nova=inp.value||'';
+  if(nova.length<6){ toast('O código deve ter pelo menos 6 caracteres','erro'); return; }
+  if(navigator.onLine===false){ toast('📵 Precisa de internet','erro'); return; }
+  const b=document.getElementById('seg-bt-senha'); b.disabled=true; b.textContent='A trocar…';
+  try{
+    let { error }=await supabaseClient.auth.updateUser({ password: nova });
+    if(error){ const r=await supabaseClient.rpc('trocar_senha_conta',{ nova_senha: nova }); if(r.error){ toast(error.message||r.error.message,'erro'); return; } }
+    inp.value=''; toast('✅ Código (senha) trocado','ok');
+  }finally{ b.disabled=false; b.textContent='🔑 Trocar código (senha)'; }
 }
 async function pfGuardar(){
   const nome=document.getElementById('pf-nome').value.trim();
