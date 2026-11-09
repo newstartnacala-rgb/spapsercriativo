@@ -1,1 +1,1 @@
-{"versao": "2.9.213", "data": "2026-11-09", "novidades": "Login ajustado também com o telemóvel deitado.", "melhorias": ["Com o telemóvel deitado, o login mostra o logótipo de um lado e o formulário do outro, sem deslizar."]}
+{"versao": "2.9.214", "data": "2026-11-09", "novidades": "Login, cadastro e planos fixos, sem zoom.", "melhorias": ["As telas de login, cadastro e planos já não aumentam com zoom (pinça, dois toques ou ao escrever). Ficam sempre fixas."]}
