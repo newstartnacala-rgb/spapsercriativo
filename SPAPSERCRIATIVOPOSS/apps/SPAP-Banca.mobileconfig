@@ -608,9 +608,9 @@
 			<key>IsRemovable</key>
 			<true/>
 			<key>Label</key>
-			<string>Banca</string>
+			<string>Banca e Vendas</string>
 			<key>PayloadDisplayName</key>
-			<string>Banca</string>
+			<string>Banca e Vendas</string>
 			<key>PayloadIdentifier</key>
 			<string>com.spapsercriativo.banca.ios.webclip</string>
 			<key>PayloadType</key>
@@ -626,9 +626,9 @@
 		</dict>
 	</array>
 	<key>PayloadDescription</key>
-	<string>Instala a app Banca (Spap-Sercriativo) no ecrã principal.</string>
+	<string>Instala a app Banca e Vendas (Spap-Sercriativo) no ecrã principal.</string>
 	<key>PayloadDisplayName</key>
-	<string>Banca</string>
+	<string>Banca e Vendas</string>
 	<key>PayloadIdentifier</key>
 	<string>com.spapsercriativo.banca.ios</string>
 	<key>PayloadOrganization</key>

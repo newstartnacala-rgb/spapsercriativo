@@ -57,7 +57,7 @@ android {
         create("banca") {
             dimension = "app"
             applicationId = "com.spapsercriativo.banca"
-            resValue("string", "app_name", "Banca")
+            resValue("string", "app_name", "Banca e Vendas")
             buildConfigField("String", "START_PATH", "\"/mobile.html\"")
             buildConfigField("boolean", "IS_MONITOR", "false")
             buildConfigField("String", "APP_TIPO", "\"banca\"")
@@ -65,7 +65,7 @@ android {
         create("bancamonitor") {
             dimension = "app"
             applicationId = "com.spapsercriativo.bancamonitor"
-            resValue("string", "app_name", "Monitor Banca")
+            resValue("string", "app_name", "Monitor e Banca")
             buildConfigField("String", "START_PATH", "\"/mobile-monitor.html\"")
             buildConfigField("boolean", "IS_MONITOR", "true")
             buildConfigField("String", "APP_TIPO", "\"bancamonitor\"")

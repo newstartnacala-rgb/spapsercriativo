@@ -1,6 +1,6 @@
 {
-  "name": "Banca — Spap-Sercriativo",
-  "short_name": "Banca",
+  "name": "Banca e Vendas — Spap-Sercriativo",
+  "short_name": "Banca e Vendas",
   "description": "Ponto de venda simples para bancas — Spap-Sercriativo",
   "id": "/banca",
   "start_url": "mobile.html",
