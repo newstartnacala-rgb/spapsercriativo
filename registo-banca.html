@@ -3,51 +3,84 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
-<script src="spap-semzoom.js?v=3.7.5"></script>
-<meta name="theme-color" content="#16a34a">
+<script src="spap-semzoom.js?v=3.7.6"></script>
+<meta name="theme-color" content="#eef3fb">
 <title>Banca — Criar conta</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="spap-premium.css?v=3.7.6">
 <style>
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-  body{font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;background:#f0fdf4;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:20px;}
-  .box{background:#fff;border-radius:22px;padding:28px 24px;width:100%;max-width:400px;box-shadow:0 10px 40px rgba(16,163,74,.12);}
-  .logo{text-align:center;margin-bottom:6px;}
-  .logo .ic{font-size:40px;} .logo h1{font-size:20px;color:#166534;margin-top:2px;}
-  .sub{text-align:center;font-size:13px;color:#64748b;margin:4px 0 18px;}
-  label{display:block;font-size:12px;color:#64748b;font-weight:700;margin:12px 0 5px;}
-  input{width:100%;border:1.5px solid #d7eadd;border-radius:13px;padding:14px 15px;font-size:16px;outline:none;}
-  input:focus{border-color:#16a34a;}
-  .btn{width:100%;margin-top:20px;padding:16px;background:#16a34a;color:#fff;border:none;border-radius:13px;font-size:17px;font-weight:800;}
-  .btn:disabled{background:#a7d8ba;}
-  .erro{display:none;margin-top:12px;background:#fef2f2;color:#dc2626;border-radius:10px;padding:11px 13px;font-size:13px;}
-  .ok{display:none;margin-top:12px;background:#f0fdf4;color:#166534;border-radius:10px;padding:11px 13px;font-size:13px;}
-  .rodape{text-align:center;margin-top:18px;font-size:14px;color:#64748b;}
-  .rodape a{color:#16a34a;font-weight:800;text-decoration:none;}
-  .passo{display:none;} .passo.on{display:block;}
-  .otp{display:flex;gap:8px;justify-content:center;margin-top:8px;}
-  .otp input{width:46px;height:56px;text-align:center;font-size:24px;font-weight:800;padding:0;}
-  .dica{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
+  body.pm{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:28px 16px;}
+  .rb{width:100%;max-width:440px;padding:28px 22px 24px;}
+  .rb .pm-topo{margin-bottom:18px;}
+  .rb .pm-marca{width:104px;height:104px;}
+  .rb-tit{font-family:Sora,'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:20px;color:var(--pm-tx);text-align:center;letter-spacing:-.01em;}
+  .sub{text-align:center;font-size:13.5px;color:var(--pm-tx2);margin:4px 0 16px;line-height:1.5;}
+  .rb-campo{display:flex;align-items:center;gap:12px;height:54px;padding:0 16px;border-radius:16px;border:1.5px solid var(--pm-ln);background:rgba(255,255,255,.9);margin-bottom:10px;transition:border-color .15s,box-shadow .15s;}
+  .rb-campo:focus-within{border-color:#f2700f;box-shadow:0 0 0 4px rgba(242,112,15,.15);background:#fff;}
+  .rb-ic{width:22px;height:22px;color:var(--pm-tx3);flex:none;display:flex;} .rb-ic svg{width:22px;height:22px;}
+  .rb-campo:focus-within .rb-ic{color:#f2700f;}
+  .rb-campo input{flex:1;min-width:0;border:0;outline:0;background:none;font-size:16px;color:var(--pm-tx);font-weight:500;}
+  .rb-campo input::placeholder{color:var(--pm-tx3);}
+  .btn{width:100%;height:56px;margin-top:8px;border:0;border-radius:16px;font-family:Sora,'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:16px;letter-spacing:.04em;cursor:pointer;color:#fff;
+    background:linear-gradient(135deg,#ffa24a,#f2700f 55%,#e05c00);box-shadow:0 14px 28px rgba(242,112,15,.36);transition:transform .12s,opacity .15s;}
+  .btn:active{transform:scale(.985);} .btn:disabled{opacity:.6;box-shadow:none;}
+  .erro{display:none;margin-top:12px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;border-radius:12px;padding:11px 13px;font-size:14px;font-weight:600;}
+  .ok{display:none;margin-top:12px;background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;border-radius:12px;padding:11px 13px;font-size:14px;font-weight:600;}
+  .rodape{text-align:center;margin-top:18px;font-size:14.5px;color:var(--pm-tx2);}
+  .rodape a{color:#ea580c;font-weight:800;text-decoration:none;}
+  .passo{display:none;} .passo.on{display:block;animation:rb-in .3s ease both;}
+  @keyframes rb-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .otp{display:flex;gap:8px;justify-content:center;margin:10px 0 6px;}
+  .otp input{width:46px;height:58px;text-align:center;font-size:24px;font-weight:800;border:1.5px solid var(--pm-ln);border-radius:14px;background:#fff;outline:none;color:var(--pm-tx);}
+  .otp input:focus{border-color:#f2700f;box-shadow:0 0 0 4px rgba(242,112,15,.15);}
+  .dica{font-size:13px;text-align:center;margin-top:12px;} .dica a{color:#ea580c !important;}
+  .pl-ok{text-align:center;margin:0 0 14px;}
+  .pl-ok-ico{width:64px;height:64px;margin:0 auto;border-radius:50%;background:#dcfce7;display:flex;align-items:center;justify-content:center;font-size:32px;}
+  .pl-ok h2{font-family:Sora,'Plus Jakarta Sans',sans-serif;color:var(--pm-tx);font-size:21px;font-weight:800;margin:10px 0 4px;}
+  .pl-ok p{color:var(--pm-tx2);font-size:14px;line-height:1.5;}
+  .pl-lista{display:grid;gap:12px;margin:6px 0 14px;}
+  .pl-card{position:relative;display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid var(--pm-ln);border-radius:18px;padding:14px 16px;text-align:left;}
+  .pl-card .pl-t{flex:1;min-width:0;} .pl-card .pl-t b{display:block;font-size:16px;color:var(--pm-tx);font-weight:800;}
+  .pl-card .pl-t small{display:block;font-size:12.5px;color:var(--pm-tx2);font-weight:600;margin-top:2px;}
+  .pl-card .pl-p{font-family:Sora,'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:19px;color:var(--pm-tx);white-space:nowrap;}
+  .pl-card .pl-p small{font-size:12px;color:var(--pm-tx2);font-weight:700;margin-left:2px;font-family:'Plus Jakarta Sans',sans-serif;}
+  .pl-card.pl-gratis{border-color:#bbf7d0;background:linear-gradient(135deg,#f0fdf4,#ffffff);}
+  .pl-card.pl-anual{border-color:#f3d79a;background:linear-gradient(135deg,#fffaf0,#ffffff);}
+  .pl-card.pl-anual .pl-p{color:#b47a1f;}
+  .pl-selo{position:absolute;top:-10px;right:14px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:11px;font-weight:800;border-radius:999px;padding:3px 10px;box-shadow:0 4px 10px rgba(22,163,74,.3);}
+  @media (max-width:767px){
+    body.pm{padding:max(10px,env(safe-area-inset-top)) 12px max(10px,env(safe-area-inset-bottom));}
+    .rb{border-radius:26px !important;padding:20px 18px 18px;}
+    .rb .pm-marca{width:clamp(64px,11vh,96px);height:clamp(64px,11vh,96px);}
+    .rb .pm-nome{font-size:clamp(20px,3vh,24px);}
+    .rb .pm-topo{margin-bottom:12px;}
+    .rb-campo{height:clamp(46px,6.2vh,54px);margin-bottom:8px;}
+    .btn{height:clamp(48px,6.6vh,56px);}
+  }
+  html.escuro{filter:none !important;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.5">
-<script src="banca-tema.js?v=3.7.5" defer></script>
 </head>
-<body>
-<div class="box">
-  <div class="logo"><div class="ic"><img class="logo-ssteam" src="ssteam-logo.png" alt="SSTEAM"></div><h1>Criar a tua banca</h1></div>
+<body class="pm">
+<main class="box rb pm-vidro pm-entra">
+  <div class="pm-topo">
+    <img class="pm-marca" src="ssteam-logo.png" alt="SSTEAM — Tecnologia Varejista de Ponta">
+    <div class="pm-nome notranslate">Spap-<em>Sercriativo</em></div>
+    <div class="pm-tag notranslate">TECNOLOGIA VAREJISTA DE PONTA</div>
+    <div class="pm-extra">A tua banca no bolso</div>
+    <div class="pm-sub">Criar a tua banca</div>
+  </div>
 
   <!-- PASSO 1: dados -->
   <div class="passo on" id="p1">
     <div class="sub">Só o básico. Depois escolhes o plano.</div>
-    <label>🏪 Nome da banca</label>
-    <input id="nome" type="text" placeholder="Ex: Banca do João">
-    <label>📧 Email</label>
-    <input id="email" type="email" inputmode="email" placeholder="o-teu-email@exemplo.com">
-    <label>📱 Número de telefone</label>
-    <input id="telefone" type="tel" inputmode="tel" placeholder="84 000 0000">
-    <label>🔑 Código (senha)</label>
-    <input id="senha" type="password" placeholder="mínimo 6 caracteres">
-    <label>🔁 Repetir código</label>
-    <input id="senha2" type="password" placeholder="escreve o código outra vez">
+    <label class="rb-campo"><span class="rb-ic"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M3 9l1.5-5h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6"/></svg></span><input id="nome" type="text" placeholder="Nome da banca"></label>
+    <label class="rb-campo"><span class="rb-ic"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M4 6h16v12H4z M4 7l8 6 8-6"/></svg></span><input id="email" type="email" inputmode="email" placeholder="Email"></label>
+    <label class="rb-campo"><span class="rb-ic"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M7 3h10v18H7z M11 18h2"/></svg></span><input id="telefone" type="tel" inputmode="tel" placeholder="Telefone (84 000 0000)"></label>
+    <label class="rb-campo"><span class="rb-ic"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M6 11h12v9H6z M8.5 11V8a3.5 3.5 0 0 1 7 0v3"/></svg></span><input id="senha" type="password" placeholder="Código (mín. 6 caracteres)"></label>
+    <label class="rb-campo"><span class="rb-ic"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M6 11h12v9H6z M8.5 11V8a3.5 3.5 0 0 1 7 0v3 M10 15.5l1.5 1.5 3-3"/></svg></span><input id="senha2" type="password" placeholder="Repetir código"></label>
     <button class="btn" id="btn1" onclick="criar()">Criar banca</button>
     <div class="erro" id="erro1"></div>
     <div class="rodape">Já tens banca? <a href="login-banca.html">Entrar</a></div>
@@ -63,7 +96,7 @@
     <button class="btn" id="btn2" onclick="verificar()">Confirmar código</button>
     <div class="erro" id="erro2"></div>
     <div class="ok" id="ok2"></div>
-    <div class="dica"><a href="#" onclick="reenviar();return false;" style="color:#16a34a;font-weight:700;text-decoration:none;">📩 Reenviar código</a></div>
+    <div class="dica"><a href="#" onclick="reenviar();return false;" style="font-weight:800;text-decoration:none;">📩 Reenviar código</a></div>
   </div>
 
   <!-- PASSO 3: sucesso + planos -->
@@ -80,7 +113,7 @@
     </div>
     <button class="btn" onclick="location.href='mobile.html'">Começar a vender</button>
   </div>
-</div>
+</main>
 
 <script src="supabase-config.js"></script>
 <script>
