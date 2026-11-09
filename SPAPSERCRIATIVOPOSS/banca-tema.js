@@ -214,6 +214,44 @@
       nomeGratis: c.gratis_nome || 'Grátis', nomePro: c.mensal_nome || 'Pro', nomeAnual: c.anual_nome || 'Anual' };
   }
   window.bancaPrecos = precos;
+
+  // ===== Janelas próprias (em vez das caixas do navegador que mostram o endereço do site) =====
+  function _escD(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function janela(o) {
+    return new Promise(function (res) {
+      var ant = document.getElementById('bj-fundo'); if (ant) ant.remove();
+      var ov = document.createElement('div'); ov.id = 'bj-fundo'; ov.className = 'notranslate-x';
+      var temCampo = o.tipo === 'texto' || o.tipo === 'numero';
+      ov.innerHTML = '<div class="bj" role="dialog" aria-modal="true">'
+        + '<div class="bj-ico' + (o.perigo ? ' perigo' : '') + '">' + (o.icone || (o.perigo ? '⚠️' : temCampo ? '✏️' : 'ℹ️')) + '</div>'
+        + '<h3>' + _escD(o.titulo || '') + '</h3>'
+        + (o.texto ? '<p>' + _escD(o.texto).replace(/\n/g, '<br>') + '</p>' : '')
+        + (temCampo ? '<input class="bj-in" ' + (o.tipo === 'numero' ? 'type="text" inputmode="decimal"' : 'type="text"') + ' placeholder="' + _escD(o.placeholder || '') + '" value="' + _escD(o.valor == null ? '' : o.valor) + '">' : '')
+        + '<div class="bj-erro"></div>'
+        + '<div class="bj-bts">' + (o.tipo === 'aviso' ? '' : '<button type="button" class="bj-can">' + _escD(o.cancelar || 'Cancelar') + '</button>')
+        + '<button type="button" class="bj-ok' + (o.perigo ? ' perigo' : '') + '">' + _escD(o.ok || 'OK') + '</button></div></div>';
+      document.body.appendChild(ov);
+      requestAnimationFrame(function () { ov.classList.add('ativo'); });
+      var inp = ov.querySelector('.bj-in'), er = ov.querySelector('.bj-erro'), feito = false;
+      function fim(v) { if (feito) return; feito = true; ov.classList.remove('ativo'); setTimeout(function () { ov.remove(); }, 200); res(v); }
+      function ok() {
+        if (!temCampo) return fim(true);
+        var v = inp.value.trim();
+        if (o.tipo === 'numero') { if (v === '' && o.vazioOk) return fim(''); var n = parseFloat(v.replace(',', '.')); if (isNaN(n) || (o.min != null && n < o.min)) { er.textContent = o.erroNumero || 'Escreve um número válido.'; inp.focus(); return; } return fim(v.replace(',', '.')); }
+        if (!v && !o.vazioOk) { er.textContent = 'Escreve um valor.'; inp.focus(); return; }
+        fim(v);
+      }
+      ov.querySelector('.bj-ok').onclick = ok;
+      var c = ov.querySelector('.bj-can'); if (c) c.onclick = function () { fim(temCampo ? null : false); };
+      ov.addEventListener('click', function (e) { if (e.target === ov) fim(o.tipo === 'aviso' ? true : (temCampo ? null : false)); });
+      if (inp) { inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') ok(); }); inp.addEventListener('input', function () { er.textContent = ''; }); setTimeout(function () { try { inp.focus(); inp.select(); } catch (e) {} }, 60); }
+    });
+  }
+  window.bancaPedir = function (titulo, texto, valor, extra) { return janela(Object.assign({ tipo: 'texto', titulo: titulo, texto: texto, valor: valor, ok: 'Guardar' }, extra || {})); };
+  window.bancaPedirNumero = function (titulo, texto, valor, extra) { return janela(Object.assign({ tipo: 'numero', titulo: titulo, texto: texto, valor: valor, ok: 'Confirmar', min: 0 }, extra || {})); };
+  window.bancaConfirmar = function (titulo, texto, extra) { return janela(Object.assign({ tipo: 'confirmar', titulo: titulo, texto: texto, ok: 'Confirmar' }, extra || {})); };
+  window.bancaAviso = function (titulo, texto, extra) { return janela(Object.assign({ tipo: 'aviso', titulo: titulo, texto: texto, ok: 'Entendi' }, extra || {})); };
+
   function mt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
   function irPagamento(motivo) { location.href = 'planos-banca.html' + (motivo ? '?m=' + motivo : ''); }
   function verificarPlano() {

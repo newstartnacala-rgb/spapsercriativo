@@ -80,9 +80,9 @@
   .au-nota.au-falta{background:#fef2f2;border-left-color:#dc2626;color:#991b1b;font-size:13.5px;font-weight:700;}
   .au-sem{margin-top:6px;font-size:12px;color:var(--suave,#94a3b8);font-style:italic;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.6">
-<script src="banca-tema.js?v=3.7.6" defer></script>
-<script src="app-android.js?v=3.7.6" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.7">
+<script src="banca-tema.js?v=3.7.7" defer></script>
+<script src="app-android.js?v=3.7.7" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -387,14 +387,14 @@ let sessao=null, produtos=[], periodo='hoje', periodoDesc='hoje';
   try{
     const { data:membros } = await supabaseClient.from('membros_loja')
       .select('loja_id, papel, lojas(nome, vendedores, telefone)').eq('user_id', ses.user.id).limit(1);
-    if(!membros||!membros.length){ alert('Conta sem banca.'); location.href='login-banca.html'; return; }
+    if(!membros||!membros.length){ location.href='login-banca.html'; return; }
     sessao = { lojaId: membros[0].loja_id, nomeLoja:(membros[0].lojas&&membros[0].lojas.nome)||'Banca', papel:membros[0].papel };
     window._vendedores = (membros[0].lojas && membros[0].lojas.vendedores && membros[0].lojas.vendedores.length) ? membros[0].lojas.vendedores : ['0000'];
     window._lojaTelefone = (membros[0].lojas && membros[0].lojas.telefone) || '';
     document.getElementById('nome-loja').textContent = sessao.nomeLoja;
     await carregarProdutos();
     await Promise.all([carregarResumo(), carregarDescontos()]);
-  }catch(e){ alert('Erro: '+(e.message||e)); }
+  }catch(e){ toast('Erro: '+(e.message||e),'erro'); }
   document.getElementById('carregando').style.display='none';
 })();
 
@@ -757,7 +757,7 @@ function abrirFolha(id){ document.getElementById(id).classList.add('ativa'); }
 function fecharFolha(id){ document.getElementById(id).classList.remove('ativa'); }
 function abrirMenu(){ abrirFolha('folha-menu'); }
 function suporte(){ fecharFolha('folha-menu'); window.open('https://wa.me/258866577722?text='+encodeURIComponent('Olá, preciso de ajuda com o monitor da minha banca.'),'_blank'); }
-function sobre(){ fecharFolha('folha-menu'); alert('ℹ️ Mobile POSS — Monitor\nSpap-Sercriativo\n\nBanca: '+(sessao?sessao.nomeLoja:'')+'\nVersão 2.9.149'); }
+function sobre(){ fecharFolha('folha-menu'); bancaAviso('Mobile POSS — Monitor','Spap-Sercriativo\nBanca: '+(sessao?sessao.nomeLoja:''),{icone:'ℹ️'}); }
 async function atualizarDados(){ fecharFolha('folha-menu'); toast('🔄 A atualizar…'); await carregarProdutos(); await Promise.all([carregarResumo(), carregarDescontos()]); toast('✅ Atualizado','ok'); }
 async function sairBanca(){ try{ sessionStorage.removeItem('banca_vend_ok'); }catch(e){} try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='login-banca.html'; }
 
@@ -925,20 +925,34 @@ function mStockCritico(){
 
 // ===== PRODUTOS / RASTREIO / DIAGNÓSTICO =====
 function mProducts(){ fecharFolha('folha-menu'); mostrarTela('produtos'); }
-async function mRastreioProduto(){
-  const nome=prompt('🔎 Rastreio de Produto\nEscreve parte do nome do produto:'); if(!nome) return;
-  const achados=produtos.filter(p=>(p.nome||'').toLowerCase().includes(nome.trim().toLowerCase()));
-  if(!achados.length){ toast('Nenhum produto','erro'); return; }
-  const p=achados[0];
-  mostrarInfo('🔎 '+p.nome,'<div class="vazio">A carregar…</div>');
+const ICO_LUPA='<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+function mRastreioProduto(){
+  mostrarInfo('🔎 Rastreio de Produto','<div class="rt-busca">'+ICO_LUPA+'<input id="rt-q" type="text" placeholder="Escreve o nome ou o código do produto" autocomplete="off" oninput="rtFiltrar()"></div><div id="rt-res"></div>');
+  rtFiltrar(); setTimeout(()=>{ const i=document.getElementById('rt-q'); if(i) i.focus(); },250);
+}
+function rtFiltrar(){
+  const q=((document.getElementById('rt-q')||{}).value||'').trim().toLowerCase();
+  const lista=(q? produtos.filter(p=>(p.nome||'').toLowerCase().includes(q)||String(p.codbarras||'').includes(q)||String(p.codigo||'').toLowerCase().includes(q)) : produtos.slice()).slice(0,60);
+  const r=document.getElementById('rt-res'); if(!r) return;
+  r.innerHTML = lista.length ? '<div class="cartao" style="padding:4px;">'+lista.map(p=>{ const st=parseInt(p.stock)||0; const cl=st<=0?'zero':(st<=5?'baixo':'');
+      return '<div class="rt-item" onclick="rtVer(\''+p.id+'\')"><div class="rt-ph">'+(p.imagem?'<img src="'+esc(p.imagem)+'" alt="" onerror="this.remove()">':'📦')+'</div><div class="rt-in"><b>'+esc(p.nome)+'</b><small>'+fmt(p.preco)+(p.codbarras||p.codigo?' · '+esc(p.codbarras||p.codigo):'')+'</small></div><span class="rt-st '+cl+'">'+st+' un</span></div>'; }).join('')+'</div>'
+    : '<div class="vazio">Nenhum produto encontrado'+(q?' para «'+esc(q)+'»':'')+'.</div>';
+}
+async function rtVer(id){
+  const p=produtos.find(x=>String(x.id)===String(id)); if(!p) return;
+  const c=document.getElementById('info-conteudo'); document.getElementById('info-titulo').textContent='🔎 '+p.nome;
+  c.innerHTML='<div class="vazio">A carregar…</div>';
   let vendas=[];
   try{ const {data}=await supabaseClient.from('venda_itens').select('qtd,preco_unitario,vendas(criado_em)').eq('loja_id',sessao.lojaId).ilike('produto_nome',p.nome).limit(200); vendas=data||[]; }catch(e){}
-  const vendido=vendas.reduce((s,v)=>s+(parseFloat(v.qtd)||0),0);
-  let html='<div class="cartao"><div style="padding:12px 14px;">'
-    +linhaKV('Stock atual',parseInt(p.stock)||0)+linhaKV('Preço de venda',fmt(p.preco))+linhaKV('Preço de compra',fmt(p.preco_compra||0))
-    +linhaKV('Total já vendido',vendido+' un')+linhaKV('Código',p.codbarras||p.codigo||'—')+'</div></div>';
-  html+='<h4>Últimas saídas</h4><div class="cartao">'+(vendas.length? vendas.slice(0,20).map(v=>{ const dt=v.vendas&&v.vendas.criado_em?new Date(v.vendas.criado_em).toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):''; return '<div class="row"><div class="in"><div class="mt">'+dt+'</div></div><div class="vv">'+(parseFloat(v.qtd)||0)+' un · '+fmt(v.preco_unitario)+'</div></div>'; }).join(''):'<div class="vazio">Sem saídas registadas.</div>')+'</div>';
-  document.getElementById('info-conteudo').innerHTML=html;
+  vendas.sort((a,b)=>new Date((b.vendas||{}).criado_em||0)-new Date((a.vendas||{}).criado_em||0));
+  const vendido=vendas.reduce((s,v)=>s+(parseFloat(v.qtd)||0),0), receita=vendas.reduce((s,v)=>s+(parseFloat(v.qtd)||0)*(parseFloat(v.preco_unitario)||0),0);
+  const st=parseInt(p.stock)||0;
+  let html='<button class="rt-voltar" onclick="mRastreioProduto()">← Outro produto</button>'
+    +'<div class="rt-kpis"><div class="rt-kpi lj"><small>Stock atual</small><b>'+st+' un</b></div><div class="rt-kpi"><small>Total vendido</small><b>'+vendido+' un</b></div>'
+    +'<div class="rt-kpi"><small>Preço de venda</small><b>'+fmt(p.preco)+'</b></div><div class="rt-kpi"><small>Preço de compra</small><b>'+fmt(p.preco_compra||0)+'</b></div></div>'
+    +'<div class="cartao" style="padding:6px 14px;">'+linhaKV('Receita das vendas',fmt(receita))+linhaKV('Código',esc(p.codbarras||p.codigo||'—'))+linhaKV('Categoria',esc(p.categoria||'Sem categoria'))+'</div>';
+  html+='<h4>Últimas saídas</h4><div class="cartao">'+(vendas.length? vendas.slice(0,25).map(v=>{ const dt=v.vendas&&v.vendas.criado_em?new Date(v.vendas.criado_em).toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):''; return '<div class="row"><div class="in"><div class="nn" style="font-size:14px;">'+(parseFloat(v.qtd)||0)+' un · '+fmt(v.preco_unitario)+'</div><div class="mt">'+dt+'</div></div><div class="vv">'+fmt((parseFloat(v.qtd)||0)*(parseFloat(v.preco_unitario)||0))+'</div></div>'; }).join(''):'<div class="vazio">Sem saídas registadas.</div>')+'</div>';
+  c.innerHTML=html; c.scrollTop=0;
 }
 function mDiagnostico(){
   const neg=produtos.filter(p=>(parseInt(p.stock)||0)<0);
@@ -950,18 +964,23 @@ function mDiagnostico(){
 }
 
 // ===== CATEGORIAS =====
+const ICO_LAPIS='<svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 20h4L19 9l-4-4L4 16z M13.5 6.5l4 4"/></svg>';
 function mCategorias(){
   const cats={}; produtos.forEach(p=>{ const c=(p.categoria&&String(p.categoria).trim())||'Sem categoria'; cats[c]=(cats[c]||0)+1; });
-  const nomes=Object.keys(cats).sort();
-  const html = nomes.length? '<div class="cartao">'+nomes.map(c=>'<div class="row" onclick="renomearCategoria(\''+c.replace(/'/g,"\\'")+'\')"><div class="in"><div class="nn">'+esc(c)+'</div><div class="mt">'+cats[c]+' produto(s) · toca para renomear</div></div><div style="color:#94a3b8;font-size:20px;">›</div></div>').join('')+'</div>' : '<div class="vazio">Sem categorias.</div>';
+  const nomes=Object.keys(cats).sort((a,b)=>a==='Sem categoria'?1:b==='Sem categoria'?-1:a.localeCompare(b,'pt'));
+  window._catNomes=nomes;
+  const html = nomes.length? '<div class="cat-lista">'+nomes.map((c,i)=>'<div class="cat-item" onclick="renomearCategoria('+i+')"><div class="cat-ini'+(c==='Sem categoria'?' sem':'')+'">'+esc((c[0]||'?').toUpperCase())+'</div><div class="cat-txt"><b>'+esc(c)+'</b><small>'+cats[c]+' produto'+(cats[c]===1?'':'s')+'</small></div><div class="cat-ed">'+ICO_LAPIS+'</div></div>').join('')+'</div><div class="cat-dica">Toca numa categoria para mudar o nome.</div>' : '<div class="vazio">Sem categorias.</div>';
   mostrarInfo('🏷️ Categorias', html);
 }
-async function renomearCategoria(cat){
-  const novo=prompt('Renomear a categoria "'+cat+'" para:', cat==='Sem categoria'?'':cat);
-  if(novo===null||!novo.trim()) return;
-  try{ await supabaseClient.from('produtos').update({categoria:novo.trim()}).eq('loja_id',sessao.lojaId).eq('categoria', cat==='Sem categoria'?null:cat);
+async function renomearCategoria(i){
+  const cat=(window._catNomes||[])[i]; if(cat==null) return;
+  const novo=await bancaPedir('Renomear categoria', 'Novo nome para «'+cat+'». Todos os produtos desta categoria passam para o nome novo.', cat==='Sem categoria'?'':cat, { icone:'🏷️', placeholder:'Nome da categoria' });
+  if(novo===null||!novo.trim()||novo.trim()===cat) return;
+  try{ let q=supabaseClient.from('produtos').update({categoria:novo.trim()}).eq('loja_id',sessao.lojaId);
+    q = cat==='Sem categoria' ? q.is('categoria',null) : q.eq('categoria',cat);
+    const { error } = await q; if(error) throw error;
     produtos.forEach(p=>{ if(((p.categoria&&String(p.categoria).trim())||'Sem categoria')===cat) p.categoria=novo.trim(); });
-    mCategorias(); toast('✅ Renomeado','ok');
+    mCategorias(); toast('✅ Categoria renomeada','ok');
   }catch(e){ toast('Erro: '+(e.message||e),'erro'); }
 }
 
@@ -982,9 +1001,9 @@ function dspFiltrar(){
   const achados=produtos.filter(p=>(p.nome||'').toLowerCase().includes(termo)).slice(0,30);
   res.innerHTML=achados.length? '<div class="cartao">'+achados.map(p=>'<div class="row" onclick="dspAdd(\''+p.id+'\')"><div class="in"><div class="nn">'+esc(p.nome)+'</div><div class="mt">stock '+(parseInt(p.stock)||0)+'</div></div><div class="vv" style="color:#16a34a;font-size:22px;">＋</div></div>').join('')+'</div>' : '<div class="vazio">Nenhum produto.</div>';
 }
-function dspAdd(id){
+async function dspAdd(id){
   const p=produtos.find(x=>x.id===id); if(!p) return;
-  const qStr=prompt('Quantas unidades de "'+p.nome+'" vais enviar?','1'); if(qStr===null) return;
+  const qStr=await bancaPedirNumero('Quantidade a enviar','Quantas unidades de «'+p.nome+'» vais enviar?','1',{ icone:'🚚', min:1, erroNumero:'Escreve uma quantidade maior que zero.' }); if(qStr===null) return;
   const q=parseInt(qStr); if(isNaN(q)||q<=0){ toast('Quantidade inválida','erro'); return; }
   const ex=_despacho.find(x=>x.produto_id===id);
   if(ex) ex.enviado+=q; else _despacho.push({produto_id:id, nome:p.nome, enviado:q, preco:parseFloat(p.preco)||0});
@@ -1056,9 +1075,9 @@ async function _guardarVendedores(cods){
   try{ await supabaseClient.from('lojas').update({vendedores:cods}).eq('id',sessao.lojaId); window._vendedores=cods; mVendedores(); toast('✅ Guardado','ok'); }
   catch(e){ toast('Erro: '+(e.message||e),'erro'); }
 }
-function vendEditar(i){ const cods=(window._vendedores||['0000']).slice(); const n=prompt('Novo código:',cods[i]); if(n===null||!n.trim())return; cods[i]=n.trim(); _guardarVendedores(cods); }
-function vendApagar(i){ const cods=(window._vendedores||['0000']).slice(); if(cods.length<=1){ toast('Tem de existir pelo menos 1 código','erro'); return; } if(!confirm('Apagar o código '+cods[i]+'?'))return; cods.splice(i,1); _guardarVendedores(cods); }
-function vendAdicionar(){ const cods=(window._vendedores||['0000']).slice(); const n=prompt('Novo código do balconista:',''); if(n===null||!n.trim())return; cods.push(n.trim()); _guardarVendedores(cods); }
+async function vendEditar(i){ const cods=(window._vendedores||['0000']).slice(); const n=await bancaPedir('Mudar código','Novo código do balconista.',cods[i],{icone:'🔐'}); if(n===null||!n.trim())return; cods[i]=n.trim(); _guardarVendedores(cods); }
+async function vendApagar(i){ const cods=(window._vendedores||['0000']).slice(); if(cods.length<=1){ toast('Tem de existir pelo menos 1 código','erro'); return; } if(!(await bancaConfirmar('Apagar código?','O código '+cods[i]+' deixa de abrir a caixa.',{perigo:true,ok:'Apagar'})))return; cods.splice(i,1); _guardarVendedores(cods); }
+async function vendAdicionar(){ const cods=(window._vendedores||['0000']).slice(); const n=await bancaPedir('Novo código','Código do novo balconista.','',{icone:'🔐',placeholder:'Ex: 1234',ok:'Adicionar'}); if(n===null||!n.trim())return; cods.push(n.trim()); _guardarVendedores(cods); }
 
 // ===== AUDITORIA DE CAIXA =====
 async function mAuditoria(){
@@ -1130,7 +1149,7 @@ window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); _prompeI
 async function mInstalar(){
   fecharFolha('folha-menu');
   if(_prompeInstalar){ _prompeInstalar.prompt(); try{ await _prompeInstalar.userChoice; }catch(e){} _prompeInstalar=null; return; }
-  alert('📲 Instalar a banca no telemóvel\n\n• Android/Chrome: menu ⋮ → "Adicionar ao ecrã inicial".\n• iPhone/Safari: botão Partilhar → "Adicionar ao ecrã principal".\n\nFica como uma app normal.');
+  bancaAviso('Instalar a banca no telemóvel','• Android/Chrome: menu ⋮ → «Adicionar ao ecrã inicial».\n• iPhone/Safari: botão Partilhar → «Adicionar ao ecrã principal».\n\nFica como uma app normal.',{icone:'📲'});
 }
 
 let toastT=null;

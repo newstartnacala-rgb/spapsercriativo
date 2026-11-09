@@ -110,9 +110,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="SPAP Banca">
-<link rel="stylesheet" href="banca-tema.css?v=3.7.6">
-<script src="banca-tema.js?v=3.7.6" defer></script>
-<script src="app-android.js?v=3.7.6" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.7">
+<script src="banca-tema.js?v=3.7.7" defer></script>
+<script src="app-android.js?v=3.7.7" defer></script>
 </head>
 <body>
 
@@ -412,7 +412,7 @@ let descontosLote = [];   // descontos feitos nesta venda, para registar ao conf
       .from('membros_loja')
       .select('loja_id, papel, nome_exibicao, lojas(nome, estado, tipo_loja, vendedores, telefone)')
       .eq('user_id', ses.user.id).limit(1);
-    if (!membros || !membros.length) { alert('Esta conta não tem banca associada.'); location.href='login-banca.html'; return; }
+    if (!membros || !membros.length) { location.href='login-banca.html'; return; }
     const m = membros[0];
     sessao = {
       lojaId: m.loja_id,
@@ -428,7 +428,7 @@ let descontosLote = [];   // descontos feitos nesta venda, para registar ao conf
     try { aplicarIdioma(idiomaAtual()); } catch(e){}
     pedirCodigoBalconista();
   } catch(e) {
-    alert('Erro ao abrir: ' + (e.message || e));
+    toast('Erro ao abrir: ' + (e.message || e), 'erro');
   }
   document.getElementById('carregando').style.display = 'none';
 })();
@@ -571,10 +571,10 @@ function mudarQtd(idx,d){
   if (!carrinho.length) fecharFolha('folha-carrinho');
 }
 // Desconto: o balconista baixa o preço; fica registado para o dono ver no monitor.
-function descontar(idx){
+async function descontar(idx){
   const it = carrinho[idx]; if(!it) return;
   const base = it.precoOriginal || it.preco;
-  const novoStr = prompt('🏷️ Desconto em "' + it.nome + '"\nPreço normal: ' + fmt(base) + '\n\nNovo preço por unidade:', it.preco);
+  const novoStr = await bancaPedirNumero('Desconto em «' + it.nome + '»', 'Preço normal: ' + fmt(base) + '. Escreve o novo preço por unidade.', it.preco, { icone:'🏷️', ok:'Aplicar' });
   if (novoStr===null) return;
   const novo = parseFloat(String(novoStr).replace(',','.'));
   if (isNaN(novo) || novo<0){ toast('Preço inválido', 'erro'); return; }
@@ -807,7 +807,7 @@ async function guardarProduto(){
 }
 async function apagarProduto(){
   if(!fpId) return;
-  if(!confirm('Apagar este produto?')) return;
+  if(!(await bancaConfirmar('Apagar este produto?','Esta ação não pode ser desfeita.',{perigo:true,ok:'Apagar'}))) return;
   try{ await supabaseClient.from('produtos').delete().eq('id', fpId); await carregarProdutos(); fecharFolha('folha-produto'); toast('Apagado','ok'); }
   catch(e){ toast('Erro: '+(e.message||e),'erro'); }
 }
@@ -877,10 +877,10 @@ function reimprimirRecibo(){
 }
 function infoImpressora(){
   fecharFolha('folha-menu');
-  alert('🖨️ Impressora & Scanner\n\n• O recibo imprime pela janela do telemóvel/Windows (botão Imprimir no recibo).\n• Para ler códigos, usa o botão 📷 na barra de pesquisa (câmara) ou um leitor USB.\n\nDica: numa impressora térmica, no Windows escolhe o tamanho de papel 58mm e Margens = Nenhuma.');
+  bancaAviso('Impressora & Scanner','• O recibo imprime pela janela do telemóvel/Windows (botão Imprimir no recibo).\n• Para ler códigos, usa o botão 📷 na barra de pesquisa (câmara) ou um leitor USB.\n\nDica: numa impressora térmica, no Windows escolhe o tamanho de papel 58mm e Margens = Nenhuma.',{icone:'🖨️'});
 }
 function suporte(){ fecharFolha('folha-menu'); window.open('https://wa.me/258866577722?text=' + encodeURIComponent('Olá, preciso de ajuda com a minha banca (Mobile POSS).'), '_blank'); }
-function sobre(){ fecharFolha('folha-menu'); alert('ℹ️ Mobile POSS — Banca\nSpap-Sercriativo\n\nLoja: ' + (sessao?sessao.nomeLoja:'') + '\nVersão 2.9.149'); }
+function sobre(){ fecharFolha('folha-menu'); bancaAviso('Mobile POSS — Banca','Spap-Sercriativo\nBanca: ' + (sessao?sessao.nomeLoja:''),{icone:'ℹ️'}); }
 // ===== IDIOMA (Português / Inglês / Francês) =====
 const I18N={
   pt:{nome:'Português',ph:'Procurar produto…',cart:'Finalizar venda',confirmar:'✅ Confirmar venda',pagar:'💳 Receber / Pagar',sub:'vender',t_vender:'Vender',t_prod:'Produtos'},
@@ -948,7 +948,7 @@ async function avisoDespacho(){
 }
 async function confirmarDespacho(i){
   const d=(window._despRecebidos||[])[i]; if(!d) return;
-  if(!confirm('Confirmar este despacho? O stock dos produtos vai aumentar.')) return;
+  if(!(await bancaConfirmar('Confirmar o despacho?','O stock dos produtos vai aumentar.',{icone:'🚚',ok:'Confirmar'}))) return;
   try{
     for(const it of (d.itens||[])){
       const q=parseInt(it.enviado)||0; if(!q) continue;
@@ -962,7 +962,7 @@ async function confirmarDespacho(i){
 }
 async function rejeitarDespacho(i){
   const d=(window._despRecebidos||[])[i]; if(!d) return;
-  if(!confirm('Rejeitar este despacho? O stock NÃO muda.')) return;
+  if(!(await bancaConfirmar('Rejeitar o despacho?','O stock não muda.',{perigo:true,ok:'Rejeitar'}))) return;
   try{ await supabaseClient.from('despachos').update({estado:'rejeitado'}).eq('id',d.id); toast('Despacho rejeitado','ok'); avisoDespacho(); }
   catch(e){ toast('Erro: '+(e.message||e),'erro'); }
 }
@@ -982,10 +982,10 @@ function pdFiltrar(){
 }
 async function pdRegistar(id){
   const p=produtos.find(x=>x.id===id); if(!p) return;
-  const qStr=prompt('📉 Perda de "'+p.nome+'"\nQuantas unidades?','1');
+  const qStr=await bancaPedirNumero('Perda de «'+p.nome+'»','Quantas unidades se perderam?','1',{icone:'📉',min:1,erroNumero:'Escreve uma quantidade maior que zero.'});
   if(qStr===null) return;
   const q=parseInt(qStr); if(isNaN(q)||q<=0){ toast('Quantidade inválida','erro'); return; }
-  const motivo=prompt('Motivo (opcional): partiu, expirou, estragou…','')||null;
+  const motivo=(await bancaPedir('Motivo da perda','Opcional: partiu, expirou, estragou…','',{icone:'📝',vazioOk:true,ok:'Registar',placeholder:'Ex: partiu'}))||null;
   try{
     try{ await supabaseClient.rpc('baixar_stock',{p_id:id,p_qtd:q}); }catch(e){}
     p.stock=(parseInt(p.stock)||0)-q;
@@ -1061,10 +1061,10 @@ function retFiltrar(){
 }
 async function retDevolver(id){
   const p=produtos.find(x=>x.id===id); if(!p) return;
-  const qStr=prompt('↩️ Devolver "'+p.nome+'"\n\nQuantas unidades voltaram?', '1');
+  const qStr=await bancaPedirNumero('Devolver «'+p.nome+'»','Quantas unidades voltaram?','1',{icone:'↩️',min:1,erroNumero:'Escreve uma quantidade maior que zero.'});
   if(qStr===null) return;
   const q=parseInt(qStr); if(isNaN(q)||q<=0){ toast('Quantidade inválida','erro'); return; }
-  const rStr=prompt('💵 Quanto dinheiro foi devolvido ao cliente?\n(Normal: '+fmt((parseFloat(p.preco)||0)*q)+'. Enter para aceitar)', ((parseFloat(p.preco)||0)*q).toFixed(2));
+  const rStr=await bancaPedirNumero('Dinheiro devolvido','Quanto dinheiro foi devolvido ao cliente? Normal: '+fmt((parseFloat(p.preco)||0)*q)+'.', ((parseFloat(p.preco)||0)*q).toFixed(2),{icone:'💵'});
   if(rStr===null) return;
   const reembolso=parseFloat(String(rStr).replace(',','.'))||0;
   try{
