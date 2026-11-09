@@ -112,9 +112,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="Banca e Vendas">
-<link rel="stylesheet" href="banca-tema.css?v=3.7.16">
-<script src="banca-tema.js?v=3.7.16" defer></script>
-<script src="app-android.js?v=3.7.16" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.17">
+<script src="banca-tema.js?v=3.7.17" defer></script>
+<script src="app-android.js?v=3.7.17" defer></script>
 </head>
 <body>
 
@@ -212,6 +212,7 @@
     <div class="cab"><h3>🛒 Carrinho</h3><button onclick="fecharFolha('folha-carrinho')">✕</button></div>
     <div class="conteudo" id="cart-itens"></div>
     <div class="rodape">
+      <div class="linha-desc" id="cart-desc" style="display:none"></div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
         <span style="color:var(--suave);font-weight:700;">Total</span>
         <span id="cart-tot2" style="font-size:22px;font-weight:800;">MT 0,00</span>
@@ -230,6 +231,7 @@
         <span style="color:var(--suave);font-weight:700;">Total a pagar</span>
         <span id="pag-total" style="font-size:20px;font-weight:800;">MT 0,00</span>
       </div>
+      <div class="linha-desc" id="pag-desc" style="display:none"></div>
       <div style="font-size:12px;color:var(--suave);font-weight:700;margin-bottom:5px;">Dinheiro recebido</div>
       <div class="display-num" id="pag-disp">0</div>
       <div class="troco" id="pag-troco">Troco: MT 0,00</div>
@@ -269,7 +271,7 @@
         <div class="campo"><label>Preço de venda *</label><input id="fp-preco" type="number" inputmode="decimal" placeholder="0"></div>
         <div class="campo"><label>Preço de compra</label><input id="fp-compra" type="number" inputmode="decimal" placeholder="0"></div>
       </div>
-      <div class="campo"><label>Stock (quantidade)</label><input id="fp-stock" type="number" inputmode="numeric" placeholder="0"></div>
+      <div class="campo" style="display:none"><label>Stock (quantidade)</label><input id="fp-stock" type="number" inputmode="numeric" placeholder="0"></div>
       <div class="campo"><label>Código de barras</label>
         <div style="display:flex;gap:8px;">
           <input id="fp-codigo" type="text" placeholder="opcional" style="flex:1;" oninput="fpDup()" onblur="fpDup(true)">
@@ -292,7 +294,7 @@
     <div class="cab"><h3>☰ Menu</h3><button onclick="fecharFolha('folha-menu')">✕</button></div>
     <div class="conteudo">
       <div class="menu-grid">
-        <div class="mi" onclick="reimprimirRecibo()"><div class="e">🧾</div><div class="t">Recibo de venda</div></div>
+        <div class="mi" onclick="reimprimirRecibo()"><div class="e">🧾</div><div class="t">Vendas e recibos</div></div>
         <div class="mi" onclick="abrirRetornar()"><div class="e">↩️</div><div class="t">Retorno (devolver)</div></div>
         <div class="mi" onclick="avisoDespacho()"><div class="e">🚚</div><div class="t">Aviso de despacho</div></div>
         <div class="mi" onclick="fecharFolha('folha-menu');abrirFolha('folha-definicoes')"><div class="e">⚙️</div><div class="t">Definições</div></div>
@@ -394,7 +396,7 @@
 <div id="toast" class="toast"></div>
 
 <script src="supabase-config.js"></script>
-<script src="banca-offline.js?v=3.7.16"></script>
+<script src="banca-offline.js?v=3.7.17"></script>
 <script>
 // ===================== ESTADO =====================
 let sessao = null;        // { lojaId, nomeLoja, userId, vendedor }
@@ -535,13 +537,11 @@ function renderProdutos(){
   const g = document.getElementById('grelha');
   document.getElementById('sem-produtos').style.display = produtos.length ? 'none' : 'block';
   g.innerHTML = lista.map(p => {
-    const st = parseInt(p.stock)||0;
     const img = p.imagem ? `<img class="img" src="${p.imagem}" onerror="this.style.display='none'">` : `<div class="img">🛒</div>`;
     return `<div class="card" onclick="addCarrinho('${p.id}')">
       ${img}
       <div class="n">${esc(p.nome)}</div>
       <div class="p">${fmt(p.preco)}</div>
-      <div class="st ${st<=0?'zero':''}">${st<=0?'sem stock':('stock: '+st)}</div>
     </div>`;
   }).join('');
 }
@@ -567,23 +567,28 @@ function abrirCarrinho(){ if(!carrinho.length) return; renderCarrinho(); abrirFo
 function renderCarrinho(){
   const div = document.getElementById('cart-itens');
   if (!carrinho.length){ div.innerHTML = '<div class="vazio">Carrinho vazio.</div>'; }
-  else div.innerHTML = carrinho.map((it,idx)=>`
-    <div class="item">
+  else div.innerHTML = carrinho.map((it,idx)=>{
+    const d = it.precoOriginal ? (it.precoOriginal - it.preco) : 0;
+    return `
+    <div class="item${d>0?' com-desc':''}">
       <div class="in">
         <div class="nn">${esc(it.nome)}</div>
         <div class="pp">
-          <span onclick="descontar(${idx})" style="text-decoration:underline;">${it.precoOriginal?('<s style="color:#94a3b8">'+fmt(it.precoOriginal)+'</s> '):''}<b>${fmt(it.preco)}</b></span>
+          ${d>0?('<span class="riscado">'+fmt(it.precoOriginal)+'</span> <span class="menos">− '+fmt(d).replace('MT ','')+'</span> = '):''}<b>${fmt(it.preco)}</b>
           × ${it.qtd} = <b>${fmt(it.preco*it.qtd)}</b>
         </div>
+        <button type="button" class="bt-desc${d>0?' tem':''}" onclick="descontar(${idx})">🏷️ ${d>0?('Desconto −'+fmt(d*it.qtd).replace('MT ','')+' · mudar'):'Dar desconto'}</button>
       </div>
       <div class="passo">
         <button onclick="mudarQtd(${idx},-1)">−</button>
         <span class="q">${it.qtd}</span>
         <button onclick="mudarQtd(${idx},1)">+</button>
       </div>
-    </div>`).join('');
+    </div>`; }).join('');
   const t = carrinho.reduce((s,i)=>s+i.preco*i.qtd,0);
   document.getElementById('cart-tot2').textContent = fmt(t);
+  const dt = totalDescontoCarrinho(), ld = document.getElementById('cart-desc');
+  if (ld){ ld.style.display = dt>0 ? 'flex' : 'none'; ld.innerHTML = '<span>🏷️ Desconto dado</span><span>− '+fmt(dt)+'</span>'; }
 }
 function mudarQtd(idx,d){
   const it = carrinho[idx]; if(!it) return;
@@ -592,18 +597,20 @@ function mudarQtd(idx,d){
   renderCarrinho(); atualizarBarraCarrinho();
   if (!carrinho.length) fecharFolha('folha-carrinho');
 }
-// Desconto: o balconista baixa o preço; fica registado para o dono ver no monitor.
+function totalDescontoCarrinho(){ return carrinho.reduce((s,i)=>s+(i.precoOriginal ? (i.precoOriginal-i.preco)*i.qtd : 0),0); }
+// Desconto: o balconista diz quanto desconta (ex.: 150 − 30 = 120). Fica registado para o dono ver no Monitor.
 async function descontar(idx){
   const it = carrinho[idx]; if(!it) return;
   const base = it.precoOriginal || it.preco;
-  const novoStr = await bancaPedirNumero('Desconto em «' + it.nome + '»', 'Preço normal: ' + fmt(base) + '. Escreve o novo preço por unidade.', it.preco, { icone:'🏷️', ok:'Aplicar' });
-  if (novoStr===null) return;
-  const novo = parseFloat(String(novoStr).replace(',','.'));
-  if (isNaN(novo) || novo<0){ toast('Preço inválido', 'erro'); return; }
-  if (!it.precoOriginal) it.precoOriginal = it.preco;
-  it.preco = novo;
+  const atual = it.precoOriginal ? (it.precoOriginal - it.preco) : '';
+  const dStr = await bancaPedirNumero('Desconto em «' + it.nome + '»', 'Preço normal: ' + fmt(base) + ' por unidade.\nQuanto vai descontar em cada unidade? (0 tira o desconto)', atual, { icone:'🏷️', ok:'Aplicar desconto', placeholder:'Ex: 30' });
+  if (dStr===null) return;
+  const d = Math.round((parseFloat(String(dStr).replace(',','.'))||0)*100)/100;
+  if (d<0 || d>=base){ toast('O desconto tem de ser menor que ' + fmt(base), 'erro'); return; }
+  if (d===0){ it.preco = base; delete it.precoOriginal; renderCarrinho(); atualizarBarraCarrinho(); toast('Desconto tirado', 'ok'); return; }
+  it.precoOriginal = base; it.preco = Math.round((base-d)*100)/100;
   renderCarrinho(); atualizarBarraCarrinho();
-  toast('Desconto aplicado', 'ok');
+  toast('🏷️ ' + fmt(base) + ' − ' + fmt(d).replace('MT ','') + ' = ' + fmt(it.preco), 'ok');
 }
 
 // ===================== PAGAMENTO =====================
@@ -612,6 +619,8 @@ function abrirPagamento(){
   if(!carrinho.length) return;
   const t = carrinho.reduce((s,i)=>s+i.preco*i.qtd,0);
   document.getElementById('pag-total').textContent = fmt(t);
+  const dt = totalDescontoCarrinho(), pd = document.getElementById('pag-desc');
+  pd.style.display = dt>0 ? 'flex' : 'none'; pd.innerHTML = '<span>🏷️ Já inclui desconto de</span><span>− '+fmt(dt)+'</span>';
   pagBuf = String(t.toFixed(2));
   pagRender();
   fecharFolha('folha-carrinho');
@@ -665,7 +674,7 @@ async function _gravarVenda(){
   aConfirmar=true;
   const btn=document.getElementById('btn-confirmar'); btn.disabled=true; btn.textContent='A gravar…';
   const troco = recebido-total;
-  const itensVenda = carrinho.map(i=>({ nome:i.nome, qtd:i.qtd, preco:i.preco }));
+  const itensVenda = carrinho.map(i=>({ nome:i.nome, qtd:i.qtd, preco:i.preco, precoOriginal: (i.precoOriginal && i.precoOriginal>i.preco) ? i.precoOriginal : null }));
   try{
     const vendaId = bancaUUID();
     const agora = new Date().toISOString();
@@ -678,13 +687,13 @@ async function _gravarVenda(){
       { t:'insert', tabela:'venda_itens', linhas: carrinho.map(i=>({ id: bancaUUID(), venda_id: vendaId, loja_id: sessao.lojaId, produto_nome: i.nome, qtd: i.qtd, preco_unitario: i.preco })) },
       ...carrinho.map(i=>({ t:'rpc', fn:'baixar_stock', args:{ p_id: i.id, p_qtd: i.qtd }, opcional:true })),
       ...(descs.length ? [{ t:'insert', tabela:'descontos', opcional:true, linhas: descs.map(i=>({ id: bancaUUID(), loja_id: sessao.lojaId, produto_id: i.id, produto_nome: i.nome,
-        preco_original: i.precoOriginal, preco_novo: i.preco, quantidade: i.qtd, feito_por: sessao.vendedor })) }] : [])
+        preco_original: i.precoOriginal, preco_novo: i.preco, quantidade: i.qtd, feito_por: sessao.vendedor, criado_em: agora })) }] : [])
     ]});
-    bancaRegistarNoDia(sessao.lojaId, { id: vendaId, total: total, numero: numeroDia, criado: agora });
+    bancaRegistarNoDia(sessao.lojaId, { id: vendaId, total: total, numero: numeroDia, criado: agora, recebido: recebido, troco: troco, itens: itensVenda, vendedor: sessao.vendedor||null });
     for (const i of carrinho){ const p = produtos.find(x=>x.id===i.id); if(p) p.stock = (parseInt(p.stock)||0) - i.qtd; }
     bancaGuardarProdutos(sessao.lojaId, produtos);
     toast(navigator.onLine === false ? '📵 Venda guardada no telemóvel (envia quando houver internet). Troco: ' + fmt(troco) : '✅ Venda registada! Troco: ' + fmt(troco), 'ok');
-    ultimaVenda = { numeroDia, total, recebido, troco, itens: itensVenda, data: new Date() };
+    ultimaVenda = { id: vendaId, numeroDia, total, recebido, troco, itens: itensVenda, data: new Date(agora), pendente: true };
     carrinho = []; descontosLote = [];
     atualizarBarraCarrinho(); renderProdutos();
     fecharFolha('folha-pagamento');
@@ -710,34 +719,155 @@ async function proximoNumeroDia(){
   return Math.max(srv, bancaNumeroLocal(sessao.lojaId)) + 1;
 }
 
-// ===================== RECIBO SIMPLES =====================
+// ===================== RECIBO + DESEMPENHO DO BALCONISTA =====================
 let ultimaVenda = null;
-function mostrarRecibo(){
-  if(!ultimaVenda) return;
-  const v = ultimaVenda;
-  const linhas = v.itens.map(i=>`${i.qtd}x ${i.nome} — ${fmt(i.preco*i.qtd)}`).join('\n');
-  const texto = `*${sessao.nomeLoja}*\nRecibo nº ${v.numeroDia}\n${v.data.toLocaleString('pt-PT')}\n--------------------\n${linhas}\n--------------------\nTOTAL: ${fmt(v.total)}\nRecebido: ${fmt(v.recebido)}\nTroco: ${fmt(v.troco)}\n\nObrigado!`;
-  const ov = document.createElement('div');
-  ov.className='folha-fundo ativa'; ov.id='folha-recibo';
-  ov.innerHTML = `<div class="folha"><div class="cab"><h3>🧾 Recibo</h3><button onclick="document.getElementById('folha-recibo').remove()">✕</button></div>
-    <div class="conteudo"><pre style="white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:13px;line-height:1.5;background:#f8fafc;border-radius:12px;padding:14px;">${esc(texto)}</pre></div>
-    <div class="rodape" style="display:flex;gap:10px;">
-      <button class="btn" style="flex:1;background:#25D366;" onclick="window.open('https://wa.me/?text='+encodeURIComponent(reciboTxt),'_blank')">📲 WhatsApp</button>
-      <button class="btn" style="flex:1;" onclick="imprimirRecibo()">🖨 Imprimir</button>
-    </div></div>`;
-  window.reciboTxt = texto;
-  document.body.appendChild(ov);
+let _vendasHoje = [];     // [{ id, numeroDia, total, recebido, troco, itens:[{nome,qtd,preco,precoOriginal}], data, pendente }]
+function _vdDesc(v){ return (v.itens||[]).reduce((s,i)=>s+(i.precoOriginal ? (i.precoOriginal-i.preco)*i.qtd : 0),0); }
+function _balc(){ const v = sessao && sessao.vendedor; return v ? (/^balconista/i.test(v) ? v : 'Balconista ' + v) : ''; }
+function _vdHora(d){ return new Date(d).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'}); }
+
+// Vendas de hoje deste balconista: as do servidor + as deste telemóvel ainda por enviar
+async function carregarVendasHoje(){
+  const lojaId = sessao.lojaId, meu = sessao.vendedor || null;
+  const mapa = {};
+  bancaVendasDoDia(lojaId).forEach(v => {
+    if (meu && v.vendedor && v.vendedor !== meu) return;
+    mapa[v.id] = { id:v.id, numeroDia:v.numero, total:parseFloat(v.total)||0, recebido:v.recebido, troco:v.troco, itens:v.itens||null, data:new Date(v.criado), pendente:true };
+  });
+  if (navigator.onLine !== false) {
+    try {
+      const hoje = new Date(); hoje.setHours(0,0,0,0);
+      let q = supabaseClient.from('vendas').select('id,numero_do_dia,total,recebido,troco,criado_em,vendedor_codigo, venda_itens(produto_nome,qtd,preco_unitario)')
+        .eq('loja_id', lojaId).gte('criado_em', hoje.toISOString());
+      if (meu) q = q.eq('vendedor_codigo', meu);
+      const [rv, rd] = await Promise.race([ Promise.all([ q.order('criado_em',{ascending:false}).limit(500),
+          supabaseClient.from('descontos').select('produto_nome,preco_original,preco_novo,criado_em').eq('loja_id', lojaId).gte('criado_em', hoje.toISOString()).limit(1000) ]),
+        new Promise(res => setTimeout(() => res([{},{}]), 5000)) ]);
+      const desc = {}; ((rd && rd.data) || []).forEach(d => { desc[new Date(d.criado_em).getTime() + '|' + (d.produto_nome||'')] = parseFloat(d.preco_original)||0; });
+      ((rv && rv.data) || []).forEach(v => {
+        const loc = mapa[v.id], t = new Date(v.criado_em).getTime();
+        const itens = (v.venda_itens||[]).map(it => { const po = desc[t + '|' + (it.produto_nome||'')]; const pr = parseFloat(it.preco_unitario)||0;
+          return { nome: it.produto_nome, qtd: parseFloat(it.qtd)||0, preco: pr, precoOriginal: po && po > pr ? po : null }; });
+        mapa[v.id] = { id:v.id, numeroDia:v.numero_do_dia, total:parseFloat(v.total)||0, recebido: v.recebido!=null?parseFloat(v.recebido):(loc&&loc.recebido), troco: v.troco!=null?parseFloat(v.troco):(loc&&loc.troco),
+          itens: (loc && loc.itens && loc.itens.length) ? loc.itens : itens, data:new Date(v.criado_em), pendente:false };
+      });
+    } catch(e){}
+  }
+  // as que ainda estão na fila continuam «por enviar»
+  const naFila = new Set(); bancaFila().forEach(op => (op.passos||[]).forEach(p => { if (p.t==='insert' && p.tabela==='vendas' && !p.feito) (p.linhas||[]).forEach(l => naFila.add(l.id)); }));
+  _vendasHoje = Object.values(mapa).map(v => (v.pendente = naFila.has(v.id), v)).sort((a,b) => b.data - a.data);
+  return _vendasHoje;
 }
-function imprimirRecibo(){
-  const v = ultimaVenda; if(!v) return;
-  const w = window.open('','_blank');
-  const linhas = v.itens.map(i=>`<tr><td>${i.qtd}x ${i.nome}</td><td style="text-align:right">${fmt(i.preco*i.qtd)}</td></tr>`).join('');
-  w.document.write(`<html><head><title>Recibo</title><style>@page{size:58mm auto;margin:0}body{width:58mm;font-family:monospace;padding:3mm;font-size:12px;margin:0}h3{text-align:center;margin:0 0 4px}table{width:100%;border-collapse:collapse}td{padding:2px 0}hr{border:none;border-top:1px dashed #000}.t{font-weight:bold;font-size:14px}</style></head><body>
-  <h3>${esc(sessao.nomeLoja)}</h3><div style="text-align:center;font-size:11px">Recibo nº ${v.numeroDia}<br>${v.data.toLocaleString('pt-PT')}</div><hr>
+
+function htmlDesempenho(lista){
+  const normais = lista.filter(v => v.total >= 0);
+  const total = lista.reduce((s,v)=>s+v.total,0);
+  const desc = lista.reduce((s,v)=>s+_vdDesc(v),0);
+  const prod = {};
+  normais.forEach(v => (v.itens||[]).forEach(it => { const k = it.nome||'Produto'; prod[k] = prod[k] || { nome:k, qtd:0, valor:0, desc:0 }; prod[k].qtd += it.qtd; prod[k].valor += it.preco*it.qtd; if (it.precoOriginal) prod[k].desc += (it.precoOriginal-it.preco)*it.qtd; }));
+  const tops = Object.values(prod).sort((a,b)=>b.valor-a.valor);
+  const nItens = tops.reduce((s,p)=>s+p.qtd,0), max = tops.length ? tops[0].valor : 1;
+  return `<div class="bv-cards">
+      <div class="bv-card verde largo"><div class="l">💰 Vendido hoje</div><div class="v">${fmt(total)}</div></div>
+      <div class="bv-card"><div class="l">🧾 Vendas</div><div class="v">${normais.length}</div></div>
+      <div class="bv-card"><div class="l">📦 Produtos vendidos</div><div class="v">${nItens}</div></div>
+      ${desc>0?`<div class="bv-card amarelo largo"><div class="l">🏷️ Descontos dados hoje</div><div class="v">− ${fmt(desc)}</div></div>`:''}
+    </div>
+    <div class="bv-sec"><span>🏆 O que vendeu hoje</span><small>${tops.length} produto${tops.length===1?'':'s'}</small></div>
+    ${tops.length ? tops.map((p,i)=>`<div class="bv-top"><div class="pos">${i+1}</div><div style="flex:1;min-width:0">
+        <div style="display:flex;gap:8px;align-items:center"><div class="nm">${esc(p.nome)}</div><div class="qt">${p.qtd} un.</div><div class="vl">${fmt(p.valor)}</div></div>
+        ${p.desc>0?`<span class="tag-desc" style="margin-top:4px">🏷️ desconto −${fmt(p.desc).replace('MT ','')}</span>`:''}
+        <div class="bv-barra"><i style="width:${Math.max(4,Math.round(p.valor/max*100))}%"></i></div></div></div>`).join('')
+      : '<div class="bv-vazio">Ainda não vendeu nada hoje.</div>'}`;
+}
+function htmlListaVendas(lista){
+  if (!lista.length) return '<div class="bv-vazio">Ainda não há vendas hoje.</div>';
+  return lista.map(v => { const d = _vdDesc(v), n = (v.itens||[]).reduce((s,i)=>s+i.qtd,0);
+    return `<div class="bv-venda${d>0?' desc':''}" onclick="verVenda('${v.id}')"><div class="ic">🧾</div>
+      <div class="in"><div class="t">Venda nº ${v.numeroDia||'—'}</div>
+      <div class="s">🕒 ${_vdHora(v.data)} · ${n} item(s) ${d>0?`<span class="tag-desc">🏷️ −${fmt(d).replace('MT ','')}</span>`:''} ${v.pendente?'<span class="bv-pend">⏳ por enviar</span>':''}</div></div>
+      <div class="vv">${fmt(v.total)}</div></div>`; }).join('');
+}
+function htmlRecibo(v){
+  const d = _vdDesc(v);
+  const linhas = (v.itens||[]).map(i => `<div class="rc-it"><div><span class="q">${i.qtd}×</span>${esc(i.nome)}
+      ${i.precoOriginal?`<small>${fmt(i.precoOriginal)} − ${fmt(i.precoOriginal-i.preco).replace('MT ','')} = ${fmt(i.preco)}</small>`:''}</div><b>${fmt(i.preco*i.qtd)}</b></div>`).join('');
+  return `<div class="bv-recibo"><div class="rc-cab"><div class="rc-loja">${esc(sessao.nomeLoja||'Banca')}</div><div class="rc-num">Recibo nº ${v.numeroDia||'—'}</div>
+      <div class="rc-data">${new Date(v.data).toLocaleString('pt-PT')}${_balc()?(' · '+esc(_balc())):''}</div></div>
+    ${linhas || '<div class="bv-vazio">Sem detalhe dos produtos.</div>'}
+    <div class="rc-tot">${d>0?`<div class="dsc"><span>🏷️ Desconto</span><span>− ${fmt(d)}</span></div>`:''}
+      <div class="grande"><span>TOTAL</span><span>${fmt(v.total)}</span></div>
+      ${v.recebido!=null?`<div><span>Recebido</span><span>${fmt(v.recebido)}</span></div>`:''}
+      ${v.troco!=null?`<div><span>Troco</span><span>${fmt(v.troco)}</span></div>`:''}</div></div>`;
+}
+function textoRecibo(v){
+  const d = _vdDesc(v);
+  const linhas = (v.itens||[]).map(i=>`${i.qtd}x ${i.nome} — ${fmt(i.preco*i.qtd)}` + (i.precoOriginal?`\n   (${fmt(i.precoOriginal)} − ${fmt(i.precoOriginal-i.preco).replace('MT ','')} = ${fmt(i.preco)})`:'')).join('\n');
+  return `*${sessao.nomeLoja}*\nRecibo nº ${v.numeroDia}\n${new Date(v.data).toLocaleString('pt-PT')}\n--------------------\n${linhas}\n--------------------\n${d>0?('Desconto: − '+fmt(d)+'\n'):''}TOTAL: ${fmt(v.total)}\n${v.recebido!=null?('Recebido: '+fmt(v.recebido)+'\n'):''}${v.troco!=null?('Troco: '+fmt(v.troco)+'\n'):''}\nObrigado!`;
+}
+function _folhaVendas(){
+  let ov = document.getElementById('folha-vendas');
+  if (!ov){ ov = document.createElement('div'); ov.className='folha-fundo'; ov.id='folha-vendas';
+    ov.innerHTML = '<div class="folha"><div class="cab"><h3 id="fv-tit">🧾 Recibo</h3><button onclick="fecharFolha(\'folha-vendas\')">✕</button></div><div class="conteudo" id="fv-corpo"></div></div>';
+    ov.addEventListener('click', e => { if (e.target === ov) fecharFolha('folha-vendas'); });
+    document.body.appendChild(ov); }
+  return ov;
+}
+let _fvVenda = null;
+// Depois da venda: o recibo + o desempenho do balconista (como no balcão principal)
+async function mostrarRecibo(){
+  if(!ultimaVenda) return;
+  _fvVenda = ultimaVenda; _folhaVendas();
+  document.getElementById('fv-tit').textContent = '🧾 Recibo da venda';
+  const corpo = document.getElementById('fv-corpo');
+  const pintar = (lista) => { corpo.innerHTML = htmlRecibo(_fvVenda)
+    + '<div class="bv-bts"><button class="zap" onclick="enviarReciboZap()">📲 WhatsApp</button><button class="imp" onclick="imprimirVenda(_fvVenda)">🖨 Imprimir</button></div>'
+    + '<div class="bv-sec"><span>📊 O seu desempenho hoje</span><small>' + esc(_balc()) + '</small></div>'
+    + (lista ? htmlDesempenho(lista) : '<div class="bv-vazio">A carregar…</div>')
+    + '<button class="bv-mais" onclick="abrirVendas()">🧾 Ver as vendas de hoje e reimprimir</button>'; };
+  pintar(null); abrirFolha('folha-vendas');
+  pintar(await carregarVendasHoje());
+}
+// Menu «Vendas e recibos»: desempenho + lista; toque numa venda para ver e reimprimir
+async function abrirVendas(){
+  fecharFolha('folha-menu'); _folhaVendas();
+  document.getElementById('fv-tit').textContent = '🧾 Vendas e recibos';
+  const corpo = document.getElementById('fv-corpo');
+  corpo.innerHTML = '<div class="bv-vazio">A carregar…</div>'; abrirFolha('folha-vendas');
+  const lista = await carregarVendasHoje();
+  corpo.innerHTML = '<div class="bv-sec" style="margin-top:0"><span>📊 Desempenho de hoje</span><small>' + new Date().toLocaleDateString('pt-PT',{weekday:'long',day:'2-digit',month:'long'}) + '</small></div>'
+    + htmlDesempenho(lista) + '<div class="bv-sec"><span>🧾 Vendas de hoje</span><small>toque para ver e reimprimir</small></div>' + htmlListaVendas(lista);
+  corpo.scrollTop = 0;
+}
+function verVenda(id){
+  const v = _vendasHoje.find(x => x.id === id); if (!v) return;
+  _fvVenda = v;
+  const d = _vdDesc(v);
+  document.getElementById('fv-tit').textContent = '🧾 Venda nº ' + (v.numeroDia||'—');
+  const corpo = document.getElementById('fv-corpo');
+  corpo.innerHTML = '<button class="bv-voltar" onclick="abrirVendas()">← Voltar às vendas</button>'
+    + '<table class="bv-tab"><thead><tr><th>Produto</th><th class="n">Qtd</th><th class="n">Preço</th><th class="n">Subtotal</th></tr></thead><tbody>'
+    + (v.itens||[]).map(i => `<tr class="${i.precoOriginal?'desc':''}"><td>${esc(i.nome)}${i.precoOriginal?`<small>${fmt(i.precoOriginal)} − ${fmt(i.precoOriginal-i.preco).replace('MT ','')} = ${fmt(i.preco)}</small>`:''}</td><td class="n">${i.qtd}</td><td class="n">${fmt(i.preco).replace('MT ','')}</td><td class="n"><b>${fmt(i.preco*i.qtd).replace('MT ','')}</b></td></tr>`).join('')
+    + '</tbody></table><div class="bv-info"><div><span>Nº da venda (do dia)</span><b>#' + (v.numeroDia||'—') + '</b></div><div><span>Data e hora</span><b>' + new Date(v.data).toLocaleString('pt-PT') + '</b></div>'
+    + '<div><span>Pagamento</span><b>Numerário</b></div>' + (v.recebido!=null?'<div><span>Recebido</span><b>'+fmt(v.recebido)+'</b></div>':'') + (v.troco!=null?'<div><span>Troco</span><b>'+fmt(v.troco)+'</b></div>':'')
+    + (d>0?'<div><span>🏷️ Desconto</span><b style="color:#b45309">− '+fmt(d)+'</b></div>':'') + (v.pendente?'<div><span>Estado</span><b style="color:#c2410c">⏳ por enviar</b></div>':'') + '</div>'
+    + '<div class="bv-total"><span>Valor total</span><b>' + fmt(v.total) + '</b></div>'
+    + '<div class="bv-bts" style="margin-top:0"><button class="zap" onclick="enviarReciboZap()">📲 WhatsApp</button><button class="imp" onclick="imprimirVenda(_fvVenda)">🖨 Reimprimir recibo</button></div>';
+  corpo.scrollTop = 0;
+}
+function enviarReciboZap(){ if(_fvVenda) window.open('https://wa.me/?text='+encodeURIComponent(textoRecibo(_fvVenda)),'_blank'); }
+function imprimirRecibo(){ imprimirVenda(ultimaVenda); }
+function imprimirVenda(v){
+  if(!v) return;
+  const w = window.open('','_blank'); if(!w){ toast('Não foi possível abrir a impressão','erro'); return; }
+  const d = _vdDesc(v);
+  const linhas = (v.itens||[]).map(i=>`<tr><td>${i.qtd}x ${esc(i.nome)}${i.precoOriginal?`<br><small>${fmt(i.precoOriginal)} - ${fmt(i.precoOriginal-i.preco).replace('MT ','')} = ${fmt(i.preco)}</small>`:''}</td><td style="text-align:right">${fmt(i.preco*i.qtd)}</td></tr>`).join('');
+  w.document.write(`<html><head><title>Recibo</title><style>@page{size:58mm auto;margin:0}body{width:58mm;font-family:monospace;padding:3mm;font-size:12px;margin:0}h3{text-align:center;margin:0 0 4px}table{width:100%;border-collapse:collapse}td{padding:2px 0;vertical-align:top}small{font-size:10px}hr{border:none;border-top:1px dashed #000}.t{font-weight:bold;font-size:14px}</style></head><body>
+  <h3>${esc(sessao.nomeLoja)}</h3><div style="text-align:center;font-size:11px">Recibo nº ${v.numeroDia}<br>${new Date(v.data).toLocaleString('pt-PT')}${_balc()?('<br>'+esc(_balc())):''}</div><hr>
   <table>${linhas}</table><hr>
-  <table><tr class="t"><td>TOTAL</td><td style="text-align:right">${fmt(v.total)}</td></tr>
-  <tr><td>Recebido</td><td style="text-align:right">${fmt(v.recebido)}</td></tr>
-  <tr><td>Troco</td><td style="text-align:right">${fmt(v.troco)}</td></tr></table><hr>
+  <table>${d>0?`<tr><td>Desconto</td><td style="text-align:right">- ${fmt(d)}</td></tr>`:''}<tr class="t"><td>TOTAL</td><td style="text-align:right">${fmt(v.total)}</td></tr>
+  ${v.recebido!=null?`<tr><td>Recebido</td><td style="text-align:right">${fmt(v.recebido)}</td></tr>`:''}
+  ${v.troco!=null?`<tr><td>Troco</td><td style="text-align:right">${fmt(v.troco)}</td></tr>`:''}</table><hr>
   <div style="text-align:center;font-size:11px">Obrigado!</div>
   <script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>`);
   w.document.close();
@@ -754,7 +884,7 @@ function renderListaProdutos(){
     const img = p.imagem ? `<img src="${p.imagem}" style="width:48px;height:48px;border-radius:10px;object-fit:cover;">` : `<div style="width:48px;height:48px;border-radius:10px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:22px;">🛒</div>`;
     return `<div class="item" onclick="abrirFormProduto('${p.id}')">
       ${img}
-      <div class="in"><div class="nn">${esc(p.nome)}</div><div class="pp"><b>${fmt(p.preco)}</b> · ${st<=0?('<span style="color:#dc2626">sem stock</span>'):('stock '+st)}</div></div>
+      <div class="in"><div class="nn">${esc(p.nome)}</div><div class="pp"><b>${fmt(p.preco)}</b></div></div>
       <div style="color:#94a3b8;font-size:20px;">›</div>
     </div>`;
   }).join('');
@@ -897,11 +1027,7 @@ async function pararScanCampo(){ if(_scanCampo){ try{ await _scanCampo.stop(); _
 
 // ===================== MENU =====================
 function abrirMenu(){ abrirFolha('folha-menu'); }
-function reimprimirRecibo(){
-  fecharFolha('folha-menu');
-  if (!ultimaVenda){ toast('Ainda não há venda para reimprimir','erro'); return; }
-  imprimirRecibo();
-}
+function reimprimirRecibo(){ abrirVendas(); }
 function infoImpressora(){
   fecharFolha('folha-menu');
   bancaAviso('Impressora & Scanner','• O recibo imprime pela janela do telemóvel/Windows (botão Imprimir no recibo).\n• Para ler códigos, usa o botão 📷 na barra de pesquisa (câmara) ou um leitor USB.\n\nDica: numa impressora térmica, no Windows escolhe o tamanho de papel 58mm e Margens = Nenhuma.',{icone:'🖨️'});
@@ -1012,7 +1138,7 @@ function pdFiltrar(){
   const achados=produtos.filter(p=>(p.nome||'').toLowerCase().includes(termo)).slice(0,30);
   if(!achados.length){ res.innerHTML='<div class="vazio">Nenhum produto.</div>'; return; }
   res.innerHTML=achados.map(p=>`<div class="item" onclick="pdRegistar('${p.id}')">
-    <div class="in"><div class="nn">${esc(p.nome)}</div><div class="pp">stock ${parseInt(p.stock)||0}</div></div>
+    <div class="in"><div class="nn">${esc(p.nome)}</div><div class="pp">${fmt(p.preco)}</div></div>
     <div style="color:#dc2626;font-weight:800;font-size:22px;">📉</div></div>`).join('');
 }
 async function pdRegistar(id){
@@ -1092,7 +1218,7 @@ function retFiltrar(){
   const achados=produtos.filter(p=>(p.nome||'').toLowerCase().includes(termo)||(p.codbarras||'').toLowerCase().includes(termo)).slice(0,30);
   if(!achados.length){ res.innerHTML='<div class="vazio">Nenhum produto com esse nome.</div>'; return; }
   res.innerHTML=achados.map(p=>`<div class="item" onclick="retDevolver('${p.id}')">
-    <div class="in"><div class="nn">${esc(p.nome)}</div><div class="pp"><b>${fmt(p.preco)}</b> · stock ${parseInt(p.stock)||0}</div></div>
+    <div class="in"><div class="nn">${esc(p.nome)}</div><div class="pp"><b>${fmt(p.preco)}</b></div></div>
     <div style="color:#16a34a;font-weight:800;font-size:22px;">↩️</div></div>`).join('');
 }
 async function retDevolver(id){
@@ -1140,6 +1266,7 @@ async function abrirEntregar(){
   document.getElementById('ent-total').textContent = fmt(total);
   document.getElementById('ent-dinheiro').value=''; document.getElementById('ent-gastos').value=''; document.getElementById('ent-gastos-nota').value='';
   window._entTotalHoje = total; window._entNum = normais.length;
+  window._entDesc = Math.round(bancaVendasDoDia(sessao.lojaId).reduce((s,v)=>s+_vdDesc(v),0)*100)/100;
   abrirFolha('folha-entregar');
 }
 async function confirmarEntrega(){
@@ -1150,7 +1277,7 @@ async function confirmarEntrega(){
   const btn=document.getElementById('btn-entregar'); btn.disabled=true; btn.textContent='A registar…';
   bancaGuardarOp({ tipo:'entrega', rotulo:'Entrega do dia', passos:[
     { t:'insert', tabela:'entregas', linhas:[{ id: bancaUUID(), loja_id: sessao.lojaId, vendedor_codigo: sessao.vendedor||null,
-      total_entregue: dinheiro, num_vendas: window._entNum||0, descontos: 0, gastos: gastos, gastos_nota: nota||null, criado_em: new Date().toISOString() }] } ]});
+      total_entregue: dinheiro, num_vendas: window._entNum||0, descontos: window._entDesc||0, gastos: gastos, gastos_nota: nota||null, criado_em: new Date().toISOString() }] } ]});
   const sobra = Math.round((dinheiro - ((window._entTotalHoje||0) - gastos))*100)/100;
   // tenta enviar tudo antes de fechar a sessão (sem sessão não se pode enviar)
   let res = null; try { res = await Promise.race([ bancaSincronizar(), new Promise(r=>setTimeout(()=>r(null), 8000)) ]); } catch(e){}

@@ -88,9 +88,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.16">
-<script src="banca-tema.js?v=3.7.16" defer></script>
-<script src="app-android.js?v=3.7.16" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.17">
+<script src="banca-tema.js?v=3.7.17" defer></script>
+<script src="app-android.js?v=3.7.17" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -136,6 +136,10 @@
       <div class="stat"><div class="lbl">🧾 Nº de vendas</div><div class="val" id="s-nvendas">0</div></div>
       <div class="stat"><div class="lbl">📈 Lucro estimado</div><div class="val laranja" id="s-lucro">MT 0,00</div></div>
     </div>
+    <div class="atalhos-dono">
+      <button type="button" onclick="mFinancas()"><span>💰</span><b>Dinheiro e lucro</b><small>investido, lucro, entregas</small></button>
+      <button type="button" onclick="mInventario()"><span>📋</span><b>Inventário</b><small>contar e acertar o stock</small></button>
+    </div>
     <div class="graf-card">
       <div class="graf-cab"><span class="graf-ico">📊</span><div><b id="graf-tit">Vendas por hora</b><small id="graf-sub">—</small></div><span class="graf-tot" id="graf-tot">MT 0,00</span></div>
       <div class="graf" id="graf"><div class="graf-vazio">A carregar…</div></div>
@@ -161,7 +165,7 @@
       <div class="stat wide"><div class="lbl">💼 Valor do stock (a preço de venda)</div><div class="val" id="s-valorstock">MT 0,00</div></div>
     </div>
     <h4>Produtos <small class="h4-dica">· toque para gerir, carregue uns instantes para selecionar e eliminar</small></h4>
-    <div class="stock-acoes"><button type="button" class="bt-selecionar" onclick="_modoSel?sairSelecao():(_modoSel=true,_atualizarSel())">☑️ Selecionar</button></div>
+    <div class="stock-acoes"><button type="button" class="bt-inventario" onclick="mInventario()">📋 Inventário</button><button type="button" class="bt-selecionar" onclick="_modoSel?sairSelecao():(_modoSel=true,_atualizarSel())">☑️ Selecionar</button></div>
     <div class="barra-stock">
       <input id="busca-stock" type="search" placeholder="Procurar produto ou código…" oninput="renderProdutos()" autocomplete="off">
       <button type="button" onclick="scanStock()" aria-label="Ler código de barras">📷</button>
@@ -196,12 +200,26 @@
   </div>
 </div>
 
+<!-- ===== INVENTÁRIO ===== -->
+<div id="tela-inventario" class="tela">
+  <div class="topo"><div style="display:flex;align-items:center;gap:10px"><button type="button" class="inv-voltar" onclick="mostrarTela('produtos')" aria-label="Voltar">←</button><div><div class="nome">📋 Inventário</div><div class="sub">contar o stock e comparar com o sistema</div></div></div></div>
+  <div class="corpo" id="inv-corpo"><div class="vazio">A carregar…</div></div>
+  <div class="nav">
+    <a onclick="mostrarTela('resumo')"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true" class="ic-home"><path fill="currentColor" d="M11.3 2.7a1 1 0 0 1 1.4 0l9 8.6a1 1 0 0 1-1.4 1.4l-.8-.7V20a2 2 0 0 1-2 2h-3.5a1 1 0 0 1-1-1v-5h-2v5a1 1 0 0 1-1 1H6.5a2 2 0 0 1-2-2v-8l-.8.7a1 1 0 0 1-1.4-1.4z"/></svg></span>Home</a>
+    <a onclick="mostrarTela('produtos')"><span class="ic">📦</span>Stock</a>
+    <a onclick="mostrarTela('descontos')"><span class="ic">🏷️</span>Descontos</a>
+    <a onclick="abrirMenu()"><span class="ic ic-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 6h16a1 1 0 1 1 0 2H4a1 1 0 0 1 0-2zm0 5h16a1 1 0 1 1 0 2H4a1 1 0 1 1 0-2zm0 5h16a1 1 0 1 1 0 2H4a1 1 0 1 1 0-2z"/></svg></span>Menu</a>
+  </div>
+</div>
+
 <!-- ===== FOLHA: MENU (dono) ===== -->
 <div class="folha-fundo" id="folha-menu">
   <div class="folha">
     <div class="cab"><h3>☰ Menu</h3><button onclick="fecharFolha('folha-menu')">✕</button></div>
     <div class="conteudo">
       <div class="menu-grid">
+        <div class="mi" onclick="mFinancas()"><div class="e">💰</div><div class="t">Dinheiro e lucro</div></div>
+        <div class="mi" onclick="mInventario()"><div class="e">📋</div><div class="t">Inventário</div></div>
         <div class="mi" onclick="mRelatorio()"><div class="e">📈</div><div class="t">Relatório</div></div>
         <div class="mi" onclick="mRastreioProduto()"><div class="e">🔎</div><div class="t">Rastreio de Produto</div></div>
         <div class="mi" onclick="mProducts()"><div class="e">📦</div><div class="t">Produtos</div></div>
@@ -666,9 +684,13 @@ async function carregarResumo(){
       .select('id,numero_do_dia,total,criado_em,vendedor_codigo, venda_itens(produto_nome,qtd,preco_unitario)')
       .eq('loja_id',sessao.lojaId).gte('criado_em',r.ini.toISOString());
     if(r.fim) q = q.lt('criado_em', r.fim.toISOString());
-    const { data } = await q.order('criado_em',{ascending:false}).limit(500);
+    let qd = supabaseClient.from('descontos').select('produto_nome,preco_original,preco_novo,quantidade,criado_em').eq('loja_id',sessao.lojaId).gte('criado_em',r.ini.toISOString());
+    if(r.fim) qd = qd.lt('criado_em', r.fim.toISOString());
+    const [{ data }, rd] = await Promise.all([ q.order('criado_em',{ascending:false}).limit(500), qd.limit(2000).then(x=>x,()=>({})) ]);
     vendas=data||[];
+    marcarDescontos(vendas, (rd&&rd.data)||[]);
   }catch(e){}
+  window._vendasResumo = vendas;
   const totalVend = vendas.reduce((s,v)=>s+(parseFloat(v.total)||0),0);
   document.getElementById('s-vendido').textContent = fmt(totalVend);
   document.getElementById('s-nvendas').textContent = vendas.length;
@@ -687,8 +709,9 @@ async function carregarResumo(){
   div.innerHTML = vendas.slice(0,50).map(v=>{
     const dt=new Date(v.criado_em).toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
     const nit=(v.venda_itens||[]).reduce((s,i)=>s+(parseFloat(i.qtd)||0),0);
-    return `<div class="row"><div class="ph">🧾</div>
-      <div class="in"><div class="nn">Venda nº ${v.numero_do_dia||'-'}</div><div class="mt">${dt} · ${nit} item(s)${v.vendedor_codigo?(' · '+esc(v.vendedor_codigo)):''}</div></div>
+    const d=v._desc||0;
+    return `<div class="row venda-row${d>0?' com-desc':''}" onclick="verVendaMonitor('${v.id}')"><div class="ph">🧾</div>
+      <div class="in"><div class="nn">Venda nº ${v.numero_do_dia||'-'} ${d>0?`<span class="tag-desc">🏷️ desconto −${fmt(d).replace('MT ','')}</span>`:''}</div><div class="mt">${dt} · ${nit} item(s)${v.vendedor_codigo?(' · '+esc(v.vendedor_codigo)):''}</div></div>
       <div class="vv">${fmt(v.total)}</div></div>`;
   }).join('');
 }
@@ -754,11 +777,173 @@ async function carregarDescontos(){
   div.innerHTML = desc.map(d=>{
     const dt=new Date(d.criado_em).toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
     const dif=((parseFloat(d.preco_original)||0)-(parseFloat(d.preco_novo)||0))*(parseFloat(d.quantidade)||1);
-    return `<div class="row"><div class="ph">🏷️</div>
-      <div class="in"><div class="nn">${esc(d.produto_nome||'Produto')}</div>
-      <div class="mt"><s style="color:#94a3b8">${fmt(d.preco_original)}</s> → <b>${fmt(d.preco_novo)}</b> · ${esc(d.feito_por||'balconista')} · ${dt}</div></div>
-      <div class="vv" style="color:#dc2626">-${fmt(dif)}</div></div>`;
+    const po=parseFloat(d.preco_original)||0, pn=parseFloat(d.preco_novo)||0, q=parseFloat(d.quantidade)||1;
+    return `<div class="row com-desc"><div class="ph">🏷️</div>
+      <div class="in"><div class="nn">${esc(d.produto_nome||'Produto')} <span class="tag-desc">DESCONTADO</span></div>
+      <div class="conta-desc">${fmt(po)} <span>− ${fmt(po-pn).replace('MT ','')}</span> = <b>${fmt(pn)}</b>${q!==1?(' × '+q):''}</div>
+      <div class="mt">${esc(d.feito_por||'balconista')} · ${dt}</div></div>
+      <div class="vv" style="color:#b45309">−${fmt(dif).replace('MT ','MT ')}</div></div>`;
   }).join('');
+}
+
+
+// ===== DESCONTOS LIGADOS ÀS VENDAS (a venda e o desconto têm a mesma hora) =====
+function marcarDescontos(vendas, desc){
+  const m={}; desc.forEach(d=>{ m[new Date(d.criado_em).getTime()+'|'+(d.produto_nome||'')]=d; });
+  vendas.forEach(v=>{ const t=new Date(v.criado_em).getTime(); let tot=0;
+    (v.venda_itens||[]).forEach(it=>{ const d=m[t+'|'+(it.produto_nome||'')]; const pr=parseFloat(it.preco_unitario)||0;
+      if(d && (parseFloat(d.preco_original)||0)>pr){ it._orig=parseFloat(d.preco_original); tot+=(it._orig-pr)*(parseFloat(it.qtd)||0); } });
+    v._desc=Math.round(tot*100)/100; });
+}
+function verVendaMonitor(id){
+  const v=(window._vendasResumo||[]).find(x=>String(x.id)===String(id)); if(!v) return;
+  const its=v.venda_itens||[], d=v._desc||0;
+  mostrarInfo('🧾 Venda nº '+(v.numero_do_dia||'—'),
+    (d>0?'<div class="aviso-desc">🏷️ Nesta venda o balconista deu <b>'+fmt(d)+'</b> de desconto.</div>':'')
+    +'<table class="bv-tab"><thead><tr><th>Produto</th><th class="n">Qtd</th><th class="n">Preço</th><th class="n">Subtotal</th></tr></thead><tbody>'
+    +its.map(it=>{ const pr=parseFloat(it.preco_unitario)||0, q=parseFloat(it.qtd)||0;
+      return '<tr class="'+(it._orig?'desc':'')+'"><td>'+esc(it.produto_nome)+(it._orig?'<small>'+fmt(it._orig)+' − '+fmt(it._orig-pr).replace('MT ','')+' = '+fmt(pr)+'</small>':'')+'</td><td class="n">'+q+'</td><td class="n">'+fmt(pr).replace('MT ','')+'</td><td class="n"><b>'+fmt(pr*q).replace('MT ','')+'</b></td></tr>'; }).join('')
+    +'</tbody></table><div class="bv-info"><div><span>Data e hora</span><b>'+new Date(v.criado_em).toLocaleString('pt-PT')+'</b></div>'
+    +(v.vendedor_codigo?'<div><span>Balconista</span><b>'+esc(v.vendedor_codigo)+'</b></div>':'')
+    +(d>0?'<div><span>Sem desconto seria</span><b>'+fmt((parseFloat(v.total)||0)+d)+'</b></div><div><span>🏷️ Descontado</span><b style="color:#b45309">− '+fmt(d)+'</b></div>':'')
+    +'</div><div class="bv-total"><span>Valor total</span><b>'+fmt(v.total)+'</b></div>');
+}
+
+// ===== DINHEIRO E LUCRO (como no Monitor principal) =====
+let _finPer='hoje';
+async function mFinancas(p){
+  if(p) _finPer=p;
+  const chips='<div class="periodo" style="margin-bottom:12px">'+[['hoje','Hoje'],['semana','Semana'],['mes','Mês']].map(([k,t])=>'<button class="'+(k===_finPer?'on':'')+'" onclick="mFinancas(\''+k+'\')">'+t+'</button>').join('')+'</div>';
+  if(!document.getElementById('folha-info').classList.contains('ativa') || !p) mostrarInfo('💰 Dinheiro e lucro', chips+'<div class="vazio">A calcular…</div>');
+  else document.getElementById('info-conteudo').innerHTML = chips+'<div class="vazio">A calcular…</div>';
+  const r=rangePeriodo(_finPer), ini=r.ini.toISOString(), fim=r.fim?r.fim.toISOString():null;
+  const per=(q)=>{ q=q.eq('loja_id',sessao.lojaId).gte('criado_em',ini); return fim?q.lt('criado_em',fim):q; };
+  let vendas=[], desc=[], perdas=[], ent=[];
+  try{ const res=await Promise.all([
+      per(supabaseClient.from('vendas').select('id,total,criado_em, venda_itens(produto_nome,qtd,preco_unitario)')).limit(3000),
+      per(supabaseClient.from('descontos').select('produto_nome,preco_original,preco_novo,quantidade,criado_em')).limit(3000),
+      per(supabaseClient.from('perdas').select('produto_id,produto_nome,quantidade,estado,criado_em')).limit(3000),
+      per(supabaseClient.from('entregas').select('total_entregue,gastos,num_vendas,criado_em,vendedor_codigo')).limit(500) ].map(x=>x.then(y=>y,()=>({}))));
+    vendas=res[0].data||[]; desc=res[1].data||[]; perdas=res[2].data||[]; ent=res[3].data||[];
+  }catch(e){}
+  const custo={}, custoId={}; produtos.forEach(x=>{ custo[(x.nome||'').toLowerCase()]=parseFloat(x.preco_compra)||0; custoId[x.id]=parseFloat(x.preco_compra)||0; });
+  let vendido=0, custoVend=0;
+  vendas.forEach(v=>{ vendido+=parseFloat(v.total)||0; (v.venda_itens||[]).forEach(it=>{ custoVend+=(custo[(it.produto_nome||'').toLowerCase()]||0)*(parseFloat(it.qtd)||0); }); });
+  const descontado=desc.reduce((s,d)=>s+((parseFloat(d.preco_original)||0)-(parseFloat(d.preco_novo)||0))*(parseFloat(d.quantidade)||1),0);
+  const perdaVal=perdas.filter(x=>x.estado!=='rejeitado').reduce((s,x)=>s+(custoId[x.produto_id]!=null?custoId[x.produto_id]:(custo[(x.produto_nome||'').toLowerCase()]||0))*(parseFloat(x.quantidade)||0),0);
+  const entregue=ent.reduce((s,e)=>s+(parseFloat(e.total_entregue)||0),0), gastos=ent.reduce((s,e)=>s+(parseFloat(e.gastos)||0),0);
+  const lucroBruto=vendido-custoVend, lucroLiq=lucroBruto-perdaVal-gastos;
+  const invest=produtos.reduce((s,x)=>s+Math.max(0,parseInt(x.stock)||0)*(parseFloat(x.preco_compra)||0),0);
+  const valorVenda=produtos.reduce((s,x)=>s+Math.max(0,parseInt(x.stock)||0)*(parseFloat(x.preco)||0),0);
+  const semCusto=produtos.filter(x=>!(parseFloat(x.preco_compra)>0)).length;
+  const difCaixa= ent.length ? entregue-(vendido-gastos) : null;
+  const card=(cls,l,v,sub)=>'<div class="bv-card '+cls+'"><div class="l">'+l+'</div><div class="v">'+v+'</div>'+(sub?'<div class="fin-sub">'+sub+'</div>':'')+'</div>';
+  document.getElementById('info-conteudo').innerHTML = chips
+    +'<div class="bv-sec" style="margin-top:4px"><span>💵 Dinheiro do período</span><small>'+esc((document.getElementById('data-rotulo')&&_finPer===periodo)?'':'')+'</small></div><div class="bv-cards">'
+    +card('verde largo','💰 Vendido',fmt(vendido),vendas.length+' venda'+(vendas.length===1?'':'s'))
+    +card('','🤝 Entregue pelo balconista',fmt(entregue),ent.length+' entrega'+(ent.length===1?'':'s'))
+    +card('','🧾 Gastos do balconista',fmt(gastos))
+    +(difCaixa!==null?card(difCaixa<0?'vermelho largo':(difCaixa>0?'amarelo largo':'verde largo'),difCaixa<0?'⚠️ Falta na entrega':(difCaixa>0?'➕ Sobra na entrega':'✅ Entrega certa'),(difCaixa<0?'− ':'')+fmt(Math.abs(difCaixa)),'entregue − (vendido − gastos)'):'')
+    +'</div><div class="bv-sec"><span>📈 Lucro do período</span></div><div class="bv-cards">'
+    +card('','📦 Custo do que vendeu',fmt(custoVend))
+    +card('verde','📈 Lucro bruto',fmt(lucroBruto))
+    +card('amarelo','🏷️ Descontos dados','− '+fmt(descontado))
+    +card('vermelho','📉 Perdas (custo)','− '+fmt(perdaVal))
+    +card((lucroLiq<0?'vermelho':'verde')+' largo','✅ Lucro líquido',fmt(lucroLiq),'lucro bruto − perdas − gastos')
+    +'</div><div class="bv-sec"><span>🏦 Stock agora</span><small>'+produtos.length+' produtos</small></div><div class="bv-cards">'
+    +card('largo','💼 Investido em stock (custo)',fmt(invest))
+    +card('','🏷️ Valor de venda',fmt(valorVenda))
+    +card('verde','📈 Lucro potencial',fmt(valorVenda-invest))
+    +card('largo azul','🏦 Capital da banca',fmt(invest+entregue),'stock a custo + dinheiro entregue no período')
+    +'</div>'+(semCusto?'<div class="aviso-desc" style="margin-top:12px">⚠️ '+semCusto+' produto(s) sem preço de compra — o lucro fica maior do que é. Põe o preço de compra em Stock.</div>':'');
+}
+
+// ===== INVENTÁRIO (a mesma lógica do Monitor principal) =====
+let _invCont={};
+function mInventario(){
+  fecharFolha('folha-menu'); _invCont={};
+  mostrarTela('inventario'); renderInventario();
+}
+function renderInventario(){
+  const c=document.getElementById('inv-corpo');
+  if(!produtos.length){ c.innerHTML='<div class="vazio">Ainda não há produtos para contar.</div>'; return; }
+  let custo=0, venda=0, semCusto=0;
+  produtos.forEach(p=>{ const st=Math.max(0,parseInt(p.stock)||0), pc=parseFloat(p.preco_compra)||0; custo+=st*pc; venda+=st*(parseFloat(p.preco)||0); if(!pc) semCusto++; });
+  c.innerHTML='<div class="bv-cards" style="margin-bottom:12px">'
+    +'<div class="bv-card"><div class="l">💰 Investido em stock</div><div class="v">'+fmt(custo)+'</div></div>'
+    +'<div class="bv-card verde"><div class="l">🏷️ Valor de venda</div><div class="v">'+fmt(venda)+'</div></div>'
+    +'<div class="bv-card amarelo largo"><div class="l">📈 Lucro potencial (se vender tudo)</div><div class="v">'+fmt(venda-custo)+'</div></div></div>'
+    +(semCusto?'<div class="aviso-desc">⚠️ '+semCusto+' produto(s) sem preço de compra.</div>':'')
+    +'<div class="inv-dica">📌 Conte as unidades de cada produto na banca e escreva em <b>Contei</b>. Os que deixar em branco não mudam.</div>'
+    +'<label class="inv-completa"><input type="checkbox" id="inv-completa"><span><b>Contagem completa (contei tudo)</b><br>Os produtos em branco ficam a <b>0</b> e contam como perda.</span></label>'
+    +'<div class="barra-stock"><input id="inv-busca" type="search" placeholder="Procurar produto ou código…" oninput="invFiltrar()" autocomplete="off"><button type="button" onclick="invScan()" aria-label="Ler código">📷</button></div>'
+    +'<div class="inv-cab"><span>Produto</span><span>Sistema</span><span>Contei</span></div><div class="cartao" id="inv-lista">'
+    +produtos.map(p=>{ const st=parseInt(p.stock)||0;
+      return '<div class="inv-linha" data-id="'+p.id+'" data-busca="'+esc(((p.nome||'')+' '+(p.codbarras||'')+' '+(p.codigo||'')).toLowerCase())+'">'
+        +(p.imagem?'<img src="'+p.imagem+'" alt="" onerror="this.style.visibility=\'hidden\'">':'<div class="inv-ph">📦</div>')
+        +'<div class="inv-in"><div class="nn">'+esc(p.nome)+'</div><div class="mt">custo '+fmt(p.preco_compra)+' · venda '+fmt(p.preco)+'</div></div>'
+        +'<div class="inv-sis">'+st+'</div><input class="inv-q" type="text" inputmode="numeric" placeholder="—" value="'+(_invCont[p.id]!=null?_invCont[p.id]:'')+'" oninput="invMudou(\''+p.id+'\',this)"></div>'; }).join('')
+    +'</div><div id="inv-res"></div>'
+    +'<button type="button" class="inv-bt verif" onclick="verificarInventario()">🔍 Verificar diferenças</button>'
+    +'<button type="button" class="inv-bt guardar" id="inv-guardar" style="display:none" onclick="guardarInventario()">✅ Confirmar e guardar inventário</button>'
+    +'<button type="button" class="inv-bt hist" onclick="historicoInventario()">📚 Ver inventários anteriores</button>';
+}
+function invMudou(id,el){ el.value=el.value.replace(/[^\d]/g,''); if(el.value==='') delete _invCont[id]; else _invCont[id]=parseInt(el.value,10); el.closest('.inv-linha').classList.toggle('contado', el.value!==''); const g=document.getElementById('inv-guardar'); if(g) g.style.display='none'; }
+function invFiltrar(){ const t=(document.getElementById('inv-busca').value||'').trim().toLowerCase(); document.querySelectorAll('#inv-lista .inv-linha').forEach(l=>{ l.style.display=!t||l.dataset.busca.includes(t)?'':'none'; }); }
+function invScan(){
+  if(!window.bancaScanner){ toast('Leitor indisponível','erro'); return; }
+  bancaScanner(code=>{
+    const c=String(code||'').trim().toLowerCase(), d=c.replace(/\D/g,'');
+    const p=produtos.find(x=>(x.codbarras||'').toLowerCase()===c || (x.codigo||'').toLowerCase()===c || (d && String(x.codbarras||'').replace(/\D/g,'')===d));
+    const b=document.getElementById('inv-busca'); b.value=p?p.nome:code; invFiltrar();
+    if(p){ const i=document.querySelector('.inv-linha[data-id="'+p.id+'"] .inv-q'); if(i) setTimeout(()=>{ i.focus(); i.select(); },250); }
+    else toast('Código não encontrado na banca: '+code,'erro');
+  });
+}
+function _invCalcular(){
+  const completa=!!(document.getElementById('inv-completa')||{}).checked;
+  const difs=[]; let contados=0, falta=0, sobra=0, custoEsp=0, vendaEsp=0;
+  produtos.forEach(p=>{ const st=parseInt(p.stock)||0, pc=parseFloat(p.preco_compra)||0, pv=parseFloat(p.preco)||0;
+    custoEsp+=st*pc; vendaEsp+=st*pv;
+    let c=_invCont[p.id]; if(c==null){ if(!completa) return; c=0; }
+    contados++; const d=c-st; if(d<0) falta+=-d*pc; else sobra+=d*pc;
+    if(d!==0) difs.push({ id:p.id, nome:p.nome, sistema:st, contado:c, diferenca:d, valor_custo:pc }); });
+  return { completa, difs, contados, falta, sobra, custoEsp, vendaEsp };
+}
+function verificarInventario(){
+  const r=_invCalcular(), box=document.getElementById('inv-res');
+  if(!r.contados){ box.innerHTML='<div class="aviso-desc">⚠️ Ainda não contou nenhum produto. Escreva as quantidades em «Contei».</div>'; document.getElementById('inv-guardar').style.display='none'; return; }
+  box.innerHTML='<div class="inv-resultado"><div class="bv-sec" style="margin-top:0"><span>🔍 Resultado</span><small>'+r.contados+' contado(s)</small></div>'
+    +(r.falta>0?'<div class="inv-falta">💸 Falta em stock: <b>'+fmt(r.falta)+'</b> (a preço de compra)</div>':'')
+    +(r.sobra>0?'<div class="inv-sobra">➕ A mais: <b>'+fmt(r.sobra)+'</b></div>':'')
+    +(r.difs.length?r.difs.sort((a,b)=>Math.abs(b.diferenca)-Math.abs(a.diferenca)).map(d=>'<div class="inv-dif '+(d.diferenca<0?'menos':'mais')+'"><div><b>'+esc(d.nome)+'</b><small>Sistema: '+d.sistema+' · Contei: '+d.contado+'</small></div><span>'+(d.diferenca<0?'faltam '+(-d.diferenca):'sobram '+d.diferenca)+(d.valor_custo?'<small>'+fmt(Math.abs(d.diferenca)*d.valor_custo)+'</small>':'')+'</span></div>').join('')
+      :'<div class="inv-ok">✅ Tudo certo! A contagem bate com o sistema.</div>')
+    +'<div class="mt" style="text-align:center;margin-top:8px">Confira. Se estiver certo, toque em «Confirmar e guardar».</div></div>';
+  document.getElementById('inv-guardar').style.display='block';
+  box.scrollIntoView({behavior:'smooth',block:'start'});
+}
+async function guardarInventario(){
+  const r=_invCalcular(); if(!r.contados) return;
+  if(!(await bancaConfirmar('Guardar o inventário?','O stock dos '+r.contados+' produto(s) contado(s) passa a ser o que contou.',{icone:'📋',ok:'Guardar'}))) return;
+  const bt=document.getElementById('inv-guardar'); bt.disabled=true; bt.textContent='A guardar…';
+  let erros=0;
+  const contados=produtos.filter(p=>_invCont[p.id]!=null || r.completa);
+  for(const p of contados){ const c=_invCont[p.id]!=null?_invCont[p.id]:0; if(c===(parseInt(p.stock)||0)) continue;
+    try{ const { error }=await supabaseClient.from('produtos').update({ stock:c }).eq('id',p.id); if(error) erros++; else p.stock=c; }catch(e){ erros++; } }
+  try{ await supabaseClient.from('balancos').insert({ loja_id:sessao.lojaId, feito_por:'Dono (Monitor e Banca)', valor_custo_esperado:r.custoEsp, valor_venda_esperado:r.vendaEsp,
+    lucro_potencial:r.vendaEsp-r.custoEsp, perda_quebra:r.falta, itens_contados:r.contados, itens_com_diferenca:r.difs.length, detalhe:r.difs.map(d=>({nome:d.nome,sistema:d.sistema,contado:d.contado,diferenca:d.diferenca,valor_custo:d.valor_custo})) }); }catch(e){}
+  bt.disabled=false; bt.textContent='✅ Confirmar e guardar inventário';
+  if(erros){ toast('⚠️ '+erros+' produto(s) não foram atualizados. Verifique a internet.','erro'); return; }
+  toast('✅ Inventário guardado','ok'); _invCont={}; renderProdutos(); renderInventario();
+}
+async function historicoInventario(){
+  mostrarInfo('📚 Inventários anteriores','<div class="vazio">A carregar…</div>');
+  let l=[]; try{ const { data }=await supabaseClient.from('balancos').select('*').eq('loja_id',sessao.lojaId).order('criado_em',{ascending:false}).limit(50); l=data||[]; }catch(e){}
+  document.getElementById('info-conteudo').innerHTML = l.length ? l.map(b=>'<div class="inv-hist"><div class="nn">📋 '+new Date(b.criado_em).toLocaleString('pt-PT')+'</div>'
+    +'<div class="mt">'+(b.itens_contados||0)+' contado(s) · '+(b.itens_com_diferenca||0)+' com diferença</div>'
+    +'<div class="mt">Investido: <b>'+fmt(b.valor_custo_esperado)+'</b> · Lucro potencial: <b style="color:#15803d">'+fmt(b.lucro_potencial)+'</b></div>'
+    +((parseFloat(b.perda_quebra)||0)>0?'<div class="mt" style="color:#dc2626">Falta: <b>'+fmt(b.perda_quebra)+'</b></div>':'')+'</div>').join('')
+    : '<div class="vazio">Ainda não há inventários guardados.</div>';
 }
 
 // ===== FOLHAS / MENU =====
