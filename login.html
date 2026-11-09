@@ -10,69 +10,92 @@
 <meta name="apple-mobile-web-app-title" content="SPAP Loja">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: Arial, sans-serif; background: #f0f0f0; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
-  /* Tablets — tudo ainda maior */
-  @media (min-width: 768px) {
-    .box { max-width: 560px; padding: 56px 60px; }
-    .campo { padding: 20px 20px; }
-    .campo input { font-size: 19px; }
-    .btn-principal { padding: 22px; font-size: 21px; }
-  }
-  .box { background: white; border-radius: 20px; padding: 48px 44px; width: 100%; max-width: 480px; box-shadow: 0 6px 28px rgba(0,0,0,0.15); text-align: center; }
-  .logo { font-size: 28px; font-weight: bold; color: #1a56a0; margin-bottom: 8px; }
-  .logo span { color: #e05c00; }
-  .subtitulo { font-size: 13px; color: #999; margin-bottom: 30px; }
-  .campo { display: flex; align-items: center; border: 1.5px solid #ddd; border-radius: 12px; margin-bottom: 16px; padding: 17px 18px; gap: 12px; text-align: left; }
-  .campo:focus-within { border-color: #1a56a0; }
-  .campo span { font-size: 22px; flex-shrink: 0; }
-  .campo input { border: none; outline: none; width: 100%; font-size: 17px; color: #333; }
-  .btn-principal { width: 100%; padding: 19px; background: #1a56a0; color: white; border: none; border-radius: 12px; font-size: 19px; font-weight: bold; cursor: pointer; letter-spacing: 1.5px; }
-  .btn-principal:hover { background: #154a8a; }
-  .btn-principal:disabled { background: #aac0db; cursor: not-allowed; }
-  .erro-msg { color: #e74c3c; font-size: 14px; margin-top: 12px; display: none; text-align: left; background: #fdecea; padding: 10px 12px; border-radius: 8px; }
-  .sucesso-msg { color: #239b6b; font-size: 14px; margin-top: 12px; display: none; text-align: left; background: #eef9f0; padding: 10px 12px; border-radius: 8px; }
-  .rodape { margin-top: 24px; font-size: 15px; color: #888; }
-  .rodape a { color: #1a56a0; text-decoration: none; font-weight: bold; }
-  .rodape a:hover { text-decoration: underline; }
-  .link-esqueci { display: block; margin-top: 10px; font-size: 14px; color: #999; text-align: right; cursor: pointer; }
-  .link-esqueci:hover { color: #1a56a0; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root { --tx:#0f1b3d; --tx2:#5b6785; --tx3:#9aa5bd; --ln:#dfe6f3; --az:#1d4ed8; --az2:#4338ca; }
+  html { background:#eef3fb; }
+  body { font-family:'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; -webkit-font-smoothing:antialiased; min-height:100vh; display:flex; justify-content:center; align-items:center;
+         padding:28px 16px; background:#eef3fb; color:var(--tx); position:relative; overflow-x:hidden; }
+  body::before { content:""; position:fixed; inset:-20%; z-index:0; pointer-events:none;
+    background:radial-gradient(40% 35% at 15% 20%,rgba(37,99,235,.22),transparent 70%),radial-gradient(35% 30% at 85% 15%,rgba(226,174,74,.30),transparent 70%),radial-gradient(45% 40% at 70% 90%,rgba(99,102,241,.20),transparent 70%); filter:blur(10px); }
+  button, input { font:inherit; }
+  .box { position:relative; z-index:1; width:100%; max-width:430px; background:rgba(255,255,255,.74); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px);
+         border:1px solid rgba(255,255,255,.9); border-radius:30px; padding:30px 22px 24px; box-shadow:0 30px 60px rgba(15,27,61,.14), inset 0 1px 0 #fff; animation:lg-entra .45s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes lg-entra { from { opacity:0; transform:translateY(14px) scale(.985); } to { opacity:1; transform:none; } }
+  .lg-topo { display:flex; flex-direction:column; align-items:center; text-align:center; margin-bottom:22px; }
+  .lg-marca { width:128px; height:128px; object-fit:contain; border-radius:50%; margin-bottom:12px; filter:drop-shadow(0 12px 22px rgba(156,100,22,.45)); }
+  .lg-nome { font-family:Sora, 'Plus Jakarta Sans', sans-serif; font-weight:800; font-size:27px; letter-spacing:-.02em; color:var(--tx); line-height:1.15; }
+  .lg-nome em { font-style:normal; background:linear-gradient(90deg,#E9B954,#B47A1F); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .lg-tag { font-size:10.5px; font-weight:800; letter-spacing:.22em; color:#8a6a2a; margin-top:5px; }
+  .lg-sub { margin-top:12px; display:inline-flex; align-items:center; gap:7px; background:#fff; border:1px solid var(--ln); padding:6px 13px; border-radius:999px; font-size:12.5px; font-weight:600; color:var(--tx2); }
+  .lg-sub::before { content:""; width:7px; height:7px; border-radius:50%; background:#22c55e; box-shadow:0 0 0 3px rgba(34,197,94,.2); flex:none; }
+  .langs { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin:0 0 20px; }
+  .langs button { border:1px solid var(--ln); background:rgba(255,255,255,.75); color:var(--tx2); padding:8px 13px; border-radius:999px; font-size:13px; font-weight:700; cursor:pointer; transition:all .15s; }
+  .langs button.on { background:linear-gradient(135deg,var(--az),var(--az2)); color:#fff; border-color:transparent; box-shadow:0 6px 14px rgba(37,99,235,.28); }
+  .campo { display:flex; align-items:center; gap:12px; height:58px; padding:0 16px; border-radius:16px; border:1.5px solid var(--ln); background:rgba(255,255,255,.88); margin-bottom:12px; text-align:left; transition:border-color .15s, box-shadow .15s; }
+  .campo:focus-within { border-color:var(--az); box-shadow:0 0 0 4px rgba(37,99,235,.16); background:#fff; }
+  .campo .ic { width:22px; height:22px; color:var(--tx3); flex:none; display:flex; } .campo .ic svg { width:22px; height:22px; }
+  .campo:focus-within .ic { color:var(--az); }
+  .campo input { flex:1; min-width:0; border:0; outline:0; background:none; font-size:16px; color:var(--tx); font-weight:500; }
+  .campo input::placeholder { color:var(--tx3); }
+  .olho { width:36px; height:36px; margin-right:-8px; border:0; background:none; color:var(--tx3); cursor:pointer; display:flex; align-items:center; justify-content:center; border-radius:10px; flex:none; }
+  .olho svg { width:22px; height:22px; } .olho.on { color:var(--az); }
+  .link-esqueci { display:block; margin:2px 0 16px; font-size:13.5px; font-weight:600; color:var(--az); text-align:right; cursor:pointer; }
+  .link-esqueci:hover { text-decoration:underline; }
+  .btn-principal { width:100%; height:58px; border:0; border-radius:16px; font-family:Sora, 'Plus Jakarta Sans', sans-serif; font-weight:700; font-size:16px; letter-spacing:.14em; cursor:pointer; color:#fff;
+                   background:linear-gradient(135deg,var(--az),var(--az2)); box-shadow:0 14px 28px rgba(37,99,235,.38); transition:transform .12s, box-shadow .15s, opacity .15s; }
+  .btn-principal:active { transform:scale(.985); }
+  .btn-principal:disabled { opacity:.6; cursor:not-allowed; box-shadow:none; }
+  .erro-msg { color:#b91c1c; font-size:14px; margin-top:12px; display:none; text-align:left; background:#fef2f2; border:1px solid #fecaca; padding:11px 13px; border-radius:12px; font-weight:600; }
+  .sucesso-msg { color:#15803d; font-size:14px; margin-top:12px; display:none; text-align:left; background:#f0fdf4; border:1px solid #bbf7d0; padding:11px 13px; border-radius:12px; font-weight:600; }
+  .ou { display:flex; align-items:center; gap:12px; margin:18px 0; color:var(--tx3); font-size:13px; } .ou::before, .ou::after { content:""; flex:1; height:1px; background:var(--ln); }
+  .btn-google { width:100%; height:54px; border-radius:16px; border:1.5px solid var(--ln); background:rgba(255,255,255,.9); color:var(--tx); font-weight:700; font-size:15px; display:flex; align-items:center; justify-content:center; gap:10px; cursor:pointer; transition:border-color .15s; }
+  .btn-google:hover { border-color:#c7d2fe; } .btn-google svg { width:20px; height:20px; }
+  .rodape { text-align:center; margin:22px 0 14px; font-size:14.5px; color:var(--tx2); }
+  .rodape a { color:var(--az); font-weight:800; text-decoration:none; }
+  .lg-banca { display:flex; align-items:center; justify-content:center; gap:6px 8px; flex-wrap:wrap; padding:13px 14px; border-radius:14px; background:#ecfdf5; color:#047857; font-size:14px; font-weight:600; border:1px dashed #86efac; text-decoration:none; text-align:center; }
+  .lg-banca b { font-weight:800; }
+  #btn-entrar-offline { height:52px; border-radius:16px !important; }
+  @media (min-width:768px) { .box { max-width:460px; padding:38px 34px 28px; } .lg-marca { width:140px; height:140px; } }
+  @media (max-width:360px) { .lg-nome { font-size:23px; } .lg-marca { width:108px; height:108px; } }
 </style>
-<script src="app-android.js?v=2.9.209" defer></script>
+<script src="app-android.js?v=2.9.210" defer></script>
 </head>
 <body>
-<div class="box">
-  <div style="text-align:center;margin-bottom:20px;">
-    <img src="logo.png" alt="Spap-Sercriativo — Tecnologia Varejista de Ponta" style="width:280px;max-width:90%;">
-    <div style="font-size:11px;color:#94a3b8;margin-top:6px;" id="lg-sub">Sistema de Ponto de Venda</div>
+<main class="box">
+  <div class="lg-topo">
+    <img class="lg-marca" src="ssteam-logo.png" alt="SSTEAM — Tecnologia Varejista de Ponta">
+    <div class="lg-nome notranslate">Spap-<em>Sercriativo</em></div>
+    <div class="lg-tag notranslate">TECNOLOGIA VAREJISTA DE PONTA</div>
+    <div class="lg-sub" id="lg-sub">Sistema de Ponto de Venda</div>
   </div>
 
-  <div style="display:flex;gap:6px;justify-content:center;margin-bottom:16px;flex-wrap:wrap;">
-    <button type="button" onclick="lgLingua('pt')" id="lgl-pt" style="padding:6px 10px;border:1.5px solid #1a56a0;background:#eff6ff;border-radius:8px;cursor:pointer;font-size:12px;font-weight:bold;">🇲🇿 PT</button>
-    <button type="button" onclick="lgLingua('en')" id="lgl-en" style="padding:6px 10px;border:1.5px solid #ddd;background:white;border-radius:8px;cursor:pointer;font-size:12px;font-weight:bold;">🇬🇧 EN</button>
-    <button type="button" onclick="lgLingua('fr')" id="lgl-fr" style="padding:6px 10px;border:1.5px solid #ddd;background:white;border-radius:8px;cursor:pointer;font-size:12px;font-weight:bold;">🇫🇷 FR</button>
-    <button type="button" onclick="lgLingua('zh')" id="lgl-zh" style="padding:6px 10px;border:1.5px solid #ddd;background:white;border-radius:8px;cursor:pointer;font-size:12px;font-weight:bold;">🇨🇳 中文</button>
+  <div class="langs notranslate" role="group" aria-label="Idioma">
+    <button type="button" onclick="lgLingua('pt')" id="lgl-pt">🇲🇿 PT</button>
+    <button type="button" onclick="lgLingua('en')" id="lgl-en">🇬🇧 EN</button>
+    <button type="button" onclick="lgLingua('fr')" id="lgl-fr">🇫🇷 FR</button>
+    <button type="button" onclick="lgLingua('zh')" id="lgl-zh">🇨🇳 中文</button>
   </div>
 
-  <div class="campo"><span>👤</span><input type="email" id="email" placeholder="Email" autocomplete="email" /></div>
-  <div class="campo"><span>🔒</span><input type="password" id="senha" placeholder="Senha" autocomplete="current-password" /></div>
+  <label class="campo"><span class="ic"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M4 6h16v12H4z M4 7l8 6 8-6"/></svg></span><input type="email" id="email" placeholder="Email" autocomplete="email" /></label>
+  <label class="campo"><span class="ic"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M6 11h12v9H6z M8.5 11V8a3.5 3.5 0 0 1 7 0v3"/></svg></span><input type="password" id="senha" placeholder="Senha" autocomplete="current-password" /><button type="button" class="olho" id="lg-olho" aria-label="Mostrar senha" onclick="lgVerSenha()"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button></label>
   <span class="link-esqueci" id="lg-esqueci" onclick="esqueceuSenha()">Esqueci a senha</span>
 
-  <button class="btn-principal" id="btn-entrar" onclick="fazerLogin()" style="margin-top:14px;">ENTRAR</button>
+  <button class="btn-principal" id="btn-entrar" onclick="fazerLogin()">ENTRAR</button>
   <div class="erro-msg" id="erro-msg"></div>
   <div class="sucesso-msg" id="sucesso-msg"></div>
 
-  <div style="display:flex;align-items:center;gap:10px;margin:16px 0 8px;"><div style="flex:1;height:1px;background:#e2e8f0;"></div><span style="font-size:12px;color:#94a3b8;">ou</span><div style="flex:1;height:1px;background:#e2e8f0;"></div></div>
-  <button onclick="entrarComGoogle()" type="button" style="width:100%;padding:12px;background:white;border:1.5px solid #dadce0;border-radius:10px;font-size:14px;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;color:#3c4043;">
-    <span style="font-size:16px;font-weight:bold;"><span style="color:#4285F4;">G</span><span style="color:#EA4335;">o</span><span style="color:#FBBC05;">o</span><span style="color:#4285F4;">g</span><span style="color:#34A853;">l</span><span style="color:#EA4335;">e</span></span> — Continuar com Google
+  <div class="ou"><span>ou</span></div>
+  <button onclick="entrarComGoogle()" type="button" class="btn-google">
+    <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
+    Continuar com Google
   </button>
 
   <div class="rodape">Ainda não tens loja? <a href="registo.html">Criar loja grátis</a></div>
-  <div style="text-align:center;margin-top:12px;padding-top:12px;border-top:1px solid #eee;">
-    <a href="login-banca.html" style="display:inline-block;color:#16a34a;font-weight:bold;text-decoration:none;font-size:14px;">🏪 Tens uma banca pequena? Entrar aqui →</a>
-  </div>
-</div>
+  <a class="lg-banca" href="login-banca.html"><span>🏪</span>Tens uma banca pequena? <b>Entrar aqui →</b></a>
+</main>
 
 <script src="supabase-config.js"></script>
 <script>
@@ -262,8 +285,13 @@
     set('btn-entrar','textContent',t.entrar);
     ['pt','en','fr','zh'].forEach(l => {
       const b = document.getElementById('lgl-'+l);
-      if (b) { b.style.borderColor = l===lang?'#1a56a0':'#ddd'; b.style.background = l===lang?'#eff6ff':'white'; }
+      if (b) b.classList.toggle('on', String(lang||'pt').indexOf(l) === 0);
     });
+  }
+  function lgVerSenha() {
+    const i = document.getElementById('senha'), o = document.getElementById('lg-olho');
+    const ver = i.type === 'password'; i.type = ver ? 'text' : 'password'; o.classList.toggle('on', ver);
+    o.setAttribute('aria-label', ver ? 'Esconder senha' : 'Mostrar senha'); i.focus();
   }
   function lgLingua(lang) { try { localStorage.setItem('pdv_lingua', lang); } catch(e){} lgAplicar(lang); }
   lgAplicar((function(){ try { return localStorage.getItem('pdv_lingua') || 'pt'; } catch(e){ return 'pt'; } })());
