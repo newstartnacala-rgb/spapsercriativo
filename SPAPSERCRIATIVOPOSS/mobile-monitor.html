@@ -73,9 +73,9 @@
   .menu-grid .mi{background:#f0fdf4;border:1px solid var(--borda);border-radius:14px;padding:16px 10px;text-align:center;}
   .menu-grid .mi .e{font-size:28px;} .menu-grid .mi .t{font-size:12px;font-weight:700;margin-top:6px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.6.1">
-<script src="banca-tema.js?v=3.6.1" defer></script>
-<script src="app-android.js?v=3.6.1" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.0">
+<script src="banca-tema.js?v=3.7.0" defer></script>
+<script src="app-android.js?v=3.7.0" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -208,6 +208,7 @@
     <div class="cab"><h3>⚙️ Definições</h3><button onclick="fecharFolha('folha-definicoes')">✕</button></div>
     <div class="conteudo">
       <div class="menu-grid">
+        <div class="mi" onclick="fecharFolha('folha-definicoes');abrirCodigoBalconista()"><div class="e">🔐</div><div class="t">Código do balconista</div></div>
         <div class="mi" onclick="fecharFolha('folha-definicoes');mPerfil()"><div class="e">🪪</div><div class="t">Meu Perfil</div></div>
         <div class="mi" onclick="fecharFolha('folha-definicoes');mBackup()"><div class="e">💾</div><div class="t">Backup / Segurança</div></div>
         <div class="mi" onclick="fecharFolha('folha-definicoes');window.spapInstalarApp?spapInstalarApp('android'):mInstalar()"><div class="e">📲</div><div class="t">App para Android</div></div>
@@ -237,6 +238,24 @@
     <p id="el-txt"></p>
     <button class="btn el-sim" id="el-sim" type="button" onclick="confirmarEliminar()">Eliminar</button>
     <button class="btn cinza" type="button" onclick="fecharFolha('folha-eliminar')">Cancelar</button>
+  </div>
+</div>
+
+<!-- ===== FOLHA: CÓDIGO DO BALCONISTA ===== -->
+<div class="folha-fundo" id="folha-codigo">
+  <div class="folha">
+    <div class="cab"><h3>🔐 Código do balconista</h3><button onclick="fecharFolha('folha-codigo')">✕</button></div>
+    <div class="conteudo">
+      <div class="cod-atual">
+        <div><small>Código actual</small><b id="cod-atual" class="notranslate">••••</b></div>
+        <button type="button" class="cod-ver" onclick="codVer()" id="cod-ver-bt">Mostrar</button>
+      </div>
+      <p class="cod-nota">O balconista escreve este código para abrir a caixa. Quando guardar um código novo, o antigo deixa de funcionar na hora e a app de vender pede o novo.</p>
+      <div class="campo"><label>Novo código (4 a 8 números)</label><input id="cod-novo" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="••••"></div>
+      <div class="campo"><label>Repetir o novo código</label><input id="cod-novo2" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="••••"></div>
+      <div class="cod-erro" id="cod-erro"></div>
+    </div>
+    <div class="rodape"><button class="btn" id="cod-guardar" onclick="codGuardar()">💾 Guardar código</button></div>
   </div>
 </div>
 
@@ -989,6 +1008,43 @@ function mVendedores(){
     +'<button class="btn" style="margin-top:12px;" onclick="vendAdicionar()">➕ Adicionar código</button>';
   mostrarInfo('👤 Vendedores / Código', html);
 }
+// ===== CÓDIGO DO BALCONISTA (Definições) =====
+let _codVisivel=false;
+async function abrirCodigoBalconista(){
+  ['cod-novo','cod-novo2'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('cod-erro').textContent=''; _codVisivel=false;
+  try{ const { data }=await supabaseClient.from('lojas').select('vendedores').eq('id',sessao.lojaId).maybeSingle(); if(data && Array.isArray(data.vendedores) && data.vendedores.length) window._vendedores=data.vendedores; }catch(e){}
+  codPintar(); abrirFolha('folha-codigo');
+  setTimeout(()=>{ try{ document.getElementById('cod-novo').focus(); }catch(e){} }, 300);
+}
+function codPintar(){
+  const c=String((window._vendedores||['0000'])[0]||'0000');
+  document.getElementById('cod-atual').textContent = _codVisivel ? c : '•'.repeat(c.length);
+  document.getElementById('cod-ver-bt').textContent = _codVisivel ? 'Esconder' : 'Mostrar';
+}
+function codVer(){ _codVisivel=!_codVisivel; codPintar(); }
+async function codGuardar(){
+  const n1=(document.getElementById('cod-novo').value||'').trim(), n2=(document.getElementById('cod-novo2').value||'').trim(), er=document.getElementById('cod-erro');
+  er.textContent='';
+  if(!/^\d{4,8}$/.test(n1)){ er.textContent='O código deve ter de 4 a 8 números.'; return; }
+  if(n1!==n2){ er.textContent='Os dois códigos não são iguais.'; return; }
+  const cods=(window._vendedores||['0000']).map(String).slice();
+  if(cods[0]===n1){ er.textContent='Este já é o código actual.'; return; }
+  cods[0]=n1; const final=cods.filter((c,i)=>cods.indexOf(c)===i);
+  const b=document.getElementById('cod-guardar'); b.disabled=true; b.textContent='A guardar…';
+  try{
+    const { data, error }=await supabaseClient.from('lojas').update({ vendedores: final }).eq('id',sessao.lojaId).select('vendedores');
+    if(error) throw error;
+    const gravado = data && data[0] && Array.isArray(data[0].vendedores) && data[0].vendedores.map(String).includes(n1);
+    if(!gravado) throw new Error('a base de dados não aceitou a alteração');
+    window._vendedores=data[0].vendedores; _codVisivel=true; codPintar();
+    ['cod-novo','cod-novo2'].forEach(id=>document.getElementById(id).value='');
+    toast('✅ Código guardado. O balconista já entra com '+n1,'ok');
+    setTimeout(()=>fecharFolha('folha-codigo'), 900);
+  }catch(e){ er.textContent='Não foi possível guardar: '+(e.message||e); }
+  b.disabled=false; b.textContent='💾 Guardar código';
+}
+
 async function _guardarVendedores(cods){
   try{ await supabaseClient.from('lojas').update({vendedores:cods}).eq('id',sessao.lojaId); window._vendedores=cods; mVendedores(); toast('✅ Guardado','ok'); }
   catch(e){ toast('Erro: '+(e.message||e),'erro'); }

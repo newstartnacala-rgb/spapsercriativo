@@ -110,9 +110,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="SPAP Banca">
-<link rel="stylesheet" href="banca-tema.css?v=3.6.1">
-<script src="banca-tema.js?v=3.6.1" defer></script>
-<script src="app-android.js?v=3.6.1" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.0">
+<script src="banca-tema.js?v=3.7.0" defer></script>
+<script src="app-android.js?v=3.7.0" defer></script>
 </head>
 <body>
 
@@ -144,7 +144,7 @@
     style="width:200px;text-align:center;font-size:30px;letter-spacing:6px;border:none;border-radius:14px;padding:16px;outline:none;color:#0f172a;">
   <div id="cb-erro" style="display:none;background:rgba(0,0,0,.2);border-radius:10px;padding:8px 14px;margin-top:12px;font-size:13px;">Código errado. Pede ao dono.</div>
   <button onclick="confirmarCodigoBalconista()" style="margin-top:18px;background:#fff;color:var(--verde);border:none;border-radius:14px;padding:15px 40px;font-size:17px;font-weight:800;">Entrar</button>
-  <div style="font-size:11px;opacity:.8;margin-top:22px;">Código inicial: 0000 · o dono muda em Monitor → Vendedores</div>
+  <div style="font-size:11px;opacity:.8;margin-top:22px;">Código inicial: 0000 · o dono muda no Monitor da Banca → Definições → Código do balconista</div>
 </div>
 
 <!-- ======== TELA VENDER ======== -->
@@ -446,10 +446,31 @@ function _codBalcAtivo(cod){
   sessao.vendedor = 'Balconista ' + cod;
   const sub = document.querySelector('#tela-vender .topo .sub'); if (sub) sub.textContent = 'Balconista ' + cod;
 }
-function confirmarCodigoBalconista(){
+// lê da base de dados os códigos em vigor (o dono pode tê-los mudado agora mesmo)
+async function codigosAtuais(){
+  try{
+    const { data }=await supabaseClient.from('lojas').select('vendedores').eq('id',sessao.lojaId).maybeSingle();
+    if(data && Array.isArray(data.vendedores) && data.vendedores.length) sessao.vendedores=data.vendedores;
+  }catch(e){}
+  return (sessao.vendedores||['0000']).map(x=>String(x).trim());
+}
+// se o código usado deixou de existir, volta a pedir o código
+async function verificarCodigoEmUso(){
+  if(!sessao || document.getElementById('tela-codigo').style.display==='flex') return;
+  let usado=''; try{ if(sessionStorage.getItem('banca_vend_ok')!=='1') return; usado=sessionStorage.getItem('banca_vend')||''; }catch(e){ return; }
+  const lista=await codigosAtuais();
+  if(usado && !lista.includes(usado)){
+    try{ sessionStorage.removeItem('banca_vend_ok'); sessionStorage.removeItem('banca_vend'); }catch(e){}
+    pedirCodigoBalconista();
+    const er=document.getElementById('cb-erro'); er.textContent='O código mudou. Peça o novo código ao dono.'; er.style.display='block';
+  }
+}
+setInterval(verificarCodigoEmUso, 20000);
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) verificarCodigoEmUso(); });
+async function confirmarCodigoBalconista(){
   const cod = (document.getElementById('cb-input').value||'').trim();
-  const lista = (sessao.vendedores||['0000']).map(x=>String(x).trim());
-  if (!lista.includes(cod)) { document.getElementById('cb-erro').style.display='block'; document.getElementById('cb-input').value=''; return; }
+  const lista = await codigosAtuais();
+  if (!lista.includes(cod)) { const er=document.getElementById('cb-erro'); er.textContent='Código errado. Pede ao dono.'; er.style.display='block'; document.getElementById('cb-input').value=''; return; }
   try { sessionStorage.setItem('banca_vend_ok','1'); sessionStorage.setItem('banca_vend', cod); } catch(e){}
   _codBalcAtivo(cod);
   document.getElementById('tela-codigo').style.display='none';
