@@ -1,4 +1,4 @@
-/* SPAP Banca — modo offline
+/* Banca — modo offline
    • Tudo o que o balconista faz (vendas, devoluções, perdas, entrega do dia) é guardado PRIMEIRO no telemóvel
      (fila), e só depois enviado à base de dados. Nada se perde sem internet.
    • Assim que há internet, a fila é enviada sozinha, na hora (evento «online», a cada poucos segundos e ao voltar à app).

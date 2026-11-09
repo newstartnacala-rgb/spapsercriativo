@@ -1,4 +1,4 @@
-/* SPAP Banca — tema moderno: troca os emojis por ícones 3D (os mesmos da
+/* Banca — tema moderno: troca os emojis por ícones 3D (os mesmos da
    plataforma principal) e monta a marca no cabeçalho. Não muda funções. */
 (function () {
   // Versão da Banca desta página (vem do ?v= do próprio ficheiro)
@@ -342,7 +342,7 @@
       var c = null; try { c = r && r.data && r.data.valor ? (typeof r.data.valor === 'string' ? JSON.parse(r.data.valor) : r.data.valor) : null; } catch (e) {}
       var p = precos(c);
       var ov = document.createElement('div'); ov.className = 'folha-fundo ativa'; ov.id = 'folha-boasvindas';
-      ov.innerHTML = '<div class="folha att-folha"><div class="att-ico">⭐</div><h3>Bem-vindo à SPAP Banca!</h3>'
+      ov.innerHTML = '<div class="folha att-folha"><div class="att-ico">⭐</div><h3>Bem-vindo à Banca!</h3>'
         + '<div class="att-v">Plano grátis activo: ' + dias + ' dia' + (dias === 1 ? '' : 's') + '</div>'
         + '<div class="pl-lista" style="text-align:left">'
         + '<div class="pl-card pl-gratis"><div class="pl-t"><b>' + p.nomeGratis + '</b><small>' + p.dias + ' dias, só para a primeira conta</small></div><div class="pl-p">0 MT</div><span class="pl-selo">Activo agora</span></div>'
@@ -534,7 +534,7 @@
   function versaoNasDefinicoes() {
     var f = document.querySelector('#folha-definicoes .conteudo'); if (!f || f.querySelector('.def-versao')) return;
     var d = document.createElement('div'); d.className = 'def-versao notranslate';
-    d.textContent = 'SPAP Banca · versão ' + EU_VERSAO; f.appendChild(d);
+    d.textContent = 'Banca · versão ' + EU_VERSAO; f.appendChild(d);
   }
   // ===== Ecrã de carregamento (igual ao das lojas principais): carrinho + contagem em % =====
   (function carregamento() {

@@ -1,6 +1,6 @@
 {
-  "name": "Spap Monitor — Painel do Dono",
-  "short_name": "Spap Monitor",
+  "name": "Monitor — Spap-Sercriativo",
+  "short_name": "Monitor",
   "description": "Monitor e gestão do Spap-Sercriativo",
   "id": "/monitor",
   "start_url": "monitor.html",
@@ -9,10 +9,23 @@
   "theme_color": "#12315e",
   "orientation": "portrait",
   "icons": [
-    { "src": "icon-monitor-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "icon-monitor-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    {
+      "src": "icon-monitor-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-monitor-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ],
-  "categories": ["business", "productivity"],
+  "categories": [
+    "business",
+    "productivity"
+  ],
   "lang": "pt-PT",
   "scope": "./",
   "prefer_related_applications": false

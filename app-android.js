@@ -9,7 +9,7 @@
   // Banca (/banca, mobile*.html, login/registo da banca) tem app própria; depois Monitor; o resto é Loja
   var pth = location.pathname;
   var tipo = /banca\/monitor|mobile-monitor/i.test(pth) ? 'bancamonitor' : /banca|mobile/i.test(pth) ? 'banca' : (/monitor/i.test(pth) ? 'monitor' : 'loja');
-  var NOMES = { monitor: 'SPAP Monitor', loja: 'SPAP Loja', banca: 'SPAP Banca', bancamonitor: 'SPAP Banca Monitor' };
+  var NOMES = { monitor: 'Monitor', loja: 'Loja', banca: 'Banca', bancamonitor: 'Monitor Banca' };
   var FICH = { monitor: 'SPAP-Monitor', loja: 'SPAP-Loja', banca: 'SPAP-Banca', bancamonitor: 'SPAP-Banca-Monitor' };
   var nome = NOMES[tipo];
   var ficheiro = FICH[tipo] + '.apk';

@@ -53,8 +53,8 @@ jobs:
             gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
             gh release create "$TAG" "$@" --title "$TIT" --notes "$NOTA" --latest=false
           }
-          publicar loja-latest "SPAP Loja e Monitor $VN" "versao=$VN" apks-build/SPAP-Loja.apk apks-build/SPAP-Monitor.apk
-          publicar banca-latest "SPAP Banca e Banca Monitor $VB" "versao=$VB" apks-build/SPAP-Banca.apk apks-build/SPAP-Banca-Monitor.apk
+          publicar loja-latest "Loja e Monitor $VN" "versao=$VN" apks-build/SPAP-Loja.apk apks-build/SPAP-Monitor.apk
+          publicar banca-latest "Banca e Monitor Banca $VB" "versao=$VB" apks-build/SPAP-Banca.apk apks-build/SPAP-Banca-Monitor.apk
       - name: Publicar APKs no site (para cada app se atualizar sozinha)
         run: |
           # APKs no site do GitHub Pages (a raiz do repositório): …github.io/spapsercriativo/apps/SPAP-*.apk

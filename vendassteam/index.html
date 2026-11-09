@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>VendasSTEAM — apps de venda da SSTEAM</title>
-<meta name="description" content="VendasSTEAM: as apps de venda da SSTEAM num só lugar. SPAP Banca, SPAP Loja e SPAP Monitor para Android, iPhone e navegador.">
+<meta name="description" content="VendasSTEAM: as apps de venda da SSTEAM num só lugar. Banca, Loja e Monitor para Android, iPhone e navegador.">
 <meta name="theme-color" content="#0b1b4d">
 <link rel="icon" href="img/ssteam-logo.png">
 <link rel="apple-touch-icon" href="img/ssteam-logo.png">
@@ -196,6 +196,15 @@ section{padding:88px 0}
 .plano.destaque .bt-tinta{background:var(--ouro);color:var(--tinta);box-shadow:none}
 .selo{align-self:flex-start;background:var(--ouro);color:var(--tinta);font-weight:700;font-size:13px;border-radius:999px;padding:4px 11px;margin-bottom:12px}
 .pagar{margin-top:22px;color:var(--tinta2);font-size:15.5px}
+.planos-bn{background:linear-gradient(180deg,#fff7ef,#ffffff)}
+.planos-troca{display:inline-flex;gap:4px;background:#eef2fa;border-radius:999px;padding:5px;margin-top:22px}
+.planos-troca a{font-weight:700;font-size:15px;color:var(--tinta2);padding:9px 18px;border-radius:999px;text-decoration:none;white-space:nowrap}
+.planos-troca a.on{background:var(--tinta);color:#fff}
+.planos-bn .planos-troca a.on{background:var(--banca)}
+.planos-bn .plano.destaque-bn{background:linear-gradient(160deg,#f2700f,#c2410c);border-color:#c2410c;box-shadow:0 24px 48px rgba(242,112,15,.28)}
+.planos-bn .plano.destaque-bn .quem,.planos-bn .plano.destaque-bn .extra,.planos-bn .plano.destaque-bn .preco small{color:#ffe4cc}
+.planos-bn .plano.destaque-bn .bt-tinta{background:#fff;color:#c2410c}
+.planos-bn .plano.destaque-bn .selo{background:#fff;color:#c2410c}
 @media (max-width:860px){.planos-grade{grid-template-columns:1fr}}
 
 /* ---------- Instalar ---------- */
@@ -258,7 +267,8 @@ section{padding:88px 0}
       <a href="#" class="m-att" data-verificar><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 4a8 8 0 0 1 7.4 5H17a1 1 0 1 0 0 2h4a1 1 0 0 0 1-1V6a1 1 0 1 0-2 0v1.3A10 10 0 0 0 2.1 10.9a1 1 0 0 0 2 .3A8 8 0 0 1 12 4zm9 8.8a1 1 0 0 0-1.1.9A8 8 0 0 1 4.6 15H7a1 1 0 1 0 0-2H3a1 1 0 0 0-1 1v4a1 1 0 1 0 2 0v-1.3a10 10 0 0 0 17.9-3.6 1 1 0 0 0-.9-1.3z"/></svg>Verificar atualizações</a>
       <a href="#loja" data-fechar>Loja</a>
       <a href="#banca" data-fechar>Banca</a>
-      <a href="#planos" data-fechar>Planos</a>
+      <a href="#planos" data-fechar>Planos da Loja</a>
+      <a href="#planos-banca" data-fechar>Planos da Banca</a>
       <a href="#instalar" data-fechar>Como instalar</a>
       <a href="#perguntas" data-fechar>Perguntas</a>
       <a href="#contacto" data-fechar>Contacto</a>
@@ -321,18 +331,18 @@ section{padding:88px 0}
           </div>
           <div class="baixar">
         <div class="cartao-app" data-app="Loja">
-          <div class="topo-app"><img src="img/icon-loja.png" alt="Ícone da app SPAP Loja"><div><b>SPAP Loja</b><span class="funcao">Ponto de venda</span></div></div>
+          <div class="topo-app"><img src="img/icon-loja.png" alt="Ícone da app Loja"><div><b>Loja</b><span class="funcao">Ponto de venda</span></div></div>
           <p>Vender no balcão, com recibo, stock, códigos de barras e vários vendedores. Continua a vender quando a internet falha.</p>
-          <a class="bt bt-tinta" data-tipo="android" data-f="SPAP-Loja" href="#"><img class="ico-app" src="img/icon-loja.png" alt=""><span class="rot">Baixar para Android<small>SPAP Loja · ficheiro APK</small></span></a>
-          <a class="bt bt-linha" data-tipo="ios" data-f="SPAP-Loja" href="#"><span class="ico-plat"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg></span><span class="rot">Instalar no iPhone<small>SPAP Loja</small></span></a>
+          <a class="bt bt-tinta" data-tipo="android" data-f="SPAP-Loja" href="#"><img class="ico-app" src="img/icon-loja.png" alt=""><span class="rot">Baixar para Android<small>Loja · ficheiro APK</small></span></a>
+          <a class="bt bt-linha" data-tipo="ios" data-f="SPAP-Loja" href="#"><span class="ico-plat"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg></span><span class="rot">Instalar no iPhone<small>Loja</small></span></a>
           <div class="versao" data-versao></div>
           <a class="web" data-tipo="web" data-f="SPAP-Loja" href="#">Ou abrir no navegador</a>
         </div>
         <div class="cartao-app" data-app="Monitor">
-          <div class="topo-app"><img src="img/icon-monitor.png" alt="Ícone da app SPAP Monitor"><div><b>SPAP Monitor</b><span class="funcao">Para o dono</span></div></div>
+          <div class="topo-app"><img src="img/icon-monitor.png" alt="Ícone da app Monitor"><div><b>Monitor</b><span class="funcao">Para o dono</span></div></div>
           <p>Total vendido, lucro, stock e um aviso no telemóvel a cada venda, de onde estiver.</p>
-          <a class="bt bt-tinta" data-tipo="android" data-f="SPAP-Monitor" href="#"><img class="ico-app" src="img/icon-monitor.png" alt=""><span class="rot">Baixar para Android<small>SPAP Monitor · ficheiro APK</small></span></a>
-          <a class="bt bt-linha" data-tipo="ios" data-f="SPAP-Monitor" href="#"><span class="ico-plat"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg></span><span class="rot">Instalar no iPhone<small>SPAP Monitor</small></span></a>
+          <a class="bt bt-tinta" data-tipo="android" data-f="SPAP-Monitor" href="#"><img class="ico-app" src="img/icon-monitor.png" alt=""><span class="rot">Baixar para Android<small>Monitor · ficheiro APK</small></span></a>
+          <a class="bt bt-linha" data-tipo="ios" data-f="SPAP-Monitor" href="#"><span class="ico-plat"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg></span><span class="rot">Instalar no iPhone<small>Monitor</small></span></a>
           <div class="versao" data-versao></div>
           <a class="web" data-tipo="web" data-f="SPAP-Monitor" href="#">Ou abrir no navegador</a>
         </div>
@@ -348,18 +358,18 @@ section{padding:88px 0}
           <div class="novidades" data-nov="banca" hidden><b></b><ul></ul></div>
           <div class="baixar">
         <div class="cartao-app" data-app="Banca">
-          <div class="topo-app"><img src="img/icon-banca.png" alt="Ícone da app SPAP Banca"><div><b>SPAP Banca</b><span class="funcao">Para vender</span></div></div>
+          <div class="topo-app"><img src="img/icon-banca.png" alt="Ícone da app Banca"><div><b>Banca</b><span class="funcao">Para vender</span></div></div>
           <p>Tocar nos produtos, receber e dar o troco. No fim do dia, entregar as contas num toque.</p>
-          <a class="bt bt-tinta" data-tipo="android" data-f="SPAP-Banca" href="#"><img class="ico-app" src="img/icon-banca.png" alt=""><span class="rot">Baixar para Android<small>SPAP Banca · ficheiro APK</small></span></a>
-          <a class="bt bt-linha" data-tipo="ios" data-f="SPAP-Banca" href="#"><span class="ico-plat"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg></span><span class="rot">Instalar no iPhone<small>SPAP Banca</small></span></a>
+          <a class="bt bt-tinta" data-tipo="android" data-f="SPAP-Banca" href="#"><img class="ico-app" src="img/icon-banca.png" alt=""><span class="rot">Baixar para Android<small>Banca · ficheiro APK</small></span></a>
+          <a class="bt bt-linha" data-tipo="ios" data-f="SPAP-Banca" href="#"><span class="ico-plat"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg></span><span class="rot">Instalar no iPhone<small>Banca</small></span></a>
           <div class="versao" data-versao></div>
           <a class="web" data-tipo="web" data-f="SPAP-Banca" href="#">Ou abrir no navegador</a>
         </div>
         <div class="cartao-app" data-app="BancaMonitor">
-          <div class="topo-app"><img src="img/icon-bancamonitor.png" alt="Ícone da app SPAP Banca Monitor"><div><b>SPAP Banca Monitor</b><span class="funcao">Para o dono da banca</span></div></div>
+          <div class="topo-app"><img src="img/icon-bancamonitor.png" alt="Ícone da app Monitor Banca"><div><b>Monitor Banca</b><span class="funcao">Para o dono da banca</span></div></div>
           <p>Vendas do dia, lucro, stock, descontos e despachos para a banca.</p>
-          <a class="bt bt-tinta" data-tipo="android" data-f="SPAP-Banca-Monitor" href="#"><img class="ico-app" src="img/icon-bancamonitor.png" alt=""><span class="rot">Baixar para Android<small>SPAP Banca Monitor · ficheiro APK</small></span></a>
-          <a class="bt bt-linha" data-tipo="ios" data-f="SPAP-Banca-Monitor" href="#"><span class="ico-plat"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg></span><span class="rot">Instalar no iPhone<small>SPAP Banca Monitor</small></span></a>
+          <a class="bt bt-tinta" data-tipo="android" data-f="SPAP-Banca-Monitor" href="#"><img class="ico-app" src="img/icon-bancamonitor.png" alt=""><span class="rot">Baixar para Android<small>Monitor Banca · ficheiro APK</small></span></a>
+          <a class="bt bt-linha" data-tipo="ios" data-f="SPAP-Banca-Monitor" href="#"><span class="ico-plat"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg></span><span class="rot">Instalar no iPhone<small>Monitor Banca</small></span></a>
           <div class="versao" data-versao></div>
           <a class="web" data-tipo="web" data-f="SPAP-Banca-Monitor" href="#">Ou abrir no navegador</a>
         </div>
@@ -372,8 +382,9 @@ section{padding:88px 0}
 
   <section class="planos" id="planos">
     <div class="envolve">
-      <h2 class="tit-sec">Planos simples, em Meticais</h2>
+      <h2 class="tit-sec">Planos da Loja, em Meticais</h2>
       <p class="sub-sec">Pague por mês ou por ano. Pode mudar de plano quando quiser.</p>
+      <div class="planos-troca"><a class="on" href="#planos">Planos da Loja</a><a href="#planos-banca">Planos da Banca</a></div>
       <div class="planos-grade">
         <div class="plano">
           <h3 id="pn-basico">Básico</h3>
@@ -405,6 +416,43 @@ section{padding:88px 0}
     </div>
   </section>
 
+
+  <section class="planos planos-bn" id="planos-banca">
+    <div class="envolve">
+      <h2 class="tit-sec">Planos de pagamento da Banca</h2>
+      <p class="sub-sec">Comece grátis. Depois escolha pagar por mês ou por ano.</p>
+      <div class="planos-troca"><a href="#planos">Planos da Loja</a><a class="on" href="#planos-banca">Planos da Banca</a></div>
+      <div class="planos-grade">
+        <div class="plano">
+          <h3 id="bn-n-gratis">Grátis</h3>
+          <div class="quem">Para experimentar sem pagar</div>
+          <div class="preco">0 <small>MT</small></div>
+          <div class="extra"><span id="bn-dias">15</span> dias, só na primeira conta</div>
+          <ul><li>App Banca para vender</li><li>Monitor Banca para o dono</li><li>Funciona sem internet</li><li>Sem cartão, sem compromisso</li></ul>
+          <a class="bt bt-linha" data-tipo="registo-banca" href="#">Criar banca</a>
+        </div>
+        <div class="plano">
+          <h3 id="bn-n-pro">Pro</h3>
+          <div class="quem">Pagamento mensal</div>
+          <div class="preco"><span id="bn-mensal">500</span> <small>MT por mês</small></div>
+          <div class="extra" id="bn-pro-extra"></div>
+          <ul><li>Tudo do Grátis</li><li>Vendas e stock sem limite de dias</li><li>Entrega do dia e auditoria</li><li>Suporte por WhatsApp</li></ul>
+          <a class="bt bt-linha" data-tipo="registo-banca" href="#">Criar banca</a>
+        </div>
+        <div class="plano destaque destaque-bn">
+          <span class="selo">Poupa mais</span>
+          <h3 id="bn-n-anual">Anual</h3>
+          <div class="quem">Pagamento único para o ano todo</div>
+          <div class="preco"><span id="bn-anual">5.700</span> <small>MT por ano</small></div>
+          <div class="extra" id="bn-anual-extra">Poupa 5% (300 MT)</div>
+          <ul><li>Tudo do Pro</li><li>12 meses sem se preocupar</li><li>Preço fixo durante o ano</li><li>Suporte prioritário</li></ul>
+          <a class="bt bt-tinta" data-tipo="registo-banca" href="#">Criar banca</a>
+        </div>
+      </div>
+      <p class="pagar">Pagamento por M-Pesa ou e-Mola. A banca fica ativa assim que o pagamento é confirmado.</p>
+    </div>
+  </section>
+
   <section class="instalar" id="instalar">
     <div class="envolve">
       <h2 class="tit-sec">Como instalar</h2>
@@ -415,7 +463,7 @@ section{padding:88px 0}
       </div>
       <ol class="passos" id="p-and" role="tabpanel" aria-labelledby="tab-and">
         <li><b>Escolha a app</b><span>Toque em «Baixar para Android» na app que quer.</span></li>
-        <li><b>Abra o ficheiro</b><span>Quando o download terminar, toque no ficheiro SPAP.</span></li>
+        <li><b>Abra o ficheiro</b><span>Quando o download terminar, toque no ficheiro descarregado.</span></li>
         <li><b>Permita a instalação</b><span>Se o telemóvel pedir, ative «Permitir desta origem».</span></li>
         <li><b>Entre na conta</b><span>Abra a app e entre com o seu e-mail e senha.</span></li>
       </ol>
@@ -481,6 +529,7 @@ section{padding:88px 0}
     else if (t === 'ios') a.href = SITE + '/apps/' + f + '.mobileconfig';
     else if (t === 'web') { a.href = WEB[f]; a.target = '_blank'; a.rel = 'noopener'; }
     else if (t === 'registo') a.href = REGISTO;
+    else if (t === 'registo-banca') a.href = GH + '/registo-banca.html';
   });
 
   // No iPhone, o botão principal passa a ser o do iPhone
@@ -543,7 +592,7 @@ section{padding:88px 0}
   document.querySelectorAll('.folha-fundo').forEach(function (f) { f.addEventListener('click', function (e) { if (e.target === f) fecharF(f); }); });
   document.querySelectorAll('[data-fechar]').forEach(function (b) { b.addEventListener('click', function () { fecharF(b); }); });
   addEventListener('keydown', function (e) { if (e.key === 'Escape') document.querySelectorAll('.folha-fundo.aberta').forEach(fecharF); });
-  var APPS = [['SPAP-Loja', 'SPAP Loja', 'icon-loja.png'], ['SPAP-Monitor', 'SPAP Monitor', 'icon-monitor.png'], ['SPAP-Banca', 'SPAP Banca', 'icon-banca.png'], ['SPAP-Banca-Monitor', 'SPAP Banca Monitor', 'icon-bancamonitor.png']];
+  var APPS = [['SPAP-Loja', 'Loja', 'icon-loja.png'], ['SPAP-Monitor', 'Monitor', 'icon-monitor.png'], ['SPAP-Banca', 'Banca', 'icon-banca.png'], ['SPAP-Banca-Monitor', 'Monitor Banca', 'icon-bancamonitor.png']];
   function verificar(e) {
     if (e) e.preventDefault();
     document.querySelectorAll('.folha-fundo.aberta').forEach(fecharF);
@@ -567,13 +616,21 @@ section{padding:88px 0}
 
   // Preços e WhatsApp definidos no painel de administração (se disponíveis)
   var SB = 'https://kggqshpqydhvtxklixyk.supabase.co', KEY = 'sb_publishable_FLR81R0et5RIFR9WToVjsQ_RoP3RPew';
-  function fmt(n) { return Math.round(n).toLocaleString('pt-PT').replace(/\s/g, '.'); }
-  fetch(SB + '/rest/v1/config_global?select=chave,valor&chave=in.(planos_config,link_suporte_whatsapp)', { headers: { apikey: KEY } })
+  function fmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+  fetch(SB + '/rest/v1/config_global?select=chave,valor&chave=in.(planos_config,planos_banca,link_suporte_whatsapp)', { headers: { apikey: KEY } })
     .then(function (r) { return r.ok ? r.json() : []; })
     .then(function (linhas) {
       (linhas || []).forEach(function (l) {
         var v = l.valor; try { v = JSON.parse(v); } catch (e) {}
         if (l.chave === 'link_suporte_whatsapp' && typeof v === 'string' && /^https?:/.test(v.trim())) document.getElementById('lk-zap').href = v.trim();
+        if (l.chave === 'planos_banca' && v && typeof v === 'object') {
+          var m = parseFloat(v.mensal) || 500, dp = parseFloat(v.mensal_desconto) || 0, ba = parseFloat(v.anual_preco) || m, da = parseFloat(v.anual_desconto); if (!(da >= 0)) da = 5;
+          var pm = m * (1 - dp / 100), an = ba * 12 * (1 - da / 100), set = function (id, t) { var e = document.getElementById(id); if (e) e.textContent = t; };
+          set('bn-dias', parseInt(v.gratis_dias) || 15); set('bn-mensal', fmt(pm)); set('bn-anual', fmt(an));
+          set('bn-pro-extra', dp ? 'Desconto ' + dp + '% (era ' + fmt(m) + ' MT)' : '');
+          set('bn-anual-extra', 'Poupa ' + da + '% (' + fmt(ba * 12 - an) + ' MT)');
+          if (v.gratis_nome) set('bn-n-gratis', v.gratis_nome); if (v.mensal_nome) set('bn-n-pro', v.mensal_nome); if (v.anual_nome) set('bn-n-anual', v.anual_nome);
+        }
         if (l.chave === 'planos_config' && v && typeof v === 'object') {
           ['basico', 'pro', 'anual'].forEach(function (k) {
             var p = v[k]; if (!p) return; var m = parseFloat(p.preco); if (!(m > 0)) return;

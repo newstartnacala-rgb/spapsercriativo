@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <script src="spap-migrar.js?v=1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
-<script src="spap-semzoom.js?v=3.7.12"></script>
+<script src="spap-semzoom.js?v=3.7.13"></script>
 <meta name="theme-color" content="#f4f8ff">
-<title>Planos — SPAP Banca</title>
+<title>Planos — Banca</title>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -63,14 +63,14 @@
   .rodape a{color:var(--lj-esc);font-weight:800;text-decoration:none}
   [hidden]{display:none!important}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.12">
-<script src="banca-tema.js?v=3.7.12" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.13">
+<script src="banca-tema.js?v=3.7.13" defer></script>
 </head>
 <body>
 <div class="pg">
   <div class="cab">
     <img src="ssteam-logo.png" alt="SSTEAM">
-    <div><b>SPAP Banca</b><small id="nome-banca">Planos</small></div>
+    <div><b>Banca</b><small id="nome-banca">Planos</small></div>
     <button class="sair" type="button" onclick="sair()">Sair</button>
   </div>
 
@@ -186,7 +186,7 @@ async function enviar(){
   if(!plano||!met){ toast('Escolha o plano e a forma de pagamento','erro'); return; }
   const b=document.getElementById('btn-pagar'); b.disabled=true; b.textContent='A enviar…';
   const nomes={banca_mensal:P.nPro, banca_anual:P.nAnual};
-  const msg=encodeURIComponent('💳 *Pagamento SPAP Banca*\n\n🏪 *Banca:* '+(loja.nome||'')+'\n📧 *Email:* '+(sessao.email||'')
+  const msg=encodeURIComponent('💳 *Pagamento Banca*\n\n🏪 *Banca:* '+(loja.nome||'')+'\n📧 *Email:* '+(sessao.email||'')
     +'\n💎 *Plano:* '+nomes[plano]+'\n💰 *Valor:* MT '+fmtMT(valor())+'\n💳 *Método:* '+(met==='mpesa'?'M-Pesa':'e-Mola')+'\n\nSegue o comprovativo. Por favor activar.');
   window.open(WA_PAG+(WA_PAG.includes('?')?'&':'?')+'text='+msg,'_blank');
   try{ await supabaseClient.from('lojas').update({ plano, estado:'pendente_pagamento' }).eq('id', sessao.lojaId); loja.estado='pendente_pagamento'; }catch(e){}

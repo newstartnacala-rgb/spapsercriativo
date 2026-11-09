@@ -19,7 +19,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.220"></script>
+<script src="spap-leitor.js?v=2.9.221"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -1030,7 +1030,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 <link rel="manifest" href="manifest-monitor.json">
 <link rel="apple-touch-icon" href="ios-monitor-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="SPAP Monitor">
+<meta name="apple-mobile-web-app-title" content="Monitor">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#12315e">
 <script>
@@ -1039,7 +1039,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.220" defer></script>
+<script src="app-android.js?v=2.9.221" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -5707,7 +5707,7 @@ async function verificarApp() {
       txt.innerHTML = 'A app está atualizada: <b>' + _escMon(inst) + '</b>';
     }
   } else {
-    txt.innerHTML = 'Instala a app <b>SPAP Monitor</b> no teu Android (versão ' + _escMon(_infoApp.versao) + ').';
+    txt.innerHTML = 'Instala a app <b>Monitor</b> no teu Android (versão ' + _escMon(_infoApp.versao) + ').';
     btn.style.display = ''; btn.textContent = 'Baixar a app (' + _escMon(_infoApp.versao) + ')';
   }
 }
@@ -5753,12 +5753,12 @@ async function verificarAppAuto() {
     const d = await _lerVersaoApp();
     if (d && d.versao && _cmpVersao(d.versao, _versaoAppInstalada()) > 0) {
       _infoApp = d;
-      _popupAtualizacao('app' + d.versao, 'Nova versão da app!', 'A app SPAP Monitor ' + d.versao + ' já está disponível. Toca em «Ver atualização» para baixar e instalar.');
+      _popupAtualizacao('app' + d.versao, 'Nova versão da app!', 'A app Monitor ' + d.versao + ' já está disponível. Toca em «Ver atualização» para baixar e instalar.');
     }
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.220';
+const MONITOR_VERSAO = '2.9.221';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -7017,7 +7017,7 @@ async function carregarContagensEquipa() {
       <div class="att-quando" id="att-quando"></div>
     </div>
     <div class="att-card" id="att-app" style="display:none">
-      <div class="att-card-tit"><img src="icons3d/telemovel.png" alt=""><span>App Android · SPAP Monitor</span><em id="att-app-ver"></em></div>
+      <div class="att-card-tit"><img src="icons3d/telemovel.png" alt=""><span>App Android · Monitor</span><em id="att-app-ver"></em></div>
       <div class="att-app-txt" id="att-app-txt">A verificar a app…</div>
       <div class="att-app-barra" id="att-app-barra" style="display:none"><i id="att-app-prog"></i></div>
       <button class="att-btn att-btn-verde" id="att-app-btn" style="display:none;width:100%;margin-top:10px" onclick="instalarAppNova()">Baixar e instalar</button>

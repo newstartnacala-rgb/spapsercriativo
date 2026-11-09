@@ -1043,7 +1043,7 @@
 			<key>Label</key>
 			<string>Banca Monitor</string>
 			<key>PayloadDisplayName</key>
-			<string>SPAP Banca Monitor</string>
+			<string>Monitor Banca</string>
 			<key>PayloadIdentifier</key>
 			<string>com.spapsercriativo.bancamonitor.ios.webclip</string>
 			<key>PayloadType</key>
@@ -1059,9 +1059,9 @@
 		</dict>
 	</array>
 	<key>PayloadDescription</key>
-	<string>Instala a app SPAP Banca Monitor (Spap-Sercriativo) no ecrã principal.</string>
+	<string>Instala a app Monitor Banca (Spap-Sercriativo) no ecrã principal.</string>
 	<key>PayloadDisplayName</key>
-	<string>SPAP Banca Monitor</string>
+	<string>Monitor Banca</string>
 	<key>PayloadIdentifier</key>
 	<string>com.spapsercriativo.bancamonitor.ios</string>
 	<key>PayloadOrganization</key>
