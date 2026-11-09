@@ -25,6 +25,31 @@ jobs:
           [ -x "$SDKM" ] || SDKM="$(command -v sdkmanager)"
           yes | "$SDKM" --licenses >/dev/null 2>&1 || true
           "$SDKM" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+      - name: Guardar a ferramenta de compilação (Gradle) entre execuções
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/wrapper/dists
+            ~/gradle-dist
+          key: gradle-dist-8.9
+      - name: Obter o Gradle (com servidores alternativos se o principal falhar)
+        run: |
+          mkdir -p ~/gradle-dist; Z=~/gradle-dist/gradle-8.9-bin.zip
+          if [ ! -s "$Z" ] || ! unzip -tq "$Z" >/dev/null 2>&1; then
+            for U in https://services.gradle.org/distributions/gradle-8.9-bin.zip \
+                     https://github.com/gradle/gradle-distributions/releases/download/v8.9.0/gradle-8.9-bin.zip \
+                     https://mirrors.cloud.tencent.com/gradle/gradle-8.9-bin.zip \
+                     https://mirrors.aliyun.com/gradle/distributions/v8.9.0/gradle-8.9-bin.zip \
+                     https://downloads.gradle.org/distributions/gradle-8.9-bin.zip; do
+              echo "A tentar $U"; curl -fsSL --retry 3 --retry-delay 5 --max-time 300 -o "$Z" "$U" && unzip -tq "$Z" >/dev/null 2>&1 && break
+              rm -f "$Z"
+            done
+          fi
+          [ -s "$Z" ] || { echo "Não foi possível obter o Gradle"; exit 1; }
+          # o wrapper usa a cópia local (não depende da rede)
+          sed -i "s|^distributionUrl=.*|distributionUrl=file\\:$Z|" spap-android/gradle/wrapper/gradle-wrapper.properties
+          sed -i '/^distributionSha256Sum/d' spap-android/gradle/wrapper/gradle-wrapper.properties
+          cat spap-android/gradle/wrapper/gradle-wrapper.properties
       - name: Compilar APKs
         working-directory: spap-android
         run: |
