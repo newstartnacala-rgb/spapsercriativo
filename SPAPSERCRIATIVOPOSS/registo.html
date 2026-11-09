@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Criar Loja — Spap-Sercriativo</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="spap-premium.css?v=2.9.212">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family:-apple-system,Arial,sans-serif; background:linear-gradient(135deg,#1a56a0 0%,#0f3460 100%); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
@@ -60,13 +63,44 @@ body { font-family:-apple-system,Arial,sans-serif; background:linear-gradient(13
   .corpo { padding:18px; }
   .campo-linha { grid-template-columns:1fr; }
 }
+
+/* ===== Estilo premium (igual ao login) ===== */
+body.pm { padding:28px 16px; }
+.card { max-width:480px; overflow:hidden; }
+.header { background:none !important; padding:28px 24px 16px !important; color:inherit !important; }
+.passos { background:none !important; border:0 !important; gap:6px; padding:4px 20px 6px; }
+.passo { font-size:11px !important; font-weight:700 !important; color:var(--pm-tx3) !important; }
+.passo-num { width:30px !important; height:30px !important; font-size:12px !important; border:2px solid var(--pm-ln) !important; background:#fff !important; margin-bottom:5px !important; transition:all .2s; }
+.passo.ativo { color:var(--pm-az) !important; } .passo.ativo .passo-num { border-color:transparent !important; color:#fff !important; background:linear-gradient(135deg,var(--pm-az),var(--pm-az2)) !important; box-shadow:0 6px 14px rgba(37,99,235,.3); }
+.passo.concluido { color:#16a34a !important; } .passo.concluido .passo-num { background:#16a34a !important; border-color:#16a34a !important; color:#fff !important; }
+.corpo { padding:18px 26px 26px !important; }
+.secao-titulo { font-family:Sora, 'Plus Jakarta Sans', sans-serif; font-size:19px !important; font-weight:800 !important; color:var(--pm-tx) !important; letter-spacing:-.01em; }
+.secao-sub { font-size:13px !important; color:var(--pm-tx2) !important; }
+.campo-grupo label { font-size:12.5px !important; font-weight:700 !important; color:#334155 !important; margin-bottom:6px !important; }
+.campo-wrap { min-height:52px; border:1.5px solid var(--pm-ln) !important; border-radius:14px !important; background:rgba(255,255,255,.9); padding:0 14px !important; }
+.campo-wrap:focus-within { border-color:var(--pm-az) !important; box-shadow:0 0 0 4px rgba(37,99,235,.14) !important; background:#fff; }
+.campo-wrap input, .campo-wrap select { font-size:15px !important; color:var(--pm-tx) !important; font-weight:500; padding:13px 0; }
+.campo-dica { font-size:11.5px !important; color:var(--pm-tx3) !important; margin-top:5px !important; }
+.btn-principal { height:54px; padding:0 !important; border-radius:16px !important; font-family:Sora, 'Plus Jakarta Sans', sans-serif; font-weight:700 !important; font-size:15.5px !important; letter-spacing:.02em;
+  background:linear-gradient(135deg,var(--pm-az),var(--pm-az2)) !important; box-shadow:0 14px 28px rgba(37,99,235,.34); margin-top:12px !important; }
+.btn-secundario { height:48px; padding:0 !important; border-radius:14px !important; background:#fff !important; border:1.5px solid var(--pm-ln) !important; color:#334155 !important; font-weight:700; }
+.msg { border-radius:12px !important; font-weight:600; }
+.termos label { font-size:12.5px !important; } .termos a, .rodape a { color:var(--pm-az) !important; }
+.rodape { font-size:14px !important; color:var(--pm-tx2) !important; margin-top:18px !important; } .rodape a { font-weight:800 !important; }
+.otp-digito { border-radius:14px !important; border-color:var(--pm-ln) !important; background:#fff; }
+.otp-digito:focus { border-color:var(--pm-az) !important; box-shadow:0 0 0 4px rgba(37,99,235,.14) !important; }
+@media(max-width:480px) { body.pm { padding:12px; } .card { border-radius:26px !important; } .corpo { padding:16px 18px 22px !important; } .pm-marca { width:88px; height:88px; } .pm-nome { font-size:23px; } }
 </style>
 </head>
-<body>
-<div class="card">
+<body class="pm">
+<div class="card pm-vidro pm-entra">
   <div class="header">
-    <img src="logo.png" alt="Spap-Sercriativo" style="width:200px;max-width:80%;margin-bottom:4px;">
-    <div class="header-sub">Cria a tua loja em menos de 2 minutos</div>
+  <div class="pm-topo">
+    <img class="pm-marca" src="ssteam-logo.png" alt="SSTEAM — Tecnologia Varejista de Ponta">
+    <div class="pm-nome notranslate">Spap-<em>Sercriativo</em></div>
+    <div class="pm-tag notranslate">TECNOLOGIA VAREJISTA DE PONTA</div>
+    <div class="pm-sub">Cria a tua loja em menos de 2 minutos</div>
+  </div>
   </div>
 
   <div class="passos">

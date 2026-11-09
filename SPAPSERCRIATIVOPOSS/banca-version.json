@@ -1,1 +1,1 @@
-{"versao": "3.7.2", "data": "2026-11-09", "novidades": "Nota de quem entregou o dia.", "melhorias": ["Auditoria de Caixa: mostra a nota de quem entregou o dia, em destaque, além do dinheiro e dos gastos. Se declarou gastos sem nota, aparece um aviso."]}
+{"versao": "3.7.3", "data": "2026-11-09", "novidades": "Novo login da Banca.", "melhorias": ["Login da Banca com o mesmo design e a mesma descrição do login principal, com «A tua banca no bolso»."]}

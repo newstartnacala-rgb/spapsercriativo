@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Planos — Spap-Sercriativo</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="spap-premium.css?v=2.9.212">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family:-apple-system,Arial,sans-serif; background:linear-gradient(135deg,#1a56a0,#0f3460); min-height:100vh; padding:20px; }
@@ -59,13 +62,49 @@ body { font-family:-apple-system,Arial,sans-serif; background:linear-gradient(13
 .sucesso-box { background:white; border-radius:16px; padding:32px 20px; text-align:center; display:none; }
 .sucesso-box h2 { color:#16a34a; font-size:22px; margin:12px 0 8px; }
 .sucesso-box p { color:#64748b; font-size:13px; margin-bottom:20px; }
+
+/* ===== Estilo premium (igual ao login) ===== */
+body.pm { padding:24px 16px 40px; }
+.container { max-width:720px; }
+.header { color:inherit !important; padding:14px 0 24px !important; }
+.planos-grid { gap:14px !important; margin-bottom:22px !important; }
+.plano-card { background:rgba(255,255,255,.8) !important; -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); border:2px solid rgba(255,255,255,.95) !important; border-radius:22px !important;
+  padding:24px 16px 18px !important; box-shadow:0 14px 34px rgba(15,27,61,.10); transition:transform .18s, box-shadow .18s, border-color .18s !important; }
+.plano-card:hover { transform:translateY(-3px); box-shadow:0 20px 40px rgba(15,27,61,.14); }
+.plano-card.selecionado { border-color:var(--pm-az) !important; box-shadow:0 0 0 4px rgba(37,99,235,.14), 0 20px 40px rgba(37,99,235,.18); }
+.plano-card.popular { background:linear-gradient(180deg,#fffaf0,#ffffff) !important; border-color:#f3d79a !important; }
+.plano-card.popular.selecionado { border-color:#C8922E !important; box-shadow:0 0 0 4px rgba(226,174,74,.22), 0 20px 40px rgba(200,146,46,.22); }
+.badge { background:linear-gradient(135deg,#F1C86A,#C8922E) !important; color:#3b2606 !important; font-size:10.5px !important; padding:5px 13px !important; box-shadow:0 6px 14px rgba(200,146,46,.35); }
+.plano-nome { font-family:Sora, 'Plus Jakarta Sans', sans-serif; font-size:15.5px !important; font-weight:800 !important; color:var(--pm-tx) !important; }
+.plano-preco { font-family:Sora, 'Plus Jakarta Sans', sans-serif; font-size:30px !important; font-weight:800 !important; color:var(--pm-az) !important; letter-spacing:-.02em; }
+.popular .plano-preco { background:linear-gradient(90deg,#D9A440,#A26A18); -webkit-background-clip:text; background-clip:text; color:transparent !important; }
+.plano-moeda { color:var(--pm-tx2) !important; font-weight:600; }
+.plano-economia { font-weight:800 !important; }
+.plano-features { color:var(--pm-tx2) !important; border-top:1px solid var(--pm-ln) !important; font-size:12.5px !important; }
+.secao, .sucesso-box, #resumo-box { background:rgba(255,255,255,.8) !important; -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,.95); border-radius:22px !important; box-shadow:0 14px 34px rgba(15,27,61,.10); }
+.secao h3 { font-family:Sora, 'Plus Jakarta Sans', sans-serif; font-size:16px !important; font-weight:800 !important; color:var(--pm-tx) !important; }
+.metodo { border:1.5px solid var(--pm-ln) !important; border-radius:16px !important; background:#fff; }
+.metodo:hover { border-color:#c7d2fe !important; }
+.metodo.selecionado { border-color:var(--pm-az) !important; background:#eff6ff !important; box-shadow:0 0 0 4px rgba(37,99,235,.12); }
+.metodo-num { color:var(--pm-az) !important; }
+.instrucoes { border-radius:14px !important; }
+.upload-area { border-radius:16px !important; border-color:var(--pm-ln) !important; background:rgba(255,255,255,.7); }
+.btn { height:54px; padding:0 !important; border-radius:16px !important; font-weight:700 !important; }
+.btn-principal { font-family:Sora, 'Plus Jakarta Sans', sans-serif; background:linear-gradient(135deg,var(--pm-az),var(--pm-az2)) !important; box-shadow:0 14px 28px rgba(37,99,235,.34); }
+.btn-secundario { background:#fff !important; border:1.5px solid var(--pm-ln) !important; color:#334155 !important; }
+.msg { border-radius:12px !important; font-weight:600; }
+@media(max-width:560px) { body.pm { padding:14px 12px 30px; } .pm-marca { width:88px; height:88px; } .pm-nome { font-size:23px; } }
 </style>
 </head>
-<body>
+<body class="pm">
 <div class="container">
   <div class="header">
-    <div style="background:rgba(255,255,255,0.92);border-radius:14px;padding:10px 18px;display:inline-block;margin-bottom:6px;"><img src="logo.png" alt="Spap-Sercriativo" style="width:190px;max-width:100%;display:block;"></div>
-    <p>Escolhe o plano certo para o teu negócio</p>
+  <div class="pm-topo">
+    <img class="pm-marca" src="ssteam-logo.png" alt="SSTEAM — Tecnologia Varejista de Ponta">
+    <div class="pm-nome notranslate">Spap-<em>Sercriativo</em></div>
+    <div class="pm-tag notranslate">TECNOLOGIA VAREJISTA DE PONTA</div>
+    <div class="pm-sub">Escolhe o plano certo para o teu negócio</div>
+  </div>
   </div>
 
   <div id="secao-planos">

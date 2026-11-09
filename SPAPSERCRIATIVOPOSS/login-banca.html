@@ -3,48 +3,70 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#16a34a">
+<meta name="theme-color" content="#eef3fb">
 <title>Banca — Entrar</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="spap-premium.css?v=3.7.3">
 <style>
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-  body{font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;background:#f0fdf4;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:20px;}
-  .box{background:#fff;border-radius:22px;padding:30px 24px;width:100%;max-width:400px;box-shadow:0 10px 40px rgba(16,163,74,.12);}
-  .logo{text-align:center;margin-bottom:6px;}
-  .logo .ic{font-size:44px;}
-  .logo h1{font-size:22px;color:#166534;margin-top:4px;}
-  .logo p{font-size:13px;color:#16a34a;font-weight:600;}
-  .sub{text-align:center;font-size:13px;color:#64748b;margin:4px 0 22px;}
-  label{display:block;font-size:12px;color:#64748b;font-weight:700;margin:14px 0 6px;}
-  input{width:100%;border:1.5px solid #d7eadd;border-radius:13px;padding:15px 16px;font-size:16px;outline:none;}
-  input:focus{border-color:#16a34a;}
-  .btn{width:100%;margin-top:22px;padding:16px;background:#16a34a;color:#fff;border:none;border-radius:13px;font-size:17px;font-weight:800;}
-  .btn:disabled{background:#a7d8ba;}
-  .erro{display:none;margin-top:14px;background:#fef2f2;color:#dc2626;border-radius:10px;padding:11px 13px;font-size:13px;}
-  .rodape{text-align:center;margin-top:20px;font-size:14px;color:#64748b;}
-  .rodape a{color:#16a34a;font-weight:800;text-decoration:none;}
-  .mini{text-align:center;margin-top:14px;font-size:12px;}
-  .mini a{color:#94a3b8;text-decoration:none;}
+  body.pm{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:28px 16px;}
+  .lb{width:100%;max-width:430px;padding:30px 22px 24px;}
+  .lb .pm-topo{margin-bottom:22px;}
+  .lb .pm-marca{width:124px;height:124px;}
+  .lb-campo{display:flex;align-items:center;gap:12px;height:58px;padding:0 16px;border-radius:16px;border:1.5px solid var(--pm-ln);background:rgba(255,255,255,.9);margin-bottom:12px;transition:border-color .15s,box-shadow .15s;}
+  .lb-campo:focus-within{border-color:#f2700f;box-shadow:0 0 0 4px rgba(242,112,15,.15);background:#fff;}
+  .lb-ic{width:22px;height:22px;color:var(--pm-tx3);flex:none;display:flex;} .lb-ic svg{width:22px;height:22px;}
+  .lb-campo:focus-within .lb-ic{color:#f2700f;}
+  .lb-campo input{flex:1;min-width:0;border:0 !important;outline:0;background:none !important;box-shadow:none !important;font-size:16px;color:var(--pm-tx);font-weight:500;padding:0 !important;}
+  .lb-campo input::placeholder{color:var(--pm-tx3);}
+  .lb-olho{width:36px;height:36px;margin-right:-8px;border:0;background:none;color:var(--pm-tx3);cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none;}
+  .lb-olho svg{width:22px;height:22px;} .lb-olho.on{color:#f2700f;}
+  .lb-entrar{width:100%;height:58px;margin-top:6px;border:0;border-radius:16px;font-family:Sora,'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:16px;letter-spacing:.14em;cursor:pointer;color:#fff;
+    background:linear-gradient(135deg,#ffa24a,#f2700f 55%,#e05c00);box-shadow:0 14px 28px rgba(242,112,15,.36);transition:transform .12s,opacity .15s;}
+  .lb-entrar:active{transform:scale(.985);} .lb-entrar:disabled{opacity:.6;box-shadow:none;}
+  .lb-erro{display:none;margin-top:12px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;border-radius:12px;padding:11px 13px;font-size:14px;font-weight:600;}
+  .lb-rodape{text-align:center;margin:22px 0 14px;font-size:14.5px;color:var(--pm-tx2);}
+  .lb-rodape a{color:#ea580c;font-weight:800;text-decoration:none;}
+  .lb-loja{display:flex;align-items:center;justify-content:center;gap:6px 8px;flex-wrap:wrap;padding:13px 14px;border-radius:14px;background:#eff6ff;color:#1d4ed8;font-size:14px;font-weight:600;border:1px dashed #93c5fd;text-decoration:none;}
+  .lb-loja b{font-weight:800;}
+  @media (max-width:767px){
+    body.pm{padding:max(10px,env(safe-area-inset-top)) 12px max(10px,env(safe-area-inset-bottom));}
+    .lb{padding:clamp(16px,3svh,30px) 18px clamp(14px,2.4svh,24px);border-radius:26px !important;}
+    .lb .pm-topo{margin-bottom:clamp(12px,2.4svh,22px);}
+    .lb .pm-marca{width:clamp(72px,15svh,124px);height:clamp(72px,15svh,124px);margin-bottom:clamp(4px,1.1svh,10px);}
+    .lb .pm-nome{font-size:clamp(21px,3.3svh,26px);}
+    .lb .pm-sub{margin-top:clamp(6px,1.2svh,10px);}
+    .lb .pm-extra{margin-top:clamp(4px,.9svh,8px);}
+    .lb-campo{height:clamp(48px,6.8svh,58px);margin-bottom:clamp(8px,1.4svh,12px);}
+    .lb-entrar{height:clamp(48px,6.8svh,58px);}
+    .lb-rodape{margin:clamp(12px,2.2svh,22px) 0 clamp(8px,1.4svh,14px);}
+    .lb-loja{padding:clamp(9px,1.5svh,13px) 12px;}
+  }
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="SPAP Banca">
-<link rel="stylesheet" href="banca-tema.css?v=3.7.2">
-<script src="banca-tema.js?v=3.7.2" defer></script>
-<script src="app-android.js?v=3.7.2" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.3">
+<script src="banca-tema.js?v=3.7.3" defer></script>
+<script src="app-android.js?v=3.7.3" defer></script>
 </head>
-<body>
-<div class="box">
-  <div class="logo"><div class="ic"><img class="logo-ssteam" src="ssteam-logo.png" alt="SSTEAM"></div><h1>Mobile POSS</h1><p>A tua banca no bolso</p></div>
-  <div class="sub">Entra para vender</div>
-  <label>📧 Email</label>
-  <input id="email" type="email" inputmode="email" placeholder="o-teu-email@exemplo.com" autocomplete="username">
-  <label>🔑 Código (senha)</label>
-  <input id="senha" type="password" placeholder="o teu código" autocomplete="current-password">
-  <button class="btn" id="btn" onclick="entrar()">Entrar</button>
-  <div class="erro" id="erro"></div>
-  <div class="rodape">Ainda não tens banca? <a href="registo-banca.html">Cadastrar</a></div>
-  <div class="mini"><a href="login.html">Tenho uma loja grande →</a></div>
-</div>
+<body class="pm">
+<main class="lb pm-vidro pm-entra">
+  <div class="pm-topo">
+    <img class="pm-marca" src="ssteam-logo.png" alt="SSTEAM — Tecnologia Varejista de Ponta">
+    <div class="pm-nome notranslate">Spap-<em>Sercriativo</em></div>
+    <div class="pm-tag notranslate">TECNOLOGIA VAREJISTA DE PONTA</div>
+    <div class="pm-extra">A tua banca no bolso</div>
+    <div class="pm-sub">Sistema de Ponto de Venda</div>
+  </div>
+  <label class="lb-campo"><span class="lb-ic"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M4 6h16v12H4z M4 7l8 6 8-6"/></svg></span><input id="email" type="email" inputmode="email" placeholder="Email" autocomplete="username"></label>
+  <label class="lb-campo"><span class="lb-ic"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M6 11h12v9H6z M8.5 11V8a3.5 3.5 0 0 1 7 0v3"/></svg></span><input id="senha" type="password" placeholder="Código (senha)" autocomplete="current-password"><button type="button" class="lb-olho" id="lb-olho" aria-label="Mostrar código" onclick="verCodigo()"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button></label>
+  <button class="lb-entrar" id="btn" onclick="entrar()">ENTRAR</button>
+  <div class="lb-erro" id="erro"></div>
+  <div class="lb-rodape">Ainda não tens banca? <a href="registo-banca.html">Cadastrar</a></div>
+  <a class="lb-loja" href="login.html"><span>🏬</span>Tenho uma loja grande <b>→</b></a>
+</main>
 <script src="supabase-config.js"></script>
 <script>
 const btn=document.getElementById('btn');
@@ -61,15 +83,16 @@ async function entrar(){
   let data,error;
   try{ const r=await supabaseClient.auth.signInWithPassword({email,password:senha}); data=r.data; error=r.error; }
   catch(e){ error={message:'Sem internet. Tenta de novo.'}; }
-  if(error){ erro(error.message.includes('Invalid')?'Email ou código errado.':error.message); btn.disabled=false; btn.textContent='Entrar'; return; }
+  if(error){ erro(error.message.includes('Invalid')?'Email ou código errado.':error.message); btn.disabled=false; btn.textContent='ENTRAR'; return; }
   // Verifica estado da banca
   try{
     const { data:m }=await supabaseClient.from('membros_loja').select('lojas(estado,nome)').eq('user_id',data.user.id).limit(1);
     const est = m&&m[0]&&m[0].lojas&&m[0].lojas.estado;
-    if(est==='suspenso'||est==='bloqueado'){ await supabaseClient.auth.signOut(); erro('🚫 Banca suspensa. Contacta o suporte: +258 86 657 7722'); btn.disabled=false; btn.textContent='Entrar'; return; }
+    if(est==='suspenso'||est==='bloqueado'){ await supabaseClient.auth.signOut(); erro('🚫 Banca suspensa. Contacta o suporte: +258 86 657 7722'); btn.disabled=false; btn.textContent='ENTRAR'; return; }
   }catch(e){}
   location.href=destino();
 }
+function verCodigo(){ const i=document.getElementById('senha'),o=document.getElementById('lb-olho'); const v=i.type==='password'; i.type=v?'text':'password'; o.classList.toggle('on',v); i.focus(); }
 document.getElementById('senha').addEventListener('keydown',e=>{ if(e.key==='Enter') entrar(); });
 </script>
 </body>

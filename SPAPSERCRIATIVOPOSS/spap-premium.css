@@ -1,0 +1,21 @@
+/* SPAP — estilo premium partilhado (login, cadastro, planos, login da Banca) */
+:root { --pm-tx:#0f1b3d; --pm-tx2:#5b6785; --pm-tx3:#9aa5bd; --pm-ln:#dfe6f3; --pm-az:#1d4ed8; --pm-az2:#4338ca; }
+html { background:#eef3fb; }
+body.pm { font-family:'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif !important; -webkit-font-smoothing:antialiased; color:var(--pm-tx);
+  background:#eef3fb !important; position:relative; overflow-x:hidden; }
+body.pm::before { content:""; position:fixed; inset:-20%; z-index:0; pointer-events:none;
+  background:radial-gradient(40% 35% at 15% 20%,rgba(37,99,235,.22),transparent 70%),radial-gradient(35% 30% at 85% 15%,rgba(226,174,74,.30),transparent 70%),radial-gradient(45% 40% at 70% 90%,rgba(99,102,241,.20),transparent 70%); filter:blur(10px); }
+body.pm > * { position:relative; z-index:1; }
+body.pm button, body.pm input, body.pm select, body.pm textarea { font-family:inherit; }
+.pm-vidro { background:rgba(255,255,255,.76) !important; -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); border:1px solid rgba(255,255,255,.9) !important;
+  border-radius:28px !important; box-shadow:0 30px 60px rgba(15,27,61,.13), inset 0 1px 0 #fff !important; }
+.pm-entra { animation:pm-entra .45s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes pm-entra { from { opacity:0; transform:translateY(14px) scale(.985); } to { opacity:1; transform:none; } }
+.pm-topo { display:flex; flex-direction:column; align-items:center; text-align:center; }
+.pm-marca { width:104px; height:104px; object-fit:contain; border-radius:50%; margin-bottom:10px; filter:drop-shadow(0 12px 22px rgba(156,100,22,.45)); }
+.pm-nome { font-family:Sora, 'Plus Jakarta Sans', sans-serif; font-weight:800; font-size:25px; letter-spacing:-.02em; color:var(--pm-tx); line-height:1.15; }
+.pm-nome em { font-style:normal; background:linear-gradient(90deg,#E9B954,#B47A1F); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.pm-tag { font-size:10px; font-weight:800; letter-spacing:.22em; color:#8a6a2a; margin-top:5px; }
+.pm-sub { margin-top:10px; display:inline-flex; align-items:center; gap:7px; background:#fff; border:1px solid var(--pm-ln); padding:6px 13px; border-radius:999px; font-size:12.5px; font-weight:600; color:var(--pm-tx2); }
+.pm-sub::before { content:""; width:7px; height:7px; border-radius:50%; background:#22c55e; box-shadow:0 0 0 3px rgba(34,197,94,.2); flex:none; }
+.pm-extra { margin-top:8px; font-size:14px; font-weight:800; color:#ea580c; }
