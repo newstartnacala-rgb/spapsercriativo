@@ -36,8 +36,10 @@ jobs:
           VB=$(python3 -c "import json;print(json.load(open('../SPAPSERCRIATIVOPOSS/banca-version.json'))['versao'])")
           echo "Principal: $VN  |  Banca: $VB"
           echo "VN=$VN" >> $GITHUB_ENV; echo "VB=$VB" >> $GITHUB_ENV
-          ./gradlew assembleMonitorRelease assembleLojaRelease --no-daemon --stacktrace -PappVersionName="$VN" -PappVersionCode="$(code $VN)"
-          ./gradlew assembleBancaRelease assembleBancamonitorRelease --no-daemon --stacktrace -PappVersionName="$VB" -PappVersionCode="$(code $VB)"
+          # Se o download das ferramentas falhar (rede do GitHub), tenta outra vez até 4 vezes
+          tentar() { for i in 1 2 3 4; do "$@" && return 0; echo "Falhou (tentativa $i); a tentar de novo em 20 s…"; sleep 20; done; return 1; }
+          tentar ./gradlew assembleMonitorRelease assembleLojaRelease --no-daemon --stacktrace -PappVersionName="$VN" -PappVersionCode="$(code $VN)"
+          tentar ./gradlew assembleBancaRelease assembleBancamonitorRelease --no-daemon --stacktrace -PappVersionName="$VB" -PappVersionCode="$(code $VB)"
       - name: Publicar em Releases (links fixos de download)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
