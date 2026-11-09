@@ -1,1 +1,1 @@
-{"versao": "3.7.9", "data": "2026-11-09", "novidades": "Produto com código repetido já não é cadastrado duas vezes.", "melhorias": ["No Monitor da Banca e na Banca de venda, se o código de barras já existe, a app pára, avisa e mostra logo o produto existente, com o botão para o abrir."]}
+{"versao": "3.7.10", "data": "2026-11-09", "novidades": "Mudança de endereço automática e sem se notar.", "melhorias": ["Quem abre a Banca pelo endereço antigo passa sozinho para o endereço principal, com a sessão aberta e as vendas por enviar."]}

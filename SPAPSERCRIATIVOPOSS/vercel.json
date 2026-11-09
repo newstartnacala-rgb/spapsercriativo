@@ -98,19 +98,5 @@
       ]
     }
   ],
-  "ignoreCommand": "bash vercel-ignore.sh",
-  "redirects": [
-    {
-      "source": "/:caminho((?!apps/|version\\.json|banca-version\\.json|sw\\.js|manifest).*)",
-      "missing": [
-        {
-          "type": "header",
-          "key": "user-agent",
-          "value": ".*SPAPApp.*"
-        }
-      ],
-      "destination": "https://newstartnacala-rgb.github.io/spapsercriativo/:caminho",
-      "permanent": false
-    }
-  ]
+  "ignoreCommand": "bash vercel-ignore.sh"
 }

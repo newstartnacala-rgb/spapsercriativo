@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spap-pdv-v291';
+const CACHE_NAME = 'spap-pdv-v292';
 const FICHEIROS = [
   './',
   './index.html',
@@ -16,6 +16,7 @@ const FICHEIROS = [
   './banca-offline.js',
   './spap-premium.css',
   './spap-semzoom.js',
+  './spap-migrar.js',
   './app-android.js',
   './supabase-config.js',
   './sw.js',
