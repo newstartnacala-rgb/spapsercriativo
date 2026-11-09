@@ -628,3 +628,14 @@ html.escuro #bj-fundo .bj-ico img.e3d{filter:invert(1) hue-rotate(180deg);}
 /* fila offline por enviar */
 .tp-net.pend i{background:#f59e0b !important;box-shadow:0 0 0 3px rgba(245,158,11,.22) !important;}
 .topo .tp-net.pend:not(.off){color:#b45309 !important;border-color:#fde68a !important;background:linear-gradient(180deg,#fff,#fffbeb) !important;}
+
+/* código de barras já existe */
+.bd-caixa{margin:8px 0 4px;background:#fef2f2;border:1.5px solid #fca5a5;border-radius:16px;padding:12px;}
+.bd-tit{font-weight:800;font-size:13.5px;color:#b91c1c;margin-bottom:8px;}
+.bd-prod{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #fee2e2;border-radius:14px;padding:10px;text-align:left;}
+.bd-ph{width:48px;height:48px;border-radius:12px;background:#f1f5ff;flex:none;display:flex;align-items:center;justify-content:center;font-size:22px;overflow:hidden;}
+.bd-ph img{width:100%;height:100%;object-fit:cover;}
+.bd-in{min-width:0;} .bd-in b{display:block;font-size:15px;color:var(--nv);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bd-in small{display:block;font-size:12.5px;color:#64748b;font-weight:600;}
+.bd-bt{width:100%;margin-top:8px;height:44px;border:0;border-radius:12px;background:#dc2626;color:#fff;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;}
+input.bd-erro{border-color:#dc2626 !important;box-shadow:0 0 0 3px rgba(220,38,38,.15) !important;}

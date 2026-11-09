@@ -18,7 +18,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.215"></script>
+<script src="spap-leitor.js?v=2.9.216"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -860,6 +860,24 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   #sa-veu { position:fixed; left:50%; top:92px; transform:translateX(-50%); z-index:99981; display:flex; align-items:center; gap:10px; background:#0f172a; color:#fff; padding:10px 16px; border-radius:999px; font-size:13.5px; font-weight:700; box-shadow:0 12px 30px rgba(15,23,42,.35); opacity:0; pointer-events:none; transition:opacity .2s; white-space:nowrap; max-width:92vw; overflow:hidden; text-overflow:ellipsis; }
   #sa-veu i { width:16px; height:16px; border-radius:50%; border:2.5px solid rgba(255,255,255,.3); border-top-color:#fff; animation:spin .8s linear infinite; flex:none; }
   body.sa-trocando #sa-veu { opacity:1; }
+  .dup-caixa { margin:4px 0 14px; background:#fef2f2; border:1.5px solid #fca5a5; border-radius:14px; padding:12px; animation:dup-in .25s ease; }
+  @keyframes dup-in { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+  .dup-tit { font-weight:800; font-size:13.5px; color:#b91c1c; margin-bottom:8px; }
+  .dup-prod { display:flex; align-items:center; gap:12px; background:#fff; border:1px solid #fee2e2; border-radius:12px; padding:10px; text-align:left; }
+  .dup-ph { width:48px; height:48px; border-radius:12px; background:#f1f5f9; flex:none; display:flex; align-items:center; justify-content:center; font-size:22px; overflow:hidden; }
+  .dup-ph img { width:100%; height:100%; object-fit:cover; }
+  .dup-in { min-width:0; } .dup-in b { display:block; font-size:15px; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .dup-in small { display:block; font-size:12.5px; color:#64748b; font-weight:600; }
+  .dup-bt { width:100%; margin-top:8px; padding:11px; border:0; border-radius:12px; background:#dc2626; color:#fff; font-weight:800; font-size:14px; cursor:pointer; }
+  input.dup-erro { border-color:#dc2626 !important; box-shadow:0 0 0 3px rgba(220,38,38,.15) !important; }
+  #dup-janela { position:fixed; inset:0; z-index:99995; background:rgba(15,23,42,.55); display:flex; align-items:center; justify-content:center; padding:16px; }
+  #dup-janela .dj-caixa { width:100%; max-width:380px; background:#fff; border-radius:22px; padding:22px 18px 16px; text-align:center; box-shadow:0 30px 70px rgba(8,15,35,.4); animation:dup-in .2s ease; }
+  #dup-janela .dj-ico { width:60px; height:60px; margin:0 auto 10px; border-radius:18px; background:#fef2f2; display:flex; align-items:center; justify-content:center; font-size:30px; }
+  #dup-janela h3 { margin:0 0 6px; font-size:19px; font-weight:800; color:#0f172a; }
+  #dup-janela p { margin:0 0 12px; font-size:14px; color:#475569; line-height:1.5; }
+  #dup-janela .dj-bts { display:flex; gap:10px; margin-top:14px; }
+  #dup-janela .dj-bts button { flex:1; padding:13px; border:0; border-radius:14px; font-weight:800; font-size:15px; cursor:pointer; }
+  #dup-janela .dj-fechar { background:#f1f5f9; color:#334155; } #dup-janela .dj-abrir { background:linear-gradient(135deg,#1d4ed8,#4f46e5); color:#fff; }
   .nb-caixa { background:linear-gradient(180deg,#fffbeb,#fff7ed); border:2px solid #f59e0b; border-radius:14px; padding:14px; margin-bottom:14px; box-shadow:0 6px 18px rgba(245,158,11,.18); }
   .nb-tit { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
   .nb-tit > span { width:42px; height:42px; border-radius:12px; background:#f59e0b; display:flex; align-items:center; justify-content:center; font-size:22px; flex:none; box-shadow:0 4px 10px rgba(245,158,11,.35); }
@@ -1020,7 +1038,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.215" defer></script>
+<script src="app-android.js?v=2.9.216" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -1390,11 +1408,12 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
       <div class="form-campo"><label>Stock</label><input type="number" id="np-stock" placeholder="0" value="0"></div>
       <div class="form-campo"><label>Código</label>
         <div style="display:flex;gap:8px;align-items:center;">
-          <input type="text" id="np-codigo" placeholder="Ex: P001" style="flex:1;">
+          <input type="text" id="np-codigo" placeholder="Ex: P001" style="flex:1;" oninput="dupVerificarCampo('np-codigo','np-dup')" onblur="dupVerificarCampo('np-codigo','np-dup',true)">
           <button type="button" onclick="abrirScannerCadastro()" title="Ler código de barras" style="flex:none;padding:0 14px;height:42px;background:#7c3aed;border:none;border-radius:8px;color:#fff;font-size:18px;cursor:pointer;">📷</button>
         </div>
       </div>
     </div>
+    <div id="np-dup" class="dup-caixa" hidden></div>
     <div id="np-scanner-area" style="display:none;margin:4px 0 12px;background:#000;border-radius:12px;overflow:hidden;position:relative;"></div>
     </div>
     <div class="form-campo">
@@ -3127,6 +3146,11 @@ async function salvarEdicaoProduto(id, tinhaImg) {
   };
   if (editImagemBase64) dados.imagem = editImagemBase64;
   if (!dados.nome) { mostrarNotif('❌ O nome é obrigatório.', true); return; }
+  for (const c of [dados.codigo, dados.codbarras]) {
+    if (!c) continue;
+    const ex = await dupProcurar(c, id);
+    if (ex) { dupJanela(ex, c); return; }
+  }
 
   const precoAntigo = parseFloat(p.preco) || 0;
   const antes = Object.assign({}, p);
@@ -3428,19 +3452,12 @@ async function salvarNovoProduto() {
 
   if (!nome || isNaN(preco)) { msg.textContent = '❌ Preenche nome e preço de venda.'; msg.style.color='#dc2626'; return; }
 
-  // AVISO DE CÓDIGO DUPLICADO: se já existe um produto com este código/código de barras nesta loja,
-  // mostra qual é e pede confirmação (evita lançar o mesmo produto duas vezes).
+  // CÓDIGO JÁ EXISTE: não deixa cadastrar o mesmo produto duas vezes — mostra o produto que já existe
   if (codigo) {
-    // verificação instantânea na lista já carregada (sem ir ao servidor)
-    const ex = (todosProdutos || []).find(x => x && (String(x.codigo || '') === codigo || String(x.codbarras || '') === codigo));
-    if (ex) {
-      const ok = confirm('⚠️ JÁ EXISTE um produto com o código "' + codigo + '":\n\n'
-        + '📦 ' + (ex.nome||'(sem nome)') + '\n'
-        + '💰 MT ' + (parseFloat(ex.preco)||0).toFixed(2) + '\n\n'
-        + 'Queres mesmo gravar OUTRO produto com o mesmo código?\n'
-        + '(OK = gravar na mesma · Cancelar = voltar para corrigir)');
-      if (!ok) { msg.textContent = 'Verifica o código — já existe "' + (ex.nome||'') + '".'; msg.style.color='#d97706'; return; }
-    }
+    btn.disabled = true;
+    const ex = await dupProcurar(codigo, null);
+    btn.disabled = false;
+    if (ex) { dupMostrarCampo('np-dup', ex, codigo); dupJanela(ex, codigo); msg.textContent = '⛔ Este código já existe: «' + (ex.nome||'') + '». Não foi cadastrado de novo.'; msg.style.color='#dc2626'; return; }
   }
 
   const _unEl = document.getElementById('np-unidade');
@@ -3466,6 +3483,7 @@ async function salvarNovoProduto() {
 
     // Guardado com sucesso — limpa e mostra na lista com o stock
     ['np-nome','np-preco','np-preco-compra','np-codigo'].forEach(id => document.getElementById(id).value='');
+    { const d = document.getElementById('np-dup'); if (d) { d.hidden = true; d.innerHTML = ''; } }
     document.getElementById('np-stock').value='0';
     document.getElementById('np-imagem-preview').style.display = 'none';
     document.getElementById('np-img-thumb').src = '';
@@ -5739,7 +5757,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.215';
+const MONITOR_VERSAO = '2.9.216';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -6368,13 +6386,80 @@ function abrirImagemGrande(url) {
   document.body.appendChild(ov);
 }
 
+// ===== CÓDIGO DE BARRAS JÁ EXISTE (cadastro e edição de produtos) =====
+// Procura na lista carregada e, se houver internet, também na base de dados (apanha produtos ainda não carregados).
+async function dupProcurar(codigo, ignorarId) {
+  codigo = String(codigo || '').trim(); if (!codigo) return null;
+  const igual = x => x && String(x.id) !== String(ignorarId || '') && (String(x.codbarras || '').trim() === codigo || String(x.codigo || '').trim() === codigo);
+  let ex = (todosProdutos || []).find(x => igual(x) && (!lojaId || !x.loja_id || x.loja_id === lojaId));
+  if (ex) return ex;
+  if (!lojaId || navigator.onLine === false) return null;
+  try {
+    const COLS = 'id,loja_id,nome,codigo,codbarras,preco,stock,categoria,unidade';
+    const [a, b] = await Promise.all([
+      supabaseClient.from('produtos').select(COLS).eq('loja_id', lojaId).eq('codbarras', codigo).limit(3),
+      supabaseClient.from('produtos').select(COLS).eq('loja_id', lojaId).eq('codigo', codigo).limit(3)
+    ]);
+    ex = [].concat((a && a.data) || [], (b && b.data) || []).find(igual) || null;
+  } catch (e) {}
+  return ex;
+}
+let _dupTimer = null;
+function dupVerificarCampo(inputId, caixaId, ja) {
+  return new Promise(res => {
+    clearTimeout(_dupTimer);
+    _dupTimer = setTimeout(async () => {
+      const inp = document.getElementById(inputId), cx = document.getElementById(caixaId); if (!inp || !cx) return res(null);
+      const c = inp.value.trim();
+      if (!c) { cx.hidden = true; cx.innerHTML = ''; inp.classList.remove('dup-erro'); return res(null); }
+      const ex = await dupProcurar(c, null);
+      if (inp.value.trim() !== c) return res(null);
+      if (ex) dupMostrarCampo(caixaId, ex, c); else { cx.hidden = true; cx.innerHTML = ''; }
+      inp.classList.toggle('dup-erro', !!ex);
+      res(ex);
+    }, ja ? 0 : 350);
+  });
+}
+function _dupCartao(ex) {
+  const p = (todosProdutos || []).find(x => String(x.id) === String(ex.id)) || ex;
+  const st = parseInt(p.stock) || 0;
+  const img = p.imagem ? '<img src="' + _escNota(p.imagem) + '" alt="" onerror="this.remove()">' : '📦';
+  return '<div class="dup-prod"><div class="dup-ph">' + img + '</div><div class="dup-in"><b>' + _escNota(p.nome || '(sem nome)') + '</b>'
+    + '<small>MT ' + (parseFloat(p.preco) || 0).toFixed(2) + ' · stock ' + st + (p.categoria ? ' · ' + _escNota(p.categoria) : '') + '</small>'
+    + '<small>Código: ' + _escNota(p.codbarras || p.codigo || '—') + '</small></div></div>';
+}
+function dupMostrarCampo(caixaId, ex, codigo) {
+  const cx = document.getElementById(caixaId); if (!cx) return;
+  cx.innerHTML = '<div class="dup-tit">⛔ Este código já existe — o produto já está cadastrado</div>' + _dupCartao(ex)
+    + '<button type="button" class="dup-bt" onclick="dupAbrir(\'' + String(ex.id).replace(/'/g, '') + '\')">✏️ Abrir o produto existente</button>';
+  cx.hidden = false;
+}
+function dupAbrir(id) {
+  { const o = document.getElementById('dup-janela'); if (o) o.remove(); }
+  try { fecharSubPainel('painel-add-produto'); } catch (e) {}
+  setTimeout(() => editarProdutoCompleto(id), 120);
+}
+function dupJanela(ex, codigo) {
+  { const o = document.getElementById('dup-janela'); if (o) o.remove(); }
+  const ov = document.createElement('div'); ov.id = 'dup-janela';
+  ov.innerHTML = '<div class="dj-caixa"><div class="dj-ico">⛔</div><h3>Produto já cadastrado</h3>'
+    + '<p>O código <b>' + _escNota(codigo) + '</b> já pertence a este produto. Não é preciso cadastrar duas vezes.</p>'
+    + _dupCartao(ex)
+    + '<div class="dj-bts"><button type="button" class="dj-fechar">Fechar</button><button type="button" class="dj-abrir">✏️ Abrir produto</button></div></div>';
+  document.body.appendChild(ov);
+  try { navigator.vibrate && navigator.vibrate([60, 40, 60]); } catch (e) {}
+  ov.querySelector('.dj-fechar').onclick = () => ov.remove();
+  ov.querySelector('.dj-abrir').onclick = () => dupAbrir(ex.id);
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+}
+
 // ===== SCANNER NO CADASTRO DE PRODUTO =====
 // Botão de câmera junto ao campo Código: lê o código de barras e preenche-o.
 function abrirScannerCadastro() {
   scannerAbrir('np-scanner-area', 'np-reader', function(codigo) {
     const inp = document.getElementById('np-codigo');
     if (inp) inp.value = codigo;
-    mostrarNotif('✅ Código lido: ' + codigo);
+    dupVerificarCampo('np-codigo', 'np-dup', true).then(ex => { if (ex) dupJanela(ex, codigo); else mostrarNotif('✅ Código lido: ' + codigo); });
   });
 }
 

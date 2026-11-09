@@ -110,9 +110,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="SPAP Banca">
-<link rel="stylesheet" href="banca-tema.css?v=3.7.8">
-<script src="banca-tema.js?v=3.7.8" defer></script>
-<script src="app-android.js?v=3.7.8" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.9">
+<script src="banca-tema.js?v=3.7.9" defer></script>
+<script src="app-android.js?v=3.7.9" defer></script>
 </head>
 <body>
 
@@ -270,10 +270,11 @@
       <div class="campo"><label>Stock (quantidade)</label><input id="fp-stock" type="number" inputmode="numeric" placeholder="0"></div>
       <div class="campo"><label>Código de barras</label>
         <div style="display:flex;gap:8px;">
-          <input id="fp-codigo" type="text" placeholder="opcional" style="flex:1;">
+          <input id="fp-codigo" type="text" placeholder="opcional" style="flex:1;" oninput="fpDup()" onblur="fpDup(true)">
           <button type="button" onclick="scanCampo('fp-codigo')" title="Ler com a câmara" style="flex-shrink:0;width:52px;border:1.5px solid var(--borda);background:#f0fdf4;border-radius:12px;font-size:22px;">📷</button>
         </div>
         <div id="scan-fp-codigo" style="display:none;background:#000;border-radius:12px;overflow:hidden;margin-top:8px;"></div>
+        <div id="fp-dup" class="bd-caixa" hidden></div>
       </div>
     </div>
     <div class="rodape" style="display:flex;gap:10px;">
@@ -391,7 +392,7 @@
 <div id="toast" class="toast"></div>
 
 <script src="supabase-config.js"></script>
-<script src="banca-offline.js?v=3.7.8"></script>
+<script src="banca-offline.js?v=3.7.9"></script>
 <script>
 // ===================== ESTADO =====================
 let sessao = null;        // { lojaId, nomeLoja, userId, vendedor }
@@ -768,6 +769,7 @@ function abrirFormProduto(id){
   document.getElementById('fp-compra').value = p && p.preco_compra ? p.preco_compra : '';
   document.getElementById('fp-stock').value = p ? (p.stock||0) : '';
   document.getElementById('fp-codigo').value = p ? (p.codbarras||p.codigo||'') : '';
+  document.getElementById('fp-codigo').classList.remove('bd-erro'); { const d=document.getElementById('fp-dup'); d.hidden=true; d.innerHTML=''; }
   const w = document.getElementById('fp-img-wrap');
   w.innerHTML = (p && p.imagem) ? `<img src="${p.imagem}" style="width:100%;height:100%;object-fit:cover;">` : '📷';
   document.getElementById('fp-apagar').style.display = p ? 'block' : 'none';
@@ -791,6 +793,8 @@ function fpImagem(ev){
   };
   r.readAsDataURL(f);
 }
+function fpAbrirExistente(ex){ setTimeout(()=>abrirFormProduto(String(ex.id)),220); }
+function fpDup(ja){ return bancaDupCampo('fp-codigo','fp-dup',()=>fpId,fpAbrirExistente,ja); }
 async function guardarProduto(){
   if(navigator.onLine===false){ toast('📵 Guardar produtos precisa de internet. As vendas continuam a funcionar offline.','erro'); return; }
   const nome = document.getElementById('fp-nome').value.trim();
@@ -804,7 +808,9 @@ async function guardarProduto(){
     codbarras: document.getElementById('fp-codigo').value.trim()||null
   };
   if (fpImg!==undefined) dados.imagem = fpImg; // string nova ou null (removida)
-  const btn=document.getElementById('fp-guardar'); btn.disabled=true; btn.textContent='A guardar…';
+  const btn=document.getElementById('fp-guardar');
+  if(dados.codbarras){ btn.disabled=true; const ex=await bancaDupProcurar(dados.codbarras,fpId); btn.disabled=false; if(ex){ fpDup(true); bancaDupJanela(ex,dados.codbarras,fpAbrirExistente); return; } }
+  btn.disabled=true; btn.textContent='A guardar…';
   try{
     if(fpId){
       let { error } = await supabaseClient.from('produtos').update(dados).eq('id', fpId);
@@ -871,7 +877,8 @@ function _ean(stored, lido){
 // ===================== LEITOR DE CÓDIGO PARA CAMPO =====================
 let _scanCampo=null;
 async function scanCampo(inputId){
-  if (window.bancaScanner){ bancaScanner((code)=>{ const inp=document.getElementById(inputId); if(inp) inp.value=String(code||'').trim(); toast('✅ Código lido','ok'); }); return; }
+  if (window.bancaScanner){ bancaScanner((code)=>{ const inp=document.getElementById(inputId); if(inp) inp.value=String(code||'').trim();
+    if(inputId==='fp-codigo'){ fpDup(true).then(ex=>{ if(ex) bancaDupJanela(ex,String(code||'').trim(),fpAbrirExistente); else toast('✅ Código lido','ok'); }); } else toast('✅ Código lido','ok'); }); return; }
   const area=document.getElementById('scan-'+inputId);
   if(_scanCampo){ await pararScanCampo(); area.style.display='none'; area.innerHTML=''; return; }
   area.style.display='block'; area.innerHTML='<div id="rd-'+inputId+'" style="width:100%"></div>';

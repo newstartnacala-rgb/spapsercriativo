@@ -80,9 +80,9 @@
   .au-nota.au-falta{background:#fef2f2;border-left-color:#dc2626;color:#991b1b;font-size:13.5px;font-weight:700;}
   .au-sem{margin-top:6px;font-size:12px;color:var(--suave,#94a3b8);font-style:italic;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.8">
-<script src="banca-tema.js?v=3.7.8" defer></script>
-<script src="app-android.js?v=3.7.8" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.9">
+<script src="banca-tema.js?v=3.7.9" defer></script>
+<script src="app-android.js?v=3.7.9" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -336,12 +336,13 @@
         <div class="campo"><label>Stock</label><input id="ap-stock" type="number" inputmode="numeric" placeholder="0"></div>
         <div class="campo"><label>Código de barras</label>
           <div style="display:flex;gap:8px;">
-            <input id="ap-codigo" type="text" placeholder="opcional" style="flex:1;">
+            <input id="ap-codigo" type="text" placeholder="opcional" style="flex:1;" oninput="apDup()" onblur="apDup(true)">
             <button type="button" onclick="scanCampo('ap-codigo')" title="Ler com a câmara" style="flex-shrink:0;width:52px;border:1.5px solid var(--borda);background:#f0fdf4;border-radius:12px;font-size:22px;">📷</button>
           </div>
           <div id="scan-ap-codigo" style="display:none;background:#000;border-radius:12px;overflow:hidden;margin-top:8px;"></div>
         </div>
       </div>
+      <div id="ap-dup" class="bd-caixa" hidden></div>
     </div>
     <div class="rodape"><button class="btn" id="ap-guardar" onclick="guardarAddProduto()">💾 Guardar produto</button></div>
   </div>
@@ -766,7 +767,8 @@ let apImg=undefined;
 function abrirAddProduto(){
   fecharFolha('folha-menu');
   apImg=undefined;
-  ['ap-nome','ap-preco','ap-compra','ap-stock','ap-codigo'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  ['ap-nome','ap-preco','ap-compra','ap-stock','ap-codigo'].forEach(id=>{ const e=document.getElementById(id); if(e){ e.value=''; e.classList.remove('bd-erro'); } });
+  { const d=document.getElementById('ap-dup'); d.hidden=true; d.innerHTML=''; }
   document.getElementById('ap-img-wrap').innerHTML='📷';
   document.getElementById('ap-img-file').value='';
   abrirFolha('folha-add');
@@ -783,6 +785,8 @@ function apImagem(ev){
   }; img.src=e.target.result; };
   r.readAsDataURL(f);
 }
+function apAbrirExistente(ex){ fecharFolha('folha-add'); setTimeout(()=>{ if(produtos.some(x=>String(x.id)===String(ex.id))) gerirProduto(ex.id); else { mostrarTela && mostrarTela('stock'); toast('Produto: '+ex.nome,'ok'); } },250); }
+function apDup(ja){ return bancaDupCampo('ap-codigo','ap-dup',null,apAbrirExistente,ja); }
 async function guardarAddProduto(){
   const nome=document.getElementById('ap-nome').value.trim();
   const preco=parseFloat(document.getElementById('ap-preco').value);
@@ -793,7 +797,9 @@ async function guardarAddProduto(){
     stock:parseInt(document.getElementById('ap-stock').value)||0,
     codbarras:document.getElementById('ap-codigo').value.trim()||null };
   if(apImg!==undefined) dados.imagem=apImg;
-  const btn=document.getElementById('ap-guardar'); btn.disabled=true; btn.textContent='A guardar…';
+  const btn=document.getElementById('ap-guardar');
+  if(dados.codbarras){ btn.disabled=true; const ex=await bancaDupProcurar(dados.codbarras,null); btn.disabled=false; if(ex){ apDup(true); bancaDupJanela(ex,dados.codbarras,apAbrirExistente); return; } }
+  btn.disabled=true; btn.textContent='A guardar…';
   try{
     let { error }=await supabaseClient.from('produtos').insert(dados);
     if(error && dados.imagem){ const r=await supabaseClient.from('produtos').insert({...dados,imagem:null}); if(r.error) throw r.error; }
@@ -858,7 +864,8 @@ function bcImprimir(){
 // ===== LEITOR DE CÓDIGO PARA PREENCHER UM CAMPO =====
 let _scanCampo=null;
 async function scanCampo(inputId){
-  if (window.bancaScanner){ bancaScanner((code)=>{ const inp=document.getElementById(inputId); if(inp) inp.value=String(code||'').trim(); toast('✅ Código lido','ok'); }); return; }
+  if (window.bancaScanner){ bancaScanner((code)=>{ const inp=document.getElementById(inputId); if(inp) inp.value=String(code||'').trim();
+    if(inputId==='ap-codigo'){ apDup(true).then(ex=>{ if(ex) bancaDupJanela(ex,String(code||'').trim(),apAbrirExistente); else toast('✅ Código lido','ok'); }); } else toast('✅ Código lido','ok'); }); return; }
   const area=document.getElementById('scan-'+inputId);
   if(_scanCampo){ await pararScanCampo(); if(_scanCampo&&_scanCampo._alvo===inputId){ _scanCampo=null; return; } }
   area.style.display='block'; area.innerHTML='<div id="rd-'+inputId+'" style="width:100%"></div>';

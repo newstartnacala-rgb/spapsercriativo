@@ -250,6 +250,59 @@
   window.bancaPedir = function (titulo, texto, valor, extra) { return janela(Object.assign({ tipo: 'texto', titulo: titulo, texto: texto, valor: valor, ok: 'Guardar' }, extra || {})); };
   window.bancaPedirNumero = function (titulo, texto, valor, extra) { return janela(Object.assign({ tipo: 'numero', titulo: titulo, texto: texto, valor: valor, ok: 'Confirmar', min: 0 }, extra || {})); };
   window.bancaConfirmar = function (titulo, texto, extra) { return janela(Object.assign({ tipo: 'confirmar', titulo: titulo, texto: texto, ok: 'Confirmar' }, extra || {})); };
+  // ===== Código de barras já existe (cadastro de produtos na Banca) =====
+  window.bancaDupProcurar = async function (codigo, ignorarId) {
+    codigo = String(codigo || '').trim(); if (!codigo) return null;
+    var igual = function (x) { return x && String(x.id) !== String(ignorarId || '') && (String(x.codbarras || '').trim() === codigo || String(x.codigo || '').trim() === codigo); };
+    var lista = []; try { lista = produtos || []; } catch (e) {}
+    var ex = lista.find(igual); if (ex) return ex;
+    var s; try { s = sessao; } catch (e) {}
+    if (!s || !s.lojaId || navigator.onLine === false || typeof supabaseClient === 'undefined') return null;
+    try {
+      var C = 'id,nome,codigo,codbarras,preco,stock,imagem';
+      var r = await Promise.all([supabaseClient.from('produtos').select(C).eq('loja_id', s.lojaId).eq('codbarras', codigo).limit(3),
+                                 supabaseClient.from('produtos').select(C).eq('loja_id', s.lojaId).eq('codigo', codigo).limit(3)]);
+      ex = [].concat((r[0] && r[0].data) || [], (r[1] && r[1].data) || []).find(igual) || null;
+    } catch (e) {}
+    return ex;
+  };
+  function dupCartao(ex) {
+    var st = parseInt(ex.stock) || 0, f = function (n) { return 'MT ' + (parseFloat(n) || 0).toFixed(2).replace('.', ','); };
+    return '<div class="bd-prod"><div class="bd-ph">' + (ex.imagem ? '<img src="' + _escD(ex.imagem) + '" alt="" onerror="this.remove()">' : '📦') + '</div>'
+      + '<div class="bd-in"><b>' + _escD(ex.nome || '(sem nome)') + '</b><small>' + f(ex.preco) + ' · stock ' + st + '</small><small>Código: ' + _escD(ex.codbarras || ex.codigo || '—') + '</small></div></div>';
+  }
+  var _bdT = null;
+  // verifica ao escrever/ler; mostra por baixo do campo o produto que já existe
+  window.bancaDupCampo = function (inputId, caixaId, ignorarId, abrir, ja) {
+    return new Promise(function (res) {
+      clearTimeout(_bdT);
+      _bdT = setTimeout(async function () {
+        var inp = document.getElementById(inputId), cx = document.getElementById(caixaId); if (!inp || !cx) return res(null);
+        var c = inp.value.trim();
+        if (!c) { cx.hidden = true; cx.innerHTML = ''; inp.classList.remove('bd-erro'); return res(null); }
+        var ex = await bancaDupProcurar(c, typeof ignorarId === 'function' ? ignorarId() : ignorarId);
+        if (inp.value.trim() !== c) return res(null);
+        inp.classList.toggle('bd-erro', !!ex);
+        if (ex) {
+          cx.innerHTML = '<div class="bd-tit">⛔ Este código já existe — o produto já está cadastrado</div>' + dupCartao(ex) + '<button type="button" class="bd-bt">Abrir o produto existente</button>';
+          cx.hidden = false; cx.querySelector('.bd-bt').onclick = function () { abrir && abrir(ex); };
+        } else { cx.hidden = true; cx.innerHTML = ''; }
+        res(ex);
+      }, ja ? 0 : 350);
+    });
+  };
+  window.bancaDupJanela = function (ex, codigo, abrir) {
+    var ant = document.getElementById('bj-fundo'); if (ant) ant.remove();
+    var ov = document.createElement('div'); ov.id = 'bj-fundo';
+    ov.innerHTML = '<div class="bj"><div class="bj-ico perigo">⛔</div><h3>Produto já cadastrado</h3><p>O código <b>' + _escD(codigo) + '</b> já pertence a este produto. Não é preciso cadastrar duas vezes.</p>'
+      + dupCartao(ex) + '<div class="bj-bts" style="margin-top:14px"><button type="button" class="bj-can">Fechar</button><button type="button" class="bj-ok">Abrir produto</button></div></div>';
+    document.body.appendChild(ov); requestAnimationFrame(function () { ov.classList.add('ativo'); });
+    try { navigator.vibrate && navigator.vibrate([60, 40, 60]); } catch (e) {}
+    var fim = function () { ov.classList.remove('ativo'); setTimeout(function () { ov.remove(); }, 200); };
+    ov.querySelector('.bj-can').onclick = fim;
+    ov.querySelector('.bj-ok').onclick = function () { fim(); abrir && abrir(ex); };
+    ov.addEventListener('click', function (e) { if (e.target === ov) fim(); });
+  };
   window.bancaAviso = function (titulo, texto, extra) { return janela(Object.assign({ tipo: 'aviso', titulo: titulo, texto: texto, ok: 'Entendi' }, extra || {})); };
 
   function mt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
