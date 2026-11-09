@@ -1,0 +1,19 @@
+name: Procurar endereços antigos na Vercel
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  procurar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Procurar
+        run: |
+          : > antigos.txt
+          for n in "" $(seq 2900 2960); do
+            d="spapsercriativo$n.vercel.app"
+            r=$(curl -s -m 10 -o v.json -w '%{http_code}' "https://$d/version.json")
+            if [ "$r" = "200" ]; then echo "$d | $(tr -d '\n' < v.json | grep -o '"versao": *"[^"]*"')" >> antigos.txt; fi
+          done
+          cat antigos.txt
+      - uses: actions/upload-artifact@v4
+        with: { name: antigos, path: antigos.txt }
