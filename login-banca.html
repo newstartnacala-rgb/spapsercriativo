@@ -8,7 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="spap-premium.css?v=3.7.3">
+<link rel="stylesheet" href="spap-premium.css?v=3.7.4">
 <style>
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   body.pm{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:28px 16px;}
@@ -31,25 +31,38 @@
   .lb-rodape a{color:#ea580c;font-weight:800;text-decoration:none;}
   .lb-loja{display:flex;align-items:center;justify-content:center;gap:6px 8px;flex-wrap:wrap;padding:13px 14px;border-radius:14px;background:#eff6ff;color:#1d4ed8;font-size:14px;font-weight:600;border:1px dashed #93c5fd;text-decoration:none;}
   .lb-loja b{font-weight:800;}
-  @media (max-width:767px){
+  /* Telemóvel (de pé): tudo cabe no ecrã e acompanha a altura — com alternativa para Android antigo (vh) */
+  @media (max-width:767px), (max-height:600px){
     body.pm{padding:max(10px,env(safe-area-inset-top)) 12px max(10px,env(safe-area-inset-bottom));}
-    .lb{padding:clamp(16px,3svh,30px) 18px clamp(14px,2.4svh,24px);border-radius:26px !important;}
-    .lb .pm-topo{margin-bottom:clamp(12px,2.4svh,22px);}
-    .lb .pm-marca{width:clamp(72px,15svh,124px);height:clamp(72px,15svh,124px);margin-bottom:clamp(4px,1.1svh,10px);}
-    .lb .pm-nome{font-size:clamp(21px,3.3svh,26px);}
-    .lb .pm-sub{margin-top:clamp(6px,1.2svh,10px);}
-    .lb .pm-extra{margin-top:clamp(4px,.9svh,8px);}
-    .lb-campo{height:clamp(48px,6.8svh,58px);margin-bottom:clamp(8px,1.4svh,12px);}
-    .lb-entrar{height:clamp(48px,6.8svh,58px);}
-    .lb-rodape{margin:clamp(12px,2.2svh,22px) 0 clamp(8px,1.4svh,14px);}
-    .lb-loja{padding:clamp(9px,1.5svh,13px) 12px;}
+    .lb{border-radius:26px !important;padding:20px 18px 18px;padding:clamp(18px,3.4vh,34px) 18px clamp(16px,2.8vh,28px);padding:clamp(18px,3.4svh,34px) 18px clamp(16px,2.8svh,28px);}
+    .lb .pm-topo{margin-bottom:clamp(14px,3vh,28px);margin-bottom:clamp(14px,3svh,28px);}
+    .lb .pm-marca{width:clamp(76px,17vh,150px);height:clamp(76px,17vh,150px);width:clamp(76px,17svh,150px);height:clamp(76px,17svh,150px);margin-bottom:clamp(6px,1.4svh,14px);}
+    .lb .pm-nome{font-size:clamp(22px,3.5vh,28px);font-size:clamp(22px,3.5svh,28px);}
+    .lb .pm-tag{font-size:clamp(9px,1.3vh,11px);}
+    .lb .pm-extra{font-size:clamp(14px,2vh,16px);margin-top:clamp(5px,1.1vh,10px);}
+    .lb .pm-sub{margin-top:clamp(7px,1.4vh,12px);}
+    .lb-campo{height:clamp(50px,7.2vh,62px);height:clamp(50px,7.2svh,62px);margin-bottom:clamp(10px,1.7svh,14px);}
+    .lb-entrar{height:clamp(50px,7.2vh,62px);height:clamp(50px,7.2svh,62px);margin-top:clamp(4px,1svh,10px);}
+    .lb-rodape{margin:clamp(14px,2.8vh,26px) 0 clamp(10px,1.8vh,16px);}
+    .lb-loja{padding:clamp(10px,1.7vh,14px) 12px;}
   }
+  /* Telemóvel deitado: logótipo à esquerda, formulário à direita */
+  @media (orientation:landscape) and (max-height:600px){
+    .lb{max-width:760px;display:grid;grid-template-columns:1fr 1.1fr;gap:4px 26px;align-items:center;padding:18px 24px !important;}
+    .lb .pm-topo{grid-row:1 / span 6;margin:0 !important;}
+    .lb .pm-marca{width:clamp(64px,24vh,120px) !important;height:clamp(64px,24vh,120px) !important;}
+    .lb-campo{height:46px !important;margin-bottom:8px !important;} .lb-entrar{height:46px !important;margin-top:2px !important;}
+    .lb-rodape{margin:10px 0 8px !important;font-size:13.5px;} .lb-loja{padding:8px 12px !important;font-size:13px;}
+  }
+  /* O login fica sempre claro (o modo escuro é só dentro da app) */
+  html.escuro{filter:none !important;background:#eef3fb !important;}
+  .lb-loja svg{width:20px;height:20px;flex:none;}
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="SPAP Banca">
-<link rel="stylesheet" href="banca-tema.css?v=3.7.3">
-<script src="banca-tema.js?v=3.7.3" defer></script>
-<script src="app-android.js?v=3.7.3" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.4">
+<script src="banca-tema.js?v=3.7.4" defer></script>
+<script src="app-android.js?v=3.7.4" defer></script>
 </head>
 <body class="pm">
 <main class="lb pm-vidro pm-entra">
@@ -65,10 +78,12 @@
   <button class="lb-entrar" id="btn" onclick="entrar()">ENTRAR</button>
   <div class="lb-erro" id="erro"></div>
   <div class="lb-rodape">Ainda não tens banca? <a href="registo-banca.html">Cadastrar</a></div>
-  <a class="lb-loja" href="login.html"><span>🏬</span>Tenho uma loja grande <b>→</b></a>
+  <a class="lb-loja" href="login.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M3 9l1.5-5h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6"/></svg>Tenho uma loja grande <b>→</b></a>
 </main>
 <script src="supabase-config.js"></script>
 <script>
+document.documentElement.classList.remove('escuro');
+document.addEventListener('DOMContentLoaded',()=>{ document.documentElement.classList.remove('escuro'); const tc=document.querySelector('meta[name="theme-color"]'); if(tc) tc.setAttribute('content','#eef3fb'); });
 const btn=document.getElementById('btn');
 function erro(m){ const e=document.getElementById('erro'); e.textContent=m; e.style.display='block'; }
 
