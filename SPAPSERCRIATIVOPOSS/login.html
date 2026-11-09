@@ -59,9 +59,29 @@
   .lg-banca b { font-weight:800; }
   #btn-entrar-offline { height:52px; border-radius:16px !important; }
   @media (min-width:768px) { .box { max-width:460px; padding:38px 34px 28px; } .lg-marca { width:140px; height:140px; } }
-  @media (max-width:360px) { .lg-nome { font-size:23px; } .lg-marca { width:108px; height:108px; } }
+  /* Telemóvel: tudo cabe no ecrã, sem deslizar — os tamanhos acompanham a altura do ecrã */
+  @media (max-width:767px) {
+    body { padding:max(10px, env(safe-area-inset-top)) 12px max(10px, env(safe-area-inset-bottom)); min-height:100vh; min-height:100svh; }
+    .box { padding:clamp(14px,2.6svh,28px) 18px clamp(12px,2.2svh,22px); border-radius:26px; }
+    .lg-topo { margin-bottom:clamp(10px,2svh,20px); }
+    .lg-marca { width:clamp(68px,14svh,124px); height:clamp(68px,14svh,124px); margin-bottom:clamp(4px,1.1svh,12px); }
+    .lg-nome { font-size:clamp(21px,3.3svh,27px); }
+    .lg-tag { font-size:clamp(9px,1.25svh,10.5px); margin-top:3px; }
+    .lg-sub { margin-top:clamp(6px,1.2svh,12px); padding:5px 12px; font-size:12px; }
+    .langs { margin-bottom:clamp(10px,2svh,20px); gap:6px; }
+    .langs button { padding:clamp(5px,.9svh,8px) 12px; font-size:12.5px; }
+    .campo { height:clamp(46px,6.6svh,58px); margin-bottom:clamp(8px,1.4svh,12px); }
+    .link-esqueci { margin:0 0 clamp(10px,1.8svh,16px); }
+    .btn-principal { height:clamp(48px,6.6svh,58px); }
+    .ou { margin:clamp(9px,1.8svh,18px) 0; }
+    .btn-google { height:clamp(44px,6svh,54px); }
+    .rodape { margin:clamp(10px,2svh,22px) 0 clamp(8px,1.4svh,14px); font-size:14px; }
+    .lg-banca { padding:clamp(8px,1.4svh,13px) 12px; font-size:13.5px; }
+  }
+  @media (max-width:767px) and (max-height:660px) { .lg-marca { width:60px; height:60px; } .campo { height:44px; } .btn-principal { height:46px; } .btn-google { height:42px; } .lg-sub { margin-top:4px; } }
+  @media (max-width:767px) and (max-height:600px) { .lg-tag { display:none; } }
 </style>
-<script src="app-android.js?v=2.9.210" defer></script>
+<script src="app-android.js?v=2.9.211" defer></script>
 </head>
 <body>
 <main class="box">
