@@ -10,7 +10,8 @@
   var pth = location.pathname;
   var tipo = /banca\/monitor|mobile-monitor/i.test(pth) ? 'bancamonitor' : /banca|mobile/i.test(pth) ? 'banca' : (/monitor/i.test(pth) ? 'monitor' : 'loja');
   var NOMES = { monitor: 'Monitor', loja: 'Loja', banca: 'Banca', bancamonitor: 'Monitor Banca' };
-  var FICH = { monitor: 'SPAP-Monitor', loja: 'SPAP-Loja', banca: 'SPAP-Banca', bancamonitor: 'SPAP-Banca-Monitor' };
+  var FICH = { monitor: 'Monitor', loja: 'Loja', banca: 'Banca', bancamonitor: 'Monitor-Banca' };
+  var FICH_IOS = { monitor: 'SPAP-Monitor', loja: 'SPAP-Loja', banca: 'SPAP-Banca', bancamonitor: 'SPAP-Banca-Monitor' };
   var nome = NOMES[tipo];
   var ficheiro = FICH[tipo] + '.apk';
   // APK sempre dos lançamentos do GitHub (funciona no GitHub Pages e na Vercel)
@@ -131,7 +132,7 @@
   var SVG_MAIS = '<svg viewBox="0 0 24 24" width="20" height="20" style="vertical-align:-4px"><rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="none" stroke="#0f172a" stroke-width="2"/><path d="M12 8v8M8 12h8" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/></svg>';
   // iPhone: instala logo a app (perfil do iPhone com o ícone no ecrã principal) — sem explicações
   // o perfil do iPhone precisa do tipo de ficheiro certo: no GitHub Pages vem da Vercel
-  var perfilIOS = (/github\.io$/i.test(location.hostname) ? 'https://spapsercriativo2950.vercel.app/' : '') + 'apps/' + FICH[tipo] + '.mobileconfig';
+  var perfilIOS = (/github\.io$/i.test(location.hostname) ? 'https://spapsercriativo2950.vercel.app/' : '') + 'apps/' + FICH_IOS[tipo] + '.mobileconfig';
   function avisoIOS(txt) {
     var t = document.getElementById('apk-aviso-ios'); if (t) t.remove();
     t = document.createElement('div'); t.id = 'apk-aviso-ios';

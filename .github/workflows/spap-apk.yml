@@ -43,27 +43,31 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p apks-build SPAPSERCRIATIVOPOSS/apps
-          cp spap-android/app/build/outputs/apk/monitor/release/app-monitor-release.apk apks-build/SPAP-Monitor.apk
-          cp spap-android/app/build/outputs/apk/loja/release/app-loja-release.apk apks-build/SPAP-Loja.apk
-          cp spap-android/app/build/outputs/apk/banca/release/app-banca-release.apk apks-build/SPAP-Banca.apk
-          cp spap-android/app/build/outputs/apk/bancamonitor/release/app-bancamonitor-release.apk apks-build/SPAP-Banca-Monitor.apk
+          # Nomes dos ficheiros: Loja, Monitor, Banca e Monitor-Banca
+          cp spap-android/app/build/outputs/apk/monitor/release/app-monitor-release.apk apks-build/Monitor.apk
+          cp spap-android/app/build/outputs/apk/loja/release/app-loja-release.apk apks-build/Loja.apk
+          cp spap-android/app/build/outputs/apk/banca/release/app-banca-release.apk apks-build/Banca.apk
+          cp spap-android/app/build/outputs/apk/bancamonitor/release/app-bancamonitor-release.apk apks-build/Monitor-Banca.apk
+          # cópias com os nomes antigos, só para as apps já instaladas encontrarem a atualização
+          cp apks-build/Monitor.apk apks-build/SPAP-Monitor.apk; cp apks-build/Loja.apk apks-build/SPAP-Loja.apk
+          cp apks-build/Banca.apk apks-build/SPAP-Banca.apk; cp apks-build/Monitor-Banca.apk apks-build/SPAP-Banca-Monitor.apk
           # Canal principal: loja-latest (Loja + Monitor). Canal da Banca: banca-latest (Banca + Banca Monitor).
           publicar() {
             TAG="$1"; TIT="$2"; NOTA="$3"; shift 3
             gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
             gh release create "$TAG" "$@" --title "$TIT" --notes "$NOTA" --latest=false
           }
-          publicar loja-latest "Loja e Monitor $VN" "versao=$VN" apks-build/SPAP-Loja.apk apks-build/SPAP-Monitor.apk
-          publicar banca-latest "Banca e Monitor Banca $VB" "versao=$VB" apks-build/SPAP-Banca.apk apks-build/SPAP-Banca-Monitor.apk
+          publicar loja-latest "Loja e Monitor $VN" "versao=$VN" apks-build/Loja.apk apks-build/Monitor.apk apks-build/SPAP-Loja.apk apks-build/SPAP-Monitor.apk
+          publicar banca-latest "Banca e Monitor Banca $VB" "versao=$VB" apks-build/Banca.apk apks-build/Monitor-Banca.apk apks-build/SPAP-Banca.apk apks-build/SPAP-Banca-Monitor.apk
       - name: Publicar APKs no site (para cada app se atualizar sozinha)
         run: |
           # APKs no site do GitHub Pages (a raiz do repositório): …github.io/spapsercriativo/apps/SPAP-*.apk
-          mkdir -p apps && cp apks-build/SPAP-*.apk apps/
+          mkdir -p apps && cp apks-build/*.apk apps/
           # (banca/bancamonitor aqui só para as apps da Banca antigas, ≤2.9.202, passarem para a linha 3.x)
           REL="https://github.com/${{ github.repository }}/releases/download"
           # links absolutos para os lançamentos do GitHub: funcionam no GitHub Pages e na Vercel
-          printf '{"versao":"%s","data":"%s","monitor":"%s/loja-latest/SPAP-Monitor.apk","loja":"%s/loja-latest/SPAP-Loja.apk","banca":"%s/banca-latest/SPAP-Banca.apk","bancamonitor":"%s/banca-latest/SPAP-Banca-Monitor.apk"}\n' "$VN" "$(date -u +%Y-%m-%d)" "$REL" "$REL" "$REL" "$REL" > SPAPSERCRIATIVOPOSS/apps/app-version.json
-          printf '{"versao":"%s","data":"%s","banca":"%s/banca-latest/SPAP-Banca.apk","bancamonitor":"%s/banca-latest/SPAP-Banca-Monitor.apk"}\n' "$VB" "$(date -u +%Y-%m-%d)" "$REL" "$REL" > SPAPSERCRIATIVOPOSS/apps/app-banca-version.json
+          printf '{"versao":"%s","data":"%s","monitor":"%s/loja-latest/Monitor.apk","loja":"%s/loja-latest/Loja.apk","banca":"%s/banca-latest/Banca.apk","bancamonitor":"%s/banca-latest/Monitor-Banca.apk"}\n' "$VN" "$(date -u +%Y-%m-%d)" "$REL" "$REL" "$REL" "$REL" > SPAPSERCRIATIVOPOSS/apps/app-version.json
+          printf '{"versao":"%s","data":"%s","banca":"%s/banca-latest/Banca.apk","bancamonitor":"%s/banca-latest/Monitor-Banca.apk"}\n' "$VB" "$(date -u +%Y-%m-%d)" "$REL" "$REL" > SPAPSERCRIATIVOPOSS/apps/app-banca-version.json
           # o GitHub Pages publica a raiz do repositório: copiar também os ficheiros de versão
           mkdir -p apps && cp SPAPSERCRIATIVOPOSS/apps/app-version.json SPAPSERCRIATIVOPOSS/apps/app-banca-version.json apps/
           cat SPAPSERCRIATIVOPOSS/apps/app-version.json SPAPSERCRIATIVOPOSS/apps/app-banca-version.json

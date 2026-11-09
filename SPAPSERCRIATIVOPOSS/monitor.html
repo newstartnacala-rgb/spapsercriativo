@@ -19,7 +19,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.221"></script>
+<script src="spap-leitor.js?v=2.9.222"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -1039,7 +1039,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.221" defer></script>
+<script src="app-android.js?v=2.9.222" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -5712,7 +5712,7 @@ async function verificarApp() {
   }
 }
 function instalarAppNova() {
-  const url = new URL((_infoApp && _infoApp.monitor) || 'apps/SPAP-Monitor.apk', location.href).href;
+  const url = new URL((_infoApp && _infoApp.monitor) || 'apps/Monitor.apk', location.href).href;
   if (_EH_APP && !(window.SPAPNative && typeof SPAPNative.instalarApp === 'function')) { window.location.href = url; return; }  // app antiga: usa o descarregador do Android
   if (_EH_APP) {
     const btn = document.getElementById('att-app-btn');
@@ -5758,7 +5758,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.221';
+const MONITOR_VERSAO = '2.9.222';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
