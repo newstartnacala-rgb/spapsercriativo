@@ -306,7 +306,11 @@
   window.bancaNet = function (avisar) {
     var on = navigator.onLine !== false;
     document.querySelectorAll('.tp-net').forEach(function (b) { b.classList.toggle('off', !on); var t = b.querySelector('span'); if (t) t.textContent = on ? 'Online' : 'Offline'; });
-    if (avisar && window.toast) toast(on ? '✅ Ligado à internet: tudo sincroniza na hora' : '⚠️ Sem internet: ligue os dados ou o Wi-Fi', on ? 'ok' : 'erro');
+    if (window.bancaPintarFila) bancaPintarFila();
+    if (avisar && window.toast) {
+      var n = window.bancaFila ? bancaFila().length : 0;
+      toast(on ? (n ? '☁️ ' + n + ' registo(s) a enviar agora…' : '✅ Ligado à internet: tudo sincroniza na hora') : '📵 Sem internet: continua a vender, fica tudo guardado no telemóvel', on ? 'ok' : 'erro');
+    }
   };
   addEventListener('online', function () { bancaNet(); });
   addEventListener('offline', function () { bancaNet(); });

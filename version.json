@@ -1,1 +1,1 @@
-{"versao": "2.9.214", "data": "2026-11-09", "novidades": "Login, cadastro e planos fixos, sem zoom.", "melhorias": ["As telas de login, cadastro e planos já não aumentam com zoom (pinça, dois toques ou ao escrever). Ficam sempre fixas."]}
+{"versao": "2.9.215", "data": "2026-11-09", "novidades": "Melhor funcionamento sem internet.", "melhorias": ["Sem internet, os pedidos falham de verdade e ficam na fila do aparelho, em vez de parecerem gravados.", "As páginas guardadas abrem sem internet, também com endereços com versão."]}

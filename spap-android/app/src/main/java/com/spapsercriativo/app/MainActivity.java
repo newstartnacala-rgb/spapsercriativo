@@ -85,6 +85,7 @@ public class MainActivity extends Activity {
     private PermissionRequest pedidoCamaraWeb;
     private static final String CANAL = "alertas_spap";
     private static final String OFFLINE = "file:///android_asset/offline.html";
+    private boolean tentouCache = false, paginaFalhou = false;
 
     private FrameLayout raiz;
     private WebView web;
@@ -316,11 +317,16 @@ public class MainActivity extends Activity {
         public void onPageStarted(WebView v, String url, android.graphics.Bitmap icon) {
             if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) injetarPonte(v);
             if (principal && url != null && !url.startsWith("file:")) emOffline = false;
+            if (principal) paginaFalhou = false;
         }
 
         @Override
         public void onPageFinished(WebView v, String url) {
             injetarPonte(v);
+            if (principal && url != null && url.startsWith("http") && !paginaFalhou) {
+                tentouCache = false;
+                v.getSettings().setCacheMode(WebSettings.LOAD_DEFAULT);
+            }
             if (principal && url != null && url.startsWith("http")) {
                 getSharedPreferences("spap", MODE_PRIVATE).edit().putInt("base", baseAtual).apply();
             }
@@ -329,6 +335,15 @@ public class MainActivity extends Activity {
         @Override
         public void onReceivedError(WebView v, WebResourceRequest pedido, WebResourceError erro) {
             if (!principal || !pedido.isForMainFrame()) return;
+            paginaFalhou = true;
+            // Sem internet: antes do ecrã «offline», tenta abrir a página guardada no telemóvel (a app funciona offline)
+            if (!tentouCache && pedido.getUrl() != null && pedido.getUrl().toString().startsWith("http")) {
+                tentouCache = true;
+                final String alvo = pedido.getUrl().toString();
+                v.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+                ui.post(() -> v.loadUrl(alvo));
+                return;
+            }
             mostrarOffline();
         }
 

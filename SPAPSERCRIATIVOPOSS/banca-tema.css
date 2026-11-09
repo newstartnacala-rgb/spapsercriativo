@@ -624,3 +624,7 @@ html.escuro #bj-fundo .bj-ico img.e3d{filter:invert(1) hue-rotate(180deg);}
 .rt-kpi b{display:block;font-size:19px;font-weight:800;color:var(--nv);margin-top:3px;}
 .rt-kpi.lj b{color:var(--lj-esc);}
 .rt-voltar{display:inline-flex;align-items:center;gap:6px;border:0;background:var(--lj-claro);color:var(--lj-esc);font-weight:800;font-size:13.5px;border-radius:999px;padding:8px 14px;margin-bottom:12px;cursor:pointer;font-family:inherit;}
+
+/* fila offline por enviar */
+.tp-net.pend i{background:#f59e0b !important;box-shadow:0 0 0 3px rgba(245,158,11,.22) !important;}
+.topo .tp-net.pend:not(.off){color:#b45309 !important;border-color:#fde68a !important;background:linear-gradient(180deg,#fff,#fffbeb) !important;}

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spap-pdv-v288';
+const CACHE_NAME = 'spap-pdv-v289';
 const FICHEIROS = [
   './',
   './index.html',
@@ -10,6 +10,13 @@ const FICHEIROS = [
   './login-banca.html',
   './registo-banca.html',
   './planos.html',
+  './planos-banca.html',
+  './banca-tema.js',
+  './banca-tema.css',
+  './banca-offline.js',
+  './spap-premium.css',
+  './spap-semzoom.js',
+  './app-android.js',
   './supabase-config.js',
   './sw.js',
   './manifest.json',
@@ -48,17 +55,9 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
-  // Supabase API — tenta rede, guarda vendas offline se falhar
-  if (url.hostname.includes('supabase.co')) {
-    e.respondWith(
-      fetch(e.request).catch(() => {
-        return new Response(JSON.stringify({ error: 'offline', message: 'Sem ligação' }), {
-          headers: { 'Content-Type': 'application/json' }
-        });
-      })
-    );
-    return;
-  }
+  // Supabase API — vai sempre direto à rede. Sem internet, o pedido falha de verdade
+  // (assim a app sabe que não foi gravado e guarda na fila do telemóvel).
+  if (url.hostname.includes('supabase.co')) { return; }
 
   // CDN (supabase-js) — cache first
   if (url.hostname.includes('jsdelivr') || url.hostname.includes('cdn')) {
@@ -97,8 +96,8 @@ self.addEventListener('fetch', e => {
         }
         return response;
       }).catch(() =>
-        caches.match(e.request).then(cached =>
-          cached || caches.match('/index.html') || caches.match('/login.html')
+        caches.match(e.request, { ignoreSearch: true }).then(cached =>
+          cached || caches.match(new URL('index.html', self.registration.scope).href)
         )
       )
     );
@@ -119,7 +118,7 @@ self.addEventListener('fetch', e => {
           caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
         }
         return response;
-      }).catch(() => caches.match('/index.html'));
+      }).catch(() => caches.match(e.request, { ignoreSearch: true }));
     })
   );
 });
