@@ -61,8 +61,8 @@
   .rodape a{color:var(--lj-esc);font-weight:800;text-decoration:none}
   [hidden]{display:none!important}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.0">
-<script src="banca-tema.js?v=3.7.0" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.1">
+<script src="banca-tema.js?v=3.7.1" defer></script>
 </head>
 <body>
 <div class="pg">
@@ -72,7 +72,7 @@
     <button class="sair" type="button" onclick="sair()">Sair</button>
   </div>
 
-  <div class="alerta expirou" id="al-expirou" hidden><div class="ai">⏳</div><div><h1>O seu plano expirou</h1><p>Para continuar a vender, escolha o plano Mensal ou Anual e faça o pagamento. A banca volta a abrir assim que o pagamento for confirmado.</p></div></div>
+  <div class="alerta expirou" id="al-expirou" hidden><div class="ai">⏳</div><div><h1>O seu plano expirou</h1><p>Para continuar a vender, escolha o plano Pro ou Anual e faça o pagamento. A banca volta a abrir assim que o pagamento for confirmado.</p></div></div>
   <div class="alerta info" id="al-ativo" hidden><div class="ai">⭐</div><div><h1 id="al-ativo-tit">O seu plano</h1><p id="al-ativo-txt"></p></div></div>
   <div class="alerta espera" id="al-espera" hidden><div class="ai">⏳</div><div><h1>Pagamento em verificação</h1><p>Recebemos o seu pedido. Assim que o pagamento for confirmado, a banca abre sozinha neste ecrã.</p></div></div>
   <div class="alerta expirou" id="al-suspenso" hidden><div class="ai">🚫</div><div><h1>Banca suspensa</h1><p>Contacte o suporte para resolver: <a id="lk-sup2" href="https://wa.me/258866577722">WhatsApp</a>.</p></div></div>
@@ -81,12 +81,12 @@
     <h2>Escolha o plano</h2>
     <div class="planos">
       <button class="plano" type="button" data-p="banca_mensal" onclick="escolher('banca_mensal')">
-        <span class="radio"></span><span class="t"><b>Mensal</b><small>Renova todos os meses</small></span>
+        <span class="radio"></span><span class="t"><b id="n-pro">Pro</b><small id="pro-sub">Renova todos os meses</small></span>
         <span class="p"><b id="pr-mensal">500</b> MT<small>por mês</small></span>
       </button>
       <button class="plano" type="button" data-p="banca_anual" onclick="escolher('banca_anual')">
         <span class="selo" id="selo-anual">Poupa 5%</span>
-        <span class="radio"></span><span class="t"><b>Anual</b><small id="anual-sub">12 meses, equivale a 475 MT por mês</small></span>
+        <span class="radio"></span><span class="t"><b id="n-anual">Anual</b><small id="anual-sub">12 meses, equivale a 475 MT por mês</small></span>
         <span class="p"><b id="pr-anual">5.700</b> MT<small>por ano</small></span>
       </button>
     </div>
@@ -115,7 +115,7 @@
 <script src="supabase-config.js"></script>
 <script>
 let sessao=null, loja=null, plano=null, met=null;
-let P={dias:15,mensal:500,desc:5,anual:5700}, M={}, WA_PAG='https://wa.me/258861667843';
+let P={dias:15,base:500,descPro:0,mensal:500,baseAnual:500,desc:5,anual:5700,nGratis:'Grátis',nPro:'Pro',nAnual:'Anual'}, M={}, WA_PAG='https://wa.me/258861667843';
 const fmtMT=n=>String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,'.');
 function toast(m,t){ const e=document.getElementById('toast'); e.textContent=m; e.className='toast '+(t||''); e.style.display='block'; clearTimeout(window._tt); window._tt=setTimeout(()=>e.style.display='none',2800); }
 async function ler(ch){ try{ const {data}=await supabaseClient.from('config_global').select('valor').eq('chave',ch).maybeSingle(); if(data&&data.valor){ try{ return typeof data.valor==='string'?JSON.parse(data.valor):data.valor; }catch(e){ return data.valor; } } }catch(e){} return null; }
@@ -128,12 +128,14 @@ async function ler(ch){ try{ const {data}=await supabaseClient.from('config_glob
   sessao={ lojaId:m[0].loja_id, email:ses.user.email }; loja=m[0].lojas||{};
   document.getElementById('nome-banca').textContent=loja.nome||'Banca';
   const [cfg, met, wa, sup]=await Promise.all([ler('planos_banca'), ler('metodos_subscricao'), ler('link_whatsapp_pagamento'), ler('link_suporte_whatsapp')]);
-  if(cfg){ const mm=+cfg.mensal||500, d=+cfg.anual_desconto||0; P={dias:+cfg.gratis_dias||15, mensal:mm, desc:d, anual:Math.round(mm*12*(1-d/100))}; }
+  if(cfg){ const mm=+cfg.mensal||500, dp=+cfg.mensal_desconto||0, ba=+cfg.anual_preco||mm, d=+cfg.anual_desconto||0; P={dias:+cfg.gratis_dias||15, base:mm, descPro:dp, mensal:Math.round(mm*(1-dp/100)), baseAnual:ba, desc:d, anual:Math.round(ba*12*(1-d/100)), nGratis:cfg.gratis_nome||'Grátis', nPro:cfg.mensal_nome||'Pro', nAnual:cfg.anual_nome||'Anual'}; }
+  document.getElementById('n-pro').textContent=P.nPro; document.getElementById('n-anual').textContent=P.nAnual;
+  document.getElementById('pro-sub').textContent=P.descPro?('Desconto '+P.descPro+'%, era '+fmtMT(P.base)+' MT'):'Renova todos os meses';
   M=met||{}; if(typeof wa==='string'&&wa.trim()) WA_PAG=wa.trim();
   if(typeof sup==='string'&&sup.trim()){ document.getElementById('lk-sup').href=sup.trim(); document.getElementById('lk-sup2').href=sup.trim(); }
   document.getElementById('pr-mensal').textContent=fmtMT(P.mensal);
   document.getElementById('pr-anual').textContent=fmtMT(P.anual);
-  document.getElementById('selo-anual').textContent='Poupa '+P.desc+'% ('+fmtMT(P.mensal*12-P.anual)+' MT)';
+  document.getElementById('selo-anual').textContent='Poupa '+P.desc+'% ('+fmtMT(P.baseAnual*12-P.anual)+' MT)';
   document.getElementById('anual-sub').textContent='12 meses, equivale a '+fmtMT(P.anual/12)+' MT por mês';
   document.getElementById('mp-num').textContent=M.mpesa||'—';
   document.getElementById('em-num').textContent=M.emola||'—';
@@ -152,9 +154,9 @@ function mostrarEstado(){
   if(loja.estado==='suspenso'||loja.estado==='bloqueado'){ document.getElementById('al-suspenso').hidden=false; document.getElementById('escolha').hidden=true; return; }
   if(loja.estado==='pendente_pagamento') document.getElementById('al-espera').hidden=false;
   if(e.expirou){ document.getElementById('al-expirou').hidden=false; return; }
-  const nomes={banca_free:'Grátis', banca_mensal:'Mensal', banca_anual:'Anual'};
+  const nomes={banca_free:P.nGratis, banca_mensal:P.nPro, banca_anual:P.nAnual};
   document.getElementById('al-ativo-tit').textContent='Plano '+(nomes[loja.plano]||'activo');
-  document.getElementById('al-ativo-txt').innerHTML='Faltam <b>'+e.dias+' dia'+(e.dias===1?'':'s')+'</b>, até '+e.exp.toLocaleDateString('pt-PT')+'. '+(loja.plano==='banca_free'?'Depois do período grátis, continue com o Mensal ou o Anual.':'Pode renovar já para não parar.')
+  document.getElementById('al-ativo-txt').innerHTML='Faltam <b>'+e.dias+' dia'+(e.dias===1?'':'s')+'</b>, até '+e.exp.toLocaleDateString('pt-PT')+'. '+(loja.plano==='banca_free'?'Depois do período grátis, continue com o '+P.nPro+' ou o '+P.nAnual+'.':'Pode renovar já para não parar.')
     +' <a href="mobile.html" style="color:var(--lj-esc);font-weight:800">Voltar à banca</a>';
   document.getElementById('al-ativo').hidden=false;
   if(!ver && !e.expirou) location.href='mobile.html';
@@ -181,7 +183,7 @@ function metodo(m){
 async function enviar(){
   if(!plano||!met){ toast('Escolha o plano e a forma de pagamento','erro'); return; }
   const b=document.getElementById('btn-pagar'); b.disabled=true; b.textContent='A enviar…';
-  const nomes={banca_mensal:'Mensal', banca_anual:'Anual'};
+  const nomes={banca_mensal:P.nPro, banca_anual:P.nAnual};
   const msg=encodeURIComponent('💳 *Pagamento SPAP Banca*\n\n🏪 *Banca:* '+(loja.nome||'')+'\n📧 *Email:* '+(sessao.email||'')
     +'\n💎 *Plano:* '+nomes[plano]+'\n💰 *Valor:* MT '+fmtMT(valor())+'\n💳 *Método:* '+(met==='mpesa'?'M-Pesa':'e-Mola')+'\n\nSegue o comprovativo. Por favor activar.');
   window.open(WA_PAG+(WA_PAG.includes('?')?'&':'?')+'text='+msg,'_blank');

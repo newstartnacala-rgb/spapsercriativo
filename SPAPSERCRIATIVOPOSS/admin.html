@@ -244,9 +244,11 @@ body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; c
 .ad-divisao img { width:52px; height:52px; object-fit:contain; flex-shrink:0; filter:drop-shadow(0 4px 8px rgba(0,0,0,.3)); }
 .ad-div-tit { font-size:20px; font-weight:800; }
 .ad-div-sub { font-size:13px; color:#c4cde6; margin-top:2px; line-height:1.4; }
-.ad-planos-banca { grid-template-columns:repeat(3,1fr) !important; }
-.ad-planos-banca label { display:flex; flex-direction:column; gap:4px; font-size:12px; font-weight:700; color:#475569; }
-@media(max-width:520px){ .ad-planos-banca { grid-template-columns:1fr !important; } }
+.ad-planos input.ad-fixo { background:#f1f5f9; color:#64748b; font-weight:700; cursor:default; }
+.ad-planos-dias { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:10px; font-size:13px; color:#475569; }
+.ad-planos-dias label { font-weight:700; }
+.ad-planos-dias input { width:90px; padding:9px 12px; border:1.5px solid #d6e4fb; border-radius:12px; font-size:14.5px; color:var(--nv); }
+.ad-planos-dias span { font-size:12px; color:#94a3b8; }
 </style>
 </head>
 <body>
@@ -321,13 +323,15 @@ body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; c
       </div>
       <div class="ad-nota">Colunas: Nome · Preço mensal (MT) · Desconto anual (%). O desconto aplica-se sobre 12 meses.</div>
 
-      <div class="ad-sec"><img src="ssteam-logo.png" alt="">Planos da Banca (app SPAP Banca)</div>
-      <div class="ad-planos ad-planos-banca">
-        <label>Dias grátis<input type="number" id="cfg-banca-dias" placeholder="15" oninput="previaBanca()"></label>
-        <label>Mensal (MT)<input type="number" id="cfg-banca-mensal" placeholder="500" oninput="previaBanca()"></label>
-        <label>Desconto anual (%)<input type="number" id="cfg-banca-desc" placeholder="5" oninput="previaBanca()"></label>
+      <div class="ad-sec"><img src="ssteam-logo.png" alt="">Planos da Banca (nome · preço/mês · desconto)</div>
+      <div class="ad-planos" id="ad-planos-banca">
+        <input type="text" id="cfg-bgratis-nome" placeholder="Grátis" oninput="previaBanca()"><input type="text" value="Grátis" readonly class="ad-fixo" title="O plano grátis não tem valor"><input type="text" value="—" readonly class="ad-fixo" title="O plano grátis não tem desconto">
+        <input type="text" id="cfg-bpro-nome" placeholder="Pro" oninput="previaBanca()"><input type="number" id="cfg-banca-mensal" placeholder="500" oninput="previaBanca()"><input type="number" id="cfg-bpro-desc" placeholder="0%" oninput="previaBanca()">
+        <input type="text" id="cfg-banual-nome" placeholder="Anual" oninput="previaBanca()"><input type="number" id="cfg-banual-preco" placeholder="500" oninput="previaBanca()"><input type="number" id="cfg-banca-desc" placeholder="5%" oninput="previaBanca()">
       </div>
-      <div class="ad-nota" id="cfg-banca-previa">Grátis 15 dias (só na primeira conta) · Mensal MT 500 · Anual MT 5.700 (poupa 5%)</div>
+      <div class="ad-planos-dias"><label for="cfg-banca-dias">Dias do plano grátis</label><input type="number" id="cfg-banca-dias" placeholder="15" oninput="previaBanca()"><span>só na primeira conta (e-mail/telefone)</span></div>
+      <div class="ad-nota">Colunas: Nome · Preço mensal (MT) · Desconto (%). No Anual o desconto aplica-se sobre 12 meses.</div>
+      <div class="ad-nota" id="cfg-banca-previa"></div>
 
       <div class="ad-sec"><img src="icons3d/card.png" alt="">Como o cliente paga a subscrição</div>
       <div class="ad-campos">
@@ -493,17 +497,24 @@ async function carregarConfigSubscricao() {
   const pbc = await lerConfig('planos_banca');
   if (pbc && typeof pbc === 'object') _planosBanca = pbc;
   const pb = precosBanca();
-  document.getElementById('cfg-banca-dias').value = pb.dias;
-  document.getElementById('cfg-banca-mensal').value = pb.mensal;
-  document.getElementById('cfg-banca-desc').value = pb.desc;
+  const pv = (id, v) => { document.getElementById(id).value = v; };
+  pv('cfg-banca-dias', pb.dias); pv('cfg-bgratis-nome', pb.nomeGratis);
+  pv('cfg-bpro-nome', pb.nomePro); pv('cfg-banca-mensal', pb.base); pv('cfg-bpro-desc', pb.descPro);
+  pv('cfg-banual-nome', pb.nomeAnual); pv('cfg-banual-preco', pb.baseAnual); pv('cfg-banca-desc', pb.desc);
   previaBanca(); renderBancas();
 }
 
+function lerPlanosBancaForm() {
+  const n = id => parseFloat(document.getElementById(id).value), t = id => (document.getElementById(id).value || '').trim();
+  const m = n('cfg-banca-mensal') || 500;
+  return { gratis_dias: n('cfg-banca-dias') || 15, gratis_nome: t('cfg-bgratis-nome') || 'Grátis',
+    mensal_nome: t('cfg-bpro-nome') || 'Pro', mensal: m, mensal_desconto: n('cfg-bpro-desc') || 0,
+    anual_nome: t('cfg-banual-nome') || 'Anual', anual_preco: n('cfg-banual-preco') || m, anual_desconto: isNaN(n('cfg-banca-desc')) ? 5 : n('cfg-banca-desc') };
+}
 function previaBanca() {
-  const n = id => parseFloat(document.getElementById(id).value);
-  const d = n('cfg-banca-dias') || 15, m = n('cfg-banca-mensal') || 500, ds = isNaN(n('cfg-banca-desc')) ? 5 : n('cfg-banca-desc');
-  const a = Math.round(m * 12 * (1 - ds / 100)), f = x => String(Math.round(x)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  document.getElementById('cfg-banca-previa').textContent = 'Grátis ' + d + ' dias (só na primeira conta) · Mensal MT ' + f(m) + ' · Anual MT ' + f(a) + ' (poupa ' + ds + '%, MT ' + f(m * 12 - a) + ')';
+  const p = precosBanca(lerPlanosBancaForm()), f = x => String(Math.round(x)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  document.getElementById('cfg-banca-previa').innerHTML = '<b>' + p.nomeGratis + '</b> ' + p.dias + ' dias (só na primeira conta) · <b>' + p.nomePro + '</b> MT ' + f(p.mensal) + '/mês'
+    + (p.descPro ? ' (−' + p.descPro + '%)' : '') + ' · <b>' + p.nomeAnual + '</b> MT ' + f(p.anual) + '/ano (poupa ' + p.desc + '%, MT ' + f(p.baseAnual * 12 - p.anual) + ')';
 }
 async function guardarConfigSubscricao() {
   const estado = document.getElementById('cfg-estado');
@@ -520,7 +531,7 @@ async function guardarConfigSubscricao() {
     banco_nome: txt('cfg-banco-nome'), banco_conta: txt('cfg-banco-conta'), banco_titular: txt('cfg-banco-titular')
   };
   const waPag = txt('cfg-wa-pagamento');
-  const planosBanca = { gratis_dias: num('cfg-banca-dias') || 15, mensal: num('cfg-banca-mensal') || 500, anual_desconto: num('cfg-banca-desc') };
+  const planosBanca = lerPlanosBancaForm();
   estado.innerHTML = '<span style="color:#64748b;">A guardar...</span>';
   try {
     const rows = [
@@ -576,10 +587,11 @@ function ehBanca(l) { return (l && l.tipo_loja) === 'banca'; }
 function bancaExpirada(l) { return !l.data_expiracao || new Date(l.data_expiracao) <= new Date(); }
 const PLANOS_BANCA_DEFAULT = { gratis_dias: 15, mensal: 500, anual_desconto: 5 };
 let _planosBanca = PLANOS_BANCA_DEFAULT;
-function precosBanca() {
-  const c = Object.assign({}, PLANOS_BANCA_DEFAULT, _planosBanca || {});
-  const m = +c.mensal || 0, d = +c.anual_desconto || 0;
-  return { dias: +c.gratis_dias || 15, mensal: m, desc: d, anual: Math.round(m * 12 * (1 - d / 100)) };
+function precosBanca(src) {
+  const c = Object.assign({}, PLANOS_BANCA_DEFAULT, src || _planosBanca || {});
+  const m = +c.mensal || 0, dp = +c.mensal_desconto || 0, d = +c.anual_desconto || 0, ba = +c.anual_preco || m;
+  return { dias: +c.gratis_dias || 15, base: m, descPro: dp, mensal: Math.round(m * (1 - dp / 100)), baseAnual: ba, desc: d, anual: Math.round(ba * 12 * (1 - d / 100)),
+    nomeGratis: c.gratis_nome || 'Grátis', nomePro: c.mensal_nome || 'Pro', nomeAnual: c.anual_nome || 'Anual' };
 }
 function textoPlano(p) {
   if (p === 'banca_free') return '<img src="icons3d/gem.png" alt="">Grátis';
@@ -771,7 +783,7 @@ function abrirEscolhaPlano(id, btn) {
   const fmtP = n => String(Math.round(Number(n || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   const pb = precosBanca();
   const lista = ehBanca(loja)
-    ? [['banca_free', 'gem', 'Grátis', 'Grátis'], ['banca_mensal', 'star', 'Mensal', 'MT ' + fmtP(pb.mensal) + '/mês'], ['banca_anual', 'calendar', 'Anual', 'MT ' + fmtP(pb.anual) + '/ano']]
+    ? [['banca_free', 'gem', pb.nomeGratis, 'Grátis'], ['banca_mensal', 'star', pb.nomePro, 'MT ' + fmtP(pb.mensal) + '/mês'], ['banca_anual', 'calendar', pb.nomeAnual, 'MT ' + fmtP(pb.anual) + '/ano']]
     : [['basico', 'gem', 'Básico'], ['pro', 'star', 'Pro'], ['anual', 'calendar', 'Anual']].map(([k, ico, nome]) => [k, ico, nome, 'MT ' + fmtP(cfg(k).preco) + '/mês']);
   const op = lista.map(([k, ico, nome, preco]) =>
     '<button type="button" class="pp-op' + (atual === k ? ' sel' : '') + '" onclick="escolherPlano(\'' + id + '\',\'' + k + '\')">'

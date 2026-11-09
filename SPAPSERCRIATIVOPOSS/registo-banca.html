@@ -27,8 +27,8 @@
   .otp input{width:46px;height:56px;text-align:center;font-size:24px;font-weight:800;padding:0;}
   .dica{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.0">
-<script src="banca-tema.js?v=3.7.0" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.1">
+<script src="banca-tema.js?v=3.7.1" defer></script>
 </head>
 <body>
 <div class="box">
@@ -73,9 +73,9 @@
       <p>Tem <b id="pl-dias">15</b> dias grátis para vender. Depois escolha o plano que preferir.</p>
     </div>
     <div class="pl-lista">
-      <div class="pl-card pl-gratis"><div class="pl-t"><b>Grátis</b><small><span id="pl-dias2">15</span> dias, só para a primeira conta</small></div><div class="pl-p">0 MT</div><span class="pl-selo">Activo agora</span></div>
-      <div class="pl-card"><div class="pl-t"><b>Pro</b><small>Pagamento mensal</small></div><div class="pl-p"><span id="pl-mensal">500</span> MT<small>/mês</small></div></div>
-      <div class="pl-card pl-anual"><div class="pl-t"><b>Anual</b><small id="pl-anual-eco">Poupa 5% (300 MT)</small></div><div class="pl-p"><span id="pl-anual">5.700</span> MT<small>/ano</small></div></div>
+      <div class="pl-card pl-gratis"><div class="pl-t"><b id="pl-n-gratis">Grátis</b><small><span id="pl-dias2">15</span> dias, só para a primeira conta</small></div><div class="pl-p">0 MT</div><span class="pl-selo">Activo agora</span></div>
+      <div class="pl-card"><div class="pl-t"><b id="pl-n-pro">Pro</b><small id="pl-pro-sub">Pagamento mensal</small></div><div class="pl-p"><span id="pl-mensal">500</span> MT<small>/mês</small></div></div>
+      <div class="pl-card pl-anual"><div class="pl-t"><b id="pl-n-anual">Anual</b><small id="pl-anual-eco">Poupa 5% (300 MT)</small></div><div class="pl-p"><span id="pl-anual">5.700</span> MT<small>/ano</small></div></div>
     </div>
     <button class="btn" onclick="location.href='mobile.html'">Começar a vender</button>
   </div>
@@ -91,9 +91,11 @@ function passo(n){ ['p1','p2','p3'].forEach((p,i)=>document.getElementById(p).cl
 async function precosBanca(){
   let c={gratis_dias:15,mensal:500,anual_desconto:5};
   try{ const { data }=await supabaseClient.from('config_global').select('valor').eq('chave','planos_banca').maybeSingle(); if(data&&data.valor){ c=Object.assign(c, typeof data.valor==='string'?JSON.parse(data.valor):data.valor); } }catch(e){}
-  const m=+c.mensal||500, d=+c.anual_desconto||0, a=Math.round(m*12*(1-d/100)), f=n=>String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,'.');
-  document.getElementById('pl-mensal').textContent=f(m); document.getElementById('pl-anual').textContent=f(a);
-  document.getElementById('pl-anual-eco').textContent='Poupa '+d+'% ('+f(m*12-a)+' MT)';
+  const m=+c.mensal||500, dp=+c.mensal_desconto||0, ba=+c.anual_preco||m, d=+c.anual_desconto||0, pm=Math.round(m*(1-dp/100)), a=Math.round(ba*12*(1-d/100)), f=n=>String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+  document.getElementById('pl-mensal').textContent=f(pm); document.getElementById('pl-anual').textContent=f(a);
+  document.getElementById('pl-anual-eco').textContent='Poupa '+d+'% ('+f(ba*12-a)+' MT)';
+  document.getElementById('pl-pro-sub').textContent=dp?('Desconto '+dp+'% (era '+f(m)+' MT)'):'Pagamento mensal';
+  document.getElementById('pl-n-gratis').textContent=c.gratis_nome||'Grátis'; document.getElementById('pl-n-pro').textContent=c.mensal_nome||'Pro'; document.getElementById('pl-n-anual').textContent=c.anual_nome||'Anual';
   document.getElementById('pl-dias').textContent=c.gratis_dias; document.getElementById('pl-dias2').textContent=c.gratis_dias;
 }
 

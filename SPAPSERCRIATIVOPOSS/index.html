@@ -349,7 +349,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
   [tabindex]:focus-visible { outline: 2px solid #1a56a0; outline-offset: 1px; }
 </style>
-<script src="app-android.js?v=2.9.206" defer></script>
+<script src="app-android.js?v=2.9.207" defer></script>
 </head>
 <body>
 
@@ -4631,13 +4631,27 @@ async function scannerFechar() {
       setTimeout(() => document.getElementById('campo-vendedor-codigo').focus(), 200);
     });
   }
-  function confirmarCodigoVendedor() {
+  // Lê os códigos actuais na base de dados (se o dono mudou, o antigo deixa de valer na hora)
+  async function codigosVendedorAtuais() {
+    try {
+      if (navigator.onLine !== false && sessaoAtual && sessaoAtual.lojaId) {
+        const { data } = await supabaseClient.from('lojas').select('vendedores').eq('id', sessaoAtual.lojaId).maybeSingle();
+        if (data && Array.isArray(data.vendedores)) sessaoAtual.vendedores = data.vendedores.map(x => String(x).trim());
+      }
+    } catch (e) {}
+    return ((sessaoAtual && sessaoAtual.vendedores) || []).map(x => String(x).trim());
+  }
+  async function confirmarCodigoVendedor() {
     const cod = document.getElementById('campo-vendedor-codigo').value.trim();
-    if (!sessaoAtual.vendedores.includes(cod)) {
-      document.getElementById('vendedor-erro').style.display = 'block';
+    const lista = await codigosVendedorAtuais();
+    if (!lista.includes(cod)) {
+      const er = document.getElementById('vendedor-erro');
+      er.textContent = '❌ Código errado. Pede o código ao dono.';
+      er.style.display = 'block';
       document.getElementById('campo-vendedor-codigo').value = '';
       return;
     }
+    document.getElementById('vendedor-erro').style.display = 'none';
     sessaoAtual.vendedorCodigo = cod;
     sessionStorage.setItem('pdv_vendedor_codigo', cod);
     document.getElementById('tela-vendedor').style.display = 'none';
@@ -4645,6 +4659,22 @@ async function scannerFechar() {
     if (u) u.textContent = (sessaoAtual.nomeExibicao||'') + ' · 👤' + cod;
     if (_resolverVendedor) { _resolverVendedor(); _resolverVendedor = null; }
   }
+  // Se o dono mudou o código no Monitor, a Loja volta a pedir o código novo
+  async function verificarCodigoVendedorEmUso() {
+    if (!sessaoAtual || !sessaoAtual.vendedorCodigo) return;
+    const t = document.getElementById('tela-vendedor'); if (!t || t.style.display === 'flex') return;
+    if (navigator.onLine === false) return;
+    const lista = await codigosVendedorAtuais();
+    if (!lista.length || lista.includes(String(sessaoAtual.vendedorCodigo))) return;
+    sessaoAtual.vendedorCodigo = null;
+    try { sessionStorage.removeItem('pdv_vendedor_codigo'); } catch (e) {}
+    document.getElementById('campo-vendedor-codigo').value = '';
+    pedirCodigoVendedor();
+    const er = document.getElementById('vendedor-erro');
+    er.textContent = '🔐 O código mudou. Pede o código novo ao dono.'; er.style.display = 'block';
+  }
+  setInterval(verificarCodigoVendedorEmUso, 20000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) verificarCodigoVendedorEmUso(); });
   document.addEventListener('keydown', e => {
     if (e.key === 'Enter' && document.getElementById('tela-vendedor').style.display === 'flex') {
       confirmarCodigoVendedor();
@@ -5850,7 +5880,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.206';
+  const VERSAO_ATUAL = '2.9.207';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.

@@ -18,6 +18,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="spap-leitor.js?v=2.9.207"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -811,6 +812,19 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   body:has(.sub-painel.aberto) .kpi::after, body:has(.sub-painel.aberto) .kpi *, body:has(.sub-painel.aberto) .cg-card * { animation-play-state:paused !important; }
   .sub-painel.aberto > div { contain:layout paint; }
   #painel-meu-perfil > div > div { contain:layout paint; }
+  #perfil-codigo-balc .cb-atual { display:flex; align-items:center; justify-content:space-between; gap:12px; background:linear-gradient(135deg,#f5f3ff,#eef2ff); border:1.5px solid #c4b5fd; border-radius:12px; padding:12px 14px; margin-bottom:10px; }
+  #perfil-codigo-balc .cb-atual small { display:block; font-size:11.5px; font-weight:700; color:#6d28d9; text-transform:uppercase; letter-spacing:.04em; }
+  #perfil-codigo-balc .cb-atual b { display:block; font-size:24px; letter-spacing:6px; color:#1e1b4b; margin-top:2px; font-variant-numeric:tabular-nums; }
+  #perfil-codigo-balc .cb-ver { flex:none; padding:9px 14px; border-radius:10px; border:1.5px solid #c4b5fd; background:#fff; color:#6d28d9; font-weight:800; font-size:13px; cursor:pointer; }
+  #perfil-codigo-balc .cb-nota { font-size:12.5px; color:#64748b; line-height:1.5; margin:0 0 12px; }
+  #perfil-codigo-balc .cb-lab { display:block; font-size:13px; color:#64748b; font-weight:600; }
+  #perfil-codigo-balc .cb-in { width:100%; padding:11px; border:1.5px solid #e2e8f0; border-radius:9px; font-size:18px; letter-spacing:4px; margin:5px 0 12px; box-sizing:border-box; outline:none; }
+  #perfil-codigo-balc .cb-in:focus { border-color:#7c3aed; }
+  #perfil-codigo-balc .cb-erro { color:#dc2626; font-size:13px; font-weight:700; min-height:0; margin:-4px 0 8px; }
+  #perfil-codigo-balc .cb-erro:empty { display:none; }
+  #perfil-codigo-balc .cb-guardar { width:100%; padding:12px; background:linear-gradient(135deg,#7c3aed,#4f46e5); border:none; border-radius:10px; color:#fff; font-weight:bold; cursor:pointer; font-size:15px; }
+  #perfil-codigo-balc .cb-guardar:disabled { opacity:.6; }
+  #perfil-codigo-balc .cb-outros { width:100%; margin-top:8px; padding:10px; background:none; border:1px dashed #c4b5fd; border-radius:10px; color:#6d28d9; font-weight:700; font-size:12.5px; cursor:pointer; }
   #painel-meu-perfil .pf-logo { display:flex; align-items:center; gap:12px; margin:6px 0 14px; }
   #painel-meu-perfil .pf-logo-caixa { width:104px; height:104px; border-radius:16px; border:2px dashed #cbd5e1; background:#f8fafc; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0; position:relative; }
   #painel-meu-perfil .pf-logo-caixa.tem-logo { border:2px solid #22c55e; background:#fff; box-shadow:0 4px 14px rgba(34,197,94,.18); }
@@ -941,7 +955,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.206" defer></script>
+<script src="app-android.js?v=2.9.207" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -4123,6 +4137,53 @@ async function abrirEntregas() {
   }).join('');
 }
 
+// ===== CÓDIGO DO BALCONISTA (Meu Perfil) — igual à Banca =====
+let _cbVisivel = false;
+async function cbCarregar() {
+  _cbVisivel = false;
+  ['cb-novo','cb-novo2'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+  const er = document.getElementById('cb-erro'); if (er) er.textContent = '';
+  try {
+    if (lojaId) {
+      const { data } = await supabaseClient.from('lojas').select('vendedores').eq('id', lojaId).maybeSingle();
+      if (data && Array.isArray(data.vendedores)) lojaVendedores = data.vendedores.map(String);
+    }
+  } catch (e) {}
+  cbPintar();
+}
+function cbPintar() {
+  const el = document.getElementById('cb-atual'); if (!el) return;
+  const c = String((lojaVendedores || [])[0] || '');
+  el.textContent = !c ? 'Sem código' : (_cbVisivel ? c : '•'.repeat(c.length));
+  el.style.letterSpacing = c ? '' : '0';
+  const b = document.getElementById('cb-ver-bt'); b.style.display = c ? '' : 'none'; b.textContent = _cbVisivel ? 'Esconder' : 'Mostrar';
+  const o = document.getElementById('cb-outros'); if (o) o.textContent = (lojaVendedores.length > 1 ? '👥 ' + lojaVendedores.length + ' códigos — gerir todos' : '👥 Tenho mais balconistas — gerir todos os códigos');
+}
+function cbVer() { _cbVisivel = !_cbVisivel; cbPintar(); }
+async function cbGuardar() {
+  const n1 = (document.getElementById('cb-novo').value || '').trim(), n2 = (document.getElementById('cb-novo2').value || '').trim(), er = document.getElementById('cb-erro');
+  er.textContent = '';
+  if (modoGeral || !lojaId) { er.textContent = 'Escolhe uma loja específica no seletor do topo.'; return; }
+  if (!/^\d{4,8}$/.test(n1)) { er.textContent = 'O código deve ter de 4 a 8 números.'; return; }
+  if (n1 !== n2) { er.textContent = 'Os dois códigos não são iguais.'; return; }
+  const cods = (lojaVendedores || []).map(String).slice();
+  if (cods[0] === n1) { er.textContent = 'Este já é o código actual.'; return; }
+  if (cods.length) cods[0] = n1; else cods.push(n1);
+  const final = cods.filter((c, i) => cods.indexOf(c) === i);
+  const b = document.getElementById('cb-guardar'); b.disabled = true; b.textContent = 'A guardar…';
+  try {
+    const { data, error } = await supabaseClient.from('lojas').update({ vendedores: final }).eq('id', lojaId).select('vendedores');
+    if (error) throw error;
+    const ok = data && data[0] && Array.isArray(data[0].vendedores) && data[0].vendedores.map(String).includes(n1);
+    if (!ok) throw new Error('a base de dados não aceitou a alteração');
+    lojaVendedores = data[0].vendedores.map(String); _cbVisivel = true; cbPintar();
+    ['cb-novo','cb-novo2'].forEach(id => document.getElementById(id).value = '');
+    mostrarNotif('✅ Código guardado. O balconista já entra com ' + n1);
+    try { if (document.getElementById('painel-vendedores-cod').classList.contains('aberto')) renderVendedoresCod(); } catch (e) {}
+  } catch (e) { er.textContent = 'Não foi possível guardar: ' + (e.message || e); }
+  b.disabled = false; b.textContent = '💾 Guardar código';
+}
+
 // ===== VENDEDORES (códigos 1001, 1002...) =====
 function abrirVendedores() {
   if (modoGeral) { alert('Escolhe uma loja específica no seletor do topo.'); return; }
@@ -4131,6 +4192,7 @@ function abrirVendedores() {
 }
 
 function renderVendedoresCod() {
+  try { cbPintar(); } catch (e) {}
   const div = document.getElementById('lista-vendedores-cod');
   if (lojaVendedores.length === 0) {
     div.innerHTML = '<div style="text-align:center;color:#cbd5e1;padding:20px;font-size:13px;">Nenhum código de vendedor. Adiciona acima.</div>';
@@ -4769,32 +4831,16 @@ const SCANNER_FORMATOS = () => [
   Html5QrcodeSupportedFormats.ITF, Html5QrcodeSupportedFormats.QR_CODE
 ];
 
+// Ecrã inteiro com moldura e linha de leitura (o mesmo modelo da Banca) — spap-leitor.js
 async function scannerAbrir(areaId, readerId, onCodigo) {
   scannerAreaId = areaId; scannerCallback = onCodigo;
   const area = document.getElementById(areaId);
-  area.style.display = 'block';
-  area.innerHTML = `
-    <div id="${readerId}" style="width:100%;"></div>
-    <div style="display:flex;gap:8px;padding:8px;background:#1e1b2e;">
-      <button onclick="scannerFoto()" style="flex:1;padding:10px;background:#7c3aed;border:none;border-radius:8px;color:white;font-weight:bold;cursor:pointer;font-size:13px;">📸 Não lê? Tira uma FOTO do código</button>
-      <button onclick="scannerFechar()" style="padding:10px 16px;background:rgba(255,255,255,0.15);border:none;border-radius:8px;color:white;cursor:pointer;font-size:13px;">✕ Fechar</button>
-    </div>
-    <div style="background:rgba(124,58,237,0.92);color:white;text-align:center;padding:7px;font-size:12px;">Enche a caixa com o código, 10–15 cm, bem iluminado</div>
-    <input type="file" id="scanner-foto-input" accept="image/*" capture="environment" style="display:none" onchange="scannerFotoLida(event)">`;
-
-  try {
-    scannerAtivo = new Html5Qrcode(readerId, { formatsToSupport: SCANNER_FORMATOS(), verbose: false });
-    await scannerAtivo.start(
-      { facingMode: 'environment' },
-      { fps: 15, qrbox: (w) => ({ width: Math.min(340, Math.floor(w*0.9)), height: 160 }),
-        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-        videoConstraints: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } },
-      (codigo) => { const cb = scannerCallback; scannerFechar(); if (cb) cb(codigo); },
-      () => {}
-    );
-  } catch (err) {
-    mostrarNotif('❌ Câmera indisponível: ' + (err.message || err) + '. Usa o botão 📸 FOTO.', true);
+  if (area) { area.style.display = 'none'; area.innerHTML = '<input type="file" id="scanner-foto-input" accept="image/*" capture="environment" style="display:none" onchange="scannerFotoLida(event)">'; }
+  if (window.spapLeitor) {
+    spapLeitor((codigo) => { const cb = scannerCallback; scannerFechar(); if (cb) cb(codigo); });
+    return;
   }
+  mostrarNotif('❌ Leitor indisponível. Atualiza a página.', true);
 }
 
 // Fallback por FOTO: usa a resolução máxima da câmera — muito mais fiável
@@ -4837,6 +4883,7 @@ async function scannerFotoLida(ev) {
 }
 
 async function scannerFechar() {
+  try { if (window.spapLeitorFechar) spapLeitorFechar(); } catch(e) {}
   if (scannerAtivo) { try { await scannerAtivo.stop(); scannerAtivo.clear(); } catch(e) {} scannerAtivo = null; }
   if (scannerAreaId) {
     const area = document.getElementById(scannerAreaId);
@@ -5489,7 +5536,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.206';
+const MONITOR_VERSAO = '2.9.207';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -5892,7 +5939,7 @@ function verificarLembreteBackup() {
 
 async function abrirMeuPerfil() {
   if (modoGeral) { mostrarNotif('Escolhe primeiro uma loja (Super Admin → loja) para ver o perfil.', true); return; }
-  document.getElementById('painel-meu-perfil').classList.add('aberto'); try{history.pushState({subpainel:'painel-meu-perfil'},'');}catch(e){}
+  document.getElementById('painel-meu-perfil').classList.add('aberto'); try{history.pushState({subpainel:'painel-meu-perfil'},'');}catch(e){} cbCarregar();
   // limpa tudo antes de carregar (nunca mostra dados de outra loja)
   ['perfil-in-nome','perfil-in-empresa','perfil-in-telefone','perfil-in-endereco','perfil-in-codigo','perfil-in-pingerente','perfil-in-rodape','perfil-in-pin','perfil-in-email','perfil-in-senha']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
@@ -6748,9 +6795,9 @@ async function carregarContagensEquipa() {
       <label style="font-size:13px;color:#64748b;font-weight:600;">Endereço</label>
       <input type="text" id="perfil-in-endereco" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:15px;margin:5px 0 14px;box-sizing:border-box;">
 
-      <label style="font-size:13px;color:#64748b;font-weight:600;">🔑 Código de acesso do balconista (loja)</label>
-      <input type="text" id="perfil-in-codigo" placeholder="ex: 1234" style="width:100%;padding:11px;border:1.5px solid #fdba74;border-radius:9px;font-size:15px;margin:5px 0 4px;box-sizing:border-box;">
-      <div style="font-size:11px;color:#64748b;margin:0 0 14px;">Muda este código quando trocares de balconista, para o anterior deixar de aceder.</div>
+      <label style="font-size:13px;color:#64748b;font-weight:600;">🏦 Código do agente (pagamentos por transferência)</label>
+      <input type="text" id="perfil-in-codigo" placeholder="ex: 123456" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:15px;margin:5px 0 4px;box-sizing:border-box;">
+      <div style="font-size:11px;color:#64748b;margin:0 0 14px;">Aparece na Loja, junto ao número de transferência, para o cliente pagar.</div>
 
       <label style="font-size:13px;color:#64748b;font-weight:600;">🔒 Código do Monitor Extra (gerente)</label>
       <input type="text" id="perfil-in-pingerente" placeholder="0000" style="width:100%;padding:11px;border:1.5px solid #fdba74;border-radius:9px;font-size:15px;margin:5px 0 4px;box-sizing:border-box;">
@@ -6764,6 +6811,23 @@ async function carregarContagensEquipa() {
       <div style="font-size:11px;color:#64748b;margin:0 0 14px;">Quando LIGADO, o balconista pode clicar no preço de um produto do carrinho e baixá-lo. Quando DESLIGADO, não consegue descontar. Só tu controlas isto — a loja atualiza ao clicar em ⟳.</div>
 
       <button class="pf-guardar" onclick="guardarDadosPerfil(this)" style="width:100%;padding:12px;background:#16a34a;border:none;border-radius:10px;color:white;font-weight:bold;cursor:pointer;">💾 Guardar dados da loja</button>
+    </div>
+
+    <!-- Código do balconista (igual à Banca) -->
+    <div id="perfil-codigo-balc" style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:16px;">
+      <div class="pf-tit"><span class="pf-ico">🔐</span><div><b>Código do balconista</b><small>O código para abrir a caixa na Loja</small></div></div>
+      <div class="cb-atual">
+        <div><small>Código actual</small><b id="cb-atual" class="notranslate">••••</b></div>
+        <button type="button" class="cb-ver" id="cb-ver-bt" onclick="cbVer()">Mostrar</button>
+      </div>
+      <p class="cb-nota">O balconista escreve este código para abrir a caixa. Quando guardares um código novo, o antigo deixa de funcionar na hora e a Loja pede o novo.</p>
+      <label class="cb-lab">Novo código (4 a 8 números)</label>
+      <input id="cb-novo" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password" placeholder="••••" class="cb-in">
+      <label class="cb-lab">Repetir o novo código</label>
+      <input id="cb-novo2" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password" placeholder="••••" class="cb-in">
+      <div class="cb-erro" id="cb-erro"></div>
+      <button type="button" id="cb-guardar" onclick="cbGuardar()" class="cb-guardar">💾 Guardar código</button>
+      <button type="button" class="cb-outros" onclick="abrirVendedores()" id="cb-outros">👥 Tenho mais balconistas — gerir todos os códigos</button>
     </div>
 
     <!-- Recibos: tudo o que aparece no recibo, num só sítio -->

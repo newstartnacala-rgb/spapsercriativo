@@ -208,9 +208,12 @@
   var _plano = { ok: false, ultimo: null };
   function precos(c) {
     c = Object.assign({ gratis_dias: 15, mensal: 500, anual_desconto: 5 }, c || {});
-    var m = +c.mensal || 500, d = +c.anual_desconto || 0;
-    return { dias: +c.gratis_dias || 15, mensal: m, desc: d, anual: Math.round(m * 12 * (1 - d / 100)) };
+    var m = +c.mensal || 500, dp = +c.mensal_desconto || 0, ba = +c.anual_preco || m, d = +c.anual_desconto || 0;
+    return { dias: +c.gratis_dias || 15, base: m, descPro: dp, mensal: Math.round(m * (1 - dp / 100)), baseAnual: ba, desc: d,
+      anual: Math.round(ba * 12 * (1 - d / 100)), poupaAnual: Math.round(ba * 12 * d / 100),
+      nomeGratis: c.gratis_nome || 'Grátis', nomePro: c.mensal_nome || 'Pro', nomeAnual: c.anual_nome || 'Anual' };
   }
+  window.bancaPrecos = precos;
   function mt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
   function irPagamento(motivo) { location.href = 'planos-banca.html' + (motivo ? '?m=' + motivo : ''); }
   function verificarPlano() {
@@ -251,9 +254,9 @@
       ov.innerHTML = '<div class="folha att-folha"><div class="att-ico">⭐</div><h3>Bem-vindo à SPAP Banca!</h3>'
         + '<div class="att-v">Plano grátis activo: ' + dias + ' dia' + (dias === 1 ? '' : 's') + '</div>'
         + '<div class="pl-lista" style="text-align:left">'
-        + '<div class="pl-card pl-gratis"><div class="pl-t"><b>Grátis</b><small>' + p.dias + ' dias, só para a primeira conta</small></div><div class="pl-p">0 MT</div><span class="pl-selo">Activo agora</span></div>'
-        + '<div class="pl-card"><div class="pl-t"><b>Pro</b><small>Pagamento mensal</small></div><div class="pl-p">' + mt(p.mensal) + ' MT<small>/mês</small></div></div>'
-        + '<div class="pl-card pl-anual"><div class="pl-t"><b>Anual</b><small>Poupa ' + p.desc + '% (' + mt(p.mensal * 12 - p.anual) + ' MT)</small></div><div class="pl-p">' + mt(p.anual) + ' MT<small>/ano</small></div></div>'
+        + '<div class="pl-card pl-gratis"><div class="pl-t"><b>' + p.nomeGratis + '</b><small>' + p.dias + ' dias, só para a primeira conta</small></div><div class="pl-p">0 MT</div><span class="pl-selo">Activo agora</span></div>'
+        + '<div class="pl-card"><div class="pl-t"><b>' + p.nomePro + '</b><small>' + (p.descPro ? 'Desconto ' + p.descPro + '% (era ' + mt(p.base) + ' MT)' : 'Pagamento mensal') + '</small></div><div class="pl-p">' + mt(p.mensal) + ' MT<small>/mês</small></div></div>'
+        + '<div class="pl-card pl-anual"><div class="pl-t"><b>' + p.nomeAnual + '</b><small>Poupa ' + p.desc + '% (' + mt(p.poupaAnual) + ' MT)</small></div><div class="pl-p">' + mt(p.anual) + ' MT<small>/ano</small></div></div>'
         + '</div><button class="btn" type="button" id="bv-ok">Começar a vender</button></div>';
       document.body.appendChild(ov);
       ov.querySelector('#bv-ok').onclick = function () { ov.remove(); };
