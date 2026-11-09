@@ -350,8 +350,10 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
   [tabindex]:focus-visible { outline: 2px solid #1a56a0; outline-offset: 1px; }
 </style>
-<script src="app-android.js?v=2.9.223" defer></script>
+<script src="app-android.js?v=2.9.224" defer></script>
 <style>/* a interface antiga nunca aparece: o ecrã antigo fica invisível até o novo abrir (sem piscar) */ body:not(.modo2) #tela-pdv { visibility:hidden !important; }</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -1054,17 +1056,57 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <!-- Modal: Aviso de Despacho (receção de mercadoria) -->
 <!-- Ecrã de entrada do vendedor (código 1001, 1002...) -->
-<div id="tela-vendedor" style="display:none;position:fixed;inset:0;background:linear-gradient(135deg,#1a56a0,#0f3460);z-index:10000;align-items:center;justify-content:center;">
-  <div style="background:white;border-radius:20px;padding:36px 32px;width:340px;max-width:92%;text-align:center;">
-    <img src="logo.png" style="width:180px;max-width:80%;margin-bottom:8px;">
-    <h2 style="font-size:17px;color:#1a202c;margin-bottom:6px;">👤 Código do Vendedor</h2>
-    <p style="font-size:13px;color:#94a3b8;margin-bottom:18px;">Digite o teu código para iniciar as vendas.</p>
-    <input type="tel" id="campo-vendedor-codigo" placeholder="Ex: 1001" inputmode="numeric" maxlength="8"
-      style="width:100%;padding:16px;border:2px solid #e2e8f0;border-radius:12px;font-size:22px;text-align:center;font-weight:bold;letter-spacing:4px;outline:none;">
-    <div id="vendedor-erro" style="display:none;color:#dc2626;font-size:13px;margin-top:10px;background:#fef2f2;padding:8px;border-radius:8px;">❌ Código inválido!</div>
-    <button onclick="confirmarCodigoVendedor()" style="width:100%;padding:15px;background:#1a56a0;border:none;border-radius:12px;color:white;font-size:16px;font-weight:bold;cursor:pointer;margin-top:14px;">ENTRAR</button>
+<div id="tela-vendedor" style="display:none;">
+  <div class="tv-caixa">
+    <img class="tv-marca" src="ssteam-logo.png" alt="SSTEAM">
+    <div class="tv-nome notranslate">Spap-<em>Sercriativo</em></div>
+    <div class="tv-tag notranslate">TECNOLOGIA VAREJISTA DE PONTA</div>
+    <div class="tv-loja" id="tv-loja">Loja</div>
+    <h2 class="tv-tit">Código do balconista</h2>
+    <p class="tv-sub">Escreve o teu código para começar a vender.</p>
+    <label class="tv-campo">
+      <span class="tv-ic"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M6 11h12v9H6z M8.5 11V8a3.5 3.5 0 0 1 7 0v3"/></svg></span>
+      <input type="password" id="campo-vendedor-codigo" placeholder="••••" inputmode="numeric" maxlength="8" autocomplete="off" aria-label="Código do balconista">
+      <button type="button" class="tv-olho" id="tv-olho" aria-label="Mostrar código" onclick="tvVerCodigo()"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button>
+    </label>
+    <div id="vendedor-erro" style="display:none;">❌ Código inválido!</div>
+    <button type="button" class="tv-entrar" onclick="confirmarCodigoVendedor()">ENTRAR</button>
+    <div class="tv-nota">🔒 O código é dado pelo dono da loja.</div>
   </div>
 </div>
+<style>
+  #tela-vendedor { position:fixed; inset:0; z-index:99995; align-items:center; justify-content:center; padding:16px; overflow:auto;
+    background:#eef3fb; font-family:'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; }
+  #tela-vendedor::before { content:""; position:fixed; inset:-20%; pointer-events:none;
+    background:radial-gradient(40% 35% at 15% 20%,rgba(37,99,235,.22),transparent 70%),radial-gradient(35% 30% at 85% 15%,rgba(226,174,74,.30),transparent 70%),radial-gradient(45% 40% at 70% 90%,rgba(99,102,241,.20),transparent 70%); filter:blur(10px); }
+  #tela-vendedor .tv-caixa { position:relative; width:100%; max-width:400px; margin:auto; text-align:center; background:rgba(255,255,255,.78); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px);
+    border:1px solid rgba(255,255,255,.9); border-radius:28px; padding:28px 22px 22px; box-shadow:0 30px 60px rgba(15,27,61,.14), inset 0 1px 0 #fff; animation:tv-entra .4s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes tv-entra { from { opacity:0; transform:translateY(12px) scale(.985); } to { opacity:1; transform:none; } }
+  #tela-vendedor .tv-caixa.treme { animation:tv-treme .38s; }
+  @keyframes tv-treme { 20%,60% { transform:translateX(-8px); } 40%,80% { transform:translateX(8px); } }
+  #tela-vendedor .tv-marca { width:96px; height:96px; object-fit:contain; border-radius:50%; filter:drop-shadow(0 12px 22px rgba(156,100,22,.45)); }
+  #tela-vendedor .tv-nome { font-family:Sora,'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:23px; letter-spacing:-.02em; color:#0f1b3d; margin-top:8px; }
+  #tela-vendedor .tv-nome em { font-style:normal; background:linear-gradient(90deg,#E9B954,#B47A1F); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  #tela-vendedor .tv-tag { font-size:9.5px; font-weight:800; letter-spacing:.22em; color:#8a6a2a; margin-top:4px; }
+  #tela-vendedor .tv-loja { display:inline-flex; align-items:center; gap:7px; margin-top:12px; background:#fff; border:1px solid #dfe6f3; padding:6px 13px; border-radius:999px; font-size:12.5px; font-weight:700; color:#5b6785; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #tela-vendedor .tv-loja::before { content:""; width:7px; height:7px; border-radius:50%; background:#22c55e; box-shadow:0 0 0 3px rgba(34,197,94,.2); flex:none; }
+  #tela-vendedor .tv-tit { font-family:Sora,'Plus Jakarta Sans',sans-serif; font-size:19px; font-weight:800; color:#0f1b3d; margin:16px 0 4px; }
+  #tela-vendedor .tv-sub { font-size:13.5px; color:#5b6785; margin:0 0 16px; }
+  #tela-vendedor .tv-campo { display:flex; align-items:center; gap:12px; height:60px; padding:0 14px 0 16px; border-radius:16px; border:1.5px solid #dfe6f3; background:rgba(255,255,255,.92); transition:border-color .15s, box-shadow .15s; }
+  #tela-vendedor .tv-campo:focus-within { border-color:#1d4ed8; box-shadow:0 0 0 4px rgba(37,99,235,.16); background:#fff; }
+  #tela-vendedor .tv-ic { width:22px; height:22px; color:#9aa5bd; flex:none; display:flex; } #tela-vendedor .tv-ic svg { width:22px; height:22px; }
+  #tela-vendedor .tv-campo:focus-within .tv-ic { color:#1d4ed8; }
+  #tela-vendedor .tv-campo input { flex:1; min-width:0; border:0; outline:0; background:none; font-size:22px; font-weight:800; letter-spacing:.3em; text-align:center; color:#0f1b3d; font-family:inherit; }
+  #tela-vendedor .tv-campo input::placeholder { color:#c3cbdc; letter-spacing:.3em; }
+  #tela-vendedor .tv-olho { width:36px; height:36px; border:0; background:none; color:#9aa5bd; cursor:pointer; display:flex; align-items:center; justify-content:center; border-radius:10px; flex:none; }
+  #tela-vendedor .tv-olho svg { width:22px; height:22px; } #tela-vendedor .tv-olho.on { color:#1d4ed8; }
+  #tela-vendedor #vendedor-erro { margin-top:10px; background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; border-radius:12px; padding:10px 12px; font-size:13.5px; font-weight:700; }
+  #tela-vendedor .tv-entrar { width:100%; height:56px; margin-top:14px; border:0; border-radius:16px; font-family:Sora,'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:16px; letter-spacing:.14em; color:#fff; cursor:pointer;
+    background:linear-gradient(135deg,#1d4ed8,#4338ca); box-shadow:0 14px 28px rgba(37,99,235,.36); transition:transform .12s; }
+  #tela-vendedor .tv-entrar:active { transform:scale(.985); }
+  #tela-vendedor .tv-nota { margin-top:12px; font-size:12px; color:#9aa5bd; }
+  @media (max-height:640px) { #tela-vendedor .tv-marca { width:64px; height:64px; } #tela-vendedor .tv-tit { margin-top:10px; } #tela-vendedor .tv-caixa { padding:18px 18px 16px; } }
+</style>
 
 <div class="modal-fundo" id="modal-despacho">
   <div class="modal largo" style="max-width:560px;">
@@ -4628,6 +4670,7 @@ async function scannerFechar() {
   function pedirCodigoVendedor() {
     return new Promise(res => {
       _resolverVendedor = res;
+      try { const l = document.getElementById('tv-loja'); if (l) l.textContent = (sessaoAtual && (sessaoAtual.nomeEmpresa || sessaoAtual.nomeLoja)) || 'Loja'; } catch (e) {}
       const t = document.getElementById('tela-vendedor');
       t.style.display = 'flex';
       setTimeout(() => document.getElementById('campo-vendedor-codigo').focus(), 200);
@@ -4643,6 +4686,10 @@ async function scannerFechar() {
     } catch (e) {}
     return ((sessaoAtual && sessaoAtual.vendedores) || []).map(x => String(x).trim());
   }
+  function tvVerCodigo() {
+    const i = document.getElementById('campo-vendedor-codigo'), o = document.getElementById('tv-olho');
+    const ver = i.type === 'password'; i.type = ver ? 'text' : 'password'; o.classList.toggle('on', ver); i.focus();
+  }
   async function confirmarCodigoVendedor() {
     const cod = document.getElementById('campo-vendedor-codigo').value.trim();
     const lista = await codigosVendedorAtuais();
@@ -4650,6 +4697,7 @@ async function scannerFechar() {
       const er = document.getElementById('vendedor-erro');
       er.textContent = '❌ Código errado. Pede o código ao dono.';
       er.style.display = 'block';
+      try { const c = document.querySelector('#tela-vendedor .tv-caixa'); c.classList.remove('treme'); void c.offsetWidth; c.classList.add('treme'); navigator.vibrate && navigator.vibrate([60,40,60]); } catch (e) {}
       document.getElementById('campo-vendedor-codigo').value = '';
       return;
     }
@@ -5882,7 +5930,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.223';
+  const VERSAO_ATUAL = '2.9.224';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
