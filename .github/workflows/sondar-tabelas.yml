@@ -1,0 +1,13 @@
+name: Sondar tabelas
+on: { workflow_dispatch: {} }
+jobs:
+  s:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          U=https://kggqshpqydhvtxklixyk.supabase.co
+          K=$(curl -s https://newstartnacala-rgb.github.io/spapsercriativo/supabase-config.js | grep -o "eyJ[A-Za-z0-9._-]*" | head -1)
+          for t in descontos inventario_sessao inventario_contagem venda_itens vendas perdas; do echo "$t $(curl -s -H "apikey: $K" -H "Authorization: Bearer $K" "$U/rest/v1/$t?select=*&limit=0" -o /tmp/o -w '%{http_code}') $(head -c 200 /tmp/o)"; done
+          curl -s -H "apikey: $K" "$U/rest/v1/" | python3 -c "import sys,json;d=json.load(sys.stdin);
+          for t in ['venda_itens','vendas','descontos','inventario_sessao','inventario_contagem','produtos']:
+            print(t, list((d.get('definitions',{}).get(t,{}).get('properties',{})).keys()))" || true
