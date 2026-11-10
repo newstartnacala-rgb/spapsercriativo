@@ -20,7 +20,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.229"></script>
+<script src="spap-leitor.js?v=2.9.230"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -1040,7 +1040,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.229" defer></script>
+<script src="app-android.js?v=2.9.230" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -1683,8 +1683,8 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 </div>
 
 <script src="supabase-config.js"></script>
-<script src="spap-avisos.js?v=1"></script>
-<script src="spap-backup.js?v=2"></script>
+<script src="spap-avisos.js?v=2"></script>
+<script src="spap-backup.js?v=3"></script>
 <script src="spap-imagem.js?v=1"></script>
 <script>
 let sessao = null, lojaId = null, nomeLoja = '';
@@ -5773,7 +5773,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.229';
+const MONITOR_VERSAO = '2.9.230';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -7298,7 +7298,7 @@ async function verificarEmergencias(){
 }
 setInterval(verificarEmergencias, 12000);
 // Avisos de abertura da loja e de entrega do dia (pop-up com a hora e a data)
-try { spapAvisosIniciar(function(){ return (typeof modoGeral!=='undefined' && modoGeral) ? null : (typeof lojaId!=='undefined' ? lojaId : null); }, function(){ return typeof nomeLoja!=='undefined' ? nomeLoja : ''; }); } catch(e) {}
+try { spapAvisosIniciar(function(){ return (typeof modoGeral!=='undefined' && modoGeral) ? null : (typeof lojaId!=='undefined' ? lojaId : null); }, function(){ return typeof nomeLoja!=='undefined' ? nomeLoja : ''; }, 'monitor'); } catch(e) {}
 setTimeout(verificarEmergencias, 4000);
 try { if ('Notification' in window && Notification.permission === 'default') { setTimeout(() => { try { Notification.requestPermission(); } catch(e){} }, 6000); } } catch(e){}
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) verificarEmergencias(); });

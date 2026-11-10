@@ -112,9 +112,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="Banca e Vendas">
-<link rel="stylesheet" href="banca-tema.css?v=3.7.19">
-<script src="banca-tema.js?v=3.7.19" defer></script>
-<script src="app-android.js?v=3.7.19" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.20">
+<script src="banca-tema.js?v=3.7.20" defer></script>
+<script src="app-android.js?v=3.7.20" defer></script>
 </head>
 <body>
 
@@ -395,8 +395,8 @@
 <div id="toast" class="toast"></div>
 
 <script src="supabase-config.js"></script>
-<script src="spap-avisos.js?v=1"></script>
-<script src="banca-offline.js?v=3.7.19"></script>
+<script src="spap-avisos.js?v=2"></script>
+<script src="banca-offline.js?v=3.7.20"></script>
 <script>
 // ===================== ESTADO =====================
 let sessao = null;        // { lojaId, nomeLoja, userId, vendedor }
@@ -404,7 +404,7 @@ let produtos = [];
 let carrinho = [];        // { id, nome, preco, precoOriginal?, qtd, stock, imagem, codbarras }
 let descontosLote = [];   // descontos feitos nesta venda, para registar ao confirmar
 // Abertura da banca: a 1.ª entrada do dia avisa o dono no Monitor e Banca (hora e data)
-function _verAbertura(){ try { if (sessao && sessao.lojaId && window.spapMarcarAbertura) spapMarcarAbertura({ lojaId: sessao.lojaId, codigo: sessao.vendedor || '', tipo: 'banca', userId: sessao.userId, fila: true }); } catch(e) {} }
+function _verAbertura(){ try { if (sessao && sessao.lojaId && window.spapVerConta) spapVerConta(sessao.lojaId, 'banca'); } catch(e) {} try { if (sessao && sessao.lojaId && window.spapMarcarAbertura) spapMarcarAbertura({ lojaId: sessao.lojaId, codigo: sessao.vendedor || '', tipo: 'banca', userId: sessao.userId, fila: true }); } catch(e) {} }
 setInterval(_verAbertura, 20000); setTimeout(_verAbertura, 3000);
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) _verAbertura(); });
 

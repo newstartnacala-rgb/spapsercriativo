@@ -54,6 +54,44 @@
       criado_em: agora.toISOString() }, o.fila);
   };
 
+
+  // ===== Conta encerrada por migração: a conta antiga não volta a abrir =====
+  // pagina: 'loja' | 'monitor' | 'banca' | 'bancamonitor'
+  var _contaVista = {};
+  window.spapVerConta = async function (lojaId, pagina) {
+    if (!lojaId || document.getElementById('spap-encerrada') || navigator.onLine === false) return;
+    if (_contaVista[lojaId] && Date.now() - _contaVista[lojaId] < 60000) return;
+    _contaVista[lojaId] = Date.now();
+    var r; try { r = await supabaseClient.from('lojas').select('estado,tipo_loja,migrado_de,migrada_para').eq('id', lojaId).maybeSingle(); } catch (e) { return; }
+    var l = r && r.data; if (!l || r.error) return;
+    var paginaBanca = pagina === 'banca' || pagina === 'bancamonitor';
+    var encerrada = l.estado === 'encerrado';
+    var trocada = !encerrada && l.migrado_de && ((l.tipo_loja === 'banca') !== paginaBanca);   // conta nova é do outro tipo
+    if (!encerrada && !trocada) return;
+    var paraBanca = encerrada ? l.migrada_para === 'banca' : l.tipo_loja === 'banca';
+    var nomeDe = paginaBanca ? 'Banca' : 'Loja', nomePara = paraBanca ? 'Banca' : 'Loja';
+    var dono = pagina === 'monitor' || pagina === 'bancamonitor';
+    var destino = paraBanca ? (dono ? 'mobile-monitor.html' : 'mobile.html') : (dono ? 'monitor.html' : 'index.html');
+    try { Object.keys(localStorage).forEach(function (k) { if (k === 'banca_sessao_cache' || (encerrada && k.indexOf(String(lojaId)) >= 0)) localStorage.removeItem(k); }); } catch (e) {}
+    var st = document.createElement('style');
+    st.textContent = '#spap-encerrada{position:fixed;inset:0;z-index:2147483600;background:#eef3fb;display:flex;align-items:center;justify-content:center;padding:18px;font-family:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;}'
+      + '#spap-encerrada .se{width:100%;max-width:400px;background:#fff;border-radius:28px;padding:26px 22px 22px;text-align:center;box-shadow:0 30px 60px rgba(15,27,61,.16);}'
+      + '#spap-encerrada .se-ic{font-size:54px;line-height:1;} #spap-encerrada .se-selo{display:inline-block;margin-top:12px;background:#fef2f2;color:#b91c1c;font-weight:800;font-size:12px;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:6px 12px;}'
+      + '#spap-encerrada h1{margin:12px 0 6px;font-size:21px;font-weight:800;color:#0f1b3d;line-height:1.25;} #spap-encerrada p{margin:0 0 16px;font-size:14.5px;color:#5b6785;line-height:1.55;}'
+      + '#spap-encerrada .se-tipo{display:flex;align-items:center;gap:10px;margin:0 0 16px;} #spap-encerrada .se-tipo div{flex:1;border-radius:14px;padding:10px;font-weight:800;} #spap-encerrada .se-tipo .a{background:#fef2f2;color:#b91c1c;text-decoration:line-through;} #spap-encerrada .se-tipo .b{background:#f0fdf4;color:#15803d;}'
+      + '#spap-encerrada a{display:flex;align-items:center;justify-content:center;height:56px;border-radius:16px;color:#fff;text-decoration:none;font-weight:800;font-size:16px;background:linear-gradient(135deg,#16a34a,#15803d);box-shadow:0 14px 28px rgba(0,0,0,.15);}'
+      + 'html.escuro #spap-encerrada{filter:invert(1) hue-rotate(180deg);}';
+    document.head.appendChild(st);
+    var d = document.createElement('div'); d.id = 'spap-encerrada';
+    d.innerHTML = '<div class="se"><div class="se-ic">' + (encerrada ? '🔒' : '🔁') + '</div><div class="se-selo">' + (encerrada ? nomeDe + ' encerrada' : 'Conta migrada') + '</div>'
+      + '<h1>Esta ' + nomeDe.toLowerCase() + ' passou a ' + nomePara + '</h1>'
+      + '<p>' + (encerrada ? 'Esta conta foi encerrada e já não abre. ' : '') + 'Os produtos estão agora na <b>' + nomePara + '</b>, com o mesmo email e palavra-passe.' + (!dono ? ' Se tiver dúvidas, fale com o dono.' : '') + '</p>'
+      + '<div class="se-tipo"><div class="a">' + nomeDe + '</div><span>➜</span><div class="b">' + nomePara + '</div></div>'
+      + '<a href="' + destino + '">Abrir a ' + nomePara + '</a></div>';
+    document.body.appendChild(d);
+    try { document.documentElement.style.overflow = 'hidden'; } catch (e) {}
+  };
+
   // ===== Monitores: pop-up =====
   var css = ''
     + '#spap-avisos{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:100040;width:calc(100% - 24px);max-width:420px;display:flex;flex-direction:column;gap:10px;pointer-events:none;font-family:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;}'
@@ -117,6 +155,7 @@
   async function verificar() {
     if (_aVer || !_getLoja) return;
     var loja = _getLoja(); if (!loja || typeof supabaseClient === 'undefined') return;
+    if (_pagina) spapVerConta(loja, _pagina);
     _aVer = true;
     try {
       var k = 'spap_avisos_visto_' + loja, desde = null;
@@ -133,8 +172,9 @@
       }
     } catch (e) {} finally { _aVer = false; }
   }
-  window.spapAvisosIniciar = function (getLoja, getNome) {
-    _getLoja = getLoja; _getNome = getNome || null;
+  var _pagina = null;
+  window.spapAvisosIniciar = function (getLoja, getNome, pagina) {
+    _getLoja = getLoja; _getNome = getNome || null; _pagina = pagina || null;
     setTimeout(verificar, 2500);
     setInterval(verificar, 15000);
     document.addEventListener('visibilitychange', function () { if (!document.hidden) verificar(); });

@@ -19,6 +19,6 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY,
 // Contas canceladas (depois de uma migração Loja ↔ Banca) ficam para o fim: entra-se sempre na conta ativa.
 function spapMembrosAtivos(l) {
   if (!Array.isArray(l)) return l;
-  var c = function (m) { var e = m && m.lojas && m.lojas.estado; return /cancel/i.test(e || '') ? 1 : 0; };
+  var c = function (m) { var e = m && m.lojas && m.lojas.estado; return /cancel|encerr/i.test(e || '') ? 1 : 0; };
   return l.slice().sort(function (a, b) { return c(a) - c(b); });
 }

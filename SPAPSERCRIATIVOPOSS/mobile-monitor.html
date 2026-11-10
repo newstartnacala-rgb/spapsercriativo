@@ -88,9 +88,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.19">
-<script src="banca-tema.js?v=3.7.19" defer></script>
-<script src="app-android.js?v=3.7.19" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.20">
+<script src="banca-tema.js?v=3.7.20" defer></script>
+<script src="app-android.js?v=3.7.20" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -407,8 +407,8 @@
 <div id="toast" class="toast"></div>
 
 <script src="supabase-config.js"></script>
-<script src="spap-avisos.js?v=1"></script>
-<script src="spap-backup.js?v=2"></script>
+<script src="spap-avisos.js?v=2"></script>
+<script src="spap-backup.js?v=3"></script>
 <script src="spap-imagem.js?v=1"></script>
 <script>
 let sessao=null, produtos=[], periodo='hoje', periodoDesc='hoje';
@@ -955,7 +955,7 @@ async function historicoInventario(){
 }
 
 // Avisos de abertura da banca e de entrega do dia (pop-up com a hora e a data)
-try { spapAvisosIniciar(function(){ return (typeof sessao!=='undefined' && sessao) ? sessao.lojaId : null; }, function(){ return (sessao && sessao.nomeLoja) || ''; }); } catch(e) {}
+try { spapAvisosIniciar(function(){ return (typeof sessao!=='undefined' && sessao) ? sessao.lojaId : null; }, function(){ return (sessao && sessao.nomeLoja) || ''; }, 'bancamonitor'); } catch(e) {}
 function mBackup(){ fecharFolha('folha-menu'); fecharFolha('folha-definicoes'); spapBackupAbrir({ lojaId: sessao.lojaId, nomeLoja: sessao.nomeLoja, tipo: 'banca', cor: 'linear-gradient(135deg,#f2700f,#e05c00)', corTexto: '#c2410c', depois: function(){ try { carregarProdutos(); } catch(e){} } }); }
 // ===== TOP 10 DE HOJE (sempre o dia de hoje, com a imagem; toque 2x para ecrã cheio) =====
 function escA(t){ return esc(t).replace(/"/g,'&quot;'); }
