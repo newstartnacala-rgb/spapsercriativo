@@ -20,7 +20,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.227"></script>
+<script src="spap-leitor.js?v=2.9.228"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -1040,7 +1040,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.227" defer></script>
+<script src="app-android.js?v=2.9.228" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -1206,7 +1206,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     <!-- TOP PRODUTOS -->
     <div class="secao-card">
       <div class="secao-header">
-        <div class="sh-esq"><img class="sh-ico" src="icons3d/trophy.png" alt=""><div class="secao-titulo">Top Produtos Hoje</div></div>
+        <div class="sh-esq"><img class="sh-ico" src="icons3d/trophy.png" alt=""><div class="secao-titulo">Top 10 Produtos Hoje</div></div>
         <button type="button" class="sh-pill sh-seta sh-botao" onclick="abrirRelatorioAvancado()" title="Ver os produtos mais vendidos"><span class="secao-sub" id="top-prod-count">0 produtos</span></button>
       </div>
       <div id="lista-top-produtos">
@@ -1321,7 +1321,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
       <button class="def-item" onclick="toggleModoEscuro()"><img id="def-escuro-ico" src="icons3d/moon.png" alt=""><span>Modo escuro</span><i class="def-switch" id="def-escuro-sw"></i></button>
       <button class="def-item" onclick="fecharDefinicoes();abrirModalLinguaMonitor()"><img src="icons3d/globe.png" alt=""><span>Idioma</span><i class="def-seta"></i></button>
       <button class="def-item" id="def-att" onclick="fecharDefinicoes();abrirAtualizacoes()"><img src="icons3d/refresh.png" alt=""><span>Verificar atualizações</span><b class="def-novo" id="def-att-novo" style="display:none">Nova</b><i class="def-seta"></i></button>
-      <button class="def-item def-dono" onclick="fecharDefinicoes();abrirBackup()"><img src="icons3d/floppy.png" alt=""><span>Backup / Segurança</span><i class="def-seta"></i></button>
+      <button class="def-item def-dono" onclick="fecharDefinicoes();abrirBackup()"><img src="icons3d/floppy.png" alt=""><span>Backup · Recuperar · Migrar</span><i class="def-seta"></i></button>
       <button class="def-item def-dono" onclick="fecharDefinicoes();abrirSuporte()"><img src="icons3d/chat.png" alt=""><span>Suporte</span><i class="def-seta"></i></button>
       <button class="def-item" onclick="fecharDefinicoes();instalarAppMonitor('android')"><span class="def-plat def-android"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85a.637.637 0 0 0-.83.22l-1.88 3.24a11.43 11.43 0 0 0-8.94 0L5.65 5.67a.643.643 0 0 0-.87-.2c-.28.18-.37.54-.22.83L6.4 9.48A10.78 10.78 0 0 0 1 18h22a10.78 10.78 0 0 0-5.4-8.52M7 15.25a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5m10 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5"/></svg></span><span>App para Android</span><i class="def-seta"></i></button>
       <button class="def-item" onclick="fecharDefinicoes();instalarAppMonitor('ios')"><span class="def-plat def-ios"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg></span><span>App para iPhone</span><i class="def-seta"></i></button>
@@ -1683,6 +1683,9 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 </div>
 
 <script src="supabase-config.js"></script>
+<script src="spap-avisos.js?v=1"></script>
+<script src="spap-backup.js?v=1"></script>
+<script src="spap-imagem.js?v=1"></script>
 <script>
 let sessao = null, lojaId = null, nomeLoja = '';
 let todasVendas = [], todosProdutos = [], todosMemb = [];
@@ -2287,6 +2290,7 @@ async function _carregarImagensProdutos(chave, daLoja, meu) {
       pendenteRender = null;
       if (_chaveLojaAtual() !== chave) return;
       _aplicarImagens(chave);
+      try { renderTop10(); } catch (e) {}
       try { const pp = document.getElementById('painel-produtos'); if (pp && pp.classList.contains('aberto')) renderProdutosSubPainel(); } catch (e) {}
     }, 400);
   };
@@ -2531,6 +2535,37 @@ function voltarParaHoje() {
 }
 
 // ===== HOME =====
+function renderTop10() {
+  const vendasHoje = window._t10Vendas || [];
+  const contagem = {};
+  vendasHoje.forEach(v => v.venda_itens.forEach(it => {
+    if (!contagem[it.produto_nome]) contagem[it.produto_nome] = {qtd:0, total:0};
+    contagem[it.produto_nome].qtd += it.qtd;
+    contagem[it.produto_nome].total += it.qtd * parseFloat(it.preco_unitario);
+  }));
+  const top = Object.entries(contagem).sort((a,b) => b[1].qtd - a[1].qtd).slice(0,10);
+  const maxQ = top.length ? top[0][1].qtd : 1;
+  document.getElementById('top-prod-count').textContent = top.length + (top.length === 1 ? ' produto' : ' produtos');
+  document.getElementById('lista-top-produtos').innerHTML = top.length === 0
+    ? '<div class="vazio-rico"><div class="vr-pedestal"><img src="icons3d/package.png" alt=""></div><div class="vr-tit">Sem dados ainda</div><div class="vr-sub">As vendas aparecerão aqui em breve.</div></div>'
+    : '<div class="t10-dica">👆 Toque 2 vezes na imagem para a ver em ecrã cheio</div>' + top.map(([nome,d],i) => {
+        const prod = todosProdutos.find(p => p.nome === nome);
+        const stock = prod ? (parseInt(prod.stock)||0) : null;
+        const stockTxt = stock === null ? '' : ` · 📦 resta ${stock}`;
+        const stockCor = stock === null ? '' : (stock <= 5 ? 'color:#dc2626;font-weight:bold;' : 'color:#16a34a;');
+        const nomeEsc = String(nome||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+        const img = prod && prod.imagem
+          ? `<img class="t10-img" src="${String(prod.imagem).replace(/"/g,'&quot;')}" alt="${nomeEsc}" data-zoom="1" data-titulo="${nomeEsc}" data-sub="${d.qtd} vendidas hoje · MT ${d.total.toFixed(0)}" loading="lazy">`
+          : '<div class="t10-img t10-sem">📦</div>';
+        return `
+      <div class="venda-item t10-item">
+        <div class="t10-foto">${img}<span class="t10-pos ${i<3?'p'+(i+1):''}">${i+1}</span></div>
+        <div class="venda-info"><div class="venda-nome">${nomeEsc}</div><div class="venda-sub">${d.qtd} vendidas<span style="${stockCor}">${stockTxt}</span></div>
+          <div class="t10-barra"><i style="width:${Math.max(5,Math.round(d.qtd/maxQ*100))}%"></i></div></div>
+        <div class="venda-valor-grande">MT ${d.total.toFixed(0)}</div>
+      </div>`;}).join('');
+
+}
 function renderHome(vendasHoje) {
   const total = vendasHoje.reduce((s,v) => s + parseFloat(v.total), 0);
   const recebido = vendasHoje.filter(v => v.recebido != null).reduce((s,v) => s + parseFloat(v.recebido || v.total), 0);
@@ -2570,29 +2605,8 @@ function renderHome(vendasHoje) {
   // Gráfico linha
   renderGraficoLinha(vendasHoje);
 
-  // Top produtos
-  const contagem = {};
-  vendasHoje.forEach(v => v.venda_itens.forEach(it => {
-    if (!contagem[it.produto_nome]) contagem[it.produto_nome] = {qtd:0, total:0};
-    contagem[it.produto_nome].qtd += it.qtd;
-    contagem[it.produto_nome].total += it.qtd * parseFloat(it.preco_unitario);
-  }));
-  const top = Object.entries(contagem).sort((a,b) => b[1].qtd - a[1].qtd).slice(0,5);
-  const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
-  document.getElementById('top-prod-count').textContent = top.length + ' produtos';
-  document.getElementById('lista-top-produtos').innerHTML = top.length === 0
-    ? '<div class="vazio-rico"><div class="vr-pedestal"><img src="icons3d/package.png" alt=""></div><div class="vr-tit">Sem dados ainda</div><div class="vr-sub">As vendas aparecerão aqui em breve.</div></div>'
-    : top.map(([nome,d],i) => {
-        const prod = todosProdutos.find(p => p.nome === nome);
-        const stock = prod ? (parseInt(prod.stock)||0) : null;
-        const stockTxt = stock === null ? '' : ` · 📦 resta ${stock}`;
-        const stockCor = stock === null ? '' : (stock <= 5 ? 'color:#dc2626;font-weight:bold;' : 'color:#16a34a;');
-        return `
-      <div class="venda-item">
-        <div class="venda-icon">${medals[i]}</div>
-        <div class="venda-info"><div class="venda-nome">${nome}</div><div class="venda-sub">${d.qtd} vendidas<span style="${stockCor}">${stockTxt}</span></div></div>
-        <div class="venda-valor-grande">MT ${d.total.toFixed(0)}</div>
-      </div>`;}).join('');
+  // Top 10 produtos de hoje (com imagem)
+  window._t10Vendas = vendasHoje; renderTop10();
 
   // Últimas vendas (home)
   document.getElementById('home-lista-vendas').innerHTML = vendasHoje.length === 0
@@ -5759,7 +5773,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.227';
+const MONITOR_VERSAO = '2.9.228';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -5806,7 +5820,7 @@ const T_MONITOR = {
     home: '🏠 Home', loja: '🏪 Loja', vendas: '🧾 Vendas',
     totalVendas: 'Total de Vendas', valorRecebido: '💰 Lucro do dia',
     numVendas: 'Nº Vendas', itensVendidos: 'Itens Vendidos', vendaMedia: 'Venda Média',
-    vendasHora: 'Vendas por hora', topProdutos: '🏆 Top Produtos Hoje',
+    vendasHora: 'Vendas por hora', topProdutos: '🏆 Top 10 Produtos Hoje',
     ultimasVendas: 'Últimas Vendas', storeManagement: 'Store Management',
     pagarCaixa: 'PAGAR / CAIXA', produtoStock: 'PRODUTO / STOCK', outro: 'OUTRO',
     hoje: 'Hoje', semana: 'Esta semana', mes: 'Este mês', todas: 'Todas',
@@ -6008,7 +6022,9 @@ setTimeout(() => aplicarTraducaoMonitor(linguaMonitor), 2000);
 
 
 async function abrirBackup() {
-  if (modoGeral) { alert('Escolhe uma loja específica no seletor do topo para fazer backup.'); return; }
+  if (modoGeral) { mostrarNotif('Escolhe uma loja específica no seletor do topo para fazer backup.', true); return; }
+  // Backup novo (mostra o que vai, recupera de ficheiro e migra Loja ↔ Banca)
+  if (window.spapBackupAbrir) { spapBackupAbrir({ lojaId: lojaId, nomeLoja: nomeLoja, cor: 'linear-gradient(135deg,#1d4ed8,#4338ca)', corTexto: '#1d4ed8', depois: function(){ try { carregarTudo(); } catch(e){} } }); return; }
   document.getElementById('painel-backup').classList.add('aberto'); try{history.pushState({subpainel:'painel-backup'},'');}catch(e){}
   const info = document.getElementById('backup-info');
   info.innerHTML = '<div style="color:#64748b;">A contar os dados...</div>';
@@ -7281,11 +7297,23 @@ async function verificarEmergencias(){
   }catch(e){}
 }
 setInterval(verificarEmergencias, 12000);
+// Avisos de abertura da loja e de entrega do dia (pop-up com a hora e a data)
+try { spapAvisosIniciar(function(){ return (typeof modoGeral!=='undefined' && modoGeral) ? null : (typeof lojaId!=='undefined' ? lojaId : null); }, function(){ return typeof nomeLoja!=='undefined' ? nomeLoja : ''; }); } catch(e) {}
 setTimeout(verificarEmergencias, 4000);
 try { if ('Notification' in window && Notification.permission === 'default') { setTimeout(() => { try { Notification.requestPermission(); } catch(e){} }, 6000); } } catch(e){}
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) verificarEmergencias(); });
 </script>
 
+<style>
+/* Top 10 do dia com imagem */
+.t10-dica{font-size:11.5px;color:#94a3b8;font-weight:600;margin:-2px 0 6px;}
+.t10-item{align-items:center;}
+.t10-foto{position:relative;flex-shrink:0;margin-right:2px;}
+.t10-img{width:54px;height:54px;border-radius:14px;object-fit:cover;background:#f1f5f9;display:grid;place-items:center;font-size:24px;box-shadow:0 4px 12px rgba(15,23,42,.1);}
+.t10-pos{position:absolute;top:-6px;left:-6px;min-width:22px;height:22px;padding:0 5px;border-radius:999px;background:#475569;color:#fff;font-size:11.5px;font-weight:800;display:grid;place-items:center;border:2px solid #fff;box-sizing:border-box;}
+.t10-pos.p1{background:linear-gradient(135deg,#f59e0b,#d97706);} .t10-pos.p2{background:linear-gradient(135deg,#94a3b8,#64748b);} .t10-pos.p3{background:linear-gradient(135deg,#c2410c,#9a3412);}
+.t10-barra{height:5px;border-radius:9px;background:#eef2f7;margin-top:6px;overflow:hidden;max-width:220px;} .t10-barra i{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,#2563eb,#60a5fa);}
+</style>
 <!-- ===== PERSONALIZAR CARTÕES (reordenar + ocultar) ===== -->
 <style>
 .grade-gestao.editando .card-gestao { outline:2px dashed #93c5fd; position:relative; }

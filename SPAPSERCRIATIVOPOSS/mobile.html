@@ -112,9 +112,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="Banca e Vendas">
-<link rel="stylesheet" href="banca-tema.css?v=3.7.17">
-<script src="banca-tema.js?v=3.7.17" defer></script>
-<script src="app-android.js?v=3.7.17" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.18">
+<script src="banca-tema.js?v=3.7.18" defer></script>
+<script src="app-android.js?v=3.7.18" defer></script>
 </head>
 <body>
 
@@ -380,11 +380,10 @@
       <div id="ent-resumo" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:14px;margin-bottom:14px;text-align:center;">
         <div style="font-size:12px;color:var(--suave);font-weight:700;" id="ent-data">Hoje</div>
         <div style="font-size:14px;color:#166534;font-weight:700;margin-top:4px;" id="ent-nvendas">0 vendas hoje</div>
-        <div style="font-size:26px;font-weight:800;color:var(--verde);margin-top:6px;" id="ent-total">MT 0,00</div>
-        <div style="font-size:11px;color:var(--suave);">total vendido (sistema)</div>
+        <div style="font-size:12px;color:var(--suave);margin-top:6px;line-height:1.45;">Conte o dinheiro e escreva o <b>total</b> que tem na mão e os <b>gastos</b> do dia. O dono confere no Monitor.</div>
       </div>
-      <div class="campo"><label>💵 Dinheiro que tens na mão</label><input id="ent-dinheiro" type="number" inputmode="decimal" placeholder="0"></div>
-      <div class="campo"><label>🧾 Gastos do dia (opcional)</label><input id="ent-gastos" type="number" inputmode="decimal" placeholder="0"></div>
+      <div class="campo"><label>💵 Dinheiro total que tem na mão</label><input id="ent-dinheiro" type="number" inputmode="decimal" placeholder="0"></div>
+      <div class="campo"><label>🧾 Gastos do dia</label><input id="ent-gastos" type="number" inputmode="decimal" placeholder="0 (se não houve gastos)"></div>
       <div class="campo"><label>Nota dos gastos (opcional)</label><input id="ent-gastos-nota" type="text" placeholder="Ex: almoço 100, saco 50"></div>
     </div>
     <div class="rodape">
@@ -396,13 +395,18 @@
 <div id="toast" class="toast"></div>
 
 <script src="supabase-config.js"></script>
-<script src="banca-offline.js?v=3.7.17"></script>
+<script src="spap-avisos.js?v=1"></script>
+<script src="banca-offline.js?v=3.7.18"></script>
 <script>
 // ===================== ESTADO =====================
 let sessao = null;        // { lojaId, nomeLoja, userId, vendedor }
 let produtos = [];
 let carrinho = [];        // { id, nome, preco, precoOriginal?, qtd, stock, imagem, codbarras }
 let descontosLote = [];   // descontos feitos nesta venda, para registar ao confirmar
+// Abertura da banca: a 1.ª entrada do dia avisa o dono no Monitor e Banca (hora e data)
+function _verAbertura(){ try { if (sessao && sessao.lojaId && window.spapMarcarAbertura) spapMarcarAbertura({ lojaId: sessao.lojaId, codigo: sessao.vendedor || '', tipo: 'banca', userId: sessao.userId, fila: true }); } catch(e) {} }
+setInterval(_verAbertura, 20000); setTimeout(_verAbertura, 3000);
+document.addEventListener('visibilitychange', function(){ if (!document.hidden) _verAbertura(); });
 
 // ===================== ARRANQUE =====================
 (async function init(){
@@ -765,19 +769,18 @@ function htmlDesempenho(lista){
   const desc = lista.reduce((s,v)=>s+_vdDesc(v),0);
   const prod = {};
   normais.forEach(v => (v.itens||[]).forEach(it => { const k = it.nome||'Produto'; prod[k] = prod[k] || { nome:k, qtd:0, valor:0, desc:0 }; prod[k].qtd += it.qtd; prod[k].valor += it.preco*it.qtd; if (it.precoOriginal) prod[k].desc += (it.precoOriginal-it.preco)*it.qtd; }));
-  const tops = Object.values(prod).sort((a,b)=>b.valor-a.valor);
-  const nItens = tops.reduce((s,p)=>s+p.qtd,0), max = tops.length ? tops[0].valor : 1;
+  const tops = Object.values(prod).sort((a,b)=>b.qtd-a.qtd);
+  const nItens = tops.reduce((s,p)=>s+p.qtd,0), max = tops.length ? tops[0].qtd : 1;
   return `<div class="bv-cards">
-      <div class="bv-card verde largo"><div class="l">💰 Vendido hoje</div><div class="v">${fmt(total)}</div></div>
-      <div class="bv-card"><div class="l">🧾 Vendas</div><div class="v">${normais.length}</div></div>
-      <div class="bv-card"><div class="l">📦 Produtos vendidos</div><div class="v">${nItens}</div></div>
+      <div class="bv-card verde"><div class="l">🧾 Vendas feitas</div><div class="v">${normais.length}</div></div>
+      <div class="bv-card"><div class="l">📦 Unidades vendidas</div><div class="v">${nItens}</div></div>
       ${desc>0?`<div class="bv-card amarelo largo"><div class="l">🏷️ Descontos dados hoje</div><div class="v">− ${fmt(desc)}</div></div>`:''}
     </div>
     <div class="bv-sec"><span>🏆 O que vendeu hoje</span><small>${tops.length} produto${tops.length===1?'':'s'}</small></div>
     ${tops.length ? tops.map((p,i)=>`<div class="bv-top"><div class="pos">${i+1}</div><div style="flex:1;min-width:0">
-        <div style="display:flex;gap:8px;align-items:center"><div class="nm">${esc(p.nome)}</div><div class="qt">${p.qtd} un.</div><div class="vl">${fmt(p.valor)}</div></div>
+        <div style="display:flex;gap:8px;align-items:center"><div class="nm">${esc(p.nome)}</div><div class="vl">${p.qtd} un.</div></div>
         ${p.desc>0?`<span class="tag-desc" style="margin-top:4px">🏷️ desconto −${fmt(p.desc).replace('MT ','')}</span>`:''}
-        <div class="bv-barra"><i style="width:${Math.max(4,Math.round(p.valor/max*100))}%"></i></div></div></div>`).join('')
+        <div class="bv-barra"><i style="width:${Math.max(4,Math.round(p.qtd/max*100))}%"></i></div></div></div>`).join('')
       : '<div class="bv-vazio">Ainda não vendeu nada hoje.</div>'}`;
 }
 function htmlListaVendas(lista){
@@ -786,7 +789,7 @@ function htmlListaVendas(lista){
     return `<div class="bv-venda${d>0?' desc':''}" onclick="verVenda('${v.id}')"><div class="ic">🧾</div>
       <div class="in"><div class="t">Venda nº ${v.numeroDia||'—'}</div>
       <div class="s">🕒 ${_vdHora(v.data)} · ${n} item(s) ${d>0?`<span class="tag-desc">🏷️ −${fmt(d).replace('MT ','')}</span>`:''} ${v.pendente?'<span class="bv-pend">⏳ por enviar</span>':''}</div></div>
-      <div class="vv">${fmt(v.total)}</div></div>`; }).join('');
+      <div class="vv" style="color:#c2410c;font-size:13px">Ver ›</div></div>`; }).join('');
 }
 function htmlRecibo(v){
   const d = _vdDesc(v);
@@ -1263,7 +1266,6 @@ async function abrirEntregar(){
   const total = vendas.reduce((s,v)=>s+(parseFloat(v.total)||0),0);
   document.getElementById('ent-data').textContent = new Date().toLocaleDateString('pt-PT',{weekday:'long',day:'2-digit',month:'long'});
   document.getElementById('ent-nvendas').textContent = normais.length + (normais.length===1?' venda hoje':' vendas hoje');
-  document.getElementById('ent-total').textContent = fmt(total);
   document.getElementById('ent-dinheiro').value=''; document.getElementById('ent-gastos').value=''; document.getElementById('ent-gastos-nota').value='';
   window._entTotalHoje = total; window._entNum = normais.length;
   window._entDesc = Math.round(bancaVendasDoDia(sessao.lojaId).reduce((s,v)=>s+_vdDesc(v),0)*100)/100;
@@ -1279,17 +1281,18 @@ async function confirmarEntrega(){
     { t:'insert', tabela:'entregas', linhas:[{ id: bancaUUID(), loja_id: sessao.lojaId, vendedor_codigo: sessao.vendedor||null,
       total_entregue: dinheiro, num_vendas: window._entNum||0, descontos: window._entDesc||0, gastos: gastos, gastos_nota: nota||null, criado_em: new Date().toISOString() }] } ]});
   const sobra = Math.round((dinheiro - ((window._entTotalHoje||0) - gastos))*100)/100;
+  try { spapRegistarEntrega({ lojaId: sessao.lojaId, codigo: sessao.vendedor, tipo: 'banca', dinheiro: dinheiro, gastos: gastos, numVendas: window._entNum||0, userId: sessao.userId, fila: true }); } catch(e) {}
   // tenta enviar tudo antes de fechar a sessão (sem sessão não se pode enviar)
   let res = null; try { res = await Promise.race([ bancaSincronizar(), new Promise(r=>setTimeout(()=>r(null), 8000)) ]); } catch(e){}
   btn.disabled=false; btn.textContent='✅ Entregar e terminar';
   fecharFolha('folha-entregar');
   if (bancaFila().length) {
-    toast('📵 Entrega guardada no telemóvel. Fica aberta até haver internet para enviar tudo.' + (sobra>0?(' · sobra '+fmt(sobra)):''), 'erro');
+    toast('📵 Entrega guardada no telemóvel. Fica aberta até haver internet para enviar tudo.', 'erro');
     const sair = () => { if (!bancaFila().length) { document.removeEventListener('banca-fila-vazia', sair); toast('✅ Tudo enviado. A sair…','ok'); setTimeout(async()=>{ try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='login-banca.html'; }, 1500); } };
     document.addEventListener('banca-fila-vazia', sair);
     return;
   }
-  toast('✅ Entrega registada' + (sobra>0?(' · sobra '+fmt(sobra)):''), 'ok');
+  toast('✅ Entrega registada. Obrigado!', 'ok');
   setTimeout(async()=>{ try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='login-banca.html'; }, 1500);
 }
 

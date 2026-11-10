@@ -88,9 +88,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.17">
-<script src="banca-tema.js?v=3.7.17" defer></script>
-<script src="app-android.js?v=3.7.17" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.18">
+<script src="banca-tema.js?v=3.7.18" defer></script>
+<script src="app-android.js?v=3.7.18" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -144,6 +144,8 @@
       <div class="graf-cab"><span class="graf-ico">📊</span><div><b id="graf-tit">Vendas por hora</b><small id="graf-sub">—</small></div><span class="graf-tot" id="graf-tot">MT 0,00</span></div>
       <div class="graf" id="graf"><div class="graf-vazio">A carregar…</div></div>
     </div>
+    <h4 class="t10-tit"><span>🏆 Top 10 de hoje</span><small id="t10-n"></small></h4>
+    <div id="lista-top10" class="cartao"><div class="vazio">A carregar…</div></div>
     <h4>Vendas recentes</h4>
     <div id="lista-vendas" class="cartao"><div class="vazio">A carregar…</div></div>
   </div>
@@ -221,6 +223,7 @@
         <div class="mi" onclick="mFinancas()"><div class="e">💰</div><div class="t">Dinheiro e lucro</div></div>
         <div class="mi" onclick="mInventario()"><div class="e">📋</div><div class="t">Inventário</div></div>
         <div class="mi" onclick="mRelatorio()"><div class="e">📈</div><div class="t">Relatório</div></div>
+        <div class="mi" onclick="mBackup()"><div class="e">💾</div><div class="t">Backup e migração</div></div>
         <div class="mi" onclick="mRastreioProduto()"><div class="e">🔎</div><div class="t">Rastreio de Produto</div></div>
         <div class="mi" onclick="mProducts()"><div class="e">📦</div><div class="t">Produtos</div></div>
         <div class="mi" onclick="abrirAddProduto()"><div class="e">➕</div><div class="t">Adicionar produto</div></div>
@@ -243,7 +246,7 @@
       <div class="menu-grid">
         <div class="mi" onclick="fecharFolha('folha-definicoes');abrirCodigoBalconista()"><div class="e">🔐</div><div class="t">Código do balconista</div></div>
         <div class="mi" onclick="fecharFolha('folha-definicoes');mPerfil()"><div class="e">🪪</div><div class="t">Meu Perfil</div></div>
-        <div class="mi" onclick="fecharFolha('folha-definicoes');mBackup()"><div class="e">💾</div><div class="t">Backup / Segurança</div></div>
+        <div class="mi" onclick="fecharFolha('folha-definicoes');mBackup()"><div class="e">💾</div><div class="t">Backup · Recuperar · Migrar</div></div>
         <div class="mi" onclick="fecharFolha('folha-definicoes');window.spapInstalarApp?spapInstalarApp('android'):mInstalar()"><div class="e">📲</div><div class="t">App para Android</div></div>
         <div class="mi" onclick="fecharFolha('folha-definicoes');window.spapInstalarApp?spapInstalarApp('ios'):mInstalar()"><div class="e">📱</div><div class="t">App para iPhone</div></div>
         <div class="mi" onclick="fecharFolha('folha-definicoes');suporte()"><div class="e">💬</div><div class="t">Suporte</div></div>
@@ -404,6 +407,9 @@
 <div id="toast" class="toast"></div>
 
 <script src="supabase-config.js"></script>
+<script src="spap-avisos.js?v=1"></script>
+<script src="spap-backup.js?v=1"></script>
+<script src="spap-imagem.js?v=1"></script>
 <script>
 let sessao=null, produtos=[], periodo='hoje', periodoDesc='hoje';
 
@@ -458,6 +464,7 @@ async function carregarProdutos(){
   }
   produtos=todos;
   renderProdutos();
+  if(window._t10vs) carregarTop10(window._t10vs);
 }
 function renderProdutos(){
   document.getElementById('s-nprod').textContent = produtos.length;
@@ -691,6 +698,7 @@ async function carregarResumo(){
     marcarDescontos(vendas, (rd&&rd.data)||[]);
   }catch(e){}
   window._vendasResumo = vendas;
+  carregarTop10(periodo==='hoje' ? vendas : null);
   const totalVend = vendas.reduce((s,v)=>s+(parseFloat(v.total)||0),0);
   document.getElementById('s-vendido').textContent = fmt(totalVend);
   document.getElementById('s-nvendas').textContent = vendas.length;
@@ -946,6 +954,32 @@ async function historicoInventario(){
     : '<div class="vazio">Ainda não há inventários guardados.</div>';
 }
 
+// Avisos de abertura da banca e de entrega do dia (pop-up com a hora e a data)
+try { spapAvisosIniciar(function(){ return (typeof sessao!=='undefined' && sessao) ? sessao.lojaId : null; }, function(){ return (sessao && sessao.nomeLoja) || ''; }); } catch(e) {}
+function mBackup(){ fecharFolha('folha-menu'); fecharFolha('folha-definicoes'); spapBackupAbrir({ lojaId: sessao.lojaId, nomeLoja: sessao.nomeLoja, cor: 'linear-gradient(135deg,#f2700f,#e05c00)', corTexto: '#c2410c', depois: function(){ try { carregarProdutos(); } catch(e){} } }); }
+// ===== TOP 10 DE HOJE (sempre o dia de hoje, com a imagem; toque 2x para ecrã cheio) =====
+function escA(t){ return esc(t).replace(/"/g,'&quot;'); }
+async function carregarTop10(vendasHoje){
+  const box=document.getElementById('lista-top10'); if(!box) return;
+  let vs=vendasHoje;
+  if(!vs){ try{ const ini=new Date(); ini.setHours(0,0,0,0);
+      const { data }=await supabaseClient.from('vendas').select('id,total,criado_em, venda_itens(produto_nome,qtd,preco_unitario)').eq('loja_id',sessao.lojaId).gte('criado_em',ini.toISOString()).limit(1000);
+      vs=data||[]; }catch(e){ vs=[]; } }
+  window._t10vs=vs;
+  const c={};
+  vs.forEach(v=>(v.venda_itens||[]).forEach(it=>{ const n=it.produto_nome||'Produto', q=parseFloat(it.qtd)||0; if(q<=0) return; c[n]=c[n]||{qtd:0,total:0}; c[n].qtd+=q; c[n].total+=q*(parseFloat(it.preco_unitario)||0); }));
+  const top=Object.entries(c).sort((a,b)=>b[1].qtd-a[1].qtd).slice(0,10);
+  document.getElementById('t10-n').textContent = top.length ? (top.length+' produto'+(top.length===1?'':'s')) : '';
+  if(!top.length){ box.innerHTML='<div class="vazio">Ainda não houve vendas hoje.</div>'; return; }
+  const max=top[0][1].qtd;
+  box.innerHTML='<div class="t10-dica">👆 Toque 2 vezes na imagem para a ver em ecrã cheio</div>'+top.map(([nome,d],i)=>{
+    const p=produtos.find(x=>x.nome===nome), st=p?(parseInt(p.stock)||0):null;
+    const img=p&&p.imagem?`<img class="t10-img" src="${escA(p.imagem)}" alt="${escA(nome)}" data-zoom="1" data-titulo="${escA(nome)}" data-sub="${d.qtd} vendidas hoje · ${fmt(d.total)}" loading="lazy">`:'<div class="t10-img t10-sem">📦</div>';
+    return `<div class="t10-item"><div class="t10-foto">${img}<span class="t10-pos ${i<3?'p'+(i+1):''}">${i+1}</span></div>
+      <div class="t10-in"><div class="nn">${esc(nome)}</div><div class="mt">${d.qtd} vendida${d.qtd===1?'':'s'}${st!==null?` · <span style="color:${st<=5?'#dc2626':'#16a34a'};font-weight:700">resta ${st}</span>`:''}</div>
+      <div class="t10-barra"><i style="width:${Math.max(5,Math.round(d.qtd/max*100))}%"></i></div></div>
+      <div class="vv">${fmt(d.total)}</div></div>`; }).join('');
+}
 // ===== FOLHAS / MENU =====
 function abrirFolha(id){ document.getElementById(id).classList.add('ativa'); }
 function fecharFolha(id){ document.getElementById(id).classList.remove('ativa'); }
@@ -1371,18 +1405,6 @@ async function pfGuardar(){
     document.getElementById('nome-loja').textContent=nome;
     fecharFolha('folha-info'); toast('✅ Guardado','ok');
   }catch(e){ toast('Erro: '+(e.message||e),'erro'); }
-}
-
-// ===== BACKUP / SEGURANÇA =====
-async function mBackup(){
-  toast('💾 A preparar backup…');
-  let vendas=[];
-  try{ const ini=new Date(); ini.setDate(ini.getDate()-60); const r=await supabaseClient.from('vendas').select('*, venda_itens(*)').eq('loja_id',sessao.lojaId).gte('criado_em',ini.toISOString()).limit(5000); vendas=r.data||[]; }catch(e){}
-  const dados={ banca:sessao.nomeLoja, exportado_em:new Date().toISOString(), produtos:produtos, vendas_60dias:vendas };
-  const blob=new Blob([JSON.stringify(dados,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='backup-banca-'+new Date().toISOString().slice(0,10)+'.json'; a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
-  toast('✅ Backup guardado (ficheiro)','ok');
 }
 
 // ===== INSTALAR APP =====
