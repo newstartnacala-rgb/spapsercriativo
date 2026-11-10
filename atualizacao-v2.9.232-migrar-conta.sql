@@ -1,5 +1,6 @@
 -- ============================================================
--- ATUALIZACAO v2.9.230 — MIGRAR CONTA (Banca ↔ Loja) NA BASE DE DADOS
+-- ATUALIZACAO v2.9.232 — MIGRAR CONTA (Banca ↔ Loja) NA BASE DE DADOS
+-- (corrige o erro «DELETE requires a WHERE clause» da versão v2.9.230)
 -- ============================================================
 -- Cria a função segura migrar_conta(origem, para, email, senha).
 -- Tudo acontece numa só operação dentro da base de dados (ou faz tudo, ou não faz nada):
@@ -54,9 +55,9 @@ BEGIN
   IF estado_origem = 'encerrado' THEN RAISE EXCEPTION 'ja_encerrada'; END IF;
 
   -- 2) cria a conta nova a partir da antiga (copia todas as colunas, menos o id e a data de criação)
-  CREATE TEMP TABLE IF NOT EXISTS _spap_mig ON COMMIT DROP AS SELECT * FROM public.lojas WITH NO DATA;
-  DELETE FROM _spap_mig;
-  EXECUTE 'INSERT INTO _spap_mig SELECT * FROM public.lojas WHERE id::text = $1' USING p_origem;
+  -- (o Supabase não deixa apagar sem condição: em vez de limpar a cópia, cria-a de novo)
+  DROP TABLE IF EXISTS pg_temp._spap_mig;
+  EXECUTE format('CREATE TEMP TABLE _spap_mig ON COMMIT DROP AS SELECT * FROM public.lojas WHERE id::text = %L', p_origem);
 
   -- colunas com valor único (ex.: códigos): liberta-as na conta antiga para a nova as poder usar
   FOR col IN
