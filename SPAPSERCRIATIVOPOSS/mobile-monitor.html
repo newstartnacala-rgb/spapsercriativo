@@ -88,9 +88,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.20">
-<script src="banca-tema.js?v=3.7.20" defer></script>
-<script src="app-android.js?v=3.7.20" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.21">
+<script src="banca-tema.js?v=3.7.21" defer></script>
+<script src="app-android.js?v=3.7.21" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -135,10 +135,6 @@
       <div class="stat wide"><div class="lbl">💰 Vendido no período</div><div class="val verde" id="s-vendido">MT 0,00</div></div>
       <div class="stat"><div class="lbl">🧾 Nº de vendas</div><div class="val" id="s-nvendas">0</div></div>
       <div class="stat"><div class="lbl">📈 Lucro estimado</div><div class="val laranja" id="s-lucro">MT 0,00</div></div>
-    </div>
-    <div class="atalhos-dono">
-      <button type="button" onclick="mFinancas()"><span>💰</span><b>Dinheiro e lucro</b><small>investido, lucro, entregas</small></button>
-      <button type="button" onclick="mInventario()"><span>📋</span><b>Inventário</b><small>contar e acertar o stock</small></button>
     </div>
     <div class="graf-card">
       <div class="graf-cab"><span class="graf-ico">📊</span><div><b id="graf-tit">Vendas por hora</b><small id="graf-sub">—</small></div><span class="graf-tot" id="graf-tot">MT 0,00</span></div>
@@ -223,7 +219,6 @@
         <div class="mi" onclick="mFinancas()"><div class="e">💰</div><div class="t">Dinheiro e lucro</div></div>
         <div class="mi" onclick="mInventario()"><div class="e">📋</div><div class="t">Inventário</div></div>
         <div class="mi" onclick="mRelatorio()"><div class="e">📈</div><div class="t">Relatório</div></div>
-        <div class="mi" onclick="mBackup()"><div class="e">💾</div><div class="t">Backup e migração</div></div>
         <div class="mi" onclick="mRastreioProduto()"><div class="e">🔎</div><div class="t">Rastreio de Produto</div></div>
         <div class="mi" onclick="mProducts()"><div class="e">📦</div><div class="t">Produtos</div></div>
         <div class="mi" onclick="abrirAddProduto()"><div class="e">➕</div><div class="t">Adicionar produto</div></div>
