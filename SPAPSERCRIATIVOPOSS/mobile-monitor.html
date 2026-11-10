@@ -88,9 +88,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.18">
-<script src="banca-tema.js?v=3.7.18" defer></script>
-<script src="app-android.js?v=3.7.18" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.19">
+<script src="banca-tema.js?v=3.7.19" defer></script>
+<script src="app-android.js?v=3.7.19" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -408,7 +408,7 @@
 
 <script src="supabase-config.js"></script>
 <script src="spap-avisos.js?v=1"></script>
-<script src="spap-backup.js?v=1"></script>
+<script src="spap-backup.js?v=2"></script>
 <script src="spap-imagem.js?v=1"></script>
 <script>
 let sessao=null, produtos=[], periodo='hoje', periodoDesc='hoje';
@@ -419,7 +419,7 @@ let sessao=null, produtos=[], periodo='hoje', periodoDesc='hoje';
   if(!ses){ location.href='login-banca.html?to='+encodeURIComponent('mobile-monitor.html'); return; }
   try{
     const { data:membros } = await supabaseClient.from('membros_loja')
-      .select('loja_id, papel, lojas(nome, vendedores, telefone)').eq('user_id', ses.user.id).limit(1);
+      .select('loja_id, papel, lojas(nome, estado, vendedores, telefone)').eq('user_id', ses.user.id).limit(20).then(r=>(r.data=spapMembrosAtivos(r.data),r));
     if(!membros||!membros.length){ location.href='login-banca.html'; return; }
     sessao = { lojaId: membros[0].loja_id, nomeLoja:(membros[0].lojas&&membros[0].lojas.nome)||'Banca', papel:membros[0].papel };
     window._vendedores = (membros[0].lojas && membros[0].lojas.vendedores && membros[0].lojas.vendedores.length) ? membros[0].lojas.vendedores : ['0000'];
@@ -956,7 +956,7 @@ async function historicoInventario(){
 
 // Avisos de abertura da banca e de entrega do dia (pop-up com a hora e a data)
 try { spapAvisosIniciar(function(){ return (typeof sessao!=='undefined' && sessao) ? sessao.lojaId : null; }, function(){ return (sessao && sessao.nomeLoja) || ''; }); } catch(e) {}
-function mBackup(){ fecharFolha('folha-menu'); fecharFolha('folha-definicoes'); spapBackupAbrir({ lojaId: sessao.lojaId, nomeLoja: sessao.nomeLoja, cor: 'linear-gradient(135deg,#f2700f,#e05c00)', corTexto: '#c2410c', depois: function(){ try { carregarProdutos(); } catch(e){} } }); }
+function mBackup(){ fecharFolha('folha-menu'); fecharFolha('folha-definicoes'); spapBackupAbrir({ lojaId: sessao.lojaId, nomeLoja: sessao.nomeLoja, tipo: 'banca', cor: 'linear-gradient(135deg,#f2700f,#e05c00)', corTexto: '#c2410c', depois: function(){ try { carregarProdutos(); } catch(e){} } }); }
 // ===== TOP 10 DE HOJE (sempre o dia de hoje, com a imagem; toque 2x para ecrã cheio) =====
 function escA(t){ return esc(t).replace(/"/g,'&quot;'); }
 async function carregarTop10(vendasHoje){

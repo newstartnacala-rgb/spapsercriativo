@@ -60,6 +60,8 @@
     + '#sbk .sbk-in{width:100%;box-sizing:border-box;height:52px;border:1.5px solid #dfe6f3;border-radius:14px;padding:0 14px;font-size:17px;font-weight:800;letter-spacing:.08em;text-align:center;text-transform:uppercase;outline:none;font-family:inherit;}'
     + '#sbk .sbk-in:focus{border-color:var(--sbkc);}'
     + '#sbk .sbk-prog{height:8px;border-radius:9px;background:#e2e8f0;overflow:hidden;margin:10px 0 4px;} #sbk .sbk-prog i{display:block;height:100%;width:0;background:var(--sbk);transition:width .2s;}'
+    + '#sbk .sbk-op{display:flex;align-items:center;gap:10px;border:1.5px solid #e2e8f0;border-radius:14px;padding:10px 12px;margin-bottom:8px;cursor:pointer;background:#fff;} #sbk .sbk-op:has(input:checked){border-color:var(--sbkc);background:#f8fafc;box-shadow:0 0 0 3px rgba(37,99,235,.08);} #sbk .sbk-op input{width:20px;height:20px;accent-color:var(--sbkc);flex-shrink:0;} #sbk .sbk-op-i{width:38px;height:38px;border-radius:12px;background:#f1f5f9;display:grid;place-items:center;font-size:20px;flex-shrink:0;} #sbk .sbk-op b{display:block;font-size:14px;color:#0f172a;} #sbk .sbk-op small{display:block;font-size:11.5px;color:#64748b;margin-top:1px;}'
+    + '#sbk .sbk-passo{display:flex;align-items:center;gap:10px;padding:9px 0;font-size:14px;color:#64748b;border-bottom:1px solid #f1f5f9;} #sbk .sbk-passo.ok{color:#15803d;font-weight:700;} #sbk .sbk-passo.erro{color:#dc2626;font-weight:700;}'
     + 'html.escuro #sbk{filter:invert(1) hue-rotate(180deg);} html.escuro #sbk img{filter:invert(1) hue-rotate(180deg);}';
 
   function el(id) { return document.getElementById(id); }
@@ -98,7 +100,8 @@
     try {
       var r = await supabaseClient.from('lojas').select('*').eq('id', cfg.lojaId).maybeSingle();
       info.loja = r.data || null;
-      info.tipo = (info.loja && info.loja.tipo_loja) || 'comercial';
+      // o tipo vem do Monitor onde estamos (Monitor e Banca = banca; Monitor = loja)
+      info.tipo = cfg.tipo ? (cfg.tipo === 'banca' ? 'banca' : 'comercial') : (((info.loja && info.loja.tipo_loja) === 'banca') ? 'banca' : 'comercial');
       var u = null; try { u = (await supabaseClient.auth.getUser()).data.user; } catch (e) {}
       info.email = String((info.loja && info.loja.email_dono) || (u && u.email) || '').trim().toLowerCase();
       info.emailSessao = String((u && u.email) || '').trim().toLowerCase();
@@ -298,27 +301,51 @@
     if (typeof cfg.depois === 'function') try { cfg.depois(); } catch (e3) {}
   }
 
-  // ===== 3) MIGRAR: Banca ↔ Loja (mesmo email) =====
-  function abaMigrar() {
+  // ===== 3) MIGRAR: transferência direta dentro da plataforma (Banca ↔ Loja, mesmo email) =====
+  var mig = { destinos: [], escolhido: null };
+  async function abaMigrar() {
     var de = info.tipo, para = ehBanca(de) ? 'comercial' : 'banca';
     var c = el('sbk-c');
-    c.innerHTML = '<div class="sbk-card"><h4>🔁 Migrar a conta</h4>'
-      + '<p class="sbk-txt">Passe tudo desta ' + nomeTipo(de).toLowerCase() + ' para uma <b>' + nomeTipo(para) + '</b>, com o <b>mesmo email</b>' + (info.email ? ' (<b>' + esc(info.email) + '</b>)' : '') + '.</p>'
-      + '<div class="sbk-tipo"><div class="de">' + (ehBanca(de) ? '🧺 Banca' : '🏪 Loja') + '</div><i>➜</i><div class="para">' + (ehBanca(para) ? '🧺 Banca' : '🏪 Loja') + '</div></div>'
-      + '<div class="sbk-lin"><span class="e">📦</span><span>Os produtos, o stock e as fotos</span><b>vão juntos</b></div>'
-      + '<div class="sbk-lin"><span class="e">🧾</span><span>As vendas e o histórico</span><b>vão juntos</b></div>'
-      + '<div class="sbk-lin"><span class="e">📧</span><span>O email e a senha</span><b>os mesmos</b></div>'
-      + '<div class="sbk-lin"><span class="e">💾</span><span>Antes de migrar</span><b>baixa um backup</b></div>'
-      + '<div class="sbk-aviso vm" style="margin-top:10px">⚠️ <b>A conta da ' + nomeTipo(de) + ' será cancelada.</b> Depois de migrar, deixa de entrar como ' + nomeTipo(de) + ' e passa a usar as apps <b>' + (ehBanca(para) ? 'Banca e Vendas / Monitor e Banca' : 'Loja / Monitor') + '</b>. O plano e o pagamento passam a ser os da ' + nomeTipo(para) + '.</div>'
+    c.innerHTML = '<div class="sbk-card"><p class="sbk-txt">A procurar as suas contas…</p></div>';
+    // outras contas do MESMO login (mesmo email) que já são do outro tipo
+    mig.destinos = [];
+    try {
+      var u = (await supabaseClient.auth.getUser()).data.user;
+      var r = await supabaseClient.from('membros_loja').select('loja_id, papel, lojas(id,nome,tipo_loja,estado,email_dono)').eq('user_id', u.id);
+      (r.data || []).forEach(function (m) {
+        var l = m.lojas; if (!l || String(l.id) === String(cfg.lojaId)) return;
+        if (/cancel/i.test(l.estado || '')) return;
+        var t = l.tipo_loja === 'banca' ? 'banca' : 'comercial';
+        if (t === para) mig.destinos.push(l);
+      });
+    } catch (e) {}
+    mig.escolhido = mig.destinos.length ? String(mig.destinos[0].id) : 'nova';
+    var ico = function (t) { return ehBanca(t) ? '🧺' : '🏪'; };
+    var opcoes = mig.destinos.map(function (l) {
+      return '<label class="sbk-op"><input type="radio" name="sbk-dest" value="' + esc(l.id) + '"' + (String(l.id) === mig.escolhido ? ' checked' : '') + '><span class="sbk-op-i">' + ico(para) + '</span><span><b>' + esc(l.nome || nomeTipo(para)) + '</b><small>' + nomeTipo(para) + ' que já tem · ' + esc(l.email_dono || info.email) + '</small></span></label>';
+    }).join('') + '<label class="sbk-op"><input type="radio" name="sbk-dest" value="nova"' + (mig.escolhido === 'nova' ? ' checked' : '') + '><span class="sbk-op-i">✨</span><span><b>' + (mig.destinos.length ? 'Passar esta conta a ' : 'A minha ') + nomeTipo(para) + ' (mesmo email)</b><small>Transferência imediata — sem esperar aprovação</small></span></label>';
+    c.innerHTML = '<div class="sbk-card"><h4>🔁 Transferir para ' + (ehBanca(para) ? 'uma Banca' : 'uma Loja') + '</h4>'
+      + '<p class="sbk-txt">Os produtos passam <b>diretamente</b> desta ' + nomeTipo(de).toLowerCase() + ' para a ' + nomeTipo(para).toLowerCase() + ', dentro da plataforma, com o <b>mesmo email</b>' + (info.email ? ' (<b>' + esc(info.email) + '</b>)' : '') + '. Não precisa de baixar nem de enviar ficheiros.</p>'
+      + '<div class="sbk-tipo"><div class="de">' + ico(de) + ' ' + nomeTipo(de) + '</div><i>➜</i><div class="para">' + ico(para) + ' ' + nomeTipo(para) + '</div></div>'
+      + '<div style="font-size:12.5px;font-weight:800;color:#334155;margin:4px 0 6px">Para onde transferir?</div>' + opcoes
+      + '<div class="sbk-lin" style="margin-top:6px"><span class="e">📦</span><span>Produtos, stock, preços e fotos</span><b>transferidos</b></div>'
+      + '<div class="sbk-lin"><span class="e">📧</span><span>Email e senha</span><b>os mesmos</b></div>'
+      + '<div class="sbk-aviso vm" style="margin-top:10px">⚠️ <b>A conta da ' + nomeTipo(de) + ' será cancelada</b> no fim da transferência. Depois usa as apps <b>' + (ehBanca(para) ? 'Banca e Vendas / Monitor e Banca' : 'Loja / Monitor') + '</b>.</div>'
       + '<button type="button" class="sbk-bt perigo" id="sbk-mig">🔁 Migrar para ' + nomeTipo(para) + '</button></div>';
+    c.querySelectorAll('input[name="sbk-dest"]').forEach(function (r) { r.onchange = function () { mig.escolhido = r.value; }; });
     el('sbk-mig').onclick = function () { confirmarMigrar(de, para); };
   }
+  function nomeDestino(para) {
+    if (mig.escolhido === 'nova') return 'a sua ' + nomeTipo(para);
+    var l = mig.destinos.find(function (x) { return String(x.id) === mig.escolhido; });
+    return '«' + ((l && l.nome) || nomeTipo(para)) + '»';
+  }
   function confirmarMigrar(de, para) {
-    el('sbk-c').innerHTML = '<div class="sbk-card"><h4>Confirmar a migração</h4>'
+    el('sbk-c').innerHTML = '<div class="sbk-card"><h4>Confirmar a transferência</h4>'
       + '<div class="sbk-tipo"><div class="de">' + nomeTipo(de) + '</div><i>➜</i><div class="para">' + nomeTipo(para) + '</div></div>'
-      + '<p class="sbk-txt">Escreva <b>MIGRAR</b> para confirmar. Primeiro é baixado um backup de segurança; depois a conta da ' + nomeTipo(de) + ' é cancelada e tudo passa para a ' + nomeTipo(para) + '.</p>'
+      + '<p class="sbk-txt">Todos os produtos vão para ' + esc(nomeDestino(para)) + ' e a conta da ' + nomeTipo(de) + ' é cancelada. Escreva <b>MIGRAR</b> para confirmar.</p>'
       + '<input class="sbk-in" id="sbk-conf" autocomplete="off" placeholder="MIGRAR">'
-      + '<button type="button" class="sbk-bt perigo" id="sbk-mig2" disabled>🔁 Confirmar migração</button>'
+      + '<button type="button" class="sbk-bt perigo" id="sbk-mig2" disabled>🔁 Transferir agora</button>'
       + '<button type="button" class="sbk-bt sec" id="sbk-volta">Cancelar</button></div>';
     var inp = el('sbk-conf'), bt = el('sbk-mig2');
     inp.oninput = function () { bt.disabled = inp.value.trim().toUpperCase() !== 'MIGRAR'; };
@@ -326,23 +353,77 @@
     bt.onclick = function () { migrar(de, para); };
     setTimeout(function () { try { inp.focus(); } catch (e) {} }, 100);
   }
+  function passos(lista) {
+    el('sbk-c').innerHTML = '<div class="sbk-card"><h4>🔁 A transferir…</h4>' + lista.map(function (t, i) { return '<div class="sbk-passo" id="sbk-p' + i + '"><span>⏳</span>' + t + '</div>'; }).join('') + '<div class="sbk-prog"><i id="sbk-pi"></i></div><div class="sbk-nota" id="sbk-pt"></div></div>';
+  }
+  function passo(i, est) { var d = el('sbk-p' + i); if (d) { d.className = 'sbk-passo ' + est; d.firstChild.textContent = est === 'ok' ? '✅' : est === 'erro' ? '❌' : '⏳'; } }
+  function erroMig(msg) {
+    var c = el('sbk-c'); var d = document.createElement('div'); d.className = 'sbk-aviso vm'; d.innerHTML = '<b>❌ A transferência parou</b><br>' + esc(msg) + '<br>Nada foi cancelado. Tente outra vez ou fale com o suporte: +258 86 657 7722';
+    c.appendChild(d);
+    var b = document.createElement('button'); b.className = 'sbk-bt sec'; b.textContent = 'Voltar'; b.onclick = abaMigrar; c.appendChild(b);
+  }
   async function migrar(de, para) {
-    var bt = el('sbk-mig2'); bt.disabled = true; bt.innerHTML = '⏳ A baixar o backup de segurança…';
-    var b = await fazerBackup(false, true);
-    if (!b) { bt.disabled = false; bt.innerHTML = '🔁 Confirmar migração'; aviso('Migração parada', 'Sem o backup de segurança não migramos. Verifique a internet.', 'vm'); return; }
-    bt.innerHTML = '⏳ A migrar…';
-    var r = await supabaseClient.from('lojas').update({ tipo_loja: para }).eq('id', cfg.lojaId).select('id,tipo_loja');
-    if (r.error || !r.data || !r.data.length || r.data[0].tipo_loja !== para) {
-      bt.disabled = false; bt.innerHTML = '🔁 Confirmar migração';
-      aviso('❌ Não foi possível migrar', esc((r.error && r.error.message) || 'A conta não foi alterada.') + '<br>Fale com o suporte: +258 86 657 7722', 'vm');
-      return;
+    var paraConta = mig.escolhido !== 'nova';
+    var log = function (lojaId, txt, extra) { return supabaseClient.from('atividade_log').insert({ loja_id: lojaId, quem: 'Dono', acao: 'migracao', detalhe: txt, extra: extra }).then(function () {}, function () {}); };
+    if (!paraConta) {
+      // ===== mesma conta: passa a ser do outro tipo (tudo fica, na hora) =====
+      passos(['A preparar a transferência', 'A transferir os produtos e o histórico para a ' + nomeTipo(para), 'A cancelar a conta da ' + nomeTipo(de)]);
+      passo(0, 'ok');
+      var r = await supabaseClient.from('lojas').update({ tipo_loja: para }).eq('id', cfg.lojaId).select('id,tipo_loja');
+      if (r.error || !r.data || !r.data.length) { passo(1, 'erro'); return erroMig((r.error && r.error.message) || 'A conta não foi alterada.'); }
+      passo(1, 'ok'); passo(2, 'ok'); el('sbk-pi').style.width = '100%';
+      await log(cfg.lojaId, 'Transferiu tudo da ' + nomeTipo(de) + ' para a ' + nomeTipo(para) + ' (a conta da ' + nomeTipo(de) + ' foi cancelada)', { de: de, para: para, email: info.email });
+      return fimMigrar(de, para, cfg.lojaId);
     }
-    try { await supabaseClient.from('atividade_log').insert({ loja_id: cfg.lojaId, quem: 'Dono', acao: 'migracao', detalhe: 'Migrou de ' + nomeTipo(de) + ' para ' + nomeTipo(para) + ' (a conta da ' + nomeTipo(de) + ' foi cancelada)', extra: { de: de, para: para, email: info.email } }); } catch (e) {}
+    // ===== para outra conta do mesmo email que já existe =====
+    var destId = mig.escolhido;
+    passos(['A ler os produtos da ' + nomeTipo(de), 'A transferir os produtos para ' + nomeDestino(para), 'A cancelar a conta da ' + nomeTipo(de)]);
+    var origem = [], destino = [];
+    try { origem = await todos('produtos'); passo(0, 'ok'); } catch (e) { passo(0, 'erro'); return erroMig(e.message || e); }
+    try {
+      var de0 = 0;
+      for (var k = 0; k < 100; k++) { var rr = await supabaseClient.from('produtos').select('id,nome,codbarras,stock,imagem,preco,preco_compra').eq('loja_id', destId).range(de0, de0 + 999); if (rr.error) throw rr.error; destino = destino.concat(rr.data || []); if ((rr.data || []).length < 1000) break; de0 += 1000; }
+    } catch (e) { passo(1, 'erro'); return erroMig(e.message || e); }
+    var porCod = {}, porNome = {};
+    destino.forEach(function (p) { if (p.codbarras) porCod[String(p.codbarras).trim()] = p; porNome[String(p.nome || '').trim().toLowerCase()] = p; });
+    var feitos = 0, erros = 0, ultimo = '', total = origem.length || 1;
+    function prog() { el('sbk-pi').style.width = Math.round(feitos / total * 100) + '%'; el('sbk-pt').textContent = feitos + ' de ' + origem.length + ' produtos'; }
+    for (var i = 0; i < origem.length; i++) {
+      var p = origem[i], ex = (p.codbarras && porCod[String(p.codbarras).trim()]) || porNome[String(p.nome || '').trim().toLowerCase()];
+      var res;
+      if (ex) {   // já existe lá: junta o stock e completa o que falta
+        var up = { stock: (parseInt(ex.stock) || 0) + Math.max(0, parseInt(p.stock) || 0) };
+        if (!ex.imagem && p.imagem) up.imagem = p.imagem;
+        if (!(parseFloat(ex.preco_compra) > 0) && p.preco_compra) up.preco_compra = p.preco_compra;
+        res = await supabaseClient.from('produtos').update(up).eq('id', ex.id);
+      } else {
+        var novo = limpar(p); novo.loja_id = destId;
+        res = await tentar(function () { return supabaseClient.from('produtos').insert(semCols(novo)); });
+      }
+      if (res && res.error) { erros++; ultimo = res.error.message; }
+      feitos++; prog();
+    }
+    if (erros && erros === origem.length) { passo(1, 'erro'); return erroMig(ultimo); }
+    passo(1, 'ok');
+    try { await supabaseClient.from('transferencias').insert({ de_loja: cfg.lojaId, para_loja: destId, estado: 'confirmado', itens: origem.map(function (x) { return { nome: x.nome, qtd: Math.max(0, parseInt(x.stock) || 0), preco: x.preco }; }) }); } catch (e) {}
+    // cancela a origem: estado cancelado e sai desta conta (o login passa a abrir a de destino)
+    var c1 = await supabaseClient.from('lojas').update({ estado: 'cancelado' }).eq('id', cfg.lojaId);
+    try { var u = (await supabaseClient.auth.getUser()).data.user; await supabaseClient.from('membros_loja').delete().eq('loja_id', cfg.lojaId).eq('user_id', u.id); } catch (e) {}
+    passo(2, c1 && c1.error ? 'erro' : 'ok');
+    await log(destId, 'Recebeu ' + (feitos - erros) + ' produto(s) transferidos da ' + nomeTipo(de) + ' ' + (info.loja && info.loja.nome || ''), { de_loja: cfg.lojaId });
+    await log(cfg.lojaId, 'Transferiu ' + (feitos - erros) + ' produto(s) para a ' + nomeTipo(para) + ' e foi cancelada', { para_loja: destId });
+    if (erros) { var d = document.createElement('div'); d.className = 'sbk-aviso am'; d.innerHTML = '⚠️ ' + erros + ' produto(s) não passaram: ' + esc(ultimo); el('sbk-c').appendChild(d); }
+    fimMigrar(de, para, destId);
+  }
+  function fimMigrar(de, para, destId) {
     try { localStorage.removeItem('pdv_login_destino'); } catch (e) {}
     info.tipo = para;
     var destino = ehBanca(para) ? 'mobile-monitor.html' : 'monitor.html';
-    el('sbk-c').innerHTML = '<div class="sbk-card" style="text-align:center"><div style="font-size:52px">🎉</div><h4 style="justify-content:center">Migração feita</h4>'
-      + '<p class="sbk-txt">A conta da ' + nomeTipo(de) + ' foi cancelada. Agora é uma <b>' + nomeTipo(para) + '</b> com o mesmo email' + (info.email ? ' (<b>' + esc(info.email) + '</b>)' : '') + ', com todos os produtos e o histórico.<br>O backup de segurança ficou baixado neste aparelho.</p>'
-      + '<button type="button" class="sbk-bt verde" onclick="location.href=\'' + destino + '\'">Abrir o Monitor da ' + nomeTipo(para) + '</button></div>';
+    var c = el('sbk-c'), d = document.createElement('div');
+    d.className = 'sbk-card'; d.style.textAlign = 'center';
+    d.innerHTML = '<div style="font-size:52px">🎉</div><h4 style="text-align:center">Transferência feita</h4>'
+      + '<p class="sbk-txt">Os produtos estão na sua <b>' + nomeTipo(para) + '</b>, com o mesmo email' + (info.email ? ' (<b>' + esc(info.email) + '</b>)' : '') + '. A conta da ' + nomeTipo(de) + ' foi cancelada.</p>'
+      + '<button type="button" class="sbk-bt verde" onclick="location.href=\'' + destino + '\'">Abrir o Monitor da ' + nomeTipo(para) + '</button>';
+    c.appendChild(d); c.scrollTop = c.scrollHeight;
   }
 })();

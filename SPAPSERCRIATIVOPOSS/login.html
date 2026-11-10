@@ -5,7 +5,7 @@
 <script src="spap-migrar.js?v=1"></script>
 <script src="spap-bloqueio.js?v=1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
-<script src="spap-semzoom.js?v=2.9.228"></script>
+<script src="spap-semzoom.js?v=2.9.229"></script>
 <title>Entrar — Spap-Sercriativo</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="ios-loja-180.png">
@@ -93,7 +93,7 @@
   @media (max-width:767px) and (max-height:660px) { .lg-marca { width:60px; height:60px; } .campo { height:44px; } .btn-principal { height:46px; } .btn-google { height:42px; } .lg-sub { margin-top:4px; } }
   @media (max-width:767px) and (max-height:600px) { .lg-marca { width:50px; height:50px; } .langs { margin-bottom:8px; } .lg-topo { margin-bottom:8px; } .ou { margin:7px 0; } .rodape { margin:8px 0 6px; } }
 </style>
-<script src="app-android.js?v=2.9.228" defer></script>
+<script src="app-android.js?v=2.9.229" defer></script>
 </head>
 <body>
 <main class="box">
@@ -183,8 +183,9 @@
         if (!localStorage.getItem('pdv_login_destino')) {
           try {
             const { data: mb } = await supabaseClient.from('membros_loja')
-              .select('lojas(tipo_loja)').eq('user_id', data.session.user.id).limit(1);
-            if (mb && mb[0] && mb[0].lojas && mb[0].lojas.tipo_loja === 'banca') { window.location.href = 'mobile.html'; return; }
+              .select('lojas(tipo_loja, estado)').eq('user_id', data.session.user.id).limit(20);
+            const mbA = spapMembrosAtivos(mb); if (mbA && mbA[0] && mbA[0].lojas && mbA[0].lojas.tipo_loja === 'banca') { window.location.href = 'mobile.html'; return; }
+            if (false && mb && mb[0] && mb[0].lojas && mb[0].lojas.tipo_loja === 'banca') { window.location.href = 'mobile.html'; return; }
           } catch(e) {}
         }
         window.location.href = destinoAposLogin(); return;
@@ -241,7 +242,7 @@
       .from('membros_loja')
       .select('loja_id, lojas(estado, nome, tipo_loja)')
       .eq('user_id', data.user.id)
-      .limit(1);
+      .limit(20).then(r => (r.data = spapMembrosAtivos(r.data), r));
 
     if (membros && membros.length > 0) {
       const estadoLoja = membros[0].lojas && membros[0].lojas.estado;

@@ -112,9 +112,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="Banca e Vendas">
-<link rel="stylesheet" href="banca-tema.css?v=3.7.18">
-<script src="banca-tema.js?v=3.7.18" defer></script>
-<script src="app-android.js?v=3.7.18" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.19">
+<script src="banca-tema.js?v=3.7.19" defer></script>
+<script src="app-android.js?v=3.7.19" defer></script>
 </head>
 <body>
 
@@ -396,7 +396,7 @@
 
 <script src="supabase-config.js"></script>
 <script src="spap-avisos.js?v=1"></script>
-<script src="banca-offline.js?v=3.7.18"></script>
+<script src="banca-offline.js?v=3.7.19"></script>
 <script>
 // ===================== ESTADO =====================
 let sessao = null;        // { lojaId, nomeLoja, userId, vendedor }
@@ -422,7 +422,7 @@ document.addEventListener('visibilitychange', function(){ if (!document.hidden) 
         const { data: membros, error } = await supabaseClient
           .from('membros_loja')
           .select('loja_id, papel, nome_exibicao, lojas(nome, estado, tipo_loja, vendedores, telefone)')
-          .eq('user_id', ses.user.id).limit(1);
+          .eq('user_id', ses.user.id).limit(20).then(r => (r.data = spapMembrosAtivos(r.data), r));
         if (!error && membros) { if (!membros.length) { location.href='login-banca.html'; return; } m = membros[0]; }
       } catch(e){}
     }

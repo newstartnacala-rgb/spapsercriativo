@@ -20,7 +20,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.228"></script>
+<script src="spap-leitor.js?v=2.9.229"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -1040,7 +1040,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.228" defer></script>
+<script src="app-android.js?v=2.9.229" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -1684,7 +1684,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="supabase-config.js"></script>
 <script src="spap-avisos.js?v=1"></script>
-<script src="spap-backup.js?v=1"></script>
+<script src="spap-backup.js?v=2"></script>
 <script src="spap-imagem.js?v=1"></script>
 <script>
 let sessao = null, lojaId = null, nomeLoja = '';
@@ -1817,15 +1817,15 @@ async function iniciar() {
       const r = await supabaseClient
         .from('membros_loja')
         .select('loja_id, papel, nome_exibicao, lojas(nome, estado, plano, categorias_personalizadas, subcategorias, vendedores, data_expiracao, codigo_relatorios, pin_monitor, tipo_loja, pin_gerente)')
-        .eq('user_id', sessao.user.id).limit(1);
+        .eq('user_id', sessao.user.id).limit(20);
       if (r.error) {
         const r2 = await supabaseClient
           .from('membros_loja')
           .select('loja_id, papel, nome_exibicao, lojas(nome, estado, plano)')
-          .eq('user_id', sessao.user.id).limit(1);
-        membros = r2.data;
+          .eq('user_id', sessao.user.id).limit(20);
+        membros = spapMembrosAtivos(r2.data);
       } else {
-        membros = r.data;
+        membros = spapMembrosAtivos(r.data);
       }
     }
 
@@ -5773,7 +5773,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.228';
+const MONITOR_VERSAO = '2.9.229';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -6024,7 +6024,7 @@ setTimeout(() => aplicarTraducaoMonitor(linguaMonitor), 2000);
 async function abrirBackup() {
   if (modoGeral) { mostrarNotif('Escolhe uma loja específica no seletor do topo para fazer backup.', true); return; }
   // Backup novo (mostra o que vai, recupera de ficheiro e migra Loja ↔ Banca)
-  if (window.spapBackupAbrir) { spapBackupAbrir({ lojaId: lojaId, nomeLoja: nomeLoja, cor: 'linear-gradient(135deg,#1d4ed8,#4338ca)', corTexto: '#1d4ed8', depois: function(){ try { carregarTudo(); } catch(e){} } }); return; }
+  if (window.spapBackupAbrir) { spapBackupAbrir({ lojaId: lojaId, nomeLoja: nomeLoja, tipo: 'comercial', cor: 'linear-gradient(135deg,#1d4ed8,#4338ca)', corTexto: '#1d4ed8', depois: function(){ try { carregarTudo(); } catch(e){} } }); return; }
   document.getElementById('painel-backup').classList.add('aberto'); try{history.pushState({subpainel:'painel-backup'},'');}catch(e){}
   const info = document.getElementById('backup-info');
   info.innerHTML = '<div style="color:#64748b;">A contar os dados...</div>';
