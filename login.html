@@ -5,7 +5,7 @@
 <script src="spap-migrar.js?v=1"></script>
 <script src="spap-bloqueio.js?v=1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
-<script src="spap-semzoom.js?v=2.9.234"></script>
+<script src="spap-semzoom.js?v=2.9.235"></script>
 <title>Entrar — Spap-Sercriativo</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="ios-loja-180.png">
@@ -31,6 +31,7 @@
   .lg-marca { width:128px; height:128px; object-fit:contain; border-radius:50%; margin-bottom:12px; filter:drop-shadow(0 12px 22px rgba(156,100,22,.45)); }
   .lg-nome { font-family:Sora, 'Plus Jakarta Sans', sans-serif; font-weight:800; font-size:27px; letter-spacing:-.02em; color:var(--tx); line-height:1.15; }
   .lg-nome em { font-style:normal; background:linear-gradient(90deg,#E9B954,#B47A1F); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .lg-nome .lg-amp { font-weight:700; color:#94a3b8; margin:0 1px; }
   .lg-tag { font-size:10.5px; font-weight:800; letter-spacing:.22em; color:#8a6a2a; margin-top:5px; }
   .lg-sub { margin-top:12px; display:inline-flex; align-items:center; gap:7px; background:#fff; border:1px solid var(--ln); padding:6px 13px; border-radius:999px; font-size:12.5px; font-weight:600; color:var(--tx2); }
   .lg-sub::before { content:""; width:7px; height:7px; border-radius:50%; background:#22c55e; box-shadow:0 0 0 3px rgba(34,197,94,.2); flex:none; }
@@ -93,14 +94,14 @@
   @media (max-width:767px) and (max-height:660px) { .lg-marca { width:60px; height:60px; } .campo { height:44px; } .btn-principal { height:46px; } .btn-google { height:42px; } .lg-sub { margin-top:4px; } }
   @media (max-width:767px) and (max-height:600px) { .lg-marca { width:50px; height:50px; } .langs { margin-bottom:8px; } .lg-topo { margin-bottom:8px; } .ou { margin:7px 0; } .rodape { margin:8px 0 6px; } }
 </style>
-<script src="app-android.js?v=2.9.234" defer></script>
+<script src="app-android.js?v=2.9.235" defer></script>
 <link rel="stylesheet" href="spap-carrinho.css?v=1">
 </head>
 <body>
 <main class="box">
   <div class="lg-topo">
     <div class="lg-marca pc-cena" role="img" aria-label="Carrinho de compras a andar — Spap-Sercriativo"><div class="pc-vento"><i></i><i></i><i></i></div><div class="pc-po"></div><div class="pc-po p2"></div><div class="pc-wrap"><img class="pc-caixa c1" src="icons3d/package.png" alt=""><img class="pc-caixa c2" src="icons3d/package-azul.png" alt=""><img class="pc-caixa c3" src="icons3d/coin.png" alt=""><img class="pc-c" src="icons3d/cart.png" alt=""></div><div class="pc-chao"></div><div class="pc-chao2"></div></div>
-    <div class="lg-nome notranslate">Spap-<em>Sercriativo</em></div>
+    <div class="lg-nome notranslate">Vendas <span class="lg-amp">&amp;</span> <em>Monitor</em></div>
     <div class="lg-tag notranslate">TECNOLOGIA VAREJISTA DE PONTA</div>
     <div class="lg-sub" id="lg-sub">Sistema de Ponto de Venda</div>
   </div>

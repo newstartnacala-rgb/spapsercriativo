@@ -354,7 +354,7 @@
         : /email_errado/.test(m) ? 'Este não é o email desta conta.'
         : /sem_permissao/.test(m) ? 'Só o dono da conta pode migrar.'
         : /ja_encerrada/.test(m) ? 'Esta conta já foi migrada e está encerrada.'
-        : /migrar_conta|PGRST202|function|schema cache/i.test(m) ? 'A migração ainda não está ativada na base de dados. É preciso correr uma vez o ficheiro «atualizacao-v2.9.232-migrar-conta.sql» no Supabase (SQL Editor). Nada foi alterado.'
+        : /migrar_conta|PGRST202|function|schema cache/i.test(m) ? 'A migração ainda não está ativada na base de dados. É preciso correr uma vez o ficheiro «atualizacao-v2.9.235-migrar-conta.sql» no Supabase (SQL Editor). Nada foi alterado.'
         : /fetch|network|Failed/i.test(m) ? 'Sem internet. Ligue a internet e tente outra vez. Nada foi alterado.'
         : 'Não foi possível migrar: ' + m + '. Nada foi alterado.';
       el('sbk-erro').textContent = txt; bt.disabled = false; bt.innerHTML = '✨ Criar a ' + nomeTipo(para) + ' e migrar';

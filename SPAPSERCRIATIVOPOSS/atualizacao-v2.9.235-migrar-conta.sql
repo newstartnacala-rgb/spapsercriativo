@@ -1,6 +1,6 @@
 -- ============================================================
--- ATUALIZACAO v2.9.232 — MIGRAR CONTA (Banca ↔ Loja) NA BASE DE DADOS
--- (corrige o erro «DELETE requires a WHERE clause» da versão v2.9.230)
+-- ATUALIZACAO v2.9.235 — MIGRAR CONTA (Banca ↔ Loja) NA BASE DE DADOS
+-- (corrige «DELETE requires a WHERE clause» e «idx_lojas_nome_unico» das versões anteriores)
 -- ============================================================
 -- Cria a função segura migrar_conta(origem, para, email, senha).
 -- Tudo acontece numa só operação dentro da base de dados (ou faz tudo, ou não faz nada):
@@ -60,16 +60,20 @@ BEGIN
   EXECUTE format('CREATE TEMP TABLE _spap_mig ON COMMIT DROP AS SELECT * FROM public.lojas WHERE id::text = %L', p_origem);
 
   -- colunas com valor único (ex.: códigos): liberta-as na conta antiga para a nova as poder usar
+  -- (inclui índices com expressões, ex.: idx_lojas_nome_unico em lower(trim(nome)))
   FOR col IN
-    SELECT a.attname AS nome, a.attnotnull AS obrig, format_type(a.atttypid, a.atttypmod) AS tipo
+    SELECT DISTINCT a.attname AS nome, a.attnotnull AS obrig, format_type(a.atttypid, a.atttypmod) AS tipo
       FROM pg_index i
-      JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY (i.indkey)
-     WHERE i.indrelid = 'public.lojas'::regclass AND i.indisunique AND NOT i.indisprimary AND i.indnatts = 1
+      JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum > 0 AND NOT a.attisdropped
+     WHERE i.indrelid = 'public.lojas'::regclass AND i.indisunique AND NOT i.indisprimary
+       AND a.attname NOT IN ('id')
+       AND (a.attnum = ANY (i.indkey) OR pg_get_indexdef(i.indexrelid) ~ ('\m' || a.attname || '\M'))
   LOOP
-    IF NOT col.obrig THEN
+    IF col.tipo IN ('text', 'character varying') OR col.tipo LIKE 'character varying%' THEN
+      -- texto (ex.: nome): a conta antiga fica «Nome (encerrada xxxxxx)» e o nome original passa para a nova
+      EXECUTE format('UPDATE public.lojas SET %I = %I || %L WHERE id::text = $1 AND %I IS NOT NULL', col.nome, col.nome, ' (encerrada ' || substr(md5(random()::text), 1, 6) || ')', col.nome) USING p_origem;
+    ELSIF NOT col.obrig THEN
       EXECUTE format('UPDATE public.lojas SET %I = NULL WHERE id::text = $1', col.nome) USING p_origem;
-    ELSIF col.tipo IN ('text', 'character varying') OR col.tipo LIKE 'character varying%' THEN
-      EXECUTE format('UPDATE public.lojas SET %I = %I || %L WHERE id::text = $1', col.nome, col.nome, '-encerrada-' || substr(md5(random()::text), 1, 6)) USING p_origem;
     END IF;
   END LOOP;
 
