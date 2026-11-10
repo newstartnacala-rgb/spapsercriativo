@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <script src="spap-migrar.js?v=1"></script>
 <script src="spap-bloqueio.js?v=1"></script>
+<script src="spap-dialogo.js?v=2"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>PDV Dashboard</title>
 <script>
@@ -20,7 +21,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.232"></script>
+<script src="spap-leitor.js?v=2.9.233"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -1040,7 +1041,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.232" defer></script>
+<script src="app-android.js?v=2.9.233" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -1857,8 +1858,12 @@ async function iniciar() {
 
     // Plano Básico não inclui o Monitor do Dono
     if (((membros[0].lojas && membros[0].lojas.plano) || '') === 'basico') {
-      alert('📊 O Monitor do Dono está disponível nos planos Bronze e Anual.\n\nFaz upgrade do teu plano para desbloquear esta funcionalidade.');
-      window.location.href = 'index.html';
+      try { if (window.fecharTelaCarregando) fecharTelaCarregando(); else document.getElementById('tela-carregando').style.display = 'none'; } catch(e) {}
+      const verPlanos = await spapUpgrade({ titulo: 'O Monitor do Dono não está no seu plano', icone: 'barchart.png',
+        texto: 'O seu plano atual é o Básico. Para acompanhar a loja à distância, escolha um plano com o Monitor.',
+        beneficios: ['<b>Vendas em tempo real</b> e lucro do dia', '<b>Top 10 produtos</b>, stock e alertas', '<b>Inventário</b>, auditoria de caixa e relatórios', 'Aviso quando a loja <b>abre e entrega o dia</b>'],
+        planos: ['Médio', 'Avançado'], cancelar: 'Voltar à Loja' });
+      window.location.href = verPlanos ? 'planos.html?upgrade=monitor' : 'index.html';
       return;
     }
 
@@ -3414,8 +3419,12 @@ let imagemBase64 = null; // guarda a imagem carregada por ficheiro ou câmera
 
 // Imagens (camara/ficheiro) so no plano Avancado
 function imagensBloqueadas() { return lojaPlano !== 'anual'; }
-function avisarUpgradeImagem() {
-  alert('📷 Adicionar imagens (câmera e ficheiro) é uma função do plano AVANÇADO.\n\nFaz upgrade para o plano Avançado para pores fotos nos produtos.');
+async function avisarUpgradeImagem() {
+  const ver = await spapUpgrade({ titulo: 'Fotos dos produtos', icone: 'camera.png',
+    texto: 'Pôr fotos nos produtos (câmara e ficheiro) é uma função do plano Avançado.',
+    beneficios: ['Tirar <b>foto com a câmara</b> ou escolher do telemóvel', 'Fotos na <b>venda</b>, no <b>Top 10</b> e no stock', 'Produtos mais fáceis de encontrar'],
+    planos: ['Avançado'] });
+  if (ver) location.href = 'planos.html?upgrade=imagens';
 }
 function tentarImagemProduto(acao) {
   if (imagensBloqueadas()) { avisarUpgradeImagem(); return; }
@@ -4924,7 +4933,10 @@ function abrirInventario() {
   fecharSubPainel('painel-produtos');
   // Restrição de plano: inventário é exclusivo do plano Anual
   if (!['pro','anual','bronze'].includes(lojaPlano)) {
-    alert('📋 O Inventário com balanço de lucro está disponível nos planos PRO e ANUAL.\n\nFaz upgrade para desbloquear.');
+    spapUpgrade({ titulo: 'Inventário com balanço de lucro', icone: 'clipboard.png',
+      texto: 'Contar o stock e ver o lucro do inventário está nos planos Médio e Avançado.',
+      beneficios: ['Contagem com <b>diferenças</b> (faltas e sobras)', '<b>Investido</b>, valor de venda e lucro potencial', 'Histórico de <b>inventários</b>'],
+      planos: ['Médio', 'Avançado'] }).then(function (ver) { if (ver) location.href = 'planos.html?upgrade=inventario'; });
     return;
   }
   document.getElementById('painel-inventario').classList.add('aberto'); try{history.pushState({subpainel:'painel-inventario'},'');}catch(e){}
@@ -5773,7 +5785,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.232';
+const MONITOR_VERSAO = '2.9.233';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
