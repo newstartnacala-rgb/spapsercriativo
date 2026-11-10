@@ -88,9 +88,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.22">
-<script src="banca-tema.js?v=3.7.22" defer></script>
-<script src="app-android.js?v=3.7.22" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.23">
+<script src="banca-tema.js?v=3.7.23" defer></script>
+<script src="app-android.js?v=3.7.23" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -414,8 +414,10 @@ let sessao=null, produtos=[], periodo='hoje', periodoDesc='hoje';
   if(!ses){ location.href='login-banca.html?to='+encodeURIComponent('mobile-monitor.html'); return; }
   try{
     const { data:membros } = await supabaseClient.from('membros_loja')
-      .select('loja_id, papel, lojas(nome, estado, vendedores, telefone)').eq('user_id', ses.user.id).limit(20).then(r=>(r.data=spapMembrosAtivos(r.data),r));
-    if(!membros||!membros.length){ location.href='login-banca.html'; return; }
+      .select('loja_id, papel, lojas(nome, estado, tipo_loja, vendedores, telefone)').eq('user_id', ses.user.id).limit(20).then(r=>(window._membrosTodos=r.data||[], r.data=spapMembrosDoTipo(r.data,'banca'),r));
+    if(membros && !membros.length && await spapContaMigrada(window._membrosTodos,'bancamonitor')){ await spapSessaoBancaErrada(); document.getElementById('carregando').style.display='none'; return; }
+    if(!membros||!membros.length){ await spapSessaoBancaErrada(); location.href='login-banca.html?conta=loja&to='+encodeURIComponent('mobile-monitor.html'); return; }
+    spapSessaoBancaOk();
     sessao = { lojaId: membros[0].loja_id, nomeLoja:(membros[0].lojas&&membros[0].lojas.nome)||'Banca', papel:membros[0].papel };
     window._vendedores = (membros[0].lojas && membros[0].lojas.vendedores && membros[0].lojas.vendedores.length) ? membros[0].lojas.vendedores : ['0000'];
     window._lojaTelefone = (membros[0].lojas && membros[0].lojas.telefone) || '';

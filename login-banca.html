@@ -5,13 +5,13 @@
 <script src="spap-migrar.js?v=1"></script>
 <script src="spap-bloqueio.js?v=1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
-<script src="spap-semzoom.js?v=3.7.22"></script>
+<script src="spap-semzoom.js?v=3.7.23"></script>
 <meta name="theme-color" content="#eef3fb">
 <title>Banca — Entrar</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="spap-premium.css?v=3.7.22">
+<link rel="stylesheet" href="spap-premium.css?v=3.7.23">
 <style>
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   body.pm{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:28px 16px;}
@@ -63,7 +63,7 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="Banca e Vendas">
-<script src="app-android.js?v=3.7.22" defer></script>
+<script src="app-android.js?v=3.7.23" defer></script>
 <link rel="stylesheet" href="spap-carrinho.css?v=1">
 </head>
 <body class="pm">
@@ -88,9 +88,14 @@ document.documentElement.classList.remove('escuro');
 document.addEventListener('DOMContentLoaded',()=>{ document.documentElement.classList.remove('escuro'); const tc=document.querySelector('meta[name="theme-color"]'); if(tc) tc.setAttribute('content','#eef3fb'); });
 const btn=document.getElementById('btn');
 function erro(m){ const e=document.getElementById('erro'); e.textContent=m; e.style.display='block'; }
+try{ if(new URLSearchParams(location.search).get('conta')==='loja') setTimeout(()=>erro('🏪 Essa conta é de uma LOJA. A Loja e a Banca são separadas: entre com a conta da Banca ou crie uma em «Cadastrar».'),50); }catch(e){}
 
 function destino(){ return new URLSearchParams(location.search).get('to') || 'mobile.html'; }
-(async()=>{ try{ const {data}=await supabaseClient.auth.getSession(); if(data&&data.session){ location.href=destino(); } }catch(e){} })();
+(async()=>{ try{ const {data}=await supabaseClient.auth.getSession(); if(data&&data.session){
+  const r=await supabaseClient.from('membros_loja').select('lojas(tipo_loja,estado)').eq('user_id',data.session.user.id).limit(20);
+  if(r.error){ location.href=destino(); return; }
+  if(spapMembrosDoTipo(r.data,'banca').length){ spapSessaoBancaOk(); location.href=destino(); } else { await spapSessaoBancaErrada(); }
+} }catch(e){} })();
 
 async function entrar(){
   const email=document.getElementById('email').value.trim();
@@ -103,7 +108,14 @@ async function entrar(){
   if(error){ erro(error.message.includes('Invalid')?'Email ou código errado.':error.message); btn.disabled=false; btn.textContent='ENTRAR'; return; }
   // Verifica estado da banca
   try{
-    const { data:m }=await supabaseClient.from('membros_loja').select('lojas(estado,nome)').eq('user_id',data.user.id).limit(20).then(r=>(r.data=spapMembrosAtivos(r.data),r));
+    const { data:mTodos }=await supabaseClient.from('membros_loja').select('lojas(estado,nome,tipo_loja)').eq('user_id',data.user.id).limit(20);
+    const m = spapMembrosDoTipo(mTodos||[],'banca');
+    if(mTodos && mTodos.length && !m.length){
+      await spapSessaoBancaErrada();
+      erro('🏪 Este email é de uma conta da LOJA, não da Banca. A Loja e a Banca são separadas: para usar a Banca, crie uma conta da Banca em «Cadastrar».');
+      btn.disabled=false; btn.textContent='ENTRAR'; return;
+    }
+    spapSessaoBancaOk();
     const est = m&&m[0]&&m[0].lojas&&m[0].lojas.estado;
     if(est==='suspenso'||est==='bloqueado'){ await supabaseClient.auth.signOut(); erro('🚫 Banca suspensa. Contacta o suporte: +258 86 657 7722'); btn.disabled=false; btn.textContent='ENTRAR'; return; }
   }catch(e){}

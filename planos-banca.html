@@ -5,7 +5,7 @@
 <script src="spap-migrar.js?v=1"></script>
 <script src="spap-bloqueio.js?v=1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
-<script src="spap-semzoom.js?v=3.7.22"></script>
+<script src="spap-semzoom.js?v=3.7.23"></script>
 <meta name="theme-color" content="#f4f8ff">
 <title>Planos — Banca</title>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
@@ -64,8 +64,8 @@
   .rodape a{color:var(--lj-esc);font-weight:800;text-decoration:none}
   [hidden]{display:none!important}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.22">
-<script src="banca-tema.js?v=3.7.22" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.23">
+<script src="banca-tema.js?v=3.7.23" defer></script>
 </head>
 <body>
 <div class="pg">
@@ -126,8 +126,8 @@ async function ler(ch){ try{ const {data}=await supabaseClient.from('config_glob
 (async function(){
   let ses=null; try{ ses=(await supabaseClient.auth.getSession()).data.session; }catch(e){}
   if(!ses){ location.href='login-banca.html'; return; }
-  const { data:m }=await supabaseClient.from('membros_loja').select('loja_id, lojas(id,nome,email_dono,plano,estado,data_expiracao)').eq('user_id',ses.user.id).limit(1);
-  if(!m||!m.length){ location.href='login-banca.html'; return; }
+  const { data:m }=await supabaseClient.from('membros_loja').select('loja_id, lojas(id,nome,email_dono,plano,estado,data_expiracao,tipo_loja)').eq('user_id',ses.user.id).limit(20).then(r=>(r.data=spapMembrosDoTipo(r.data,'banca'),r));
+  if(!m||!m.length){ await spapSessaoBancaErrada(); location.href='login-banca.html?conta=loja'; return; }
   sessao={ lojaId:m[0].loja_id, email:ses.user.email }; loja=m[0].lojas||{};
   document.getElementById('nome-banca').textContent=loja.nome||'Banca';
   const [cfg, met, wa, sup]=await Promise.all([ler('planos_banca'), ler('metodos_subscricao'), ler('link_whatsapp_pagamento'), ler('link_suporte_whatsapp')]);

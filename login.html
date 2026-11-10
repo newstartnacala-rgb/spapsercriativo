@@ -5,7 +5,7 @@
 <script src="spap-migrar.js?v=1"></script>
 <script src="spap-bloqueio.js?v=1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
-<script src="spap-semzoom.js?v=2.9.233"></script>
+<script src="spap-semzoom.js?v=2.9.234"></script>
 <title>Entrar — Spap-Sercriativo</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="ios-loja-180.png">
@@ -93,7 +93,7 @@
   @media (max-width:767px) and (max-height:660px) { .lg-marca { width:60px; height:60px; } .campo { height:44px; } .btn-principal { height:46px; } .btn-google { height:42px; } .lg-sub { margin-top:4px; } }
   @media (max-width:767px) and (max-height:600px) { .lg-marca { width:50px; height:50px; } .langs { margin-bottom:8px; } .lg-topo { margin-bottom:8px; } .ou { margin:7px 0; } .rodape { margin:8px 0 6px; } }
 </style>
-<script src="app-android.js?v=2.9.233" defer></script>
+<script src="app-android.js?v=2.9.234" defer></script>
 <link rel="stylesheet" href="spap-carrinho.css?v=1">
 </head>
 <body>
@@ -136,6 +136,14 @@
   const erroDiv = document.getElementById('erro-msg');
   const sucessoDiv = document.getElementById('sucesso-msg');
 
+  // Conta da Banca a tentar entrar na Loja: são contas separadas
+  function mostrarContaBanca() {
+    erroDiv.innerHTML = '🧺 Este email é de uma conta da <b>BANCA</b>, não da Loja.<br>A Loja e a Banca são separadas: para usar a Loja, crie uma conta da Loja em «Criar loja grátis». '
+      + '<a href="login-banca.html" style="color:inherit;font-weight:800;text-decoration:underline;">Entrar na Banca →</a>';
+    erroDiv.style.display = 'block';
+    sucessoDiv.style.display = 'none';
+  }
+  try { if (new URLSearchParams(location.search).get('conta') === 'banca') setTimeout(function(){ mostrarContaBanca(); }, 60); } catch(e) {}
   function mostrarErro(msg) {
     erroDiv.textContent = '❌ ' + msg;
     erroDiv.style.display = 'block';
@@ -180,15 +188,15 @@
     try {
       const { data } = await supabaseClient.auth.getSession();
       if (data && data.session) {
-        // Se há destino específico guardado, respeita-o. Senão, bancas vão para o Mobile POSS.
-        if (!localStorage.getItem('pdv_login_destino')) {
-          try {
-            const { data: mb } = await supabaseClient.from('membros_loja')
-              .select('lojas(tipo_loja, estado)').eq('user_id', data.session.user.id).limit(20);
-            const mbA = spapMembrosAtivos(mb); if (mbA && mbA[0] && mbA[0].lojas && mbA[0].lojas.tipo_loja === 'banca') { window.location.href = 'mobile.html'; return; }
-            if (false && mb && mb[0] && mb[0].lojas && mb[0].lojas.tipo_loja === 'banca') { window.location.href = 'mobile.html'; return; }
-          } catch(e) {}
-        }
+        // A Loja e a Banca são separadas: uma conta da Banca não abre a Loja.
+        try {
+          const { data: mb, error: eMb } = await supabaseClient.from('membros_loja')
+            .select('lojas(tipo_loja, estado)').eq('user_id', data.session.user.id).limit(20);
+          if (!eMb && mb && mb.length && !spapMembrosDoTipo(mb, 'loja').length) {
+            try { await supabaseClient.auth.signOut({ scope: 'local' }); } catch(e) {}
+            mostrarContaBanca(); return;
+          }
+        } catch(e) {}
         window.location.href = destinoAposLogin(); return;
       }
     } catch(e) {}
@@ -243,7 +251,16 @@
       .from('membros_loja')
       .select('loja_id, lojas(estado, nome, tipo_loja)')
       .eq('user_id', data.user.id)
-      .limit(20).then(r => (r.data = spapMembrosAtivos(r.data), r));
+      .limit(20).then(r => { const todos = r.data || []; r.data = spapMembrosDoTipo(todos, 'loja'); r.soBanca = todos.length > 0 && !r.data.length; return r; })
+      .then(r => { window._soBanca = r.soBanca; return r; });
+
+    // A Loja e a Banca são separadas: este email só tem conta da Banca
+    if (window._soBanca) {
+      try { await supabaseClient.auth.signOut({ scope: 'local' }); } catch(e) {}
+      mostrarContaBanca();
+      btn.disabled = false; btn.textContent = 'ENTRAR';
+      return;
+    }
 
     if (membros && membros.length > 0) {
       const estadoLoja = membros[0].lojas && membros[0].lojas.estado;
@@ -265,11 +282,6 @@
         return;
       }
 
-      // Banca → vai para a app Mobile POSS (a não ser que haja um destino específico guardado)
-      if (tipoLoja === 'banca' && !localStorage.getItem('pdv_login_destino')) {
-        window.location.href = 'mobile.html';
-        return;
-      }
     }
 
     window.location.href = destinoAposLogin();

@@ -5,13 +5,13 @@
 <script src="spap-migrar.js?v=1"></script>
 <script src="spap-bloqueio.js?v=1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
-<script src="spap-semzoom.js?v=3.7.22"></script>
+<script src="spap-semzoom.js?v=3.7.23"></script>
 <meta name="theme-color" content="#eef3fb">
 <title>Banca — Criar conta</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="spap-premium.css?v=3.7.22">
+<link rel="stylesheet" href="spap-premium.css?v=3.7.23">
 <style>
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   body.pm{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:28px 16px;}
@@ -153,7 +153,7 @@ async function criar(){
   try{ const r=await supabaseClient.auth.signUp({email,password:senha}); authData=r.data; authError=r.error; }
   catch(e){ authError={message:'Sem internet. Tenta de novo.'}; }
   btn.disabled=false; btn.textContent='Criar banca';
-  if(authError){ erro('erro1', authError.message.includes('already')?'Este email já está registado. Tenta entrar.':authError.message); return; }
+  if(authError){ erro('erro1', authError.message.includes('already')?'Este email já tem uma conta (pode ser da Loja). A Banca e a Loja são separadas: use outro email para a Banca, ou entre se já é uma conta da Banca.':authError.message); return; }
   if(authData && authData.user && Array.isArray(authData.user.identities) && authData.user.identities.length===0){ erro('erro1','Este email já está registado. Tenta entrar.'); return; }
   if(authData && authData.session){ // confirmação desligada: cria já
     const ok=await criarBanca(authData.user.id,'erro1'); if(ok){ passo(3); precosBanca(); } return;
