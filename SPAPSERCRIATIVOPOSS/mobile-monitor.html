@@ -88,9 +88,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.29">
-<script src="banca-tema.js?v=3.7.29" defer></script>
-<script src="app-android.js?v=3.7.29" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.30">
+<script src="banca-tema.js?v=3.7.30" defer></script>
+<script src="app-android.js?v=3.7.30" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -403,7 +403,7 @@
 <div id="toast" class="toast"></div>
 
 <script src="supabase-config.js"></script>
-<script src="spap-avisos.js?v=4"></script>
+<script src="spap-avisos.js?v=5"></script>
 <script src="spap-backup.js?v=7"></script>
 <script src="spap-imagem.js?v=1"></script>
 <script>
@@ -997,7 +997,7 @@ function superAbrirMenu(){
   if(!m){ m=document.createElement('div'); m.id='sa-menu-b'; m.onclick=e=>{ if(e.target===m) m.classList.remove('aberto'); }; m.innerHTML='<div class="sa-box-b" id="sa-box-b"></div>'; document.body.appendChild(m); }
   const l=window._spapBancas||[], minha=window._spapMinhaBanca, atual=String(sessao.lojaId);
   const item=(b,ico)=>'<button class="sa-item-b'+(String(b.id)===atual?' atual':'')+'" type="button" data-busca="'+escA(((b.nome||'')+' '+(b.email_dono||'')).toLowerCase())+'" onclick="superAbrirBanca(\''+b.id+'\')">'
-    +'<img src="icons3d/'+ico+'.png" alt=""><span class="sa-txt-b"><b>'+esc(b.nome||'Banca')+'</b><small>'+(spapEhSuper(b.email_dono)?'a sua conta':esc(b.email_dono||''))+(b.plano?' · '+esc(b.plano):'')+'</small></span>'+(String(b.id)===atual?'<i class="sa-ok-b">✓</i>':'')+'</button>';
+    +'<img src="icons3d/'+ico+'.png" alt=""><span class="sa-txt-b"><b>'+esc(b.nome||'Banca')+'</b><small>'+(spapEhSuper(b.email_dono)?'Desenvolvedores':esc(b.email_dono||''))+(b.plano?' · '+esc(b.plano):'')+'</small></span>'+(String(b.id)===atual?'<i class="sa-ok-b">✓</i>':'')+'</button>';
   const mine=l.filter(b=>String(b.id)===String(minha)), outras=l.filter(b=>String(b.id)!==String(minha));
   document.getElementById('sa-box-b').innerHTML=
       '<button class="sa-item-b sa-admin-b" type="button" onclick="location.href=\'admin.html?t=\'+Date.now()"><img src="icons3d/shield.png" alt=""><span>Painel de Administração</span><i class="sa-chev-r-b"></i></button>'

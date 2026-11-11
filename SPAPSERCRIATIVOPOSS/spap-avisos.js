@@ -12,8 +12,12 @@
   function fmt(v) { return 'MT ' + (parseFloat(v) || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
 
   async function inserir(linha, fila) {
-    if (fila && window.bancaGuardarOp) { bancaGuardarOp({ tipo: 'evento', rotulo: linha.detalhe, passos: [{ t: 'insert', tabela: 'atividade_log', linhas: [linha], opcional: true }] }); return; }
-    try { await supabaseClient.from('atividade_log').insert(linha); } catch (e) {}
+    var paraFila = function () { if (fila && window.bancaGuardarOp) bancaGuardarOp({ tipo: 'evento', rotulo: linha.detalhe, passos: [{ t: 'insert', tabela: 'atividade_log', linhas: [linha], opcional: true }] }); };
+    if (navigator.onLine === false) { paraFila(); return; }
+    try {
+      var r = await supabaseClient.from('atividade_log').insert(linha);
+      if (r && r.error && /fetch|network|Failed|timeout/i.test(r.error.message || '')) paraFila();
+    } catch (e) { paraFila(); }
   }
   async function uid() { try { var r = await supabaseClient.auth.getUser(); return r && r.data && r.data.user ? r.data.user.id : null; } catch (e) { return null; } }
 
@@ -99,65 +103,113 @@
     try { document.documentElement.style.overflow = 'hidden'; } catch (e) {}
   };
 
-  // ===== Monitores: pop-up =====
+  // ===== Monitores: pop-up de vidro (SSTEAM, letras douradas) =====
   var css = ''
-    + '#spap-avisos{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:100040;width:calc(100% - 24px);max-width:420px;display:flex;flex-direction:column;gap:10px;pointer-events:none;font-family:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;}'
-    + '.sav{pointer-events:auto;background:#fff;border-radius:22px;overflow:hidden;box-shadow:0 24px 60px rgba(15,23,42,.32),0 0 0 1px rgba(15,23,42,.05);animation:sav-entra .45s cubic-bezier(.2,1.2,.3,1);}'
-    + '@keyframes sav-entra{from{opacity:0;transform:translateY(-24px) scale(.96)}to{opacity:1;transform:none}}'
-    + '.sav.sai{animation:sav-sai .25s ease-in forwards;} @keyframes sav-sai{to{opacity:0;transform:translateY(-16px) scale(.97)}}'
-    + '.sav-topo{display:flex;align-items:center;gap:12px;padding:14px 16px 12px;color:#fff;}'
-    + '.sav.abre .sav-topo{background:linear-gradient(135deg,#16a34a,#15803d);} .sav.entrega .sav-topo{background:linear-gradient(135deg,#2563eb,#4338ca);}'
-    + '.sav-ic{width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.2);display:grid;place-items:center;font-size:24px;flex-shrink:0;}'
-    + '.sav-tit{font-weight:800;font-size:16.5px;line-height:1.2;} .sav-sub{font-size:12.5px;opacity:.92;margin-top:2px;}'
-    + '.sav-x{margin-left:auto;width:32px;height:32px;border-radius:10px;border:0;background:rgba(255,255,255,.2);color:#fff;font-size:16px;font-weight:800;cursor:pointer;flex-shrink:0;}'
-    + '.sav-corpo{padding:14px 16px 14px;}'
-    + '.sav-hora{display:flex;align-items:baseline;gap:10px;} .sav-hora b{font-size:34px;font-weight:800;color:#0f172a;letter-spacing:-.5px;line-height:1;} .sav-hora span{font-size:13px;color:#64748b;font-weight:700;}'
-    + '.sav-data{font-size:13px;color:#475569;margin-top:6px;}'
-    + '.sav-linhas{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;} .sav-linhas div{background:#f8fafc;border-radius:12px;padding:8px 10px;} .sav-linhas small{display:block;font-size:11px;color:#64748b;font-weight:700;} .sav-linhas b{font-size:14.5px;color:#0f172a;}'
-    + '.sav-ok{width:100%;margin-top:12px;height:46px;border:0;border-radius:14px;font-weight:800;font-size:15px;cursor:pointer;font-family:inherit;color:#fff;}'
-    + '.sav.abre .sav-ok{background:linear-gradient(135deg,#16a34a,#15803d);} .sav.entrega .sav-ok{background:linear-gradient(135deg,#2563eb,#4338ca);}'
-    + 'html.escuro #spap-avisos{filter:invert(1) hue-rotate(180deg);}';
-  function caixa() {
-    var c = document.getElementById('spap-avisos');
-    if (!c) {
-      if (!document.getElementById('spap-avisos-css')) { var st = document.createElement('style'); st.id = 'spap-avisos-css'; st.textContent = css; document.head.appendChild(st); }
-      c = document.createElement('div'); c.id = 'spap-avisos'; document.body.appendChild(c);
-    }
-    return c;
-  }
+    + '#spap-av{position:fixed;inset:0;z-index:100040;display:flex;align-items:center;justify-content:center;padding:22px;background:rgba(0,0,0,0);'
+    + '-webkit-backdrop-filter:blur(0);backdrop-filter:blur(0);transition:background .7s ease,backdrop-filter .7s ease,-webkit-backdrop-filter .7s ease,opacity .7s ease;cursor:pointer;'
+    + 'font-family:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;-webkit-tap-highlight-color:transparent;}'
+    + '#spap-av.on{background:rgba(3,5,12,.72);-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);}'
+    + '#spap-av.sai{background:rgba(0,0,0,.94);opacity:0;transition:background .35s ease,opacity .75s ease .25s;}'
+    + '#spap-av .av{position:relative;width:100%;max-width:380px;border-radius:30px;padding:30px 24px 22px;text-align:center;overflow:hidden;'
+    + 'background:linear-gradient(150deg,rgba(255,255,255,.16),rgba(255,255,255,.04) 45%,rgba(233,185,84,.07));border:1px solid rgba(233,185,84,.45);'
+    + '-webkit-backdrop-filter:blur(24px) saturate(150%);backdrop-filter:blur(24px) saturate(150%);'
+    + 'box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.06) inset,0 0 60px rgba(233,185,84,.18);'
+    + 'opacity:0;transform:translateY(26px) scale(.93);filter:blur(10px);transition:opacity .75s ease .15s,transform .85s cubic-bezier(.16,1,.3,1) .15s,filter .75s ease .15s;}'
+    + '#spap-av.on .av{opacity:1;transform:none;filter:none;}'
+    + '#spap-av.sai .av{opacity:0;transform:scale(.95);filter:blur(8px);transition:opacity .45s ease,transform .5s ease,filter .45s ease;}'
+    + '#spap-av .av::before{content:"";position:absolute;inset:-60%;background:conic-gradient(from 0deg,transparent 0 70%,rgba(233,185,84,.22) 80%,transparent 90%);animation:av-gira 7s linear infinite;pointer-events:none;}'
+    + '@keyframes av-gira{to{transform:rotate(360deg)}}'
+    + '#spap-av .av>*{position:relative;}'
+    + '#spap-av .av-logo{width:86px;height:86px;margin:0 auto 14px;border-radius:50%;padding:4px;background:conic-gradient(#f7e2a1,#b47a1f,#e9b954,#7a5313,#f7e2a1);box-shadow:0 0 34px rgba(233,185,84,.45);animation:av-pulso 2.6s ease-in-out infinite;}'
+    + '#spap-av .av-logo img{width:100%;height:100%;border-radius:50%;object-fit:contain;background:#0b0f1c;display:block;}'
+    + '@keyframes av-pulso{0%,100%{box-shadow:0 0 26px rgba(233,185,84,.35)}50%{box-shadow:0 0 48px rgba(233,185,84,.7)}}'
+    + '#spap-av .ouro{background:linear-gradient(100deg,#b47a1f 0%,#f7e2a1 22%,#e9b954 40%,#fff3c9 52%,#c8902e 66%,#f2d27a 82%,#b47a1f 100%);background-size:220% 100%;'
+    + '-webkit-background-clip:text;background-clip:text;color:transparent;animation:av-brilho 3.2s linear infinite;}'
+    + '@keyframes av-brilho{to{background-position:-220% 0}}'
+    + '#spap-av .av-selo{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.32em;text-transform:uppercase;padding:6px 14px;border-radius:999px;border:1px solid rgba(233,185,84,.5);color:#f2d27a;background:rgba(233,185,84,.08);}'
+    + '#spap-av .av-tit{font-family:Sora,"Plus Jakarta Sans",sans-serif;font-size:27px;font-weight:800;letter-spacing:-.01em;margin:14px 0 4px;line-height:1.15;}'
+    + '#spap-av .av-quem{font-size:14px;font-weight:700;color:rgba(255,255,255,.88);}'
+    + '#spap-av .av-loja{font-size:12.5px;color:rgba(247,226,161,.75);margin-top:2px;font-weight:600;}'
+    + '#spap-av .av-hora{font-family:Sora,"Plus Jakarta Sans",sans-serif;font-size:58px;font-weight:800;letter-spacing:-.03em;line-height:1;margin:18px 0 4px;}'
+    + '#spap-av .av-hora-l{font-size:11.5px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.55);}'
+    + '#spap-av .av-data{display:inline-flex;align-items:center;gap:8px;margin-top:14px;padding:8px 14px;border-radius:14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);font-size:13.5px;font-weight:700;color:#f7e2a1;}'
+    + '#spap-av .av-val{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;}'
+    + '#spap-av .av-val div{padding:10px;border-radius:16px;background:rgba(255,255,255,.07);border:1px solid rgba(233,185,84,.25);}'
+    + '#spap-av .av-val small{display:block;font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.6);}'
+    + '#spap-av .av-val b{display:block;font-size:17px;margin-top:3px;}'
+    + '#spap-av .av-fim{margin-top:20px;font-size:12px;color:rgba(255,255,255,.5);letter-spacing:.04em;}'
+    + '#spap-av .av-fim b{color:rgba(247,226,161,.85);font-weight:700;}'
+    + '#spap-av .av .entra{opacity:0;transform:translateY(10px);transition:opacity .6s ease,transform .7s cubic-bezier(.16,1,.3,1);}'
+    + '#spap-av.on .av .entra{opacity:1;transform:none;}'
+    + '#spap-av.on .av .e1{transition-delay:.35s} #spap-av.on .av .e2{transition-delay:.45s} #spap-av.on .av .e3{transition-delay:.55s} #spap-av.on .av .e4{transition-delay:.65s} #spap-av.on .av .e5{transition-delay:.8s}'
+    + '@media (prefers-reduced-motion:reduce){#spap-av .av::before,#spap-av .ouro,#spap-av .av-logo{animation:none}}';
+  function estilo() { if (document.getElementById('spap-av-css')) return; var st = document.createElement('style'); st.id = 'spap-av-css'; st.textContent = css; document.head.appendChild(st); }
+
+  // toque suave e elegante (sino em subida, ao estilo dos toques de notificação dos telemóveis)
   function som() {
     try {
-      var ctx = new (window.AudioContext || window.webkitAudioContext)();
-      [660, 880, 1100].forEach(function (f, i) {
-        var o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.value = f;
-        g.gain.setValueAtTime(0.0001, ctx.currentTime + i * 0.14); g.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + i * 0.14 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + i * 0.14 + 0.3);
-        o.connect(g); g.connect(ctx.destination); o.start(ctx.currentTime + i * 0.14); o.stop(ctx.currentTime + i * 0.14 + 0.32);
+      var C = window.AudioContext || window.webkitAudioContext; if (!C) return;
+      var ctx = window._spapAudio || (window._spapAudio = new C());
+      if (ctx.state === 'suspended') ctx.resume();
+      var t0 = ctx.currentTime + 0.02, mestre = ctx.createGain(); mestre.gain.value = 0.9; mestre.connect(ctx.destination);
+      var notas = [[1318.5, 0], [1661.2, 0.12], [1975.5, 0.24], [2637.0, 0.40]];   // E6 · G#6 · B6 · E7 (acorde de Mi maior, a subir)
+      notas.forEach(function (n, i) {
+        [[1, 'sine', 0.20], [2.01, 'sine', 0.05], [3.98, 'triangle', 0.018]].forEach(function (h) {
+          var o = ctx.createOscillator(), g = ctx.createGain(), t = t0 + n[1], dur = i === notas.length - 1 ? 1.9 : 1.2;
+          o.type = h[1]; o.frequency.value = n[0] * h[0];
+          g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(h[2], t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+          o.connect(g); g.connect(mestre); o.start(t); o.stop(t + dur + 0.05);
+        });
       });
-      setTimeout(function () { try { ctx.close(); } catch (e) {} }, 1200);
     } catch (e) {}
   }
-  function mostrar(ev, nomeLoja) {
-    var ex = ev.extra || {}, abre = ev.acao === 'abertura', banca = ex.tipo === 'banca';
+  // os toques só podem tocar depois de a pessoa tocar no ecrã uma vez: prepara o som no 1.º toque
+  ['pointerdown', 'keydown'].forEach(function (ev) { document.addEventListener(ev, function () { try { var C = window.AudioContext || window.webkitAudioContext; if (C && !window._spapAudio) window._spapAudio = new C(); if (window._spapAudio && window._spapAudio.state === 'suspended') window._spapAudio.resume(); } catch (e) {} }, { once: true, capture: true }); });
+
+  var _filaAvisos = [], _aMostrar = false;
+  function proximo() {
+    if (_aMostrar || !_filaAvisos.length) return;
+    _aMostrar = true;
+    var x = _filaAvisos.shift(), ev = x.ev, ex = ev.extra || {}, abre = ev.acao === 'abertura', banca = ex.tipo === 'banca';
     var quando = ex.hora || ev.criado_em;
-    var lugar = banca ? 'banca' : 'loja';
-    var d = document.createElement('div'); d.className = 'sav ' + (abre ? 'abre' : 'entrega');
-    d.innerHTML = '<div class="sav-topo"><div class="sav-ic">' + (abre ? '🔓' : '📦') + '</div><div><div class="sav-tit">' + (abre ? (banca ? 'A banca abriu' : 'A loja abriu') : 'Dia entregue')
-      + '</div><div class="sav-sub">' + esc(ev.quem || 'Balconista') + (nomeLoja ? ' · ' + esc(nomeLoja) : '') + '</div></div><button class="sav-x" aria-label="Fechar">✕</button></div>'
-      + '<div class="sav-corpo"><div class="sav-hora"><b>' + hora(quando) + '</b><span>' + (abre ? 'hora de abertura da ' + lugar : 'hora da entrega') + '</span></div>'
-      + '<div class="sav-data">📅 ' + dataLonga(quando) + '</div>'
-      + (!abre ? '<div class="sav-linhas"><div><small>💵 Dinheiro entregue</small><b>' + fmt(ex.dinheiro) + '</b></div><div><small>🧾 Gastos</small><b>' + fmt(ex.gastos) + '</b></div></div>' : '')
-      + '<button class="sav-ok">Visto</button></div>';
-    var fechar = function () { d.classList.add('sai'); setTimeout(function () { d.remove(); }, 260); };
-    d.querySelector('.sav-x').onclick = fechar; d.querySelector('.sav-ok').onclick = fechar;
-    caixa().appendChild(d);
-    som(); try { if (navigator.vibrate) navigator.vibrate([120, 80, 120]); } catch (e) {}
+    estilo();
+    var d = document.createElement('div'); d.id = 'spap-av'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true');
+    d.innerHTML = '<div class="av">'
+      + '<div class="av-logo entra e1"><img src="ssteam-logo.png" alt="SSTEAM"></div>'
+      + '<div class="av-selo entra e1">SSTEAM · Aviso</div>'
+      + '<div class="av-tit ouro entra e2">' + (abre ? (banca ? 'A banca abriu' : 'A loja abriu') : 'Dia entregue') + '</div>'
+      + '<div class="av-quem entra e2">' + esc(ev.quem || 'Balconista') + '</div>'
+      + (x.nome ? '<div class="av-loja entra e2">' + esc(x.nome) + '</div>' : '')
+      + '<div class="av-hora ouro entra e3">' + hora(quando) + '</div>'
+      + '<div class="av-hora-l entra e3">' + (abre ? 'hora de abertura' : 'hora da entrega') + '</div>'
+      + '<div class="av-data entra e4">📅 ' + dataLonga(quando) + '</div>'
+      + (!abre ? '<div class="av-val entra e4"><div><small>Entregue</small><b class="ouro">' + fmt(ex.dinheiro) + '</b></div><div><small>Gastos</small><b class="ouro">' + fmt(ex.gastos) + '</b></div></div>' : '')
+      + '<div class="av-fim entra e5">Toque em qualquer lado para <b>fechar</b></div></div>';
+    var fechado = false;
+    var fechar = function () {
+      if (fechado) return; fechado = true;
+      d.classList.remove('on'); d.classList.add('sai');
+      setTimeout(function () { d.remove(); _aMostrar = false; setTimeout(proximo, 250); }, 1050);
+    };
+    d.addEventListener('click', fechar);
+    document.addEventListener('keydown', function t(e) { if (e.key === 'Escape' || e.key === 'Enter') { document.removeEventListener('keydown', t); fechar(); } });
+    document.body.appendChild(d);
+    requestAnimationFrame(function () { requestAnimationFrame(function () { d.classList.add('on'); }); });
+    setTimeout(som, 250);
+    try { if (navigator.vibrate) navigator.vibrate([40, 60, 40]); } catch (e) {}
     try {
       if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
-        new Notification(abre ? (banca ? '🔓 A banca abriu' : '🔓 A loja abriu') : '📦 Dia entregue', { body: (ev.quem || 'Balconista') + ' · ' + hora(quando) + ' · ' + new Date(quando).toLocaleDateString('pt-PT'), tag: 'spap-' + ev.id });
+        new Notification(abre ? (banca ? 'A banca abriu' : 'A loja abriu') : 'Dia entregue', { body: (ev.quem || 'Balconista') + ' · ' + hora(quando) + ' · ' + new Date(quando).toLocaleDateString('pt-PT'), tag: 'spap-' + ev.id });
       }
     } catch (e) {}
   }
 
+  // cada aviso aparece UMA vez neste aparelho (mesmo que o Monitor seja recarregado ou o registo venha repetido)
+  function chaveAviso(ev) {
+    var ex = ev.extra || {};
+    if (ev.acao === 'abertura') return 'ab|' + (ev.quem || '') + '|' + dia(new Date(ex.hora || ev.criado_em));
+    return 'en|' + (ev.quem || '') + '|' + Math.round(new Date(ex.hora || ev.criado_em).getTime() / 60000);
+  }
   var _getLoja = null, _getNome = null, _aVer = false;
   async function verificar() {
     if (_aVer || !_getLoja) return;
@@ -165,17 +217,22 @@
     if (_pagina) spapVerConta(loja, _pagina);
     _aVer = true;
     try {
-      var k = 'spap_avisos_visto_' + loja, desde = null;
-      try { desde = localStorage.getItem(k); } catch (e) {}
+      var k = 'spap_avisos_visto_' + loja, kM = 'spap_avisos_mostrados_' + loja, desde = null, mostrados = [];
+      try { desde = localStorage.getItem(k); mostrados = JSON.parse(localStorage.getItem(kM) || '[]'); } catch (e) {}
       if (!desde) { var ini = new Date(); ini.setHours(0, 0, 0, 0); desde = ini.toISOString(); }   // 1.ª vez: mostra os de hoje
       var r = await supabaseClient.from('atividade_log').select('id,acao,quem,detalhe,extra,criado_em').eq('loja_id', loja).in('acao', ['abertura', 'entrega_dia'])
         .gt('criado_em', desde).order('criado_em', { ascending: true }).limit(20);
       var l = (r && r.data) || [];
       if (l.length) {
-        var visto = {}; try { visto = JSON.parse(sessionStorage.getItem('spap_avisos_ids') || '{}'); } catch (e) {}
         var nome = _getNome ? _getNome() : '';
-        l.forEach(function (ev) { if (!visto[ev.id]) { visto[ev.id] = 1; mostrar(ev, nome); } });
-        try { sessionStorage.setItem('spap_avisos_ids', JSON.stringify(visto)); localStorage.setItem(k, l[l.length - 1].criado_em); } catch (e) {}
+        l.forEach(function (ev) {
+          var c = chaveAviso(ev);
+          if (mostrados.indexOf(c) >= 0 || mostrados.indexOf('id|' + ev.id) >= 0) return;
+          mostrados.push(c, 'id|' + ev.id);
+          _filaAvisos.push({ ev: ev, nome: nome });
+        });
+        try { localStorage.setItem(kM, JSON.stringify(mostrados.slice(-300))); localStorage.setItem(k, l[l.length - 1].criado_em); } catch (e) {}
+        proximo();
       }
     } catch (e) {} finally { _aVer = false; }
   }
