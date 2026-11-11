@@ -88,9 +88,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.25">
-<script src="banca-tema.js?v=3.7.25" defer></script>
-<script src="app-android.js?v=3.7.25" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.26">
+<script src="banca-tema.js?v=3.7.26" defer></script>
+<script src="app-android.js?v=3.7.26" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -219,7 +219,7 @@
         <div class="mi" onclick="mFinancas()"><div class="e">💰</div><div class="t">Dinheiro e lucro</div></div>
         <div class="mi" onclick="mInventario()"><div class="e">📋</div><div class="t">Inventário</div></div>
         <div class="mi" onclick="mRelatorio()"><div class="e">📈</div><div class="t">Relatório</div></div>
-        <div class="mi" id="mi-super" style="display:none" onclick="mSuperBancas()"><div class="e">👑</div><div class="t">Trocar banca</div></div>
+
         <div class="mi" onclick="mRastreioProduto()"><div class="e">🔎</div><div class="t">Rastreio de Produto</div></div>
         <div class="mi" onclick="mProducts()"><div class="e">📦</div><div class="t">Produtos</div></div>
         <div class="mi" onclick="abrirAddProduto()"><div class="e">➕</div><div class="t">Adicionar produto</div></div>
@@ -425,7 +425,7 @@ let sessao=null, produtos=[], periodo='hoje', periodoDesc='hoje';
     window._vendedores = (membros[0].lojas && membros[0].lojas.vendedores && membros[0].lojas.vendedores.length) ? membros[0].lojas.vendedores : ['0000'];
     window._lojaTelefone = (membros[0].lojas && membros[0].lojas.telefone) || '';
     document.getElementById('nome-loja').textContent = sessao.nomeLoja;
-    if(window._souSuper){ const mi=document.getElementById('mi-super'); if(mi) mi.style.display=''; document.getElementById('nome-loja').textContent = '👑 ' + sessao.nomeLoja; }
+    if(window._souSuper) superPintarPilula();
     await carregarProdutos();
     await Promise.all([carregarResumo(), carregarDescontos()]);
   }catch(e){ toast('Erro: '+(e.message||e),'erro'); }
@@ -981,14 +981,65 @@ async function carregarTop10(vendasHoje){
       <div class="t10-barra"><i style="width:${Math.max(5,Math.round(d.qtd/max*100))}%"></i></div></div>
       <div class="vv">${fmt(d.total)}</div></div>`; }).join('');
 }
-// ===== SUPER ADMIN: escolher qualquer banca =====
-function mSuperBancas(){
-  fecharFolha('folha-menu');
-  const l=window._spapBancas||[];
-  mostrarInfo('👑 Super Admin — escolher banca', '<div class="aviso-desc">Como Super Admin pode abrir qualquer banca. Toque na que quer ver.</div>'
-    + (l.length ? l.map(b=>'<div class="row venda-row" onclick="superAbrirBanca(\''+b.id+'\')"><div class="ph">🧺</div><div class="in"><div class="nn">'+esc(b.nome||'Banca')+(String(b.id)===String(sessao.lojaId)?' <span class="tag-desc">ABERTA</span>':'')+'</div><div class="mt">'+esc(b.email_dono||'')+' · '+esc(b.estado||'')+' · '+esc(b.plano||'')+'</div></div><div class="vv">›</div></div>').join('') : '<div class="vazio">Não há bancas registadas.</div>'));
+// ===== SUPER ADMIN (igual ao Monitor da Loja): pastilha «👑 Super Admin ⌄» com a lista das bancas =====
+function superPintarPilula(){
+  const nm=document.getElementById('nome-loja'); if(!nm || document.getElementById('sa-pill-b')) return;
+  const b=document.createElement('button'); b.type='button'; b.id='sa-pill-b'; b.className='sa-pill-b'; b.onclick=superAbrirMenu;
+  b.innerHTML='<img src="icons3d/crown.png" alt="">Super Admin<i class="sa-chev-b"></i>';
+  nm.insertAdjacentElement('afterend', b);
+  if(window._spapMinhaBanca && String(window._spapMinhaBanca)!==String(sessao.lojaId)){
+    const v=document.createElement('div'); v.className='sa-vendo'; v.innerHTML='👁️ Outra banca · <a onclick="superAbrirBanca(\''+window._spapMinhaBanca+'\')">voltar à minha</a>';
+    b.insertAdjacentElement('afterend', v);
+  }
 }
-function superAbrirBanca(id){ try{ localStorage.setItem('spap_super_banca', id); localStorage.removeItem('banca_sessao_cache'); }catch(e){} location.href='mobile-monitor.html'; }
+function superAbrirMenu(){
+  let m=document.getElementById('sa-menu-b');
+  if(!m){ m=document.createElement('div'); m.id='sa-menu-b'; m.onclick=e=>{ if(e.target===m) m.classList.remove('aberto'); }; m.innerHTML='<div class="sa-box-b" id="sa-box-b"></div>'; document.body.appendChild(m); }
+  const l=window._spapBancas||[], minha=window._spapMinhaBanca, atual=String(sessao.lojaId);
+  const item=(b,ico)=>'<button class="sa-item-b'+(String(b.id)===atual?' atual':'')+'" type="button" data-busca="'+escA(((b.nome||'')+' '+(b.email_dono||'')).toLowerCase())+'" onclick="superAbrirBanca(\''+b.id+'\')">'
+    +'<img src="icons3d/'+ico+'.png" alt=""><span class="sa-txt-b"><b>'+esc(b.nome||'Banca')+'</b><small>'+esc(b.email_dono||'')+(b.plano?' · '+esc(b.plano):'')+'</small></span>'+(String(b.id)===atual?'<i class="sa-ok-b">✓</i>':'')+'</button>';
+  const mine=l.filter(b=>String(b.id)===String(minha)), outras=l.filter(b=>String(b.id)!==String(minha));
+  document.getElementById('sa-box-b').innerHTML=
+      '<button class="sa-item-b sa-admin-b" type="button" onclick="location.href=\'admin.html\'"><img src="icons3d/shield.png" alt=""><span>Painel de Administração</span><i class="sa-chev-r-b"></i></button>'
+    + '<button class="sa-item-b sa-loja-b" type="button" onclick="location.href=\'monitor.html\'"><img src="icons3d/store.png" alt=""><span>Monitor da Loja</span><i class="sa-chev-r-b"></i></button>'
+    + (mine.length?'<div class="sa-sec-b">A minha banca</div>'+mine.map(b=>item(b,'cart')).join(''):'')
+    + '<div class="sa-sec-b">Outras bancas <small>'+outras.length+'</small></div>'
+    + (outras.length>6?'<input class="sa-busca-b" type="search" placeholder="Procurar banca ou email…" oninput="superFiltrar(this.value)">':'')
+    + (outras.length?outras.map(b=>item(b,'store')).join(''):'<div class="sa-vazio-b">Não há outras bancas.</div>');
+  m.classList.add('aberto');
+}
+function superFiltrar(t){ t=String(t||'').toLowerCase().trim(); document.querySelectorAll('#sa-box-b .sa-item-b[data-busca]').forEach(b=>{ if(b.parentNode && String(b.dataset.busca).length) b.style.display=!t||b.dataset.busca.includes(t)?'':'none'; }); }
+// abrir a banca de OUTRA pessoa pede o código do Super Admin (uma vez por sessão), igual à Loja
+async function superAbrirBanca(id){
+  const menu=document.getElementById('sa-menu-b'); if(menu) menu.classList.remove('aberto');
+  const minha=String(window._spapMinhaBanca||'');
+  let ok=true; try{ ok = String(id)===minha || sessionStorage.getItem('spap_super_ok')==='1'; }catch(e){}
+  if(!ok){
+    const b=(window._spapBancas||[]).find(x=>String(x.id)===String(id))||{};
+    if(!(await superPedirCodigo(b.nome||'Banca', b.email_dono||''))) return;
+    try{ sessionStorage.setItem('spap_super_ok','1'); }catch(e){}
+  }
+  try{ if(String(id)===minha) sessionStorage.removeItem('spap_super_banca'); else sessionStorage.setItem('spap_super_banca', id); localStorage.removeItem('banca_sessao_cache'); }catch(e){}
+  location.href='mobile-monitor.html';
+}
+function superPedirCodigo(nome, email){
+  return new Promise(res=>{
+    const ov=document.createElement('div'); ov.id='sa-cod-b';
+    ov.innerHTML='<div class="sc-b" role="dialog" aria-modal="true"><div class="sc-cad-b">🔒</div><h3>Acesso de Super Admin</h3><p>Escreve o código para ver esta banca.</p>'
+      +'<div class="sc-loja-b"><img src="icons3d/cart.png" alt=""><div><b>'+esc(nome)+'</b>'+(email?'<small>'+esc(email)+'</small>':'')+'</div></div>'
+      +'<input id="sc-in-b" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="••••"><div class="sc-erro-b" id="sc-erro-b"></div>'
+      +'<div class="sc-bts-b"><button type="button" class="sc-can-b">Cancelar</button><button type="button" class="sc-ok-b">Entrar</button></div><div class="sc-nota-b">🔒 Só é pedido uma vez nesta sessão.</div></div>';
+    document.body.appendChild(ov);
+    const inp=ov.querySelector('#sc-in-b'), er=ov.querySelector('#sc-erro-b'); let feito=false;
+    const fim=v=>{ if(feito) return; feito=true; ov.remove(); res(v); };
+    const tentar=()=>{ if(inp.value==='0210') return fim(true); er.textContent=inp.value?'Código errado. Tenta de novo.':'Escreve o código.'; inp.value=''; inp.focus(); try{ navigator.vibrate&&navigator.vibrate([60,40,60]); }catch(e){} };
+    inp.addEventListener('input',()=>{ inp.value=inp.value.replace(/\D/g,''); er.textContent=''; if(inp.value==='0210') tentar(); });
+    inp.addEventListener('keydown',e=>{ if(e.key==='Enter') tentar(); if(e.key==='Escape') fim(false); });
+    ov.querySelector('.sc-ok-b').onclick=tentar; ov.querySelector('.sc-can-b').onclick=()=>fim(false);
+    ov.addEventListener('click',e=>{ if(e.target===ov) fim(false); });
+    inp.focus();
+  });
+}
 // ===== FOLHAS / MENU =====
 function abrirFolha(id){ document.getElementById(id).classList.add('ativa'); }
 function fecharFolha(id){ document.getElementById(id).classList.remove('ativa'); }

@@ -84,14 +84,17 @@ async function spapContaMigrada(todos, pagina) {
   } catch (e) {}
   return false;
 }
-// Super Admin nas páginas da Banca: escolhe a banca a abrir (a escolhida antes, ?loja=, a sua, ou a 1.ª)
+// Super Admin nas páginas da Banca: abre SEMPRE a sua banca (como antes, com o código do balconista dela).
+// Outra banca só quando a escolhe no menu «👑 Super Admin» (vale só enquanto a app está aberta).
 async function spapSuperMembroBanca(proprios) {
   var esc = null;
-  try { esc = new URLSearchParams(location.search).get('loja'); if (esc) localStorage.setItem('spap_super_banca', esc); else esc = localStorage.getItem('spap_super_banca'); } catch (e) {}
+  try { localStorage.removeItem('spap_super_banca'); esc = sessionStorage.getItem('spap_super_banca'); } catch (e) {}
   var r = await supabaseClient.from('lojas').select('id,nome,estado,tipo_loja,vendedores,telefone,plano,data_expiracao,email_dono').eq('tipo_loja', 'banca').order('nome').limit(1000);
   var l = (r && r.data) || []; window._spapBancas = l;
+  var meu = (proprios || []).find(function (m) { return spapEhBanca(m); });
+  window._spapMinhaBanca = meu ? meu.loja_id : null;
   var x = esc ? l.find(function (b) { return String(b.id) === String(esc); }) : null;
-  if (!x) { var meu = (proprios || []).find(function (m) { return spapEhBanca(m); }); if (meu) return meu; x = l[0]; }
+  if (!x || (meu && String(x.id) === String(meu.loja_id))) { if (meu) return meu; x = x || l[0]; }
   if (!x) return null;
   return { loja_id: x.id, papel: 'admin', nome_exibicao: 'Super Admin', lojas: x };
 }

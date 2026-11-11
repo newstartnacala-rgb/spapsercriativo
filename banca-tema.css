@@ -750,3 +750,45 @@ input.bd-erro{border-color:#dc2626 !important;box-shadow:0 0 0 3px rgba(220,38,3
 .t10-in{flex:1;min-width:0;} .t10-in .nn{font-weight:800;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;} .t10-in .mt{font-size:12px;color:#64748b;margin-top:2px;}
 .t10-item .vv{font-weight:800;font-size:14px;white-space:nowrap;}
 .t10-barra{height:5px;border-radius:9px;background:#f1f5f9;margin-top:6px;overflow:hidden;} .t10-barra i{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,#f2700f,#fbbf24);}
+
+/* ===== Super Admin no Monitor e Banca (igual ao Monitor da Loja) ===== */
+.topo .sa-pill-b,.sa-pill-b{display:inline-flex !important;align-items:center;gap:5px;align-self:flex-start;width:auto !important;height:26px !important;min-height:0 !important;margin:3px 0 1px;padding:0 10px 0 4px !important;border-radius:999px !important;cursor:pointer;background:linear-gradient(180deg,#fff8e6,#ffeec4) !important;border:1px solid #f3d995 !important;box-shadow:none !important;font-size:12px !important;font-weight:800;color:#5c3d00 !important;font-family:inherit;white-space:nowrap;line-height:1;}
+.sa-pill-b img{width:18px !important;height:18px !important;}
+.sa-chev-b{width:6px;height:6px;border-right:2px solid #5c3d00;border-bottom:2px solid #5c3d00;transform:rotate(45deg) translateY(-2px);margin-left:3px;}
+.sa-vendo{font-size:11px;font-weight:700;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:999px;padding:2px 9px;margin:2px 0;display:inline-block;align-self:flex-start;white-space:nowrap;}
+.sa-vendo a{color:#c2410c;text-decoration:underline;cursor:pointer;}
+#sa-menu-b{display:block;visibility:hidden;opacity:0;pointer-events:none;position:fixed;inset:0;z-index:3000;background:rgba(8,20,60,.25);transition:opacity .16s,visibility 0s .16s;}
+#sa-menu-b.aberto{visibility:visible;opacity:1;pointer-events:auto;transition:opacity .16s;}
+.sa-box-b{position:absolute;top:74px;left:50%;transform:translateX(-50%);width:min(92vw,380px);max-height:72vh;overflow:auto;background:#fff;border-radius:20px;padding:8px;box-shadow:0 22px 50px rgba(8,30,90,.28);animation:sa-entrar-b .18s ease;}
+@keyframes sa-entrar-b{from{opacity:0;transform:translate(-50%,-8px);}}
+.sa-item-b{display:flex;align-items:center;gap:10px;width:100%;padding:11px 12px;border:none;background:none;border-radius:13px;font-weight:700;font-size:14.5px;font-family:inherit;color:#0f172a;text-align:left;cursor:pointer;}
+.sa-item-b img{width:26px;height:26px;flex-shrink:0;}
+.sa-item-b>span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sa-item-b .sa-txt-b{display:flex;flex-direction:column;min-width:0;text-align:left;}
+.sa-item-b .sa-txt-b b{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sa-item-b .sa-txt-b small{font-size:11.5px;font-weight:600;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px;}
+.sa-item-b:hover{background:#fff7ed;}
+.sa-item-b.atual{background:#fff1e6;color:#c2410c;}
+.sa-ok-b{font-style:normal;font-weight:900;color:#c2410c;}
+.sa-admin-b{background:linear-gradient(135deg,#1d4ed8,#4338ca);color:#fff;margin-bottom:6px;box-shadow:0 8px 18px rgba(13,95,240,.3);}
+.sa-admin-b:hover{background:linear-gradient(135deg,#1d4ed8,#4338ca);filter:brightness(1.05);}
+.sa-loja-b{background:#eef2ff;color:#3730a3;margin-bottom:4px;}
+.sa-chev-r-b{width:8px;height:8px;border-right:2.5px solid currentColor;border-top:2.5px solid currentColor;transform:rotate(45deg);margin-right:4px;}
+.sa-sec-b{font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#64748b;padding:10px 12px 4px;display:flex;justify-content:space-between;}
+.sa-busca-b{width:calc(100% - 16px);margin:4px 8px 6px;box-sizing:border-box;height:42px;border:1.5px solid #e2e8f0;border-radius:12px;padding:0 12px;font-size:14px;font-family:inherit;outline:none;}
+.sa-busca-b:focus{border-color:#f2700f;}
+.sa-vazio-b{padding:12px;color:#94a3b8;font-size:13px;text-align:center;}
+#sa-cod-b{position:fixed;inset:0;z-index:3100;background:rgba(8,15,35,.55);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:16px;}
+#sa-cod-b .sc-b{width:100%;max-width:360px;background:#fff;border-radius:24px;padding:22px 20px 16px;text-align:center;box-shadow:0 30px 70px rgba(8,15,35,.38);}
+#sa-cod-b .sc-cad-b{width:60px;height:60px;margin:0 auto 10px;border-radius:18px;background:linear-gradient(135deg,#fff8e6,#ffeec4);display:grid;place-items:center;font-size:28px;}
+#sa-cod-b h3{margin:0 0 4px;font-size:19px;font-weight:800;color:#0f172a;} #sa-cod-b p{margin:0 0 12px;font-size:13.5px;color:#64748b;}
+#sa-cod-b .sc-loja-b{display:flex;align-items:center;gap:10px;background:#fff7ed;border-radius:14px;padding:10px 12px;text-align:left;margin-bottom:12px;}
+#sa-cod-b .sc-loja-b img{width:32px;height:32px;} #sa-cod-b .sc-loja-b b{display:block;font-size:14px;color:#0f172a;} #sa-cod-b .sc-loja-b small{font-size:11.5px;color:#64748b;}
+#sa-cod-b input{width:100%;box-sizing:border-box;height:56px;border:1.5px solid #e2e8f0;border-radius:14px;text-align:center;font-size:26px;letter-spacing:8px;outline:none;font-family:inherit;}
+#sa-cod-b input:focus{border-color:#f2700f;box-shadow:0 0 0 4px rgba(242,112,15,.14);}
+#sa-cod-b .sc-erro-b{min-height:18px;font-size:13px;font-weight:700;color:#dc2626;margin:6px 0;}
+#sa-cod-b .sc-bts-b{display:flex;gap:10px;} #sa-cod-b .sc-bts-b button{flex:1;height:50px;border:0;border-radius:14px;font-weight:800;font-size:15px;font-family:inherit;cursor:pointer;}
+#sa-cod-b .sc-can-b{background:#f1f5f9;color:#334155;} #sa-cod-b .sc-ok-b{background:linear-gradient(135deg,#f2700f,#e05c00);color:#fff;}
+#sa-cod-b .sc-nota-b{font-size:11.5px;color:#94a3b8;margin-top:10px;}
+/* nome da banca no topo: corta com reticências (com a pastilha do Super Admin ao lado) */
+.topo #nome-loja{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:48vw;}
