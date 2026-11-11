@@ -1,6 +1,12 @@
 -- ============================================================
--- ATUALIZACAO v2.9.235 — MIGRAR CONTA (Banca ↔ Loja) NA BASE DE DADOS
--- (corrige «DELETE requires a WHERE clause» e «idx_lojas_nome_unico» das versões anteriores)
+-- ATUALIZACAO v2.9.238 — PROTEGER O E-MAIL DO SUPER ADMIN + MIGRAR CONTA (Banca ↔ Loja)
+-- ============================================================
+-- O e-mail do Super Admin é a CHAVE de todo o projeto:
+--   • não pode ser trocado (nem pela app, nem pela função trocar_email_conta, nem pelo painel),
+--   • nenhuma outra conta pode passar a usar esse e-mail,
+--   • a conta não pode ser apagada,
+--   • não pode ser usada para migrar conta (Banca ↔ Loja).
+-- Inclui também a migração de conta (igual à v2.9.235, com esta proteção).
 -- ============================================================
 -- Cria a função segura migrar_conta(origem, para, email, senha).
 -- Tudo acontece numa só operação dentro da base de dados (ou faz tudo, ou não faz nada):
@@ -21,6 +27,33 @@ ALTER TABLE public.lojas ADD COLUMN IF NOT EXISTS migrado_de text;
 ALTER TABLE public.lojas ADD COLUMN IF NOT EXISTS migrada_para text;
 ALTER TABLE public.lojas ADD COLUMN IF NOT EXISTS migrada_em timestamptz;
 
+-- ===== 1) Proteção do e-mail do Super Admin =====
+CREATE OR REPLACE FUNCTION public.spap_eh_super_email(e text)
+RETURNS boolean LANGUAGE sql IMMUTABLE AS $$
+  SELECT lower(trim(coalesce(e, ''))) IN ('joaomassuvir@gmail.com', 'bonifacioadelino1@gmail.com')
+$$;
+
+CREATE OR REPLACE FUNCTION public.spap_proteger_super_admin()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, auth AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    IF public.spap_eh_super_email(OLD.email) THEN RAISE EXCEPTION 'super_admin_protegido'; END IF;
+    RETURN OLD;
+  END IF;
+  -- o e-mail do Super Admin não muda
+  IF public.spap_eh_super_email(OLD.email) AND lower(coalesce(NEW.email, '')) <> lower(OLD.email) THEN RAISE EXCEPTION 'super_admin_protegido'; END IF;
+  -- nenhuma outra conta pode ficar com o e-mail do Super Admin
+  IF NOT public.spap_eh_super_email(OLD.email) AND public.spap_eh_super_email(NEW.email) THEN RAISE EXCEPTION 'super_admin_protegido'; END IF;
+  -- pedido de troca pendente (link de confirmação) também é recusado
+  IF public.spap_eh_super_email(OLD.email) AND coalesce(NEW.email_change, '') <> '' AND lower(NEW.email_change) <> lower(OLD.email) THEN RAISE EXCEPTION 'super_admin_protegido'; END IF;
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS spap_proteger_super_admin ON auth.users;
+CREATE TRIGGER spap_proteger_super_admin BEFORE UPDATE OR DELETE ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.spap_proteger_super_admin();
+
+-- ===== 2) Migrar conta (Banca ↔ Loja) =====
 CREATE OR REPLACE FUNCTION public.migrar_conta(p_origem text, p_para text, p_email text, p_senha text)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -46,6 +79,7 @@ BEGIN
   SELECT lower(email), encrypted_password INTO email_conta, senha_hash FROM auth.users WHERE id = uid;
   IF email_conta IS NULL OR email_conta <> lower(trim(coalesce(p_email, ''))) THEN RAISE EXCEPTION 'email_errado'; END IF;
   IF senha_hash IS NULL OR senha_hash <> extensions.crypt(coalesce(p_senha, ''), senha_hash) THEN RAISE EXCEPTION 'senha_errada'; END IF;
+  IF public.spap_eh_super_email(email_conta) THEN RAISE EXCEPTION 'super_admin_protegido'; END IF;
 
   -- só o dono/admin da conta pode migrar
   SELECT papel INTO papel_dono FROM public.membros_loja WHERE loja_id::text = p_origem AND user_id = uid LIMIT 1;

@@ -88,9 +88,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.26">
-<script src="banca-tema.js?v=3.7.26" defer></script>
-<script src="app-android.js?v=3.7.26" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.27">
+<script src="banca-tema.js?v=3.7.27" defer></script>
+<script src="app-android.js?v=3.7.27" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -404,7 +404,7 @@
 
 <script src="supabase-config.js"></script>
 <script src="spap-avisos.js?v=3"></script>
-<script src="spap-backup.js?v=5"></script>
+<script src="spap-backup.js?v=6"></script>
 <script src="spap-imagem.js?v=1"></script>
 <script>
 let sessao=null, produtos=[], periodo='hoje', periodoDesc='hoje';
@@ -997,7 +997,7 @@ function superAbrirMenu(){
   if(!m){ m=document.createElement('div'); m.id='sa-menu-b'; m.onclick=e=>{ if(e.target===m) m.classList.remove('aberto'); }; m.innerHTML='<div class="sa-box-b" id="sa-box-b"></div>'; document.body.appendChild(m); }
   const l=window._spapBancas||[], minha=window._spapMinhaBanca, atual=String(sessao.lojaId);
   const item=(b,ico)=>'<button class="sa-item-b'+(String(b.id)===atual?' atual':'')+'" type="button" data-busca="'+escA(((b.nome||'')+' '+(b.email_dono||'')).toLowerCase())+'" onclick="superAbrirBanca(\''+b.id+'\')">'
-    +'<img src="icons3d/'+ico+'.png" alt=""><span class="sa-txt-b"><b>'+esc(b.nome||'Banca')+'</b><small>'+esc(b.email_dono||'')+(b.plano?' · '+esc(b.plano):'')+'</small></span>'+(String(b.id)===atual?'<i class="sa-ok-b">✓</i>':'')+'</button>';
+    +'<img src="icons3d/'+ico+'.png" alt=""><span class="sa-txt-b"><b>'+esc(b.nome||'Banca')+'</b><small>'+(spapEhSuper(b.email_dono)?'a sua conta':esc(b.email_dono||''))+(b.plano?' · '+esc(b.plano):'')+'</small></span>'+(String(b.id)===atual?'<i class="sa-ok-b">✓</i>':'')+'</button>';
   const mine=l.filter(b=>String(b.id)===String(minha)), outras=l.filter(b=>String(b.id)!==String(minha));
   document.getElementById('sa-box-b').innerHTML=
       '<button class="sa-item-b sa-admin-b" type="button" onclick="location.href=\'admin.html\'"><img src="icons3d/shield.png" alt=""><span>Painel de Administração</span><i class="sa-chev-r-b"></i></button>'
@@ -1416,8 +1416,9 @@ async function mPerfil(){
     +'<div class="campo"><label>📱 Telefone</label><input id="pf-tel" type="tel" value="'+esc(window._lojaTelefone||'')+'"></div>'
     +'<button class="btn" type="button" onclick="pfGuardar()" style="margin:4px 0 18px;">💾 Guardar dados da banca</button>'
     +'<div class="seg-caixa"><div class="seg-tit">🛡️ Segurança <small>E-mail e código (senha) de acesso</small></div>'
-    +'<div class="campo"><label>Novo e-mail</label><input id="seg-novo-email" type="email" inputmode="email" placeholder="novo@email.com" autocomplete="off"></div>'
-    +'<button class="btn cinza" type="button" id="seg-bt-email" onclick="segTrocarEmail()">✉️ Trocar e-mail</button>'
+    +(spapEuSuper() ? '<div class="aviso-desc">🔒 <b>E-mail do Super Admin</b> — é a chave do projeto e não pode ser trocado.</div>'
+      : '<div class="campo"><label>Novo e-mail</label><input id="seg-novo-email" type="email" inputmode="email" placeholder="novo@email.com" autocomplete="off"></div>'
+      +'<button class="btn cinza" type="button" id="seg-bt-email" onclick="segTrocarEmail()">✉️ Trocar e-mail</button>')
     +'<div class="campo" style="margin-top:14px;"><label>Novo código (senha) — mínimo 6 caracteres</label><input id="seg-nova-senha" type="password" placeholder="••••••" autocomplete="new-password"></div>'
     +'<button class="btn cinza" type="button" id="seg-bt-senha" onclick="segTrocarSenha()">🔑 Trocar código (senha)</button>'
     +'<div class="seg-nota">Mudam na hora. Da próxima vez, entra com os dados novos.</div></div>';
@@ -1425,6 +1426,7 @@ async function mPerfil(){
 }
 async function segTrocarEmail(){
   const inp=document.getElementById('seg-novo-email'), novo=(inp.value||'').trim().toLowerCase();
+  if(spapEuSuper() || spapEhSuper(novo)){ toast('🔒 O e-mail do Super Admin é a chave do projeto: não pode ser trocado nem usado por outra conta.','erro'); return; }
   if(!novo||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(novo)){ toast('Escreve um e-mail válido','erro'); return; }
   if(navigator.onLine===false){ toast('📵 Precisa de internet','erro'); return; }
   const b=document.getElementById('seg-bt-email'); b.disabled=true; b.textContent='A trocar…';
@@ -1432,6 +1434,7 @@ async function segTrocarEmail(){
     const { error }=await supabaseClient.rpc('trocar_email_conta',{ novo_email: novo });
     if(error){
       const m=error.message||'';
+      if(/super_admin_protegido/.test(m)){ toast('🔒 Esse e-mail é do Super Admin e não pode ser usado.','erro'); return; }
       if(/email_em_uso/i.test(m)){ toast('Esse e-mail já pertence a outra conta','erro'); return; }
       if(/function|does not exist|schema cache/i.test(m)){
         const r=await supabaseClient.auth.updateUser({ email: novo },{ emailRedirectTo: new URL('login-banca.html', location.href).href });

@@ -21,7 +21,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.237"></script>
+<script src="spap-leitor.js?v=2.9.238"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -1041,7 +1041,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.237" defer></script>
+<script src="app-android.js?v=2.9.238" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -1685,7 +1685,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="supabase-config.js"></script>
 <script src="spap-avisos.js?v=3"></script>
-<script src="spap-backup.js?v=5"></script>
+<script src="spap-backup.js?v=6"></script>
 <script src="spap-imagem.js?v=1"></script>
 <script>
 let sessao = null, lojaId = null, nomeLoja = '';
@@ -1789,9 +1789,10 @@ async function iniciar() {
   if (isSuperAdmin) {
     // Super-admin: carrega TODAS as lojas
     const { data: lojas } = await supabaseClient
-      .from('lojas').select('id, nome, nome_empresa, email_dono').order('nome');
+      .from('lojas').select('id, nome, nome_empresa, email_dono, tipo_loja, estado').order('nome');
 
-    todasLojas = (lojas || []).map(l => Object.assign({}, l, { nome: _nomeLojaPerfil(l) }));
+    // Só LOJAS: as bancas ficam no Monitor e Banca; contas encerradas (migradas) não aparecem
+    todasLojas = (lojas || []).filter(l => l.tipo_loja !== 'banca' && l.estado !== 'encerrado').map(l => Object.assign({}, l, { nome: _nomeLojaPerfil(l) }));
     // Por defeito abre a LOJA DE TESTE criada com a própria conta do Super Admin
     // (a loja onde este e-mail é dono/membro). Ver outras lojas exige o código 0210.
     let _minhas = [];
@@ -2052,6 +2053,8 @@ function renderSelectorLojas() {
     ;
   _pintarTituloLoja(atual);
   const da = document.getElementById('def-admin'); if (da) da.style.display = '';
+  { const be = document.getElementById('btn-trocar-email'), ie = document.getElementById('perfil-in-email');
+    if (be) { be.disabled = true; be.textContent = '🔒 E-mail do Super Admin (protegido)'; } if (ie) { ie.disabled = true; ie.placeholder = 'Protegido — não pode ser trocado'; } }
   const dl = document.getElementById('def-loja'); if (dl) dl.textContent = 'Super Admin · ' + atual;
   _renderSuperMenu();
 }
@@ -2069,7 +2072,7 @@ function _renderSuperMenu() {
   const _html = '<button class="sa-item sa-admin" type="button" onclick="window.location.href=\'admin.html\'"><img src="icons3d/shield.png" alt=""><span>Painel de Administração</span><i class="sa-chev-r"></i></button>'
     + '<div class="sa-sec">Ver loja</div>'
     + item('geral', 'Todas as Lojas', 'globe', modoGeral)
-    + (todasLojas || []).map(l => item(l.id, l.nome, 'store', !modoGeral && l.id === lojaId, l.email_dono)).join('');
+    + (todasLojas || []).map(l => item(l.id, l.nome, 'store', !modoGeral && l.id === lojaId, spapEhSuper(l.email_dono) ? 'a sua conta' : l.email_dono)).join('');
   if (box._html !== _html) { box._html = _html; box.innerHTML = _html; }
 }
 function _esconderSuperAdmin() {
@@ -2359,6 +2362,8 @@ function mostrarLojaEmCache() {
   try { aplicarDiaHome(); renderVendasHistorico(filtroVendasAtivo); } catch (e) {}
   return !!c;
 }
+// só registos das lojas normais (no modo «Todas as Lojas» do Super Admin)
+function _soLojas(lista) { const ok = new Set((todasLojas || []).map(l => String(l.id))); return (lista || []).filter(x => ok.has(String(x.loja_id))); }
 async function carregarTudo() {
   const meu = ++_pedidoCarga;
   const chave = _chaveLojaAtual();
@@ -2383,6 +2388,8 @@ async function carregarTudo() {
   todasVendas = recentes.concat(antigas);
   todosProdutos = r2.data || [];
   todosMemb = r3.data || [];
+  // «Todas as Lojas»: só as lojas normais (as vendas das bancas não entram)
+  if (geral) { todasVendas = _soLojas(todasVendas); todosProdutos = _soLojas(todosProdutos); todosMemb = _soLojas(todosMemb); }
 
   // O Supabase devolve no máx. 1000 produtos por pedido. Se bateu no limite,
   // vai buscar as páginas seguintes (senão lojas com muitos produtos perdiam os mais recentes).
@@ -2404,6 +2411,7 @@ async function carregarTudo() {
   }
 
   if (meu !== _pedidoCarga) return;
+  if (geral) todosProdutos = _soLojas(todosProdutos);
   _cacheLojas.set(chave, { vendas: todasVendas.slice(), produtos: todosProdutos, memb: todosMemb, completo: !!(cache && cache.completo), t: Date.now() });
   aplicarDiaHome();
   renderVendasHistorico(filtroVendasAtivo);
@@ -2421,8 +2429,9 @@ async function carregarTudo() {
   if (!c2.completo || (Date.now() - (c2.tCompleto || 0)) > 5 * 60 * 1000) {
     (async () => {
       try {
-        const { data, error } = await daLoja(supabaseClient.from('vendas').select('*, venda_itens(*)')).order('criado_em', {ascending:false});
+        let { data, error } = await daLoja(supabaseClient.from('vendas').select('*, venda_itens(*)')).order('criado_em', {ascending:false});
         if (error || !data) return;
+        if (geral) data = _soLojas(data);
         const atual = _cacheLojas.get(chave);
         if (atual) { atual.vendas = data; atual.completo = true; atual.tCompleto = Date.now(); }
         if (meu !== _pedidoCarga || _chaveLojaAtual() !== chave) return;   // já se mudou de loja
@@ -5791,7 +5800,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.237';
+const MONITOR_VERSAO = '2.9.238';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -6202,6 +6211,9 @@ async function abrirMeuPerfil() {
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   { const el = document.getElementById('perfil-in-descontos'); if (el) el.checked = false; }
   { const el = document.getElementById('perfil-nome-loja'); if (el) el.textContent = 'A carregar…'; }
+  // Super Admin: o e-mail é a chave do projeto — não pode ser trocado
+  { const be = document.getElementById('btn-trocar-email'), ie = document.getElementById('perfil-in-email');
+    if (isSuperAdmin) { if (be) { be.disabled = true; be.textContent = '🔒 E-mail do Super Admin (protegido)'; } if (ie) { ie.disabled = true; ie.placeholder = 'Protegido — não pode ser trocado'; } } }
   _pintarLogoPerfil('');
   _perfilLogoBase64 = null;
   try {
@@ -6351,6 +6363,7 @@ async function _guardarDadosPerfil() {
 async function trocarEmail() {
   const inp = document.getElementById('perfil-in-email');
   const novo = (inp.value || '').trim().toLowerCase();
+  if (isSuperAdmin || spapEhSuper(novo)) { mostrarNotif('🔒 O e-mail do Super Admin é a chave do projeto: não pode ser trocado nem usado por outra conta.', true); return; }
   if (!novo || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(novo)) { mostrarNotif('❌ Escreve um e-mail válido.', true); return; }
   const btn = document.getElementById('btn-trocar-email');
   if (btn) { btn.disabled = true; btn.textContent = 'A trocar…'; }
@@ -6358,6 +6371,7 @@ async function trocarEmail() {
     const { error } = await supabaseClient.rpc('trocar_email_conta', { novo_email: novo });
     if (error) {
       const m = (error.message || '');
+      if (/super_admin_protegido/.test(m)) { mostrarNotif('🔒 Esse e-mail é do Super Admin e não pode ser usado.', true); return; }
       if (/email_em_uso/i.test(m)) { mostrarNotif('❌ Esse e-mail já pertence a outra conta.', true); return; }
       if (/function|does not exist|schema cache/i.test(m)) {
         // SQL ainda não instalado → método normal do Supabase (envia link de confirmação)

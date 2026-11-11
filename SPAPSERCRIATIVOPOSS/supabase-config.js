@@ -90,7 +90,8 @@ async function spapSuperMembroBanca(proprios) {
   var esc = null;
   try { localStorage.removeItem('spap_super_banca'); esc = sessionStorage.getItem('spap_super_banca'); } catch (e) {}
   var r = await supabaseClient.from('lojas').select('id,nome,estado,tipo_loja,vendedores,telefone,plano,data_expiracao,email_dono').eq('tipo_loja', 'banca').order('nome').limit(1000);
-  var l = (r && r.data) || []; window._spapBancas = l;
+  // só bancas ativas (as encerradas por migração passaram a Loja)
+  var l = ((r && r.data) || []).filter(function (b) { return b.estado !== 'encerrado'; }); window._spapBancas = l;
   var meu = (proprios || []).find(function (m) { return spapEhBanca(m); });
   window._spapMinhaBanca = meu ? meu.loja_id : null;
   var x = esc ? l.find(function (b) { return String(b.id) === String(esc); }) : null;

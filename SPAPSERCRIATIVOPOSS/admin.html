@@ -430,7 +430,19 @@ async function carregarLojas() {
     .order('criado_em', { ascending: false });
 
   if (error) { notif('❌ Erro ao carregar: ' + error.message, true); return; }
-  lojas = data || [];
+  // • o e-mail do Super Admin não aparece nas listas (só tem acesso, como desenvolvedor)
+  // • contas encerradas por migração não aparecem: o e-mail passa para a lista do tipo novo (Loja ou Banca)
+  // • cada e-mail aparece uma só vez em cada lista (a conta mais recente)
+  const vistos = {};
+  lojas = (data || []).filter(l => {
+    const em = String(l.email_dono || '').trim().toLowerCase();
+    if (ADMIN_EMAILS.includes(em)) return false;
+    if (l.estado === 'encerrado') return false;
+    if (!em) return true;
+    const k = (ehBanca(l) ? 'banca:' : 'loja:') + em;
+    if (vistos[k]) return false;
+    vistos[k] = 1; return true;
+  });
   renderContadores();
   renderLojas();
   renderBancas();

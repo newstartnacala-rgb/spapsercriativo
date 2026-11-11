@@ -309,6 +309,11 @@
   // ===== 3) MIGRAR: confirma email e palavra-passe → a base de dados cria a conta nova, passa os produtos e encerra a antiga =====
   function abaMigrar() {
     var de = info.tipo, para = ehBanca(de) ? 'comercial' : 'banca';
+    // a conta do Super Admin é a chave do projeto: não migra
+    if ((window.spapEuSuper && spapEuSuper()) || (window.spapEhSuper && spapEhSuper(info.email))) {
+      el('sbk-c').innerHTML = '<div class="sbk-card" style="text-align:center"><div style="font-size:46px">🔒</div><h4 style="text-align:center">Conta do Super Admin</h4><p class="sbk-txt">Esta conta é a chave de todo o projeto. Não pode ser migrada nem ter o e-mail trocado.</p></div>';
+      return;
+    }
     var ico = function (t) { return ehBanca(t) ? '🧺' : '🏪'; };
     el('sbk-c').innerHTML = '<div class="sbk-card"><h4>🔁 Migrar para ' + (ehBanca(para) ? 'uma Banca' : 'uma Loja') + '</h4>'
       + '<p class="sbk-txt">A plataforma cria <b>automaticamente</b> a sua ' + nomeTipo(para) + ' com o mesmo email' + (info.email ? ' (<b>' + esc(info.email) + '</b>)' : '') + ' e passa para lá todos os produtos desta ' + nomeTipo(de).toLowerCase() + '.</p>'
@@ -350,11 +355,12 @@
     catch (e) { r = { error: e }; }
     if (r.error) {
       var m = String(r.error.message || r.error.details || r.error || '');
-      var txt = /senha_errada/.test(m) ? 'A palavra-passe está errada.'
+      var txt = /super_admin_protegido/.test(m) ? 'A conta do Super Admin não pode ser migrada.'
+        : /senha_errada/.test(m) ? 'A palavra-passe está errada.'
         : /email_errado/.test(m) ? 'Este não é o email desta conta.'
         : /sem_permissao/.test(m) ? 'Só o dono da conta pode migrar.'
         : /ja_encerrada/.test(m) ? 'Esta conta já foi migrada e está encerrada.'
-        : /migrar_conta|PGRST202|function|schema cache/i.test(m) ? 'A migração ainda não está ativada na base de dados. É preciso correr uma vez o ficheiro «atualizacao-v2.9.235-migrar-conta.sql» no Supabase (SQL Editor). Nada foi alterado.'
+        : /migrar_conta|PGRST202|function|schema cache/i.test(m) ? 'A migração ainda não está ativada na base de dados. É preciso correr uma vez o ficheiro «atualizacao-v2.9.238-proteger-super-admin-e-migrar.sql» no Supabase (SQL Editor). Nada foi alterado.'
         : /fetch|network|Failed/i.test(m) ? 'Sem internet. Ligue a internet e tente outra vez. Nada foi alterado.'
         : 'Não foi possível migrar: ' + m + '. Nada foi alterado.';
       el('sbk-erro').textContent = txt; bt.disabled = false; bt.innerHTML = '✨ Criar a ' + nomeTipo(para) + ' e migrar';
