@@ -74,6 +74,11 @@
     var nomeDe = paginaBanca ? 'Banca' : 'Loja', nomePara = paraBanca ? 'Banca' : 'Loja';
     var dono = pagina === 'monitor' || pagina === 'bancamonitor';
     var destino = paraBanca ? (dono ? 'mobile-monitor.html' : 'mobile.html') : (dono ? 'monitor.html' : 'index.html');
+    // dentro de uma app Android: a página da outra conta é de OUTRA app → manda baixar essa app
+    var REL = 'https://github.com/newstartnacala-rgb/spapsercriativo/releases/download/';
+    var outraApp = paraBanca ? (dono ? { nome: 'Monitor e Banca', f: 'banca-latest/Monitor-e-Banca.apk' } : { nome: 'Banca e Vendas', f: 'banca-latest/Banca-e-Vendas.apk' })
+                             : (dono ? { nome: 'Monitor', f: 'loja-latest/Monitor.apk' } : { nome: 'Loja', f: 'loja-latest/Loja.apk' });
+    var naApp = !!window.SPAP_APP_TIPO && window.spapPaginaDaApp && !spapPaginaDaApp(destino.replace('.html', ''));
     try { Object.keys(localStorage).forEach(function (k) { if (k === 'banca_sessao_cache' || (encerrada && k.indexOf(String(lojaId)) >= 0)) localStorage.removeItem(k); }); } catch (e) {}
     var st = document.createElement('style');
     st.textContent = '#spap-encerrada{position:fixed;inset:0;z-index:2147483600;background:#eef3fb;display:flex;align-items:center;justify-content:center;padding:18px;font-family:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;}'
@@ -89,7 +94,7 @@
       + '<h1>Esta ' + nomeDe.toLowerCase() + ' passou a ' + nomePara + '</h1>'
       + '<p>' + (encerrada ? 'Esta conta foi encerrada e já não abre. ' : '') + 'Os produtos estão agora na <b>' + nomePara + '</b>, com o mesmo email e palavra-passe.' + (!dono ? ' Se tiver dúvidas, fale com o dono.' : '') + '</p>'
       + '<div class="se-tipo"><div class="a">' + nomeDe + '</div><span>➜</span><div class="b">' + nomePara + '</div></div>'
-      + '<a href="' + destino + '">Abrir a ' + nomePara + '</a></div>';
+      + (naApp ? '<a href="' + REL + outraApp.f + '">⬇️ Baixar a app ' + outraApp.nome + '</a>' : '<a href="' + destino + '">Abrir a ' + nomePara + '</a>') + '</div>';
     document.body.appendChild(d);
     try { document.documentElement.style.overflow = 'hidden'; } catch (e) {}
   };

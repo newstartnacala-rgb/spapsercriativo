@@ -381,7 +381,9 @@
     d.className = 'sbk-card'; d.style.textAlign = 'center';
     d.innerHTML = '<div style="font-size:52px">🎉</div><h4 style="text-align:center">A sua ' + nomeTipo(para) + ' está pronta</h4>'
       + '<p class="sbk-txt">Foi criada com o mesmo email' + (info.email ? ' (<b>' + esc(info.email) + '</b>)' : '') + ' e recebeu <b>' + n + ' produto(s)</b>. A ' + nomeTipo(de) + ' foi encerrada e já não abre.</p>'
-      + '<button type="button" class="sbk-bt verde" onclick="location.replace(\'' + destino + '\')">Abrir o Monitor da ' + nomeTipo(para) + '</button>';
+      + ((window.SPAP_APP_TIPO && window.spapPaginaDaApp && !spapPaginaDaApp(destino.replace('.html', '')))
+        ? '<a class="sbk-bt verde" style="text-decoration:none" href="https://github.com/newstartnacala-rgb/spapsercriativo/releases/download/' + (ehBanca(para) ? 'banca-latest/Monitor-e-Banca.apk' : 'loja-latest/Monitor.apk') + '">⬇️ Baixar a app ' + (ehBanca(para) ? 'Monitor e Banca' : 'Monitor') + '</a>'
+        : '<button type="button" class="sbk-bt verde" onclick="location.replace(\'' + destino + '\')">Abrir o Monitor da ' + nomeTipo(para) + '</button>');
     c.appendChild(d); c.scrollTop = c.scrollHeight;
     if (typeof cfg.depoisMigrar === 'function') try { cfg.depoisMigrar(res); } catch (e) {}
   }

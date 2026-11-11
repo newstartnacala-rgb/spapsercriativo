@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <script src="spap-migrar.js?v=1"></script>
-<script src="spap-bloqueio.js?v=1"></script>
+<script src="spap-bloqueio.js?v=2"></script>
 <script>
   // Painel sempre na versão mais recente: se o aparelho mostrar uma cópia antiga, recarrega a nova
   (function () {
-    var VER = '2.9.240';
+    var VER = '2.9.241';
     try {
       fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
         var nova = j && j.versao; if (!nova || nova === VER) return;
@@ -266,6 +266,15 @@ body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; c
 .ad-planos-dias label { font-weight:700; }
 .ad-planos-dias input { width:90px; padding:9px 12px; border:1.5px solid #d6e4fb; border-radius:12px; font-size:14.5px; color:var(--nv); }
 .ad-planos-dias span { font-size:12px; color:#94a3b8; }
+
+/* Listas com rolagem própria (muitos e-mails): a lista rola por dentro, o resto do painel fica no sítio */
+#lista-lojas, #lista-bancas { max-height:min(62vh, 640px); overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
+  padding:6px 6px 10px; margin:0 -6px; border-radius:20px; background:rgba(255,255,255,.35); box-shadow:inset 0 0 0 1px rgba(148,163,184,.18);
+  scrollbar-width:thin; scrollbar-color:#94a3b8 transparent; position:relative; }
+#lista-lojas::-webkit-scrollbar, #lista-bancas::-webkit-scrollbar { width:6px; }
+#lista-lojas::-webkit-scrollbar-thumb, #lista-bancas::-webkit-scrollbar-thumb { background:#94a3b8; border-radius:9px; }
+.lista-info { display:flex; justify-content:space-between; align-items:center; font-size:12px; font-weight:700; color:#64748b; margin:2px 4px 8px; }
+.lista-info b { color:#0f172a; }
 </style>
 </head>
 <body>
@@ -382,6 +391,7 @@ body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; c
       <div class="ad-busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input type="text" class="busca" id="busca" placeholder="Pesquisar por loja, email ou telefone..." oninput="renderLojas()"></div>
     </div>
 
+    <div class="lista-info" id="info-lojas"></div>
     <div id="lista-lojas"></div>
 
     <!-- ===== BANCAS (balconistas) — lista própria ===== -->
@@ -402,6 +412,7 @@ body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; c
       <button class="filtro-btn" id="fb-expiradas" onclick="filtrarBancas('expiradas')"><img src="icons3d/prohibited.png" alt="">Expiradas</button>
       <div class="ad-busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input type="text" class="busca" id="busca-bancas" placeholder="Procurar banca, e-mail ou telefone" oninput="renderBancas()"></div>
     </div>
+    <div class="lista-info" id="info-bancas"></div>
     <div id="lista-bancas"></div>
 
     <div class="ad-rodape"><img src="ssteam-logo.png" alt=""><span>SSTEAM · Tecnologia Varejista de Ponta</span></div>
@@ -652,10 +663,16 @@ function renderLojas() {
 
   if (lista.length === 0) {
     div.innerHTML = '<div class="vazio">Nenhuma loja encontrada' + (filtroAtivo !== 'todas' ? ' neste filtro' : '') + '.</div>';
+    _infoLista('info-lojas', 0, 'loja', 'lojas');
     return;
   }
 
   div.innerHTML = lista.map(cartaoLoja).join('');
+  _infoLista('info-lojas', lista.length, 'loja', 'lojas');
+}
+function _infoLista(id, n, um, varios) {
+  const el = document.getElementById(id); if (!el) return;
+  el.innerHTML = '<span><b>' + n + '</b> ' + (n === 1 ? um : varios) + ' na lista</span>' + (n > 5 ? '<span>↕ role dentro da lista</span>' : '');
 }
 
 function cartaoLoja(l) {
@@ -919,6 +936,7 @@ function renderBancas() {
   // pagamentos a confirmar primeiro
   lista = lista.slice().sort((a, b) => (grupoBanca(a) === 'pagamento' ? 0 : 1) - (grupoBanca(b) === 'pagamento' ? 0 : 1));
   div.innerHTML = lista.length ? lista.map(cartaoLoja).join('') : '<div class="vazio">Nenhuma banca' + (filtroBancas !== 'todas' ? ' neste filtro' : '') + '.</div>';
+  _infoLista('info-bancas', lista.length, 'banca', 'bancas');
 }
 
 async function sair() {

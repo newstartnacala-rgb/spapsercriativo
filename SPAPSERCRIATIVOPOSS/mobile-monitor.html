@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <script src="spap-migrar.js?v=1"></script>
-<script src="spap-bloqueio.js?v=1"></script>
+<script src="spap-bloqueio.js?v=2"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#15803d">
 <title>Banca — Monitor</title>
@@ -88,9 +88,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.28">
-<script src="banca-tema.js?v=3.7.28" defer></script>
-<script src="app-android.js?v=3.7.28" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.29">
+<script src="banca-tema.js?v=3.7.29" defer></script>
+<script src="app-android.js?v=3.7.29" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -403,8 +403,8 @@
 <div id="toast" class="toast"></div>
 
 <script src="supabase-config.js"></script>
-<script src="spap-avisos.js?v=3"></script>
-<script src="spap-backup.js?v=6"></script>
+<script src="spap-avisos.js?v=4"></script>
+<script src="spap-backup.js?v=7"></script>
 <script src="spap-imagem.js?v=1"></script>
 <script>
 let sessao=null, produtos=[], periodo='hoje', periodoDesc='hoje';
@@ -1001,7 +1001,6 @@ function superAbrirMenu(){
   const mine=l.filter(b=>String(b.id)===String(minha)), outras=l.filter(b=>String(b.id)!==String(minha));
   document.getElementById('sa-box-b').innerHTML=
       '<button class="sa-item-b sa-admin-b" type="button" onclick="location.href=\'admin.html?t=\'+Date.now()"><img src="icons3d/shield.png" alt=""><span>Painel de Administração</span><i class="sa-chev-r-b"></i></button>'
-    + '<button class="sa-item-b sa-loja-b" type="button" onclick="location.href=\'monitor.html\'"><img src="icons3d/store.png" alt=""><span>Monitor da Loja</span><i class="sa-chev-r-b"></i></button>'
     + (mine.length?'<div class="sa-sec-b">A minha banca</div>'+mine.map(b=>item(b,'cart')).join(''):'')
     + '<div class="sa-sec-b">Outras bancas <small>'+outras.length+'</small></div>'
     + (outras.length>6?'<input class="sa-busca-b" type="search" placeholder="Procurar banca ou email…" oninput="superFiltrar(this.value)">':'')

@@ -16,7 +16,49 @@
     for (var i = 0; i < Math.max(a.length, b.length); i++) { var d = (parseInt(a[i], 10) || 0) - (parseInt(b[i], 10) || 0); if (d) return d; }
     return 0;
   }
-  if (cmp(ver, MINIMA[tipo]) >= 0) return;
+  // ===== Cada app só abre as SUAS páginas (Loja, Monitor, Banca e Vendas, Monitor e Banca) =====
+  // Se uma página de outra app for aberta dentro desta app, volta à página principal desta app.
+  var PAGINAS = {
+    loja: ['index', 'login', 'registo', 'planos', 'reset-senha', 'reset-password'],
+    monitor: ['monitor', 'login', 'registo', 'planos', 'reset-senha', 'reset-password', 'admin'],
+    banca: ['mobile', 'login-banca', 'registo-banca', 'planos-banca', 'reset-senha', 'reset-password', 'banca'],
+    bancamonitor: ['mobile-monitor', 'login-banca', 'registo-banca', 'planos-banca', 'reset-senha', 'reset-password', 'admin', 'banca/monitor']
+  };
+  var INICIO = { loja: 'login.html', monitor: 'monitor.html', banca: 'mobile.html', bancamonitor: 'mobile-monitor.html' };
+  var NOMES_APP = { loja: 'Loja', monitor: 'Monitor', banca: 'Banca e Vendas', bancamonitor: 'Monitor e Banca' };
+  function paginaAtual() {
+    var p = String(location.pathname || '/').replace(/\/+$/, '');
+    var seg = p.split('/');
+    var ult = seg.pop() || '';
+    if (ult === 'spapsercriativo' || ult === '') return 'index';             // raiz do site
+    if (ult === 'monitor' && seg[seg.length - 1] === 'banca') return 'banca/monitor';
+    return ult.replace(/\.html?$/i, '') || 'index';
+  }
+  window.SPAP_APP_TIPO = tipo;
+  window.spapPaginaDaApp = function (pag) { return (PAGINAS[tipo] || []).indexOf(pag) >= 0; };
+  if (cmp(ver, MINIMA[tipo]) >= 0) {
+    var pag = paginaAtual();
+    if (PAGINAS[tipo] && PAGINAS[tipo].indexOf(pag) < 0) {
+      try { document.documentElement.style.visibility = 'hidden'; } catch (e) {}
+      try { sessionStorage.setItem('spap_app_errada', pag); } catch (e) {}
+      location.replace(INICIO[tipo]);
+      return;
+    }
+    // links/atalhos para páginas de OUTRA app ficam escondidos dentro desta app
+    var esconder = function () {
+      try {
+        document.querySelectorAll('a[href]').forEach(function (el) {
+          var h = el.getAttribute('href') || '';
+          if (/^(https?:|mailto:|tel:|#|javascript:|data:|blob:)/i.test(h) || el.hasAttribute('download')) return;
+          var nome = h.split('?')[0].split('#')[0].split('/').pop().replace(/\.html?$/i, '');
+          if (nome && (PAGINAS[tipo] || []).indexOf(nome) < 0) el.style.display = 'none';
+        });
+      } catch (e) {}
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', esconder); else esconder();
+    setTimeout(esconder, 1500);
+    return;
+  }
   window.SPAP_APP_BLOQUEADA = true;
 
   var banca = tipo.indexOf('banca') === 0;
