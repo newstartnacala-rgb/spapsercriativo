@@ -243,6 +243,7 @@ body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; c
 /* Bancas */
 .ad-divisao { display:flex; align-items:center; gap:14px; margin:34px 0 14px; padding:16px 18px; border-radius:22px; background:linear-gradient(135deg,#14244f,#0b1b4d); color:#fff; box-shadow:0 12px 28px rgba(11,27,77,.25); position:relative; overflow:hidden; }
 .ad-divisao::before { content:''; position:absolute; left:0; top:0; bottom:0; width:5px; background:linear-gradient(180deg,#ffa24a,#f26a0c); }
+.ad-divisao.loja::before { background:linear-gradient(180deg,#60a5fa,#1d4ed8); }
 .ad-divisao img { width:52px; height:52px; object-fit:contain; flex-shrink:0; filter:drop-shadow(0 4px 8px rgba(0,0,0,.3)); }
 .ad-div-tit { font-size:20px; font-weight:800; }
 .ad-div-sub { font-size:13px; color:#c4cde6; margin-top:2px; line-height:1.4; }
@@ -286,13 +287,6 @@ body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; c
       <img class="ad-banner-logo" src="ssteam-logo.png" alt="SSTEAM">
     </div>
 
-    <!-- Contadores -->
-    <div class="contadores">
-      <div class="contador c-total" id="cont-todas" onclick="filtrar('todas')" title="Ver todas as lojas"><div class="num" id="cnt-total">0</div><div class="lbl"><img src="icons3d/store.png" alt="">Total de lojas</div></div>
-      <div class="contador c-pendente" id="cont-pendente" onclick="filtrar('pendente')" title="Ver lojas pendentes"><div class="num" id="cnt-pendente">0</div><div class="lbl"><img src="icons3d/hourglass.png" alt="">Pendentes</div></div>
-      <div class="contador c-activo" id="cont-activo" onclick="filtrar('activo')" title="Ver lojas activas"><div class="num" id="cnt-activo">0</div><div class="lbl"><img src="icons3d/check.png" alt="">Activas</div></div>
-      <div class="contador c-suspenso" id="cont-suspenso" onclick="filtrar('suspenso')" title="Ver lojas suspensas"><div class="num" id="cnt-suspenso">0</div><div class="lbl"><img src="icons3d/prohibited.png" alt="">Suspensas</div></div>
-    </div>
 
     <!-- Link de suporte -->
     <div class="ad-card">
@@ -351,6 +345,18 @@ body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; c
 
       <button class="ad-btn-grande" onclick="guardarConfigSubscricao()"><img src="icons3d/floppy.png" alt="">Guardar configuração</button>
       <div id="cfg-estado" class="ad-estado"></div>
+    </div>
+
+    <!-- ===== LOJAS (app Loja / Monitor) — lista própria ===== -->
+    <div class="ad-divisao loja" id="sec-lojas">
+      <img src="ssteam-logo.png" alt="">
+      <div><div class="ad-div-tit">Lojas</div><div class="ad-div-sub">Contas da app Loja e Monitor, com os e-mails, o plano e o estado. Toque num número para filtrar a lista.</div></div>
+    </div>
+    <div class="contadores">
+      <div class="contador c-total" id="cont-todas" onclick="filtrar('todas')" title="Ver todas as lojas"><div class="num" id="cnt-total">0</div><div class="lbl"><img src="icons3d/store.png" alt="">Total de lojas</div></div>
+      <div class="contador c-pendente" id="cont-pendente" onclick="filtrar('pendente')" title="Ver lojas pendentes"><div class="num" id="cnt-pendente">0</div><div class="lbl"><img src="icons3d/hourglass.png" alt="">Pendentes</div></div>
+      <div class="contador c-activo" id="cont-activo" onclick="filtrar('activo')" title="Ver lojas activas"><div class="num" id="cnt-activo">0</div><div class="lbl"><img src="icons3d/check.png" alt="">Activas</div></div>
+      <div class="contador c-suspenso" id="cont-suspenso" onclick="filtrar('suspenso')" title="Ver lojas suspensas"><div class="num" id="cnt-suspenso">0</div><div class="lbl"><img src="icons3d/prohibited.png" alt="">Suspensas</div></div>
     </div>
 
     <!-- Filtros e pesquisa -->
