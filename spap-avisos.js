@@ -22,6 +22,7 @@
   window.spapMarcarAbertura = async function (o) {
     // o = { lojaId, codigo, tipo:'loja'|'banca', nomeLoja, userId?, fila? }
     if (!o || !o.lojaId || _abrindo) return;
+    if (window.spapEuSuper && spapEuSuper()) return;   // o Super Admin a ver uma conta não conta como abertura
     var quem = nomeBalc(o.codigo), k = 'spap_abertura_' + o.lojaId + '_' + (o.codigo || '-') + '_' + dia();
     try { if (localStorage.getItem(k)) return; } catch (e) {}
     _abrindo = true;
@@ -60,6 +61,7 @@
   var _contaVista = {};
   window.spapVerConta = async function (lojaId, pagina) {
     if (!lojaId || document.getElementById('spap-encerrada') || navigator.onLine === false) return;
+    if (window.spapEuSuper && spapEuSuper()) return;   // Super Admin: sem restrições
     if (_contaVista[lojaId] && Date.now() - _contaVista[lojaId] < 60000) return;
     _contaVista[lojaId] = Date.now();
     var r; try { r = await supabaseClient.from('lojas').select('estado,tipo_loja,migrado_de,migrada_para').eq('id', lojaId).maybeSingle(); } catch (e) { return; }

@@ -88,9 +88,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.24">
-<script src="banca-tema.js?v=3.7.24" defer></script>
-<script src="app-android.js?v=3.7.24" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.25">
+<script src="banca-tema.js?v=3.7.25" defer></script>
+<script src="app-android.js?v=3.7.25" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -219,6 +219,7 @@
         <div class="mi" onclick="mFinancas()"><div class="e">💰</div><div class="t">Dinheiro e lucro</div></div>
         <div class="mi" onclick="mInventario()"><div class="e">📋</div><div class="t">Inventário</div></div>
         <div class="mi" onclick="mRelatorio()"><div class="e">📈</div><div class="t">Relatório</div></div>
+        <div class="mi" id="mi-super" style="display:none" onclick="mSuperBancas()"><div class="e">👑</div><div class="t">Trocar banca</div></div>
         <div class="mi" onclick="mRastreioProduto()"><div class="e">🔎</div><div class="t">Rastreio de Produto</div></div>
         <div class="mi" onclick="mProducts()"><div class="e">📦</div><div class="t">Produtos</div></div>
         <div class="mi" onclick="abrirAddProduto()"><div class="e">➕</div><div class="t">Adicionar produto</div></div>
@@ -402,7 +403,7 @@
 <div id="toast" class="toast"></div>
 
 <script src="supabase-config.js"></script>
-<script src="spap-avisos.js?v=2"></script>
+<script src="spap-avisos.js?v=3"></script>
 <script src="spap-backup.js?v=5"></script>
 <script src="spap-imagem.js?v=1"></script>
 <script>
@@ -415,6 +416,8 @@ let sessao=null, produtos=[], periodo='hoje', periodoDesc='hoje';
   try{
     const { data:membros } = await supabaseClient.from('membros_loja')
       .select('loja_id, papel, lojas(nome, estado, tipo_loja, vendedores, telefone)').eq('user_id', ses.user.id).limit(20).then(r=>(window._membrosTodos=r.data||[], r.data=spapMembrosDoTipo(r.data,'banca'),r));
+    // Super Admin: abre qualquer banca, sem restrição (troca no menu «👑 Trocar banca»)
+    if(membros && spapEuSuper()){ const sm=await spapSuperMembroBanca(window._membrosTodos); if(sm){ membros.length=0; membros.push(sm); } window._souSuper=true; }
     if(membros && !membros.length && await spapContaMigrada(window._membrosTodos,'bancamonitor')){ await spapSessaoBancaErrada(); document.getElementById('carregando').style.display='none'; return; }
     if(!membros||!membros.length){ await spapSessaoBancaErrada(); location.href='login-banca.html?conta=loja&to='+encodeURIComponent('mobile-monitor.html'); return; }
     spapSessaoBancaOk();
@@ -422,6 +425,7 @@ let sessao=null, produtos=[], periodo='hoje', periodoDesc='hoje';
     window._vendedores = (membros[0].lojas && membros[0].lojas.vendedores && membros[0].lojas.vendedores.length) ? membros[0].lojas.vendedores : ['0000'];
     window._lojaTelefone = (membros[0].lojas && membros[0].lojas.telefone) || '';
     document.getElementById('nome-loja').textContent = sessao.nomeLoja;
+    if(window._souSuper){ const mi=document.getElementById('mi-super'); if(mi) mi.style.display=''; document.getElementById('nome-loja').textContent = '👑 ' + sessao.nomeLoja; }
     await carregarProdutos();
     await Promise.all([carregarResumo(), carregarDescontos()]);
   }catch(e){ toast('Erro: '+(e.message||e),'erro'); }
@@ -977,6 +981,14 @@ async function carregarTop10(vendasHoje){
       <div class="t10-barra"><i style="width:${Math.max(5,Math.round(d.qtd/max*100))}%"></i></div></div>
       <div class="vv">${fmt(d.total)}</div></div>`; }).join('');
 }
+// ===== SUPER ADMIN: escolher qualquer banca =====
+function mSuperBancas(){
+  fecharFolha('folha-menu');
+  const l=window._spapBancas||[];
+  mostrarInfo('👑 Super Admin — escolher banca', '<div class="aviso-desc">Como Super Admin pode abrir qualquer banca. Toque na que quer ver.</div>'
+    + (l.length ? l.map(b=>'<div class="row venda-row" onclick="superAbrirBanca(\''+b.id+'\')"><div class="ph">🧺</div><div class="in"><div class="nn">'+esc(b.nome||'Banca')+(String(b.id)===String(sessao.lojaId)?' <span class="tag-desc">ABERTA</span>':'')+'</div><div class="mt">'+esc(b.email_dono||'')+' · '+esc(b.estado||'')+' · '+esc(b.plano||'')+'</div></div><div class="vv">›</div></div>').join('') : '<div class="vazio">Não há bancas registadas.</div>'));
+}
+function superAbrirBanca(id){ try{ localStorage.setItem('spap_super_banca', id); localStorage.removeItem('banca_sessao_cache'); }catch(e){} location.href='mobile-monitor.html'; }
 // ===== FOLHAS / MENU =====
 function abrirFolha(id){ document.getElementById(id).classList.add('ativa'); }
 function fecharFolha(id){ document.getElementById(id).classList.remove('ativa'); }

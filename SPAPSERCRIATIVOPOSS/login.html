@@ -5,7 +5,7 @@
 <script src="spap-migrar.js?v=1"></script>
 <script src="spap-bloqueio.js?v=1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
-<script src="spap-semzoom.js?v=2.9.235"></script>
+<script src="spap-semzoom.js?v=2.9.236"></script>
 <title>Entrar — Spap-Sercriativo</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="ios-loja-180.png">
@@ -94,14 +94,22 @@
   @media (max-width:767px) and (max-height:660px) { .lg-marca { width:60px; height:60px; } .campo { height:44px; } .btn-principal { height:46px; } .btn-google { height:42px; } .lg-sub { margin-top:4px; } }
   @media (max-width:767px) and (max-height:600px) { .lg-marca { width:50px; height:50px; } .langs { margin-bottom:8px; } .lg-topo { margin-bottom:8px; } .ou { margin:7px 0; } .rodape { margin:8px 0 6px; } }
 </style>
-<script src="app-android.js?v=2.9.235" defer></script>
+<script src="app-android.js?v=2.9.236" defer></script>
 <link rel="stylesheet" href="spap-carrinho.css?v=1">
 </head>
 <body>
 <main class="box">
   <div class="lg-topo">
     <div class="lg-marca pc-cena" role="img" aria-label="Carrinho de compras a andar — Spap-Sercriativo"><div class="pc-vento"><i></i><i></i><i></i></div><div class="pc-po"></div><div class="pc-po p2"></div><div class="pc-wrap"><img class="pc-caixa c1" src="icons3d/package.png" alt=""><img class="pc-caixa c2" src="icons3d/package-azul.png" alt=""><img class="pc-caixa c3" src="icons3d/coin.png" alt=""><img class="pc-c" src="icons3d/cart.png" alt=""></div><div class="pc-chao"></div><div class="pc-chao2"></div></div>
-    <div class="lg-nome notranslate">Vendas <span class="lg-amp">&amp;</span> <em>Monitor</em></div>
+    <div class="lg-nome notranslate" id="lg-nome">Vendas <span class="lg-amp">&amp;</span> <em>Lojas</em></div>
+    <script>
+      // Login da LOJA → «Vendas & Lojas»; login do MONITOR → «Vendas & Monitor»
+      (function () {
+        var d = ''; try { d = (localStorage.getItem('pdv_login_destino') || '') + ' ' + location.search + ' ' + navigator.userAgent; } catch (e) {}
+        var monitor = /monitor/i.test(d);
+        if (monitor) document.getElementById('lg-nome').innerHTML = 'Vendas <span class="lg-amp">&amp;</span> <em>Monitor</em>';
+      })();
+    </script>
     <div class="lg-tag notranslate">TECNOLOGIA VAREJISTA DE PONTA</div>
     <div class="lg-sub" id="lg-sub">Sistema de Ponto de Venda</div>
   </div>
