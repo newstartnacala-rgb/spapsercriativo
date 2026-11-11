@@ -21,7 +21,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.239"></script>
+<script src="spap-leitor.js?v=2.9.240"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -1041,7 +1041,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.239" defer></script>
+<script src="app-android.js?v=2.9.240" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -1118,7 +1118,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
         </div>
       </div>
       <div class="topbar-actions">
-        <button class="btn-icon" id="btn-admin" onclick="window.location.href='admin.html'" title="Painel de Administração" style="display:none;"></button>
+        <button class="btn-icon" id="btn-admin" onclick="window.location.href='admin.html?t='+Date.now()" title="Painel de Administração" style="display:none;"></button>
         <div class="indicador-live"><div class="dot-live"></div><span>Live</span></div>
         <button class="btn-icon tb-btn" id="btn-escuro" onclick="toggleModoEscuro()" title="Modo claro / escuro"><img src="icons3d/sun.png" alt=""></button>
         <button class="btn-icon tb-btn" onclick="atualizarMonitor(this)" title="Atualizar">
@@ -1318,7 +1318,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     </div>
     <div class="def-lista">
       <button class="def-item def-dono" onclick="fecharDefinicoes();abrirMeuPerfil()"><img src="icons3d/person.png" alt=""><span>Meu Perfil</span><i class="def-seta"></i></button>
-      <button class="def-item" id="def-admin" style="display:none" onclick="window.location.href='admin.html'"><img src="icons3d/shield.png" alt=""><span>Painel de Administração</span><i class="def-seta"></i></button>
+      <button class="def-item" id="def-admin" style="display:none" onclick="window.location.href='admin.html?t='+Date.now()"><img src="icons3d/shield.png" alt=""><span>Painel de Administração</span><i class="def-seta"></i></button>
       <button class="def-item" onclick="toggleModoEscuro()"><img id="def-escuro-ico" src="icons3d/moon.png" alt=""><span>Modo escuro</span><i class="def-switch" id="def-escuro-sw"></i></button>
       <button class="def-item" onclick="fecharDefinicoes();abrirModalLinguaMonitor()"><img src="icons3d/globe.png" alt=""><span>Idioma</span><i class="def-seta"></i></button>
       <button class="def-item" id="def-att" onclick="fecharDefinicoes();abrirAtualizacoes()"><img src="icons3d/refresh.png" alt=""><span>Verificar atualizações</span><b class="def-novo" id="def-att-novo" style="display:none">Nova</b><i class="def-seta"></i></button>
@@ -2069,7 +2069,7 @@ function _renderSuperMenu() {
   const box = document.getElementById('sa-box'); if (!box) return;
   const item = (val, nome, ico, eAtual, email) => '<button class="sa-item' + (eAtual ? ' atual' : '') + '" type="button" onclick="trocarLojaSuper(\'' + val + '\')">'
     + '<img src="icons3d/' + ico + '.png" alt=""><span class="sa-txt"><b>' + _escMon(nome) + '</b>' + (email ? '<small>' + _escMon(email) + '</small>' : '') + '</span>' + (eAtual ? '<i class="sa-ok">✓</i>' : '') + '</button>';
-  const _html = '<button class="sa-item sa-admin" type="button" onclick="window.location.href=\'admin.html\'"><img src="icons3d/shield.png" alt=""><span>Painel de Administração</span><i class="sa-chev-r"></i></button>'
+  const _html = '<button class="sa-item sa-admin" type="button" onclick="window.location.href=\'admin.html?t=\'+Date.now()"><img src="icons3d/shield.png" alt=""><span>Painel de Administração</span><i class="sa-chev-r"></i></button>'
     + '<div class="sa-sec">Ver loja</div>'
     + item('geral', 'Todas as Lojas', 'globe', modoGeral)
     + (todasLojas || []).map(l => item(l.id, l.nome, 'store', !modoGeral && l.id === lojaId, spapEhSuper(l.email_dono) ? 'a sua conta' : l.email_dono)).join('');
@@ -5800,7 +5800,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.239';
+const MONITOR_VERSAO = '2.9.240';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });

@@ -88,9 +88,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.27">
-<script src="banca-tema.js?v=3.7.27" defer></script>
-<script src="app-android.js?v=3.7.27" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.28">
+<script src="banca-tema.js?v=3.7.28" defer></script>
+<script src="app-android.js?v=3.7.28" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -1000,7 +1000,7 @@ function superAbrirMenu(){
     +'<img src="icons3d/'+ico+'.png" alt=""><span class="sa-txt-b"><b>'+esc(b.nome||'Banca')+'</b><small>'+(spapEhSuper(b.email_dono)?'a sua conta':esc(b.email_dono||''))+(b.plano?' · '+esc(b.plano):'')+'</small></span>'+(String(b.id)===atual?'<i class="sa-ok-b">✓</i>':'')+'</button>';
   const mine=l.filter(b=>String(b.id)===String(minha)), outras=l.filter(b=>String(b.id)!==String(minha));
   document.getElementById('sa-box-b').innerHTML=
-      '<button class="sa-item-b sa-admin-b" type="button" onclick="location.href=\'admin.html\'"><img src="icons3d/shield.png" alt=""><span>Painel de Administração</span><i class="sa-chev-r-b"></i></button>'
+      '<button class="sa-item-b sa-admin-b" type="button" onclick="location.href=\'admin.html?t=\'+Date.now()"><img src="icons3d/shield.png" alt=""><span>Painel de Administração</span><i class="sa-chev-r-b"></i></button>'
     + '<button class="sa-item-b sa-loja-b" type="button" onclick="location.href=\'monitor.html\'"><img src="icons3d/store.png" alt=""><span>Monitor da Loja</span><i class="sa-chev-r-b"></i></button>'
     + (mine.length?'<div class="sa-sec-b">A minha banca</div>'+mine.map(b=>item(b,'cart')).join(''):'')
     + '<div class="sa-sec-b">Outras bancas <small>'+outras.length+'</small></div>'

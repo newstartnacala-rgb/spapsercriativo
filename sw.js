@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spap-pdv-v314';
+const CACHE_NAME = 'spap-pdv-v315';
 const FICHEIROS = [
   './',
   './index.html',
@@ -96,13 +96,14 @@ self.addEventListener('fetch', e => {
   const ehHTML = e.request.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname.endsWith('/');
   if (ehHTML) {
     e.respondWith(
-      fetch(e.request).then(response => {
+      // «no-store»: vai SEMPRE buscar a página nova (o GitHub deixa o navegador guardar 10 min)
+      fetch(e.request.url, { cache: 'no-store', credentials: 'same-origin' }).then(response => {
         if (response && response.ok) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
         }
         return response;
-      }).catch(() =>
+      }).catch(() => fetch(e.request)).catch(() =>
         caches.match(e.request, { ignoreSearch: true }).then(cached =>
           cached || caches.match(new URL('index.html', self.registration.scope).href)
         )
