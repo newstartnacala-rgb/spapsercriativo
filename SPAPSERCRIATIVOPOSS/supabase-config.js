@@ -87,17 +87,25 @@ async function spapContaMigrada(todos, pagina) {
 // Super Admin nas páginas da Banca: abre SEMPRE a sua banca (como antes, com o código do balconista dela).
 // Outra banca só quando a escolhe no menu «👑 Super Admin» (vale só enquanto a app está aberta).
 async function spapSuperMembroBanca(proprios) {
-  var esc = null;
-  try { localStorage.removeItem('spap_super_banca'); esc = sessionStorage.getItem('spap_super_banca'); } catch (e) {}
+  // O Super Admin abre SEMPRE a SUA conta («Desenvolvedores»), como no Monitor da Loja.
+  // A conta de outra pessoa só abre depois do código do Super Admin (pedido no menu «👑 Super Admin»).
+  var esc = null, codigoOk = false;
+  try { localStorage.removeItem('spap_super_banca'); esc = sessionStorage.getItem('spap_super_banca'); codigoOk = sessionStorage.getItem('spap_super_ok') === '1'; } catch (e) {}
   var r = await supabaseClient.from('lojas').select('id,nome,estado,tipo_loja,vendedores,telefone,plano,data_expiracao,email_dono').eq('tipo_loja', 'banca').order('nome').limit(1000);
-  // só bancas ativas (as encerradas por migração passaram a Loja)
-  var l = ((r && r.data) || []).filter(function (b) { return b.estado !== 'encerrado'; }); window._spapBancas = l;
+  var l = ((r && r.data) || []).filter(function (b) { return b.estado !== 'encerrado'; });
+  var eu = spapEmailSessao();
+  // a minha conta: 1) a minha banca; 2) uma banca com o meu e-mail; 3) a minha conta (de qualquer tipo)
   var meu = (proprios || []).find(function (m) { return spapEhBanca(m); });
+  if (!meu) { var b = l.find(function (x) { return String(x.email_dono || '').toLowerCase() === eu; }); if (b) meu = { loja_id: b.id, papel: 'admin', nome_exibicao: 'Super Admin', lojas: b }; }
+  if (!meu && proprios && proprios.length) meu = proprios[0];
+  var minhaInfo = meu ? Object.assign({ id: meu.loja_id }, meu.lojas || {}, { email_dono: eu || ((meu.lojas || {}).email_dono) }) : null;
   window._spapMinhaBanca = meu ? meu.loja_id : null;
-  var x = esc ? l.find(function (b) { return String(b.id) === String(esc); }) : null;
-  if (!x || (meu && String(x.id) === String(meu.loja_id))) { if (meu) return meu; x = x || l[0]; }
-  if (!x) return null;
-  return { loja_id: x.id, papel: 'admin', nome_exibicao: 'Super Admin', lojas: x };
+  window._spapMinhaConta = minhaInfo;
+  window._spapBancas = l.filter(function (b) { return !meu || String(b.id) !== String(meu.loja_id); });   // as OUTRAS bancas
+  var x = (esc && codigoOk) ? l.find(function (b) { return String(b.id) === String(esc); }) : null;
+  if (x && (!meu || String(x.id) !== String(meu.loja_id))) return { loja_id: x.id, papel: 'admin', nome_exibicao: 'Super Admin', lojas: x };
+  try { sessionStorage.removeItem('spap_super_banca'); } catch (e) {}
+  return meu || null;
 }
 // a sessão desta página é mesmo de uma Banca: deixa de partilhar a sessão antiga com a Loja
 function spapSessaoBancaOk() {

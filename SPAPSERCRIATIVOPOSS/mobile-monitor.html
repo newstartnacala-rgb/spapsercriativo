@@ -88,9 +88,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.30">
-<script src="banca-tema.js?v=3.7.30" defer></script>
-<script src="app-android.js?v=3.7.30" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.31">
+<script src="banca-tema.js?v=3.7.31" defer></script>
+<script src="app-android.js?v=3.7.31" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -998,10 +998,10 @@ function superAbrirMenu(){
   const l=window._spapBancas||[], minha=window._spapMinhaBanca, atual=String(sessao.lojaId);
   const item=(b,ico)=>'<button class="sa-item-b'+(String(b.id)===atual?' atual':'')+'" type="button" data-busca="'+escA(((b.nome||'')+' '+(b.email_dono||'')).toLowerCase())+'" onclick="superAbrirBanca(\''+b.id+'\')">'
     +'<img src="icons3d/'+ico+'.png" alt=""><span class="sa-txt-b"><b>'+esc(b.nome||'Banca')+'</b><small>'+(spapEhSuper(b.email_dono)?'Desenvolvedores':esc(b.email_dono||''))+(b.plano?' · '+esc(b.plano):'')+'</small></span>'+(String(b.id)===atual?'<i class="sa-ok-b">✓</i>':'')+'</button>';
-  const mine=l.filter(b=>String(b.id)===String(minha)), outras=l.filter(b=>String(b.id)!==String(minha));
+  const mine=window._spapMinhaConta?[window._spapMinhaConta]:[], outras=l.filter(b=>String(b.id)!==String(minha));
   document.getElementById('sa-box-b').innerHTML=
       '<button class="sa-item-b sa-admin-b" type="button" onclick="location.href=\'admin.html?t=\'+Date.now()"><img src="icons3d/shield.png" alt=""><span>Painel de Administração</span><i class="sa-chev-r-b"></i></button>'
-    + (mine.length?'<div class="sa-sec-b">A minha banca</div>'+mine.map(b=>item(b,'cart')).join(''):'')
+    + (mine.length?'<div class="sa-sec-b">A minha conta</div>'+mine.map(b=>item(b,'cart')).join(''):'')
     + '<div class="sa-sec-b">Outras bancas <small>'+outras.length+'</small></div>'
     + (outras.length>6?'<input class="sa-busca-b" type="search" placeholder="Procurar banca ou email…" oninput="superFiltrar(this.value)">':'')
     + (outras.length?outras.map(b=>item(b,'store')).join(''):'<div class="sa-vazio-b">Não há outras bancas.</div>');
