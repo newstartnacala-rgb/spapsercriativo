@@ -641,3 +641,11 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', por); else por();
 })();
+
+/* ===== Funcionar sem internet: a Banca e o Monitor da Banca registam o «service worker»
+   (guarda as páginas e os ficheiros no telemóvel para abrirem mesmo offline) ===== */
+(function () {
+  if (!('serviceWorker' in navigator) || location.protocol === 'file:') return;
+  function reg() { navigator.serviceWorker.register('sw.js').catch(function () {}); }
+  if (document.readyState === 'complete') reg(); else window.addEventListener('load', reg);
+})();

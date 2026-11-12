@@ -112,9 +112,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="Banca e Vendas">
-<link rel="stylesheet" href="banca-tema.css?v=3.7.39">
-<script src="banca-tema.js?v=3.7.39" defer></script>
-<script src="app-android.js?v=3.7.39" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.40">
+<script src="banca-tema.js?v=3.7.40" defer></script>
+<script src="app-android.js?v=3.7.40" defer></script>
 </head>
 <body>
 
@@ -397,7 +397,8 @@
 <script src="supabase-config.js"></script>
 <script src="spap-suporte.js?v=1"></script>
 <script src="spap-avisos.js?v=5"></script>
-<script src="banca-offline.js?v=3.7.39"></script>
+<script src="spap-imagem.js?v=1"></script>
+<script src="banca-offline.js?v=3.7.40"></script>
 <script>
 // ===================== ESTADO =====================
 let sessao = null;        // { lojaId, nomeLoja, userId, vendedor }
@@ -783,17 +784,26 @@ function htmlDesempenho(lista){
   normais.forEach(v => (v.itens||[]).forEach(it => { const k = it.nome||'Produto'; prod[k] = prod[k] || { nome:k, qtd:0, valor:0, desc:0 }; prod[k].qtd += it.qtd; prod[k].valor += it.preco*it.qtd; if (it.precoOriginal) prod[k].desc += (it.precoOriginal-it.preco)*it.qtd; }));
   const tops = Object.values(prod).sort((a,b)=>b.qtd-a.qtd);
   const nItens = tops.reduce((s,p)=>s+p.qtd,0), max = tops.length ? tops[0].qtd : 1;
-  return `<div class="bv-cards">
-      <div class="bv-card verde"><div class="l">🧾 Vendas feitas</div><div class="v">${normais.length}</div></div>
-      <div class="bv-card"><div class="l">📦 Unidades vendidas</div><div class="v">${nItens}</div></div>
+  const _img = n => { const p = (typeof produtos !== 'undefined' ? produtos : []).find(x => String(x.nome||'').toLowerCase() === String(n||'').toLowerCase()); return p && p.imagem ? p.imagem : ''; };
+  const top10 = tops.slice(0, 10), resto = tops.length - top10.length;
+  return `<div class="bv-cards bv-cards3">
+      <div class="bv-card verde"><div class="l">🧾 Vendas</div><div class="v">${normais.length}</div><div class="x">clientes atendidos (recibos)</div></div>
+      <div class="bv-card"><div class="l">📦 Unidades</div><div class="v">${nItens}</div><div class="x">peças que saíram</div></div>
+      <div class="bv-card azul"><div class="l">🏷️ Produtos</div><div class="v">${tops.length}</div><div class="x">produtos diferentes</div></div>
+    </div>
+    ${normais.length ? `<div class="bv-explica">ℹ️ Hoje fez <b>${normais.length} venda${normais.length===1?'':'s'}</b>. Nessas vendas saíram <b>${nItens} unidade${nItens===1?'':'s'}</b> de <b>${tops.length} produto${tops.length===1?'':'s'} diferente${tops.length===1?'':'s'}</b> — uma venda pode levar vários produtos e várias unidades.</div>` : ''}
+    <div class="bv-cards">
       ${desc>0?`<div class="bv-card amarelo largo"><div class="l">🏷️ Descontos dados hoje</div><div class="v">− ${fmt(desc)}</div></div>`:''}
       ${rets.length?`<div class="bv-card vermelho largo"><div class="l">↩️ Retornos hoje (${unRet} un.)</div><div class="v">− ${fmt(valRet)}</div></div>`:''}
     </div>
-    <div class="bv-sec"><span>🏆 O que vendeu hoje</span><small>${tops.length} produto${tops.length===1?'':'s'}</small></div>
-    ${tops.length ? tops.map((p,i)=>`<div class="bv-top"><div class="pos">${i+1}</div><div style="flex:1;min-width:0">
+    <div class="bv-sec"><span>🏆 Top 10 de hoje</span><small>mais vendidos</small></div>
+    ${tops.length ? top10.map((p,i)=>`<div class="bv-top"><div class="pos ${i<3?'p'+(i+1):''}">${i+1}</div>
+        <div class="bv-top-img">${_img(p.nome)?`<img src="${esc(_img(p.nome))}" alt="" loading="lazy" data-zoom="1" data-titulo="${esc(p.nome)}" onerror="this.replaceWith(document.createTextNode('📦'))">`:'📦'}</div>
+        <div style="flex:1;min-width:0">
         <div style="display:flex;gap:8px;align-items:center"><div class="nm">${esc(p.nome)}</div><div class="vl">${p.qtd} un.</div></div>
         ${p.desc>0?`<span class="tag-desc" style="margin-top:4px">🏷️ desconto −${fmt(p.desc).replace('MT ','')}</span>`:''}
         <div class="bv-barra"><i style="width:${Math.max(4,Math.round(p.qtd/max*100))}%"></i></div></div></div>`).join('')
+        + (resto > 0 ? `<div class="bv-mais">+ ${resto} outro${resto===1?'':'s'} produto${resto===1?'':'s'} vendido${resto===1?'':'s'} hoje</div>` : '')
       : '<div class="bv-vazio">Ainda não vendeu nada hoje.</div>'}`;
 }
 function htmlListaVendas(lista){
@@ -804,9 +814,11 @@ function htmlListaVendas(lista){
       <div class="in"><div class="t">Retorno${nomes?' · '+nomes:''}</div>
       <div class="s">🕒 ${_vdHora(v.data)} · ${n} un. <span class="tag-ret">↩️ RETORNO −${fmt(Math.abs(v.total)).replace('MT ','')}</span> ${v.pendente?'<span class="bv-pend">⏳ por enviar</span>':''}</div></div>
       <div class="vv">− ${fmt(Math.abs(v.total))}</div></div>`; }
+    const quais = (v.itens||[]).length ? (v.itens||[]).map(i => i.qtd + '× ' + esc(i.nome)).join(', ') : '<i style="color:#b45309">sem produtos registados</i>';
     return `<div class="bv-venda${d>0?' desc':''}" onclick="verVenda('${v.id}')"><div class="ic">🧾</div>
-      <div class="in"><div class="t">Venda nº ${v.numeroDia||'—'}</div>
-      <div class="s">🕒 ${_vdHora(v.data)} · ${n} item(s) ${d>0?`<span class="tag-desc">🏷️ −${fmt(d).replace('MT ','')}</span>`:''} ${v.pendente?'<span class="bv-pend">⏳ por enviar</span>':''}</div></div>
+      <div class="in"><div class="t">Venda nº ${v.numeroDia||'—'} <span class="bv-hora">🕒 ${_vdHora(v.data)}</span></div>
+      <div class="bv-quais">${quais}</div>
+      <div class="s">${n} unidade${n===1?'':'s'} ${d>0?`<span class="tag-desc">🏷️ −${fmt(d).replace('MT ','')}</span>`:''} ${v.pendente?'<span class="bv-pend">⏳ por enviar</span>':''}</div></div>
       <div class="vv" style="color:#c2410c;font-size:13px">Ver ›</div></div>`; }).join('');
 }
 function htmlRecibo(v){

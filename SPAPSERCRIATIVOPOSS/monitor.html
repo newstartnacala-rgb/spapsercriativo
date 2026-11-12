@@ -21,7 +21,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.253"></script>
+<script src="spap-leitor.js?v=2.9.254"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -1112,11 +1112,12 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
 <meta name="theme-color" content="#12315e">
 <script>
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+    // regista já (não espera pelas imagens) para o Monitor abrir mesmo sem internet
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.253" defer></script>
+<script src="app-android.js?v=2.9.254" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -1773,6 +1774,25 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
 <script src="spap-expirou.js?v=2"></script>
 <script src="spap-suporte.js?v=1"></script>
 <script src="spap-contador.js?v=1"></script>
+<script src="spap-alertas.js?v=1"></script>
+<script>
+// Alertas do sistema (irregularidades) — sino no topo do Monitor
+document.addEventListener('DOMContentLoaded', function () { setTimeout(function () {
+  try {
+    spapAlertasIniciar({
+      loja: function () { return (typeof lojaId !== 'undefined' && lojaId) || ''; },
+      onde: document.querySelector('.topbar-actions'),
+      dados: function () {
+        const vs = (window._salVendasLoja || []).map(v => ({ id: v.id, numero: v.numero_do_dia, total: parseFloat(v.total) || 0, criado: v.criado_em,
+          ret: v.metodo === 'Devolução' || (parseFloat(v.total) || 0) < 0,
+          itens: (v.venda_itens || []).map(i => ({ nome: i.produto_nome, qtd: parseFloat(i.qtd) || 0, preco: parseFloat(i.preco_unitario) || 0 })) }));
+        return { vendas: vs, produtos: (typeof todosProdutos !== 'undefined' ? todosProdutos : []) };
+      },
+      verProduto: function (id) { try { editarProdutoCompleto(id); } catch (e) {} }
+    });
+  } catch (e) { console.warn('alertas', e); }
+}, 1500); });
+</script>
 <script>
 let sessao = null, lojaId = null, nomeLoja = '';
 let todasVendas = [], todosProdutos = [], todosMemb = [];
@@ -1904,10 +1924,13 @@ async function iniciar() {
     // Admin normal: só vê a sua loja
     let membros = null;
     {
-      const r = await supabaseClient
+      let r = await supabaseClient
         .from('membros_loja')
         .select('loja_id, papel, nome_exibicao, lojas(nome, estado, plano, categorias_personalizadas, subcategorias, vendedores, data_expiracao, codigo_relatorios, pin_monitor, tipo_loja, pin_gerente)')
         .eq('user_id', sessao.user.id).limit(20);
+      // sem internet: usa a conta guardada neste aparelho
+      if (r.error && (navigator.onLine === false || /fetch|internet|abort|network|failed/i.test(String(r.error.message || '')))) { const c = spapLerLocal('membros_mon_' + sessao.user.id); if (c) r = { data: c.v, error: null }; }
+      else if (!r.error) spapGuardarLocal('membros_mon_' + sessao.user.id, r.data);
       if (r.error) {
         const r2 = await supabaseClient
           .from('membros_loja')
@@ -2474,6 +2497,16 @@ async function carregarTudo() {
     geral ? supabaseClient.from('membros_loja').select('*, lojas(nome)') : supabaseClient.from('membros_loja').select('*, lojas(nome)').eq('loja_id', lojaDoPedido)
   ]);
   if (meu !== _pedidoCarga) return;            // entretanto escolheu-se outra loja → ignora
+  // Sem internet: mostra os últimos dados guardados neste aparelho (nunca fica vazio nem parado)
+  if (r1.error && r2.error && !(cache && cache.vendas && cache.vendas.length)) {
+    const loc = spapLerLocal('mon_' + chave);
+    if (loc && loc.v) {
+      todasVendas = loc.v.vendas || []; todosProdutos = loc.v.produtos || []; todosMemb = loc.v.memb || [];
+      try { aplicarDiaHome(); renderVendasHistorico(filtroVendasAtivo); } catch (e) {}
+      mostrarNotif('📡 Sem internet — a mostrar os dados guardados às ' + new Date(loc.t).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }) + '. Atualiza sozinho quando a internet voltar.');
+      return;
+    }
+  }
   const recentes = r1.data || [];
   // junta as vendas recentes com o histórico mais antigo já conhecido desta loja
   const antigas = (cache && cache.completo) ? cache.vendas.filter(v => v.criado_em < desde) : [];
@@ -2505,6 +2538,8 @@ async function carregarTudo() {
   if (meu !== _pedidoCarga) return;
   if (geral) todosProdutos = _soLojas(todosProdutos);
   _cacheLojas.set(chave, { vendas: todasVendas.slice(), produtos: todosProdutos, memb: todosMemb, completo: !!(cache && cache.completo), t: Date.now() });
+  // guarda no aparelho para abrir sem internet (só as vendas de ontem e hoje; produtos sem imagens)
+  if (!r1.error) spapGuardarLocal('mon_' + chave, { vendas: recentes, produtos: todosProdutos, memb: todosMemb });
   aplicarDiaHome();
   renderVendasHistorico(filtroVendasAtivo);
   const vendasHojeReal = todasVendas.filter(v => v.criado_em >= inicioHoje);
@@ -2679,6 +2714,7 @@ function renderTop10() {
 
 }
 function renderHome(vendasHoje) {
+  try { window._salVendasLoja = vendasHoje; if (window.spapAlertasAtualizar) setTimeout(spapAlertasAtualizar, 0); } catch (e) {}
   const total = vendasHoje.reduce((s,v) => s + parseFloat(v.total), 0);
   const recebido = vendasHoje.filter(v => v.recebido != null).reduce((s,v) => s + parseFloat(v.recebido || v.total), 0);
   const itens = vendasHoje.reduce((s,v) => s + v.venda_itens.reduce((si,i) => si+i.qtd, 0), 0);
@@ -6167,7 +6203,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.253';
+const MONITOR_VERSAO = '2.9.254';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });

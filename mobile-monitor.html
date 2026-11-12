@@ -88,9 +88,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.39">
-<script src="banca-tema.js?v=3.7.39" defer></script>
-<script src="app-android.js?v=3.7.39" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.40">
+<script src="banca-tema.js?v=3.7.40" defer></script>
+<script src="app-android.js?v=3.7.40" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -416,19 +416,55 @@
 <script src="supabase-config.js"></script>
 <script src="spap-suporte.js?v=1"></script>
 <script src="spap-contador.js?v=1"></script>
+<script src="spap-alertas.js?v=1"></script>
+<script>
+// Alertas do sistema (irregularidades) — sino no topo do Monitor da Banca
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
+  try{
+    spapAlertasIniciar({
+      loja: function(){ return (typeof sessao!=='undefined' && sessao && sessao.lojaId) || ''; },
+      onde: document.querySelector('.tp-acoes'),
+      dados: function(){
+        const vs = (window._salVendas || []).map(v => ({ id:v.id, numero:v.numero_do_dia, total:parseFloat(v.total)||0, criado:v.criado_em, ret:!!v._ret,
+          itens:(v.venda_itens||[]).map(i => ({ nome:i.produto_nome, qtd:parseFloat(i.qtd)||0, preco:parseFloat(i.preco_unitario)||0 })) }));
+        return { vendas: vs, produtos: (typeof produtos!=='undefined' ? produtos : []) };
+      },
+      verVenda: function(id){ try{ verVendaMonitor(id); }catch(e){} },
+      verProduto: function(id){ try{ gerirProduto(id); }catch(e){} }
+    });
+  }catch(e){ console.warn('alertas', e); }
+}, 1200); });
+</script>
 <script src="spap-avisos.js?v=5"></script>
 <script src="spap-backup.js?v=7"></script>
 <script src="spap-imagem.js?v=1"></script>
 <script>
 let sessao=null, produtos=[], periodo='hoje', periodoDesc='hoje';
 
+// Aviso discreto quando os números vêm do telemóvel (sem internet)
+function mostrarAvisoOffline(t){
+  let el=document.getElementById('aviso-offline-bm');
+  if(!t){ if(el) el.remove(); return; }
+  if(!el){ el=document.createElement('div'); el.id='aviso-offline-bm'; el.style.cssText='margin:8px 16px 0;padding:9px 12px;border-radius:12px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:12.5px;font-weight:700;line-height:1.4;';
+    const t=document.getElementById('tela-resumo'), topo=t&&t.querySelector('.topo'); if(topo) topo.after(el); else if(t) t.prepend(el); else document.body.prepend(el); }
+  el.textContent='📡 Sem internet — a mostrar os dados guardados às '+new Date(t).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'})+'. Atualiza sozinho quando a internet voltar.';
+}
+window.addEventListener('online', function(){ try{ carregarProdutos(); carregarResumo(); }catch(e){} });
+// o ecrã de carregamento nunca fica preso: some ao fim de 10 segundos aconteça o que acontecer
+setTimeout(function(){ const c=document.getElementById('carregando'); if(c && c.style.display!=='none'){ c.style.display='none'; } }, 10000);
 (async function init(){
   let ses=null;
   try{ ses=(await supabaseClient.auth.getSession()).data.session; }catch(e){}
   if(!ses){ location.href='login-banca.html?to='+encodeURIComponent('mobile-monitor.html'); return; }
   try{
-    const { data:membros } = await supabaseClient.from('membros_loja')
-      .select('loja_id, papel, lojas(nome, estado, tipo_loja, vendedores, telefone)').eq('user_id', ses.user.id).limit(20).then(r=>(window._membrosTodos=r.data||[], r.data=spapMembrosDoTipo(r.data,'banca'),r));
+    // sem internet: usa a última conta guardada neste telemóvel (nunca manda para o login só por falta de rede)
+    let _rm = await supabaseClient.from('membros_loja')
+      .select('loja_id, papel, lojas(nome, estado, tipo_loja, vendedores, telefone)').eq('user_id', ses.user.id).limit(20).then(r=>r, e=>({ error:e }));
+    if(_rm.error || !_rm.data){ const c=spapLerLocal('membros_bm_'+ses.user.id); if(c){ _rm={ data:c.v }; window._offlineDesde=c.t; } else { _rm={ data:null }; } }
+    else spapGuardarLocal('membros_bm_'+ses.user.id, _rm.data);
+    window._membrosTodos=_rm.data||[];
+    const membros = _rm.data ? spapMembrosDoTipo(_rm.data,'banca') : null;
+    if(!membros && (navigator.onLine===false || _rm.data===null)){ document.getElementById('carregando').style.display='none'; toast('📡 Sem internet — abre o Monitor uma vez com internet para ficar disponível offline.','erro'); return; }
     // Super Admin: abre qualquer banca, sem restrição (troca no menu «👑 Trocar banca»)
     if(membros && spapEuSuper()){ const sm=await spapSuperMembroBanca(window._membrosTodos); if(sm){ membros.length=0; membros.push(sm); } window._souSuper=true; }
     if(membros && !membros.length && await spapContaMigrada(window._membrosTodos,'bancamonitor')){ await spapSessaoBancaErrada(); document.getElementById('carregando').style.display='none'; return; }
@@ -473,10 +509,12 @@ async function carregarProdutos(){
     const { data,error } = await supabaseClient.from('produtos')
       .select('id,nome,preco,preco_compra,stock,imagem,codbarras,codigo')
       .eq('loja_id',sessao.lojaId).order('nome',{ascending:true}).range(pag*1000,pag*1000+999);
-    if(error) break;
+    if(error){ todos=null; break; }
     todos=todos.concat(data||[]);
     if(!data||data.length<1000) break; pag++;
   }
+  if(todos===null){ const c=spapLerLocal('produtos_bm_'+sessao.lojaId); todos=c?c.v:[]; if(c) window._offlineDesde=c.t; }
+  else spapGuardarLocal('produtos_bm_'+sessao.lojaId, todos.map(p=>Object.assign({},p,{ imagem: (p.imagem&&p.imagem.length<200000)?p.imagem:null })));
   produtos=todos;
   renderProdutos();
   if(window._t10vs) carregarTop10(window._t10vs);
@@ -741,12 +779,17 @@ async function carregarResumo(){
     if(r.fim) q = q.lt('criado_em', r.fim.toISOString());
     let qd = supabaseClient.from('descontos').select('produto_nome,preco_original,preco_novo,quantidade,criado_em').eq('loja_id',sessao.lojaId).gte('criado_em',r.ini.toISOString());
     if(r.fim) qd = qd.lt('criado_em', r.fim.toISOString());
-    const [{ data }, rd] = await Promise.all([ q.order('criado_em',{ascending:false}).limit(500), qd.limit(2000).then(x=>x,()=>({})) ]);
+    const [rv, rd] = await Promise.all([ q.order('criado_em',{ascending:false}).limit(500).then(x=>x,e=>({error:e})), qd.limit(2000).then(x=>x,()=>({})) ]);
+    const _ck='vendas_bm_'+sessao.lojaId+'_'+periodo+(periodo==='dia'?('_'+(window._diaEscolhido||'')):'');
+    let data=rv.data, desc=(rd&&rd.data)||null;
+    if(rv.error || !data){ const c=spapLerLocal(_ck); data=c?c.v.vendas:[]; desc=c?c.v.desc:[]; if(c){ window._offlineDesde=c.t; mostrarAvisoOffline(c.t); } }
+    else { spapGuardarLocal(_ck, { vendas:data, desc:desc||[] }); mostrarAvisoOffline(null); }
     vendas=normVendas(data||[]);
-    marcarDescontos(vendas, (rd&&rd.data)||[]);
+    marcarDescontos(vendas, desc||[]);
   }catch(e){}
   window._vendasResumo = vendas;
   carregarTop10(periodo==='hoje' ? vendas : null);
+  try{ if(periodo==='hoje'){ window._salVendas = vendas; spapAlertasAtualizar(); } }catch(e){}
   const totalVend = vendas.reduce((s,v)=>s+(parseFloat(v.total)||0),0);
   { const _e=document.getElementById('s-vendido'); spapNum(_e, fmt(totalVend), { cartao:_e.closest('.stat') }); }
   { const _e=document.getElementById('s-nvendas'); spapNum(_e, String(vendas.length), { cartao:_e.closest('.stat'), mais:'+1' }); }
@@ -771,7 +814,9 @@ async function carregarResumo(){
       <div class="in"><div class="nn">Retorno <span class="tag-ret">↩️ RETORNO</span></div><div class="mt">${dt} · ${nomes||'produto'} · ${un} un.${v.vendedor_codigo?(' · '+esc(v.vendedor_codigo)):''}</div></div>
       <div class="vv">− ${fmt(Math.abs(parseFloat(v.total)||0))}</div></div>`; }
     return `<div class="row venda-row${d>0?' com-desc':''}" onclick="verVendaMonitor('${v.id}')"><div class="ph">🧾</div>
-      <div class="in"><div class="nn">Venda nº ${v.numero_do_dia||'-'} ${d>0?`<span class="tag-desc">🏷️ desconto −${fmt(d).replace('MT ','')}</span>`:''}</div><div class="mt">${dt} · ${nit} item(s)${v.vendedor_codigo?(' · '+esc(v.vendedor_codigo)):''}</div></div>
+      <div class="in"><div class="nn">Venda nº ${v.numero_do_dia||'-'} ${d>0?`<span class="tag-desc">🏷️ desconto −${fmt(d).replace('MT ','')}</span>`:''}</div>
+      <div class="bv-quais">${(v.venda_itens||[]).length?(v.venda_itens||[]).map(it=>(parseFloat(it.qtd)||0)+'× '+esc(it.produto_nome)).join(', '):'<i style="color:#b45309">sem produtos registados</i>'}</div>
+      <div class="mt">${dt} · ${nit} unidade${nit==1?'':'s'}${v.vendedor_codigo?(' · '+esc(v.vendedor_codigo)):''}</div></div>
       <div class="vv">${fmt(v.total)}</div></div>`;
   }).join('');
 }

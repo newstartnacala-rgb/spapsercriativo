@@ -52,11 +52,25 @@ if (SPAP_PAGINA_BANCA && !_ehGerente && !SPAP_SUPER_UNIFICADO) {
     }
   } catch (e) {}
 }
+// Sem internet ou com rede fraca, um pedido nunca pode deixar o ecrã parado:
+// sem rede falha logo; com rede fraca desiste ao fim de 15 segundos (a app usa então os dados guardados no telemóvel).
+function spapFetch(url, opts) {
+  opts = opts || {};
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return Promise.reject(new TypeError('Sem internet'));
+  if (opts.signal || typeof AbortController === 'undefined') return fetch(url, opts);
+  var c = new AbortController(), t = setTimeout(function () { try { c.abort(); } catch (e) {} }, 15000);
+  var o = {}; for (var k in opts) o[k] = opts[k]; o.signal = c.signal;
+  return fetch(url, o).then(function (r) { clearTimeout(t); return r; }, function (e) { clearTimeout(t); throw e; });
+}
+function _spapOpcoes(auth) { var o = { global: { fetch: spapFetch } }; if (auth) o.auth = auth; return o; }
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY,
-  _ehGerente ? { auth: { storageKey: 'sb-spap-gerente', persistSession: true, autoRefreshToken: true } }
-  : (SPAP_PAGINA_BANCA && !SPAP_SUPER_UNIFICADO) ? { auth: { storageKey: SPAP_CHAVE_BANCA, persistSession: true, autoRefreshToken: true } }
-  : undefined
+  _ehGerente ? _spapOpcoes({ storageKey: 'sb-spap-gerente', persistSession: true, autoRefreshToken: true })
+  : (SPAP_PAGINA_BANCA && !SPAP_SUPER_UNIFICADO) ? _spapOpcoes({ storageKey: SPAP_CHAVE_BANCA, persistSession: true, autoRefreshToken: true })
+  : _spapOpcoes(null)
 );
+// Dados guardados no telemóvel para abrir sem internet (último resultado bom de cada pedido)
+function spapGuardarLocal(chave, valor) { try { localStorage.setItem('spap_cache_' + chave, JSON.stringify({ t: Date.now(), v: valor })); } catch (e) {} }
+function spapLerLocal(chave) { try { var x = JSON.parse(localStorage.getItem('spap_cache_' + chave) || 'null'); return x ? x : null; } catch (e) { return null; } }
 // tipo da conta: 'banca' ou 'loja'
 function spapEhBanca(m) { return !!(m && m.lojas && m.lojas.tipo_loja === 'banca'); }
 // só as contas do tipo pedido ('banca' nas páginas da Banca, 'loja' nas da Loja), as ativas primeiro
