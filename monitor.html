@@ -21,7 +21,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.252"></script>
+<script src="spap-leitor.js?v=2.9.253"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -1116,7 +1116,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.252" defer></script>
+<script src="app-android.js?v=2.9.253" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -6167,7 +6167,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.252';
+const MONITOR_VERSAO = '2.9.253';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -6618,8 +6618,6 @@ async function abrirMeuPerfil() {
       var _rp = document.getElementById('perfil-in-rodape'); if (_rp) _rp.value = data.recibo_rodape || '';
       _perfilLogoBase64 = null;
       _pintarLogoPerfil(data.logo || '');
-    } else {
-      document.getElementById('perfil-nome-loja').textContent = 'Sem nome da loja';
 
       const planos = {
         'basico': { nome: 'Básico', desc: 'Apenas PDV (loja do vendedor)' },
@@ -6629,8 +6627,12 @@ async function abrirMeuPerfil() {
       };
       const p = planos[data.plano] || { nome: data.plano || '—', desc: '' };
       { const _b = document.getElementById('perfil-plano-badge'); if (_b) _b.textContent = 'Plano ' + p.nome; const _i = document.getElementById('perfil-plano-info'); if (_i) _i.textContent = p.desc; }
+    } else {
+      // a loja não foi encontrada (sem internet ou sem acesso): mostra o perfil vazio, sem erro vermelho
+      document.getElementById('perfil-nome-loja').textContent = navigator.onLine === false ? 'Sem internet' : 'Sem nome da loja';
+      if (navigator.onLine === false) mostrarNotif('📡 Sem internet — o perfil carrega quando voltar a ligação.');
     }
-  } catch(e) { mostrarNotif('❌ Erro ao carregar perfil: ' + (e.message||e), true); }
+  } catch(e) { console.warn('perfil:', e); mostrarNotif('⚠️ Não foi possível carregar o perfil agora. Tenta de novo daqui a pouco.'); }
 }
 
 let _perfilLogoBase64 = null; // null = não mexeu; '' = remover; 'data:...' = novo
