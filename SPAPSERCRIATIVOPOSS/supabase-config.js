@@ -95,13 +95,23 @@ async function spapSuperMembroBanca(proprios) {
   var l = ((r && r.data) || []).filter(function (b) { return b.estado !== 'encerrado'; });
   var eu = spapEmailSessao();
   // a minha conta: 1) a minha banca; 2) uma banca com o meu e-mail; 3) a minha conta (de qualquer tipo)
-  var meu = (proprios || []).find(function (m) { return spapEhBanca(m); });
+  // contas encerradas (migradas) nunca contam como «a minha conta»
+  proprios = (proprios || []).filter(function (m) { return !m.lojas || m.lojas.estado !== 'encerrado'; });
+  var meu = proprios.find(function (m) { return spapEhBanca(m); });
   if (!meu) { var b = l.find(function (x) { return String(x.email_dono || '').toLowerCase() === eu; }); if (b) meu = { loja_id: b.id, papel: 'admin', nome_exibicao: 'Super Admin', lojas: b }; }
   if (!meu && proprios && proprios.length) meu = proprios[0];
   var minhaInfo = meu ? Object.assign({ id: meu.loja_id }, meu.lojas || {}, { email_dono: eu || ((meu.lojas || {}).email_dono) }) : null;
   window._spapMinhaBanca = meu ? meu.loja_id : null;
   window._spapMinhaConta = minhaInfo;
-  window._spapBancas = l.filter(function (b) { return !meu || String(b.id) !== String(meu.loja_id); });   // as OUTRAS bancas
+  // as OUTRAS bancas: sem a minha, sem o meu e-mail (nada duplicado) e um só cartão por e-mail
+  var vistos = {};
+  window._spapBancas = l.filter(function (b) {
+    if (meu && String(b.id) === String(meu.loja_id)) return false;
+    var em = String(b.email_dono || '').toLowerCase();
+    if (em && (em === eu || spapEhSuper(em))) return false;
+    if (em) { if (vistos[em]) return false; vistos[em] = 1; }
+    return true;
+  });
   var x = (esc && codigoOk) ? l.find(function (b) { return String(b.id) === String(esc); }) : null;
   if (x && (!meu || String(x.id) !== String(meu.loja_id))) return { loja_id: x.id, papel: 'admin', nome_exibicao: 'Super Admin', lojas: x };
   try { sessionStorage.removeItem('spap_super_banca'); } catch (e) {}

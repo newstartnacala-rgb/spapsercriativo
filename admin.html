@@ -8,7 +8,7 @@
 <script>
   // Painel sempre na versão mais recente: se o aparelho mostrar uma cópia antiga, recarrega a nova
   (function () {
-    var VER = '2.9.250';
+    var VER = '2.9.251';
     try {
       fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
         var nova = j && j.versao; if (!nova || nova === VER) return;
@@ -255,6 +255,33 @@ body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; c
   .lc-ico { width:28px; height:28px; }
   .loja-nome { font-size:15px; }
 }
+/* Eliminar conta */
+#el-fundo{position:fixed;inset:0;z-index:100060;background:rgba(15,10,10,.6);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;transition:opacity .2s;}
+#el-fundo.on{opacity:1;}
+.el-box{width:100%;max-width:420px;max-height:calc(100vh - 32px);overflow:auto;background:#fff;border-radius:24px;box-shadow:0 30px 80px rgba(0,0,0,.4);transform:translateY(16px) scale(.97);transition:transform .25s cubic-bezier(.2,.9,.3,1);}
+#el-fundo.on .el-box{transform:none;}
+.el-topo{text-align:center;padding:24px 20px 18px;background:radial-gradient(120% 100% at 50% 0%,#ef4444,#b91c1c 55%,#7f1d1d);color:#fff;border-radius:24px 24px 0 0;}
+.el-ico{width:72px;height:72px;margin:0 auto 10px;border-radius:22px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);display:grid;place-items:center;animation:elTreme 2.4s ease-in-out infinite;}
+.el-ico img{width:44px;height:44px;}
+@keyframes elTreme{0%,86%,100%{transform:rotate(0);}89%{transform:rotate(-8deg);}92%{transform:rotate(7deg);}95%{transform:rotate(-4deg);}}
+.el-t{font-size:20px;font-weight:800;} .el-s{font-size:13px;opacity:.9;margin-top:3px;}
+.el-corpo{padding:16px 18px 18px;}
+.el-conta{display:flex;align-items:center;gap:10px;padding:12px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0;}
+.el-conta img{width:36px;height:36px;} .el-conta div{flex:1;min-width:0;}
+.el-conta b{display:block;font-size:15px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;} .el-conta small{display:block;font-size:12.5px;color:#475569;word-break:break-all;}
+.el-tipo{font-size:11px;font-weight:800;padding:3px 9px;border-radius:99px;background:#e0e7ff;color:#3730a3;}
+.el-dados{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px;}
+.el-dados div{background:#f8fafc;border-radius:10px;padding:7px 8px;text-align:center;} .el-dados span{display:block;font-size:10.5px;color:#64748b;font-weight:700;} .el-dados b{font-size:12.5px;color:#0f172a;}
+.el-lista-t{font-size:12.5px;font-weight:800;color:#991b1b;margin:14px 0 6px;}
+.el-lista{margin:0;padding:10px 12px 10px 30px;border-radius:12px;background:#fef2f2;border:1px solid #fecaca;font-size:13px;color:#7f1d1d;line-height:1.6;}
+.el-lab{display:block;font-size:12.5px;color:#334155;margin:14px 0 6px;line-height:1.4;word-break:break-all;}
+#el-in{width:100%;box-sizing:border-box;height:48px;padding:0 14px;border:1.5px solid #fecaca;border-radius:12px;font-size:15px;font-family:inherit;outline:none;}
+#el-in:focus{border-color:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.15);} #el-in.certo{border-color:#16a34a;background:#f0fdf4;}
+.el-bts{display:grid;grid-template-columns:1fr 1.4fr;gap:8px;margin-top:14px;}
+.el-bts button{height:50px;border:0;border-radius:14px;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer;}
+.el-can{background:#f1f5f9;color:#334155;}
+.el-ok{background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff;box-shadow:0 10px 22px rgba(220,38,38,.3);}
+.el-ok:disabled{background:#e2e8f0;color:#94a3b8;box-shadow:none;cursor:not-allowed;}
 /* Contagem até expirar */
 .lc-conta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:0 12px 10px; padding:8px 12px; border-radius:12px; font-size:12.5px; font-weight:700; background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; }
 .lc-conta.aviso { background:#fffbeb; color:#b45309; border-color:#fde68a; }
@@ -1069,17 +1096,52 @@ async function adicionarDias(id) {
   notif('✅ +' + n + ' dia(s). Nova expiração: ' + new Date(base).toLocaleDateString('pt-PT'));
 }
 
+// ===== ELIMINAR CONTA — confirmação forte (escrever o e-mail para confirmar) =====
+function janelaEliminar(l) {
+  return new Promise(res => {
+    const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const email = String(l.email_dono || '').trim(), alvo = (email || l.nome || '').toLowerCase();
+    const banca = typeof ehBanca === 'function' && ehBanca(l);
+    const exp = l.data_expiracao ? new Date(l.data_expiracao).toLocaleDateString('pt-PT') : '—';
+    const d = document.createElement('div'); d.id = 'el-fundo';
+    d.innerHTML = '<div class="el-box" role="dialog" aria-modal="true" aria-labelledby="el-t">'
+      + '<div class="el-topo"><div class="el-ico"><img src="icons3d/lixo.png" alt=""></div><div class="el-t" id="el-t">Eliminar esta conta?</div><div class="el-s">Esta ação é permanente e não se pode desfazer.</div></div>'
+      + '<div class="el-corpo">'
+      + '<div class="el-conta"><img src="icons3d/' + (banca ? 'cart' : 'store') + '.png" alt=""><div><b>' + esc(l.nome || 'Sem nome') + '</b><small>' + esc(email || 'sem e-mail') + '</small></div><span class="el-tipo">' + (banca ? 'Banca' : 'Loja') + '</span></div>'
+      + '<div class="el-dados"><div><span>Plano</span><b>' + esc(l.plano || '—') + '</b></div><div><span>Estado</span><b>' + esc(l.estado || '—') + '</b></div><div><span>Expira</span><b>' + exp + '</b></div></div>'
+      + '<div class="el-lista-t">Vai ser apagado para sempre:</div>'
+      + '<ul class="el-lista"><li>Todos os produtos e o stock</li><li>Todas as vendas, recibos e relatórios</li><li>Funcionários, balconistas e gerentes</li><li>Descontos, perdas, entregas e histórico</li></ul>'
+      + '<label class="el-lab" for="el-in">Para confirmar, escreve <b>' + esc(email || l.nome || '') + '</b></label>'
+      + '<input id="el-in" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="' + esc(email || l.nome || '') + '">'
+      + '<div class="el-bts"><button type="button" class="el-can">Cancelar</button><button type="button" class="el-ok" disabled><span>Eliminar para sempre</span></button></div>'
+      + '</div></div>';
+    document.body.appendChild(d);
+    requestAnimationFrame(() => d.classList.add('on'));
+    const inp = d.querySelector('#el-in'), ok = d.querySelector('.el-ok');
+    const fim = v => { d.classList.remove('on'); setTimeout(() => d.remove(), 220); document.removeEventListener('keydown', tecla); res(v); };
+    function tecla(e) { if (e.key === 'Escape') fim(false); }
+    document.addEventListener('keydown', tecla);
+    inp.oninput = () => { const certo = inp.value.trim().toLowerCase() === alvo; ok.disabled = !certo; inp.classList.toggle('certo', certo); };
+    inp.onkeydown = e => { if (e.key === 'Enter' && !ok.disabled) ok.click(); };
+    d.querySelector('.el-can').onclick = () => fim(false);
+    d.addEventListener('click', e => { if (e.target === d) fim(false); });
+    ok.onclick = () => fim(true);
+    setTimeout(() => inp.focus(), 250);
+  });
+}
 async function eliminarLoja(id) {
   const loja = lojas.find(l => l.id === id);
-  const nome = (loja && loja.nome) || 'esta loja';
-  if (!confirm('⚠️ ELIMINAR a loja "' + nome + '"?\n\nIsto apaga TUDO desta loja (produtos, vendas, membros) e NÃO se pode desfazer.')) return;
-  if (!confirm('Tens a certeza ABSOLUTA?\n\nVais perder tudo de "' + nome + '". Clica OK só se for mesmo para apagar.')) return;
+  if (!loja) return;
+  const nome = loja.nome || 'esta conta';
+  if (!(await janelaEliminar(loja))) return;
+  notif('A eliminar «' + nome + '»…');
   const { error } = await supabaseClient.rpc('eliminar_loja', { p_loja: id });
-  if (error) { notif('❌ Erro ao eliminar: ' + error.message + ' (corre o SQL v2.9.77)', true); return; }
+  if (error) { spapAviso('Não foi possível eliminar', error.message + '\n\nSe a função não existir, corre o SQL v2.9.77 no Supabase.', { icone: '⚠️' }); return; }
   lojas = lojas.filter(l => l.id !== id);
   renderContadores();
   renderLojas();
-  notif('🗑 Loja "' + nome + '" eliminada por completo.');
+  try { renderBancas(); } catch (e) {}
+  spapAviso('Conta eliminada', '«' + nome + '»' + (loja.email_dono ? ' (' + loja.email_dono + ')' : '') + ' foi eliminada por completo.', { icone: '<img src="icons3d/check.png" alt="" style="width:40px;height:40px">' });
 }
 
 // Expiração de cada plano: Básico e Pro = 30 dias; Anual = 1 ano de calendário (365 ou 366 dias).
