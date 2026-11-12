@@ -88,9 +88,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.41">
-<script src="banca-tema.js?v=3.7.41" defer></script>
-<script src="app-android.js?v=3.7.41" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.42">
+<script src="banca-tema.js?v=3.7.42" defer></script>
+<script src="app-android.js?v=3.7.42" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -631,8 +631,12 @@ function scanStock(){
 
 // ===== EDITAR PRODUTO: foto, nome, stock e preços =====
 let _gp=null, _gpModo='add', _gpImg=undefined;   // _gpImg: undefined = sem mudança · null = remover · 'data:…' = nova foto
+// fotos: todos os planos; o Super Admin pode desligar numa conta (quadrado «📷 Fotos» no painel)
+let _fotosOffBM=null;
+(async function(){ try{ const {data}=await supabaseClient.from('config_global').select('valor').eq('chave','fotos_desativadas').maybeSingle(); let v=data&&data.valor; try{v=JSON.parse(v);}catch(e){} _fotosOffBM=Array.isArray(v)?v.map(String):[]; }catch(e){ _fotosOffBM=[]; } })();
 function gpFoto(ev){
   const f=ev.target.files&&ev.target.files[0]; if(!f) return;
+  if(_fotosOffBM && sessao && _fotosOffBM.includes(String(sessao.lojaId))){ ev.target.value=''; toast('📷 As fotos estão desligadas nesta conta. Fala com o suporte.','erro'); return; }
   document.getElementById('gp-foto-estado').textContent='A preparar a foto…';
   const r=new FileReader();
   r.onload=e=>{ const img=new Image(); img.onload=()=>{

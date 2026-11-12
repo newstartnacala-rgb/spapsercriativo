@@ -21,7 +21,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.255"></script>
+<script src="spap-leitor.js?v=2.9.256"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -1117,7 +1117,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.255" defer></script>
+<script src="app-android.js?v=2.9.256" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -3804,14 +3804,14 @@ function renderRelatoriosSubPainel() {
 // CÂMERA E FICHEIRO — Cadastro de produto no monitor
 let imagemBase64 = null; // guarda a imagem carregada por ficheiro ou câmera
 
-// Imagens (camara/ficheiro) so no plano Avancado
-function imagensBloqueadas() { return lojaPlano !== 'anual'; }
+// Fotos dos produtos: todos os planos têm acesso. O Super Admin pode desligar as fotos de uma conta
+// no Painel de Administração (quadrado «📷 Fotos»); a lista das contas sem fotos fica em config_global.
+let _fotosDesligadas = null;
+(async function () { try { const { data } = await supabaseClient.from('config_global').select('valor').eq('chave', 'fotos_desativadas').maybeSingle();
+  let v = data && data.valor; try { v = JSON.parse(v); } catch (e) {} _fotosDesligadas = Array.isArray(v) ? v.map(String) : []; } catch (e) { _fotosDesligadas = []; } })();
+function imagensBloqueadas() { return !!(_fotosDesligadas && lojaId && _fotosDesligadas.includes(String(lojaId))); }
 async function avisarUpgradeImagem() {
-  const ver = await spapUpgrade({ titulo: 'Fotos dos produtos', icone: 'camera.png',
-    texto: 'Pôr fotos nos produtos (câmara e ficheiro) é uma função do plano Avançado.',
-    beneficios: ['Tirar <b>foto com a câmara</b> ou escolher do telemóvel', 'Fotos na <b>venda</b>, no <b>Top 10</b> e no stock', 'Produtos mais fáceis de encontrar'],
-    planos: ['Avançado'] });
-  if (ver) location.href = 'planos.html?upgrade=imagens';
+  await spapAviso('Fotos desligadas', 'As fotos dos produtos estão desligadas nesta conta. Fala com o suporte para as voltar a ligar.', { icone: '<img src="icons3d/camera.png" alt="" style="width:40px;height:40px">' });
 }
 function tentarImagemProduto(acao) {
   if (imagensBloqueadas()) { avisarUpgradeImagem(); return; }
@@ -6208,7 +6208,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.255';
+const MONITOR_VERSAO = '2.9.256';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });

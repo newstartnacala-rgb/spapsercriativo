@@ -8,7 +8,7 @@
 <script>
   // Painel sempre na versão mais recente: se o aparelho mostrar uma cópia antiga, recarrega a nova
   (function () {
-    var VER = '2.9.255';
+    var VER = '2.9.256';
     try {
       fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
         var nova = j && j.versao; if (!nova || nova === VER) return;
@@ -282,6 +282,12 @@ body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; c
 .el-can{background:#f1f5f9;color:#334155;}
 .el-ok{background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff;box-shadow:0 10px 22px rgba(220,38,38,.3);}
 .el-ok:disabled{background:#e2e8f0;color:#94a3b8;box-shadow:none;cursor:not-allowed;}
+/* Fotos por conta */
+.lc-fotos { display:flex; align-items:center; gap:10px; margin:0 12px 10px; padding:9px 12px; border-radius:12px; background:#f8fafc; border:1px solid #e2e8f0; cursor:pointer; font-size:12.5px; color:#334155; }
+.lc-fotos input { width:20px; height:20px; accent-color:#16a34a; margin:0; cursor:pointer; flex-shrink:0; }
+.lc-fotos i { display:none; }
+.lc-fotos b { color:#15803d; }
+.lc-fotos input:not(:checked) ~ span b { color:#b91c1c; }
 /* Contagem até expirar */
 .lc-conta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:0 12px 10px; padding:8px 12px; border-radius:12px; font-size:12.5px; font-weight:700; background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; }
 .lc-conta.aviso { background:#fffbeb; color:#b45309; border-color:#fde68a; }
@@ -892,6 +898,22 @@ function textoEstado(e) {
 }
 
 function ehBanca(l) { return (l && l.tipo_loja) === 'banca'; }
+// ===== Fotos dos produtos por conta (todas as contas têm fotos; aqui só se desliga) =====
+let _fotosOff = new Set();
+(async function () { const v = await lerConfig('fotos_desativadas'); _fotosOff = new Set((Array.isArray(v) ? v : []).map(String)); try { renderLojas(); renderBancas(); } catch (e) {} })();
+async function mudarFotos(id, el) {
+  const ligar = el.checked, l = lojas.find(x => String(x.id) === String(id));
+  const novo = new Set(_fotosOff); if (ligar) novo.delete(String(id)); else novo.add(String(id));
+  el.disabled = true;
+  try {
+    const { error } = await supabaseClient.from('config_global').upsert([{ chave: 'fotos_desativadas', valor: JSON.stringify([...novo]), atualizado_em: new Date().toISOString() }], { onConflict: 'chave' });
+    if (error) throw error;
+    _fotosOff = novo;
+    const sp = el.parentNode.querySelector('b'); if (sp) sp.textContent = ligar ? 'ligadas' : 'desligadas';
+    notif((ligar ? '📷 Fotos ligadas' : '🚫 Fotos desligadas') + ' — ' + ((l && l.nome) || 'conta'));
+  } catch (e) { el.checked = !ligar; spapAviso('Não foi possível guardar', String(e.message || e), { icone: '⚠️' }); }
+  el.disabled = false;
+}
 function lojaExpirou(l) { return ehBanca(l) ? bancaExpirada(l) : !!(l.data_expiracao && new Date(l.data_expiracao) <= new Date()); }
 // ===== Contagem até expirar (atualiza a cada segundo; para quando chega a zero) =====
 function _fmtConta(ms) {
@@ -1004,6 +1026,7 @@ function cartaoLoja(l) {
         </div>
       </div>
       ${contagemHtml(l)}
+      <label class="lc-fotos" onclick="event.stopPropagation()" title="Ligar ou desligar as fotos dos produtos nesta conta"><input type="checkbox" ${_fotosOff.has(String(l.id)) ? '' : 'checked'} onchange="mudarFotos('${l.id}', this)"><i></i><span>📷 Fotos dos produtos <b>${_fotosOff.has(String(l.id)) ? 'desligadas' : 'ligadas'}</b></span></label>
       <div id="body-${l.id}" style="display:none;">
         <div class="lc-info2">
           <div><span>📧</span>${l.email_dono ? String(l.email_dono).replace(/</g,'&lt;') : '<i>sem email registado</i>'}</div>
