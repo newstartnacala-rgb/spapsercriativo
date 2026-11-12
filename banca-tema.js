@@ -308,6 +308,7 @@
   function mt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
   function irPagamento(motivo) { location.href = 'planos-banca.html' + (motivo ? '?m=' + motivo : ''); }
   function verificarPlano() {
+    if (window.spapEuSuper && spapEuSuper()) return;   // o Super Admin está sempre activo, sem plano
     var s; try { s = sessao; } catch (e) { return; }
     if (!s || !s.lojaId || typeof supabaseClient === 'undefined') return;
     supabaseClient.from('lojas').select('plano,estado,data_expiracao,tipo_loja').eq('id', s.lojaId).maybeSingle().then(function (r) {

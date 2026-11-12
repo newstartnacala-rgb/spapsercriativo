@@ -4,10 +4,11 @@
 <meta charset="UTF-8">
 <script src="spap-migrar.js?v=1"></script>
 <script src="spap-bloqueio.js?v=2"></script>
+<script src="spap-dialogo.js?v=2"></script>
 <script>
   // Painel sempre na versão mais recente: se o aparelho mostrar uma cópia antiga, recarrega a nova
   (function () {
-    var VER = '2.9.243';
+    var VER = '2.9.244';
     try {
       fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
         var nova = j && j.versao; if (!nova || nova === VER) return;
@@ -855,6 +856,17 @@ async function escolherPlano(id, plano) {
   fecharEscolhaPlano();
   const loja = lojas.find(l => l.id === id); if (!loja) return;
   if (loja.plano === plano) return;
+  // Pergunta SEMPRE antes de mudar o plano (Lojas e Bancas)
+  {
+    const nm = { basico: 'Básico', pro: 'Pro', bronze: 'Pro', anual: 'Anual', banca_free: 'Grátis', banca_mensal: 'Mensal', banca_anual: 'Anual' };
+    const novaExp = calcularExpiracao(plano, new Date());
+    const ok = await spapConfirmar('Mudar o plano?',
+      '«' + (loja.nome || (ehBanca(loja) ? 'Banca' : 'Loja')) + '»' + (loja.email_dono ? '\n' + loja.email_dono : '')
+      + '\n\nDe: ' + (nm[loja.plano] || loja.plano || '—') + '\nPara: ' + (nm[plano] || plano)
+      + '\n\nO novo plano conta a partir de hoje: ' + diasDoPlano(plano) + ' dias, até ' + novaExp.toLocaleDateString('pt-PT') + '.',
+      { ok: 'Sim, mudar o plano', cancelar: 'Não', icone: '🔁' });
+    if (!ok) return;
+  }
   const antes = loja.plano;
   loja.plano = plano; renderLojas(); renderBancas();          // muda logo no ecrã
   // Novo plano = nova contagem a partir de hoje (30 dias, ou 1 ano no Anual)

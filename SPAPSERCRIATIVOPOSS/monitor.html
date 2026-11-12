@@ -21,7 +21,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.243"></script>
+<script src="spap-leitor.js?v=2.9.244"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -1041,7 +1041,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.243" defer></script>
+<script src="app-android.js?v=2.9.244" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -1838,7 +1838,7 @@ async function iniciar() {
     }
 
     // Bloqueio: loja não activa OU expirada não acede ao monitor — mostra pagamento
-    if (membros && membros.length > 0 && membros[0].papel === 'admin') {
+    if (membros && membros.length > 0 && membros[0].papel === 'admin' && !spapEuSuper()) {   // o Super Admin está sempre activo, sem plano
       const _est = (membros[0].lojas && membros[0].lojas.estado) || 'pendente';
       const _exp = (membros[0].lojas && membros[0].lojas.data_expiracao) ? new Date(membros[0].lojas.data_expiracao) : null;
       const _expirou = _exp && _exp < new Date();
@@ -1864,7 +1864,7 @@ async function iniciar() {
     }
 
     // Plano Básico não inclui o Monitor do Dono
-    if (((membros[0].lojas && membros[0].lojas.plano) || '') === 'basico') {
+    if (!spapEuSuper() && ((membros[0].lojas && membros[0].lojas.plano) || '') === 'basico') {
       try { if (window.fecharTelaCarregando) fecharTelaCarregando(); else document.getElementById('tela-carregando').style.display = 'none'; } catch(e) {}
       const verPlanos = await spapUpgrade({ titulo: 'O Monitor do Dono não está no seu plano', icone: 'barchart.png',
         texto: 'O seu plano atual é o Básico. Para acompanhar a loja à distância, escolha um plano com o Monitor.',
@@ -2195,6 +2195,7 @@ function mostrarAlertaExpiracao(dataExpira, estado) {
   const anterior = document.getElementById('banner-expiracao');
   if (anterior) anterior.remove();
   if (!dataExpira) return;
+  if (spapEuSuper()) return;   // o Super Admin não tem plano nem prazo
 
   const lojaAtiva = (estado || '').toLowerCase().includes('activ') || (estado || '').toLowerCase().includes('ativ');
 
@@ -5800,7 +5801,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.243';
+const MONITOR_VERSAO = '2.9.244';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });

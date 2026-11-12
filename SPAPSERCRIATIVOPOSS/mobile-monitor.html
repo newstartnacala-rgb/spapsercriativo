@@ -88,9 +88,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.31">
-<script src="banca-tema.js?v=3.7.31" defer></script>
-<script src="app-android.js?v=3.7.31" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.32">
+<script src="banca-tema.js?v=3.7.32" defer></script>
+<script src="app-android.js?v=3.7.32" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -428,6 +428,7 @@ let sessao=null, produtos=[], periodo='hoje', periodoDesc='hoje';
     if(window._souSuper) superPintarPilula();
     await carregarProdutos();
     await Promise.all([carregarResumo(), carregarDescontos()]);
+    ligarTempoRealBanca();
   }catch(e){ toast('Erro: '+(e.message||e),'erro'); }
   document.getElementById('carregando').style.display='none';
 })();
@@ -1038,6 +1039,54 @@ function superPedirCodigo(nome, email){
     ov.addEventListener('click',e=>{ if(e.target===ov) fim(false); });
     inp.focus();
   });
+}
+
+// ===== TEMPO REAL: o que a Banca envia aparece aqui em ~1 segundo =====
+// 1) Realtime do Supabase (instantâneo); 2) reserva: uma verificação leve a cada segundo, com a app aberta.
+let _trCanal=null, _trTimer=null, _trEspera=null, _trProd=false, _trUltimo=null, _trAVer=false;
+function _trAtualizar(comProdutos){
+  if(comProdutos) _trProd=true;
+  clearTimeout(_trEspera);
+  _trEspera=setTimeout(async ()=>{
+    const p=_trProd; _trProd=false;
+    try{ if(p) await carregarProdutos(); await Promise.all([carregarResumo(), carregarDescontos()]); }catch(e){}
+    try{ const ti=document.getElementById('tela-inventario'); if(ti && ti.classList.contains('ativa') && !Object.keys(_invCont||{}).length) renderInventario(); }catch(e){}
+  }, 200);
+}
+function ligarTempoRealBanca(){
+  if(!sessao || !sessao.lojaId) return;
+  const loja=sessao.lojaId;
+  try{
+    if(_trCanal){ supabaseClient.removeChannel && supabaseClient.removeChannel(_trCanal); _trCanal=null; }
+    if(supabaseClient.channel){
+      let c=supabaseClient.channel('banca-monitor-'+loja+'-'+Date.now());
+      ['vendas','venda_itens','produtos','perdas','entregas','descontos','despachos','devolucoes'].forEach(t=>{
+        c=c.on('postgres_changes',{event:'*',schema:'public',table:t,filter:'loja_id=eq.'+loja}, ()=>_trAtualizar(t!=='vendas' && t!=='descontos' && t!=='entregas'));
+      });
+      c=c.on('postgres_changes',{event:'INSERT',schema:'public',table:'atividade_log',filter:'loja_id=eq.'+loja}, ()=>{ try{ spapAvisosVerificar(); }catch(e){} });
+      _trCanal=c.subscribe();
+    }
+  }catch(e){}
+  // reserva (se o Realtime não estiver ligado no Supabase): 1 verificação por segundo, só com a app à vista
+  if(!_trTimer){
+    _trTimer=setInterval(async ()=>{
+      if(document.hidden || _trAVer || !sessao || !sessao.lojaId || navigator.onLine===false) return;
+      _trAVer=true;
+      try{
+        const id=sessao.lojaId;
+        const [v,a]=await Promise.all([
+          supabaseClient.from('vendas').select('id,criado_em').eq('loja_id',id).order('criado_em',{ascending:false}).limit(1),
+          supabaseClient.from('atividade_log').select('id').eq('loja_id',id).order('criado_em',{ascending:false}).limit(1)]);
+        const marca=id+'|'+((v.data&&v.data[0]&&v.data[0].id)||'')+'|'+((a.data&&a.data[0]&&a.data[0].id)||'');
+        if(_trUltimo!==null && marca!==_trUltimo){
+          if(_trUltimo.split('|')[0]===id){ _trAtualizar(true); try{ spapAvisosVerificar(); }catch(e){} }
+        }
+        _trUltimo=marca;
+      }catch(e){} finally{ _trAVer=false; }
+    }, 1000);
+    document.addEventListener('visibilitychange',()=>{ if(!document.hidden) _trAtualizar(true); });
+    addEventListener('online',()=>_trAtualizar(true));
+  }
 }
 // ===== FOLHAS / MENU =====
 function abrirFolha(id){ document.getElementById(id).classList.add('ativa'); }
