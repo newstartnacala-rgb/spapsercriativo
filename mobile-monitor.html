@@ -88,9 +88,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.35">
-<script src="banca-tema.js?v=3.7.35" defer></script>
-<script src="app-android.js?v=3.7.35" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.36">
+<script src="banca-tema.js?v=3.7.36" defer></script>
+<script src="app-android.js?v=3.7.36" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -317,9 +317,20 @@
 <!-- ===== FOLHA: GERIR PRODUTO (stock e preços) ===== -->
 <div class="folha-fundo" id="folha-gerir">
   <div class="folha">
-    <div class="cab"><h3>📦 Gerir produto</h3><button onclick="fecharFolha('folha-gerir')">✕</button></div>
+    <div class="cab"><h3>✏️ Editar produto</h3><button onclick="fecharFolha('folha-gerir')">✕</button></div>
     <div class="conteudo">
-      <div class="gp-cab"><div class="gp-img" id="gp-img"></div><div class="gp-info"><b id="gp-nome"></b><small id="gp-atual"></small></div></div>
+      <div class="gp-cab"><div class="gp-img" id="gp-img" onclick="document.getElementById('gp-foto-gal').click()" title="Mudar a foto"></div><div class="gp-info"><b id="gp-nome"></b><small id="gp-atual"></small></div></div>
+      <div class="gp-sec">Foto do produto</div>
+      <div class="gp-foto">
+        <button type="button" onclick="document.getElementById('gp-foto-cam').click()"><span>📷</span>Tirar foto</button>
+        <button type="button" onclick="document.getElementById('gp-foto-gal').click()"><span>🖼️</span>Galeria</button>
+        <button type="button" class="gp-foto-tirar" id="gp-foto-rem" onclick="gpRemoverFoto()"><span>🗑️</span>Remover</button>
+        <input type="file" id="gp-foto-cam" accept="image/*" capture="environment" hidden onchange="gpFoto(event)">
+        <input type="file" id="gp-foto-gal" accept="image/*" hidden onchange="gpFoto(event)">
+      </div>
+      <div class="gp-foto-estado" id="gp-foto-estado"></div>
+      <div class="gp-sec">Nome do produto</div>
+      <div class="campo"><input id="gp-nome-in" type="text" maxlength="80" placeholder="Nome do produto" autocomplete="off"></div>
       <div class="gp-sec">Stock</div>
       <div class="gp-modo" role="tablist">
         <button type="button" class="on" id="gp-m-add" onclick="gpModo('add')">Acrescentar</button>
@@ -575,13 +586,39 @@ function scanStock(){
   });
 }
 
-// ===== GERIR PRODUTO: janela com stock e preços =====
-let _gp=null, _gpModo='add';
+// ===== EDITAR PRODUTO: foto, nome, stock e preços =====
+let _gp=null, _gpModo='add', _gpImg=undefined;   // _gpImg: undefined = sem mudança · null = remover · 'data:…' = nova foto
+function gpFoto(ev){
+  const f=ev.target.files&&ev.target.files[0]; if(!f) return;
+  document.getElementById('gp-foto-estado').textContent='A preparar a foto…';
+  const r=new FileReader();
+  r.onload=e=>{ const img=new Image(); img.onload=()=>{
+    const MAX=480; let w=img.width,h=img.height;
+    if(w>MAX||h>MAX){ if(w>=h){h=Math.round(h*MAX/w);w=MAX;} else {w=Math.round(w*MAX/h);h=MAX;} }
+    const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
+    _gpImg=c.toDataURL('image/jpeg',0.72);
+    document.getElementById('gp-img').innerHTML='<img src="'+_gpImg+'" alt="">';
+    document.getElementById('gp-foto-rem').hidden=false;
+    document.getElementById('gp-foto-estado').innerHTML='✅ Foto nova pronta — toca em <b>Guardar alterações</b>.';
+  }; img.onerror=()=>{ document.getElementById('gp-foto-estado').textContent='Não foi possível abrir esta imagem.'; }; img.src=e.target.result; };
+  r.readAsDataURL(f);
+}
+function gpRemoverFoto(){
+  _gpImg=null;
+  document.getElementById('gp-img').innerHTML='<span class="gp-sem-foto">📷<small>Sem foto</small></span>';
+  document.getElementById('gp-foto-rem').hidden=true;
+  document.getElementById('gp-foto-estado').innerHTML='A foto vai ser removida ao <b>Guardar alterações</b>.';
+}
 function gerirProduto(id){
   const p=produtos.find(x=>x.id===id); if(!p) return;
   _gp=p;
   document.getElementById('gp-nome').textContent=p.nome;
-  document.getElementById('gp-img').innerHTML=p.imagem?'<img src="'+p.imagem+'" alt="">':'🛒';
+  _gpImg=undefined;
+  document.getElementById('gp-img').innerHTML=p.imagem?'<img src="'+p.imagem+'" alt="">':'<span class="gp-sem-foto">📷<small>Sem foto</small></span>';
+  document.getElementById('gp-nome-in').value=p.nome||'';
+  document.getElementById('gp-foto-rem').hidden=!p.imagem;
+  document.getElementById('gp-foto-estado').textContent=p.imagem?'':'Este produto ainda não tem foto — tira uma ou escolhe da galeria.';
+  ['gp-foto-cam','gp-foto-gal'].forEach(i=>{ document.getElementById(i).value=''; });
   document.getElementById('gp-atual').textContent='Stock actual: '+(parseInt(p.stock)||0)+' · Preço: '+fmt(p.preco);
   document.getElementById('gp-preco').value=p.preco!=null?p.preco:'';
   document.getElementById('gp-compra').value=p.preco_compra!=null?p.preco_compra:'';
@@ -607,12 +644,19 @@ async function gpGuardar(){
   const novo=gpNovoStock(), preco=parseFloat(document.getElementById('gp-preco').value), compra=parseFloat(document.getElementById('gp-compra').value);
   if(novo<0){ toast('O stock não pode ficar negativo','erro'); return; }
   if(isNaN(preco)||preco<0){ toast('Escreva o preço de venda','erro'); return; }
+  const nome=(document.getElementById('gp-nome-in').value||'').replace(/\s+/g,' ').trim();
+  if(!nome){ toast('Escreva o nome do produto','erro'); return; }
+  if(nome.toLowerCase()!==String(_gp.nome||'').toLowerCase() && produtos.some(x=>x.id!==_gp.id && String(x.nome||'').toLowerCase()===nome.toLowerCase())){ toast('Já existe um produto com esse nome','erro'); return; }
   const dados={ stock:novo, preco:preco, preco_compra:isNaN(compra)?null:compra };
+  if(nome!==_gp.nome) dados.nome=nome;
+  if(_gpImg!==undefined) dados.imagem=_gpImg;
   const b=document.getElementById('gp-guardar'); b.disabled=true; b.textContent='A guardar…';
   try{
     const { error }=await supabaseClient.from('produtos').update(dados).eq('id',_gp.id);
     if(error) throw error;
-    Object.assign(_gp,dados); renderProdutos(); fecharFolha('folha-gerir'); toast('✅ '+_gp.nome+': stock '+novo,'ok');
+    Object.assign(_gp,dados); renderProdutos(); fecharFolha('folha-gerir');
+    try{ registarAtividadeBanca && registarAtividadeBanca('Editou produto', _gp.nome); }catch(e){}
+    toast('✅ '+_gp.nome+' guardado'+(dados.imagem!==undefined?' (com foto)':'')+' · stock '+novo,'ok');
   }catch(e){ toast('Erro: '+(e.message||e),'erro'); }
   b.disabled=false; b.textContent='💾 Guardar alterações';
 }
@@ -691,13 +735,13 @@ async function carregarResumo(){
   let vendas=[];
   try{
     let q = supabaseClient.from('vendas')
-      .select('id,numero_do_dia,total,criado_em,vendedor_codigo, venda_itens(produto_nome,qtd,preco_unitario)')
+      .select('id,numero_do_dia,total,metodo,criado_em,vendedor_codigo, venda_itens(produto_nome,qtd,preco_unitario)')
       .eq('loja_id',sessao.lojaId).gte('criado_em',r.ini.toISOString());
     if(r.fim) q = q.lt('criado_em', r.fim.toISOString());
     let qd = supabaseClient.from('descontos').select('produto_nome,preco_original,preco_novo,quantidade,criado_em').eq('loja_id',sessao.lojaId).gte('criado_em',r.ini.toISOString());
     if(r.fim) qd = qd.lt('criado_em', r.fim.toISOString());
     const [{ data }, rd] = await Promise.all([ q.order('criado_em',{ascending:false}).limit(500), qd.limit(2000).then(x=>x,()=>({})) ]);
-    vendas=data||[];
+    vendas=normVendas(data||[]);
     marcarDescontos(vendas, (rd&&rd.data)||[]);
   }catch(e){}
   window._vendasResumo = vendas;
@@ -721,6 +765,10 @@ async function carregarResumo(){
     const dt=new Date(v.criado_em).toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
     const nit=(v.venda_itens||[]).reduce((s,i)=>s+(parseFloat(i.qtd)||0),0);
     const d=v._desc||0;
+    if(v._ret){ const nomes=(v.venda_itens||[]).map(i=>esc(i.produto_nome)).join(', '), un=(v.venda_itens||[]).reduce((s,i)=>s+Math.abs(parseFloat(i.qtd)||0),0);
+      return `<div class="row venda-row com-ret" onclick="verVendaMonitor('${v.id}')"><div class="ph">↩️</div>
+      <div class="in"><div class="nn">Retorno <span class="tag-ret">↩️ RETORNO</span></div><div class="mt">${dt} · ${nomes||'produto'} · ${un} un.${v.vendedor_codigo?(' · '+esc(v.vendedor_codigo)):''}</div></div>
+      <div class="vv">− ${fmt(Math.abs(parseFloat(v.total)||0))}</div></div>`; }
     return `<div class="row venda-row${d>0?' com-desc':''}" onclick="verVendaMonitor('${v.id}')"><div class="ph">🧾</div>
       <div class="in"><div class="nn">Venda nº ${v.numero_do_dia||'-'} ${d>0?`<span class="tag-desc">🏷️ desconto −${fmt(d).replace('MT ','')}</span>`:''}</div><div class="mt">${dt} · ${nit} item(s)${v.vendedor_codigo?(' · '+esc(v.vendedor_codigo)):''}</div></div>
       <div class="vv">${fmt(v.total)}</div></div>`;
@@ -799,21 +847,37 @@ async function carregarDescontos(){
 
 
 // ===== DESCONTOS LIGADOS ÀS VENDAS (a venda e o desconto têm a mesma hora) =====
+// Retornos: o formato antigo («Produto (devolução)», qtd +, preço −) passa ao novo (nome do produto, qtd −, preço +).
+// Assim o lucro de cada retorno = −(dinheiro devolvido − custo do produto que voltou ao stock): o equilíbrio fica certo.
+function normVendas(vs){
+  (vs||[]).forEach(v=>{
+    (v.venda_itens||[]).forEach(it=>{
+      const n=String(it.produto_nome||'');
+      if(/ \(devolu[çc][ãa]o\)$/i.test(n)){ it.produto_nome=n.replace(/ \(devolu[çc][ãa]o\)$/i,''); it.qtd=-Math.abs(parseFloat(it.qtd)||0); it.preco_unitario=Math.abs(parseFloat(it.preco_unitario)||0); }
+      if((parseFloat(it.qtd)||0)<0) it._ret=true;
+    });
+    v._ret = v.metodo==='Devolução' || (parseFloat(v.total)||0)<0 || (v.venda_itens||[]).some(i=>i._ret);
+  });
+  return vs;
+}
 function marcarDescontos(vendas, desc){
   const m={}; desc.forEach(d=>{ m[new Date(d.criado_em).getTime()+'|'+(d.produto_nome||'')]=d; });
   vendas.forEach(v=>{ const t=new Date(v.criado_em).getTime(); let tot=0;
     (v.venda_itens||[]).forEach(it=>{ const d=m[t+'|'+(it.produto_nome||'')]; const pr=parseFloat(it.preco_unitario)||0;
-      if(d && (parseFloat(d.preco_original)||0)>pr){ it._orig=parseFloat(d.preco_original); tot+=(it._orig-pr)*(parseFloat(it.qtd)||0); } });
+      if(d && !it._ret && (parseFloat(d.preco_original)||0)>pr){ it._orig=parseFloat(d.preco_original); tot+=(it._orig-pr)*(parseFloat(it.qtd)||0); } });
     v._desc=Math.round(tot*100)/100; });
 }
 function verVendaMonitor(id){
   const v=(window._vendasResumo||[]).find(x=>String(x.id)===String(id)); if(!v) return;
   const its=v.venda_itens||[], d=v._desc||0;
-  mostrarInfo('🧾 Venda nº '+(v.numero_do_dia||'—'),
-    (d>0?'<div class="aviso-desc">🏷️ Nesta venda o balconista deu <b>'+fmt(d)+'</b> de desconto.</div>':'')
+  const _cd={}; produtos.forEach(x=>{ _cd[(x.nome||'').toLowerCase()]=parseFloat(x.preco_compra)||0; });
+  const _lucroRet = v._ret ? its.reduce((s,it)=>s+((parseFloat(it.preco_unitario)||0)-(_cd[(it.produto_nome||'').toLowerCase()]||0))*Math.abs(parseFloat(it.qtd)||0),0) : 0;
+  mostrarInfo(v._ret ? '↩️ Retorno' : '🧾 Venda nº '+(v.numero_do_dia||'—'),
+    (v._ret?'<div class="aviso-ret">↩️ <b>Produto devolvido pelo cliente.</b> Foram devolvidos <b>'+fmt(Math.abs(parseFloat(v.total)||0))+'</b>, o produto voltou ao stock e o lucro baixou <b>'+fmt(_lucroRet)+'</b>.</div>':'')
+    +(d>0?'<div class="aviso-desc">🏷️ Nesta venda o balconista deu <b>'+fmt(d)+'</b> de desconto.</div>':'')
     +'<table class="bv-tab"><thead><tr><th>Produto</th><th class="n">Qtd</th><th class="n">Preço</th><th class="n">Subtotal</th></tr></thead><tbody>'
     +its.map(it=>{ const pr=parseFloat(it.preco_unitario)||0, q=parseFloat(it.qtd)||0;
-      return '<tr class="'+(it._orig?'desc':'')+'"><td>'+esc(it.produto_nome)+(it._orig?'<small>'+fmt(it._orig)+' − '+fmt(it._orig-pr).replace('MT ','')+' = '+fmt(pr)+'</small>':'')+'</td><td class="n">'+q+'</td><td class="n">'+fmt(pr).replace('MT ','')+'</td><td class="n"><b>'+fmt(pr*q).replace('MT ','')+'</b></td></tr>'; }).join('')
+      return '<tr class="'+(it._ret?'ret':(it._orig?'desc':''))+'"><td>'+esc(it.produto_nome)+(it._ret?'<small>↩️ RETORNO</small>':'')+(it._orig?'<small>'+fmt(it._orig)+' − '+fmt(it._orig-pr).replace('MT ','')+' = '+fmt(pr)+'</small>':'')+'</td><td class="n">'+q+'</td><td class="n">'+fmt(pr).replace('MT ','')+'</td><td class="n"><b>'+fmt(pr*q).replace('MT ','')+'</b></td></tr>'; }).join('')
     +'</tbody></table><div class="bv-info"><div><span>Data e hora</span><b>'+new Date(v.criado_em).toLocaleString('pt-PT')+'</b></div>'
     +(v.vendedor_codigo?'<div><span>Balconista</span><b>'+esc(v.vendedor_codigo)+'</b></div>':'')
     +(d>0?'<div><span>Sem desconto seria</span><b>'+fmt((parseFloat(v.total)||0)+d)+'</b></div><div><span>🏷️ Descontado</span><b style="color:#b45309">− '+fmt(d)+'</b></div>':'')
@@ -835,7 +899,7 @@ async function mFinancas(p){
       per(supabaseClient.from('descontos').select('produto_nome,preco_original,preco_novo,quantidade,criado_em')).limit(3000),
       per(supabaseClient.from('perdas').select('produto_id,produto_nome,quantidade,estado,criado_em')).limit(3000),
       per(supabaseClient.from('entregas').select('total_entregue,gastos,num_vendas,criado_em,vendedor_codigo')).limit(500) ].map(x=>x.then(y=>y,()=>({}))));
-    vendas=res[0].data||[]; desc=res[1].data||[]; perdas=res[2].data||[]; ent=res[3].data||[];
+    vendas=normVendas(res[0].data||[]); desc=res[1].data||[]; perdas=res[2].data||[]; ent=res[3].data||[];
   }catch(e){}
   const custo={}, custoId={}; produtos.forEach(x=>{ custo[(x.nome||'').toLowerCase()]=parseFloat(x.preco_compra)||0; custoId[x.id]=parseFloat(x.preco_compra)||0; });
   let vendido=0, custoVend=0;
@@ -844,6 +908,8 @@ async function mFinancas(p){
   const perdaVal=perdas.filter(x=>x.estado!=='rejeitado').reduce((s,x)=>s+(custoId[x.produto_id]!=null?custoId[x.produto_id]:(custo[(x.produto_nome||'').toLowerCase()]||0))*(parseFloat(x.quantidade)||0),0);
   const entregue=ent.reduce((s,e)=>s+(parseFloat(e.total_entregue)||0),0), gastos=ent.reduce((s,e)=>s+(parseFloat(e.gastos)||0),0);
   const lucroBruto=vendido-custoVend, lucroLiq=lucroBruto-perdaVal-gastos;
+  const _rets=vendas.filter(v=>v._ret), devolvido=_rets.reduce((t,v)=>t+Math.abs(parseFloat(v.total)||0),0);
+  const lucroRet=_rets.reduce((t,v)=>t+(v.venda_itens||[]).reduce((u,it)=>u+((parseFloat(it.preco_unitario)||0)-(custo[(it.produto_nome||'').toLowerCase()]||0))*Math.abs(parseFloat(it.qtd)||0),0),0);
   const invest=produtos.reduce((s,x)=>s+Math.max(0,parseInt(x.stock)||0)*(parseFloat(x.preco_compra)||0),0);
   const valorVenda=produtos.reduce((s,x)=>s+Math.max(0,parseInt(x.stock)||0)*(parseFloat(x.preco)||0),0);
   const semCusto=produtos.filter(x=>!(parseFloat(x.preco_compra)>0)).length;
@@ -859,6 +925,7 @@ async function mFinancas(p){
     +card('','📦 Custo do que vendeu',fmt(custoVend))
     +card('verde','📈 Lucro bruto',fmt(lucroBruto))
     +card('amarelo','🏷️ Descontos dados','− '+fmt(descontado))
+    +(_rets.length?card('vermelho','↩️ Retornos ('+_rets.length+')','− '+fmt(devolvido),'lucro retirado: '+fmt(lucroRet)):'')
     +card('vermelho','📉 Perdas (custo)','− '+fmt(perdaVal))
     +card((lucroLiq<0?'vermelho':'verde')+' largo','✅ Lucro líquido',fmt(lucroLiq),'lucro bruto − perdas − gastos')
     +'</div><div class="bv-sec"><span>🏦 Stock agora</span><small>'+produtos.length+' produtos</small></div><div class="bv-cards">'
@@ -967,7 +1034,7 @@ async function carregarTop10(vendasHoje){
   let vs=vendasHoje;
   if(!vs){ try{ const ini=new Date(); ini.setHours(0,0,0,0);
       const { data }=await supabaseClient.from('vendas').select('id,total,criado_em, venda_itens(produto_nome,qtd,preco_unitario)').eq('loja_id',sessao.lojaId).gte('criado_em',ini.toISOString()).limit(1000);
-      vs=data||[]; }catch(e){ vs=[]; } }
+      vs=normVendas(data||[]); }catch(e){ vs=[]; } }
   window._t10vs=vs;
   const c={};
   vs.forEach(v=>(v.venda_itens||[]).forEach(it=>{ const n=it.produto_nome||'Produto', q=parseFloat(it.qtd)||0; if(q<=0) return; c[n]=c[n]||{qtd:0,total:0}; c[n].qtd+=q; c[n].total+=q*(parseFloat(it.preco_unitario)||0); }));
@@ -1230,7 +1297,7 @@ function linhaKV(k,v,cor){ return '<div class="row"><div class="in"><div class="
 // ===== RELATÓRIO / VISÃO GERAL =====
 async function _totaisPeriodo(p){
   const r=rangePeriodo(p); let vendas=[];
-  try{ let q=supabaseClient.from('vendas').select('total,criado_em, venda_itens(produto_nome,qtd,preco_unitario)').eq('loja_id',sessao.lojaId).gte('criado_em',r.ini.toISOString()); if(r.fim) q=q.lt('criado_em',r.fim.toISOString()); const {data}=await q.limit(2000); vendas=data||[]; }catch(e){}
+  try{ let q=supabaseClient.from('vendas').select('total,criado_em, venda_itens(produto_nome,qtd,preco_unitario)').eq('loja_id',sessao.lojaId).gte('criado_em',r.ini.toISOString()); if(r.fim) q=q.lt('criado_em',r.fim.toISOString()); const {data}=await q.limit(2000); vendas=normVendas(data||[]); }catch(e){}
   const custoDe={}; produtos.forEach(x=>custoDe[(x.nome||'').toLowerCase()]=parseFloat(x.preco_compra)||0);
   let total=0,lucro=0,n=vendas.length;
   vendas.forEach(v=>{ total+=parseFloat(v.total)||0; (v.venda_itens||[]).forEach(it=>{ const pv=parseFloat(it.preco_unitario)||0,q=parseFloat(it.qtd)||0; lucro+=(pv-(custoDe[(it.produto_nome||'').toLowerCase()]||0))*q; }); });

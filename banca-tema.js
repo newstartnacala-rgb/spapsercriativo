@@ -611,3 +611,33 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar); else iniciar();
 })();
+
+/* ===== Botão «Atualizar» no topo (Banca e Monitor da Banca) — sem precisar de minimizar a app ===== */
+(function () {
+  var SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>';
+  function atualizar(btn) {
+    if (btn.classList.contains('gira')) return;
+    btn.classList.add('gira');
+    if (navigator.onLine === false) {
+      // sem internet: recarrega só os dados guardados neste telemóvel
+      try { if (typeof atualizarDados === 'function') atualizarDados(); else if (typeof renderProdutos === 'function') renderProdutos(); } catch (e) {}
+      try { (window.toast || function () {})('Sem internet — mostrámos os dados deste telemóvel.', 'erro'); } catch (e) {}
+      setTimeout(function () { btn.classList.remove('gira'); }, 900);
+      return;
+    }
+    // com internet: recarrega a página toda (dados e versão mais recentes)
+    setTimeout(function () { location.reload(); }, 250);
+  }
+  function por() {
+    document.querySelectorAll('.tp-acoes').forEach(function (a) {
+      if (a.querySelector('.tp-refresh')) return;
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'tp-refresh'; b.title = 'Atualizar'; b.setAttribute('aria-label', 'Atualizar a página');
+      b.innerHTML = SVG;
+      b.addEventListener('click', function () { atualizar(b); });
+      var net = a.querySelector('.tp-net');
+      if (net && net.nextSibling) a.insertBefore(b, net.nextSibling); else a.insertBefore(b, a.firstChild);
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', por); else por();
+})();

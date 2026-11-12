@@ -112,9 +112,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="Banca e Vendas">
-<link rel="stylesheet" href="banca-tema.css?v=3.7.35">
-<script src="banca-tema.js?v=3.7.35" defer></script>
-<script src="app-android.js?v=3.7.35" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.36">
+<script src="banca-tema.js?v=3.7.36" defer></script>
+<script src="app-android.js?v=3.7.36" defer></script>
 </head>
 <body>
 
@@ -397,7 +397,7 @@
 <script src="supabase-config.js"></script>
 <script src="spap-suporte.js?v=1"></script>
 <script src="spap-avisos.js?v=5"></script>
-<script src="banca-offline.js?v=3.7.35"></script>
+<script src="banca-offline.js?v=3.7.36"></script>
 <script>
 // ===================== ESTADO =====================
 let sessao = null;        // { lojaId, nomeLoja, userId, vendedor }
@@ -733,7 +733,10 @@ async function proximoNumeroDia(){
 // ===================== RECIBO + DESEMPENHO DO BALCONISTA =====================
 let ultimaVenda = null;
 let _vendasHoje = [];     // [{ id, numeroDia, total, recebido, troco, itens:[{nome,qtd,preco,precoOriginal}], data, pendente }]
-function _vdDesc(v){ return (v.itens||[]).reduce((s,i)=>s+(i.precoOriginal ? (i.precoOriginal-i.preco)*i.qtd : 0),0); }
+function _vdDesc(v){ return (v.itens||[]).reduce((s,i)=>s+(i.precoOriginal && i.qtd>0 ? (i.precoOriginal-i.preco)*i.qtd : 0),0); }
+// Retornos: antigos («Produto (devolução)», qtd +, preço −) passam ao formato novo (nome do produto, qtd −, preço +)
+function _itemNorm(it){ const n=String(it.nome||''); if(/ \(devolu[çc][ãa]o\)$/i.test(n)) return Object.assign({}, it, { nome:n.replace(/ \(devolu[çc][ãa]o\)$/i,''), qtd:-Math.abs(it.qtd||0), preco:Math.abs(it.preco||0), ret:true }); return (it.qtd<0) ? Object.assign({}, it, { ret:true }) : it; }
+function _ehRet(v){ return !!(v.devolucao || v.total < 0 || (v.itens||[]).some(i => i.ret || i.qtd < 0)); }
 function _balc(){ const v = sessao && sessao.vendedor; return v ? (/^balconista/i.test(v) ? v : 'Balconista ' + v) : ''; }
 function _vdHora(d){ return new Date(d).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'}); }
 
@@ -743,12 +746,12 @@ async function carregarVendasHoje(){
   const mapa = {};
   bancaVendasDoDia(lojaId).forEach(v => {
     if (meu && v.vendedor && v.vendedor !== meu) return;
-    mapa[v.id] = { id:v.id, numeroDia:v.numero, total:parseFloat(v.total)||0, recebido:v.recebido, troco:v.troco, itens:v.itens||null, data:new Date(v.criado), pendente:true };
+    mapa[v.id] = { id:v.id, numeroDia:v.numero, total:parseFloat(v.total)||0, recebido:v.recebido, troco:v.troco, itens:(v.itens||[]).map(_itemNorm), data:new Date(v.criado), pendente:true, devolucao:!!v.devolucao };
   });
   if (navigator.onLine !== false) {
     try {
       const hoje = new Date(); hoje.setHours(0,0,0,0);
-      let q = supabaseClient.from('vendas').select('id,numero_do_dia,total,recebido,troco,criado_em,vendedor_codigo, venda_itens(produto_nome,qtd,preco_unitario)')
+      let q = supabaseClient.from('vendas').select('id,numero_do_dia,total,recebido,troco,metodo,criado_em,vendedor_codigo, venda_itens(produto_nome,qtd,preco_unitario)')
         .eq('loja_id', lojaId).gte('criado_em', hoje.toISOString());
       if (meu) q = q.eq('vendedor_codigo', meu);
       const [rv, rd] = await Promise.race([ Promise.all([ q.order('criado_em',{ascending:false}).limit(500),
@@ -758,20 +761,22 @@ async function carregarVendasHoje(){
       ((rv && rv.data) || []).forEach(v => {
         const loc = mapa[v.id], t = new Date(v.criado_em).getTime();
         const itens = (v.venda_itens||[]).map(it => { const po = desc[t + '|' + (it.produto_nome||'')]; const pr = parseFloat(it.preco_unitario)||0;
-          return { nome: it.produto_nome, qtd: parseFloat(it.qtd)||0, preco: pr, precoOriginal: po && po > pr ? po : null }; });
+          return _itemNorm({ nome: it.produto_nome, qtd: parseFloat(it.qtd)||0, preco: pr, precoOriginal: po && po > pr ? po : null }); });
         mapa[v.id] = { id:v.id, numeroDia:v.numero_do_dia, total:parseFloat(v.total)||0, recebido: v.recebido!=null?parseFloat(v.recebido):(loc&&loc.recebido), troco: v.troco!=null?parseFloat(v.troco):(loc&&loc.troco),
-          itens: (loc && loc.itens && loc.itens.length) ? loc.itens : itens, data:new Date(v.criado_em), pendente:false };
+          itens: (loc && loc.itens && loc.itens.length) ? loc.itens : itens, data:new Date(v.criado_em), pendente:false, devolucao: !!((loc && loc.devolucao) || v.metodo === 'Devolução') };
       });
     } catch(e){}
   }
   // as que ainda estão na fila continuam «por enviar»
   const naFila = new Set(); bancaFila().forEach(op => (op.passos||[]).forEach(p => { if (p.t==='insert' && p.tabela==='vendas' && !p.feito) (p.linhas||[]).forEach(l => naFila.add(l.id)); }));
-  _vendasHoje = Object.values(mapa).map(v => (v.pendente = naFila.has(v.id), v)).sort((a,b) => b.data - a.data);
+  _vendasHoje = Object.values(mapa).map(v => (v.pendente = naFila.has(v.id), v.ret = _ehRet(v), v)).sort((a,b) => b.data - a.data);
   return _vendasHoje;
 }
 
 function htmlDesempenho(lista){
-  const normais = lista.filter(v => v.total >= 0);
+  const normais = lista.filter(v => !v.ret);
+  const rets = lista.filter(v => v.ret), valRet = rets.reduce((s,v)=>s+Math.abs(v.total),0);
+  const unRet = rets.reduce((s,v)=>s+(v.itens||[]).reduce((t,i)=>t+Math.abs(i.qtd),0),0);
   const total = lista.reduce((s,v)=>s+v.total,0);
   const desc = lista.reduce((s,v)=>s+_vdDesc(v),0);
   const prod = {};
@@ -782,6 +787,7 @@ function htmlDesempenho(lista){
       <div class="bv-card verde"><div class="l">🧾 Vendas feitas</div><div class="v">${normais.length}</div></div>
       <div class="bv-card"><div class="l">📦 Unidades vendidas</div><div class="v">${nItens}</div></div>
       ${desc>0?`<div class="bv-card amarelo largo"><div class="l">🏷️ Descontos dados hoje</div><div class="v">− ${fmt(desc)}</div></div>`:''}
+      ${rets.length?`<div class="bv-card vermelho largo"><div class="l">↩️ Retornos hoje (${unRet} un.)</div><div class="v">− ${fmt(valRet)}</div></div>`:''}
     </div>
     <div class="bv-sec"><span>🏆 O que vendeu hoje</span><small>${tops.length} produto${tops.length===1?'':'s'}</small></div>
     ${tops.length ? tops.map((p,i)=>`<div class="bv-top"><div class="pos">${i+1}</div><div style="flex:1;min-width:0">
@@ -792,7 +798,12 @@ function htmlDesempenho(lista){
 }
 function htmlListaVendas(lista){
   if (!lista.length) return '<div class="bv-vazio">Ainda não há vendas hoje.</div>';
-  return lista.map(v => { const d = _vdDesc(v), n = (v.itens||[]).reduce((s,i)=>s+i.qtd,0);
+  return lista.map(v => { const d = _vdDesc(v), n = (v.itens||[]).reduce((s,i)=>s+Math.abs(i.qtd),0);
+    if (v.ret) { const nomes = (v.itens||[]).map(i => esc(i.nome)).join(', ');
+      return `<div class="bv-venda ret" onclick="verVenda('${v.id}')"><div class="ic">↩️</div>
+      <div class="in"><div class="t">Retorno${nomes?' · '+nomes:''}</div>
+      <div class="s">🕒 ${_vdHora(v.data)} · ${n} un. <span class="tag-ret">↩️ RETORNO −${fmt(Math.abs(v.total)).replace('MT ','')}</span> ${v.pendente?'<span class="bv-pend">⏳ por enviar</span>':''}</div></div>
+      <div class="vv">− ${fmt(Math.abs(v.total))}</div></div>`; }
     return `<div class="bv-venda${d>0?' desc':''}" onclick="verVenda('${v.id}')"><div class="ic">🧾</div>
       <div class="in"><div class="t">Venda nº ${v.numeroDia||'—'}</div>
       <div class="s">🕒 ${_vdHora(v.data)} · ${n} item(s) ${d>0?`<span class="tag-desc">🏷️ −${fmt(d).replace('MT ','')}</span>`:''} ${v.pendente?'<span class="bv-pend">⏳ por enviar</span>':''}</div></div>
@@ -853,11 +864,13 @@ function verVenda(id){
   const v = _vendasHoje.find(x => x.id === id); if (!v) return;
   _fvVenda = v;
   const d = _vdDesc(v);
-  document.getElementById('fv-tit').textContent = '🧾 Venda nº ' + (v.numeroDia||'—');
+  document.getElementById('fv-tit').textContent = v.ret ? '↩️ Retorno' : '🧾 Venda nº ' + (v.numeroDia||'—');
   const corpo = document.getElementById('fv-corpo');
   corpo.innerHTML = '<button class="bv-voltar" onclick="abrirVendas()">← Voltar às vendas</button>'
+    + (v.ret ? '<div class="aviso-ret">↩️ <b>Produto devolvido.</b> O dinheiro (' + fmt(Math.abs(v.total)) + ') foi devolvido ao cliente, o produto voltou ao stock e o lucro desta venda foi retirado.</div>' : '')
+    + (d>0 ? '<div class="aviso-desc">🏷️ Nesta venda deu <b>' + fmt(d) + '</b> de desconto.</div>' : '')
     + '<table class="bv-tab"><thead><tr><th>Produto</th><th class="n">Qtd</th><th class="n">Preço</th><th class="n">Subtotal</th></tr></thead><tbody>'
-    + (v.itens||[]).map(i => `<tr class="${i.precoOriginal?'desc':''}"><td>${esc(i.nome)}${i.precoOriginal?`<small>${fmt(i.precoOriginal)} − ${fmt(i.precoOriginal-i.preco).replace('MT ','')} = ${fmt(i.preco)}</small>`:''}</td><td class="n">${i.qtd}</td><td class="n">${fmt(i.preco).replace('MT ','')}</td><td class="n"><b>${fmt(i.preco*i.qtd).replace('MT ','')}</b></td></tr>`).join('')
+    + (v.itens||[]).map(i => `<tr class="${(i.ret||i.qtd<0)?'ret':(i.precoOriginal?'desc':'')}"><td>${esc(i.nome)}${(i.ret||i.qtd<0)?'<small>↩️ RETORNO</small>':''}${i.precoOriginal&&i.qtd>0?`<small>${fmt(i.precoOriginal)} − ${fmt(i.precoOriginal-i.preco).replace('MT ','')} = ${fmt(i.preco)}</small>`:''}</td><td class="n">${i.qtd}</td><td class="n">${fmt(i.preco).replace('MT ','')}</td><td class="n"><b>${fmt(i.preco*i.qtd).replace('MT ','')}</b></td></tr>`).join('')
     + '</tbody></table><div class="bv-info"><div><span>Nº da venda (do dia)</span><b>#' + (v.numeroDia||'—') + '</b></div><div><span>Data e hora</span><b>' + new Date(v.data).toLocaleString('pt-PT') + '</b></div>'
     + '<div><span>Pagamento</span><b>Numerário</b></div>' + (v.recebido!=null?'<div><span>Recebido</span><b>'+fmt(v.recebido)+'</b></div>':'') + (v.troco!=null?'<div><span>Troco</span><b>'+fmt(v.troco)+'</b></div>':'')
     + (d>0?'<div><span>🏷️ Desconto</span><b style="color:#b45309">− '+fmt(d)+'</b></div>':'') + (v.pendente?'<div><span>Estado</span><b style="color:#c2410c">⏳ por enviar</b></div>':'') + '</div>'
@@ -1246,8 +1259,11 @@ async function retDevolver(id){
       { t:'rpc', fn:'repor_stock', args:{ p_id:id, p_qtd:q }, opcional:true },
       { t:'insert', tabela:'vendas', linhas:[{ id: devId, loja_id: sessao.lojaId, numero_do_dia: 0, metodo: 'Devolução', total: -(reembolso), recebido: 0, troco: 0,
         vendedor_user_id: sessao.userId, vendedor_codigo: sessao.vendedor, criado_em: agoraD }] },
-      { t:'insert', tabela:'venda_itens', opcional:true, linhas:[{ id: bancaUUID(), venda_id: devId, loja_id: sessao.lojaId, produto_nome: p.nome + ' (devolução)', qtd: q, preco_unitario: -(reembolso/q) }] } ]});
-    bancaRegistarNoDia(sessao.lojaId, { id: devId, total: -(reembolso), numero: 0, criado: agoraD });
+      // quantidade NEGATIVA com o nome exato do produto: o lucro dessa venda é retirado automaticamente
+      // (perde-se o dinheiro devolvido e volta o custo do produto ao stock)
+      { t:'insert', tabela:'venda_itens', opcional:true, linhas:[{ id: bancaUUID(), venda_id: devId, loja_id: sessao.lojaId, produto_nome: p.nome, qtd: -q, preco_unitario: q ? (reembolso/q) : 0 }] } ]});
+    bancaRegistarNoDia(sessao.lojaId, { id: devId, total: -(reembolso), numero: 0, criado: agoraD, vendedor: sessao.vendedor || null, devolucao: true,
+      itens: [{ nome: p.nome, qtd: -q, preco: q ? (reembolso/q) : 0 }] });
     p.stock=(parseInt(p.stock)||0)+q; bancaGuardarProdutos(sessao.lojaId, produtos);
     renderProdutos();
     fecharFolha('folha-retornar');

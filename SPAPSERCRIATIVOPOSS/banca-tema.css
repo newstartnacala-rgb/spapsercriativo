@@ -792,3 +792,32 @@ input.bd-erro{border-color:#dc2626 !important;box-shadow:0 0 0 3px rgba(220,38,3
 #sa-cod-b .sc-nota-b{font-size:11.5px;color:#94a3b8;margin-top:10px;}
 /* nome da banca no topo: corta com reticências (com a pastilha do Super Admin ao lado) */
 .topo #nome-loja{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:48vw;}
+
+/* Editar produto (Monitor da Banca) */
+.gp-img{cursor:pointer;position:relative;}
+.gp-sem-foto{display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:22px;line-height:1;} .gp-sem-foto small{font-size:9.5px;font-weight:800;color:#94a3b8;margin-top:3px;}
+.gp-foto{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.gp-foto button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:14px;border:1.5px solid #e2e8f0;background:#fff;font-weight:800;font-size:12.5px;color:#334155;font-family:inherit;cursor:pointer;}
+.gp-foto button span{font-size:22px;}
+.gp-foto button.gp-foto-tirar{color:#b91c1c;border-color:#fecaca;background:#fef2f2;}
+.gp-foto-estado{font-size:12px;color:#64748b;margin-top:6px;min-height:0;}
+.gp-foto-estado:empty{display:none;}
+html.escuro .gp-foto button{background:#1e293b;border-color:#334155;color:#e2e8f0;}
+/* Retornos (vermelho) e descontos (laranja) */
+.tag-ret{display:inline-flex;align-items:center;gap:4px;background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:800;white-space:nowrap;}
+.row.com-ret{border-left:4px solid #dc2626;background:linear-gradient(90deg,#fef2f2,transparent 75%);}
+.row.com-ret .vv,.bv-venda.ret .vv{color:#dc2626!important;}
+.bv-venda.ret{border-left:4px solid #dc2626;background:linear-gradient(90deg,#fef2f2,#fff 70%);}
+.bv-venda.ret .ic{background:#fee2e2;}
+.bv-tab tr.ret td{background:#fef2f2;color:#991b1b;} .bv-tab tr.ret td:first-child{border-left:3px solid #dc2626;}
+.bv-tab tr.ret td small{color:#b91c1c;}
+.aviso-ret{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:12px;padding:10px 12px;font-size:13px;margin-bottom:12px;line-height:1.45;}
+.bv-card.vermelho{background:linear-gradient(135deg,#fef2f2,#fee2e2);border-color:#fecaca;} .bv-card.vermelho .v{color:#b91c1c;}
+html.escuro .row.com-ret,html.escuro .bv-venda.ret{background:linear-gradient(90deg,rgba(220,38,38,.18),transparent 75%);}
+html.escuro .bv-tab tr.ret td{background:rgba(220,38,38,.14);color:#fecaca;}
+/* botão atualizar no topo */
+.tp-refresh{width:38px;height:38px;border-radius:12px;border:1px solid rgba(15,23,42,.08);background:#fff;display:grid;place-items:center;cursor:pointer;color:#c2410c;padding:0;flex-shrink:0;}
+.tp-refresh svg{width:19px;height:19px;}
+.tp-refresh.gira svg{animation:tpGira .8s linear infinite;}
+@keyframes tpGira{to{transform:rotate(360deg);}}
+html.escuro .tp-refresh{background:#1e293b;border-color:#334155;color:#fdba74;}
