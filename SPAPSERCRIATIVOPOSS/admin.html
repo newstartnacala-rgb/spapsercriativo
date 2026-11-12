@@ -8,7 +8,7 @@
 <script>
   // Painel sempre na versão mais recente: se o aparelho mostrar uma cópia antiga, recarrega a nova
   (function () {
-    var VER = '2.9.246';
+    var VER = '2.9.247';
     try {
       fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
         var nova = j && j.versao; if (!nova || nova === VER) return;
@@ -104,7 +104,7 @@ body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; c
 .ad-acoes { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:12px; }
 .ad-acoes-dir { display:flex; gap:8px; }
 .ad-pill { display:inline-flex; align-items:center; gap:6px; padding:9px 14px; border-radius:999px; border:1px solid #dbe6fb; cursor:pointer;
-           background:linear-gradient(180deg,#ffffff,#edf3ff); color:var(--nv); font:700 13.5px/1 inherit; font-family:inherit; box-shadow:var(--sombra); }
+           background:linear-gradient(180deg,#ffffff,#edf3ff); color:var(--nv); font-weight:700;font-size:13.5px;line-height:1; font-family:inherit; box-shadow:var(--sombra); }
 .ad-pill svg { width:17px; height:17px; }
 .ad-pill:active { transform:scale(.96); }
 .ad-pill-sair { color:#dc2626; }
@@ -151,7 +151,7 @@ body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; c
 .ad-input-ico svg { width:20px; height:20px; color:var(--az); flex-shrink:0; }
 .ad-input-ico input { flex:1; min-width:0; border:none; outline:none; background:none; padding:12px 0; font-size:14.5px; color:var(--nv); font-family:inherit; }
 .ad-btn-verde { display:inline-flex; align-items:center; gap:8px; padding:11px 18px; border:none; border-radius:999px; cursor:pointer; flex-shrink:0;
-                background:linear-gradient(180deg,#22c55e,#128a36); color:#fff; font:800 15px/1 inherit; font-family:inherit; box-shadow:0 8px 16px rgba(18,138,54,.3); }
+                background:linear-gradient(180deg,#22c55e,#128a36); color:#fff; font-weight:800;font-size:15px;line-height:1; font-family:inherit; box-shadow:0 8px 16px rgba(18,138,54,.3); }
 .ad-btn-verde img { width:24px; height:24px; }
 .ad-btn-verde:active, .ad-btn-grande:active { transform:scale(.97); }
 .ad-estado { font-size:12.5px; margin-top:8px; }
@@ -166,13 +166,13 @@ body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; c
 .ad-campos { display:flex; flex-direction:column; gap:8px; }
 .ad-nota { font-size:11.5px; color:#64748b; margin-top:6px; }
 .ad-btn-grande { width:100%; margin-top:14px; display:flex; align-items:center; justify-content:center; gap:10px; padding:14px; border:none; border-radius:16px; cursor:pointer;
-                 background:var(--az-grad); color:#fff; font:800 16.5px/1 inherit; font-family:inherit; box-shadow:0 10px 22px rgba(13,95,240,.35); }
+                 background:var(--az-grad); color:#fff; font-weight:800;font-size:16.5px;line-height:1; font-family:inherit; box-shadow:0 10px 22px rgba(13,95,240,.35); }
 .ad-btn-grande img { width:26px; height:26px; }
 
 /* Filtros */
 .filtros { gap:8px; margin:6px 0 12px; }
 .filtro-btn { display:inline-flex; align-items:center; gap:6px; padding:9px 14px; border-radius:999px; border:1px solid #dce7fb; background:linear-gradient(180deg,#fff,#f0f5ff);
-              color:var(--nv); font:700 13px/1 inherit; font-family:inherit; box-shadow:var(--sombra); }
+              color:var(--nv); font-weight:700;font-size:13px;line-height:1; font-family:inherit; box-shadow:var(--sombra); }
 .filtro-btn img { width:18px; height:18px; }
 .filtro-btn.ativo { background:var(--az-grad); color:#fff; border-color:transparent; }
 .ad-busca { flex:1; min-width:200px; display:flex; align-items:center; gap:8px; padding:0 14px; border-radius:999px; background:#fff; border:1.5px solid #d6e4fb; }
@@ -255,6 +255,15 @@ body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; c
   .lc-ico { width:28px; height:28px; }
   .loja-nome { font-size:15px; }
 }
+/* Contagem até expirar */
+.lc-conta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:0 12px 10px; padding:8px 12px; border-radius:12px; font-size:12.5px; font-weight:700; background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; }
+.lc-conta.aviso { background:#fffbeb; color:#b45309; border-color:#fde68a; }
+.lc-conta.perigo { background:#fef2f2; color:#dc2626; border-color:#fecaca; }
+.lc-conta.fim { background:#f1f5f9; color:#475569; border-color:#e2e8f0; }
+.lc-conta .lcc-t { font-variant-numeric:tabular-nums; font-size:14px; letter-spacing:.02em; }
+.lc-conta .lcc-t b { font-weight:800; }
+.lc-conta.fim .lcc-t { color:#94a3b8; text-decoration:line-through; }
+.lc-conta .lcc-par { margin-left:auto; font-size:11.5px; font-weight:600; opacity:.85; }
 /* Como o cliente paga */
 .ad-divisao.pagar::before { background:linear-gradient(180deg,#34d399,#059669); }
 .pg-topo { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
@@ -856,6 +865,38 @@ function textoEstado(e) {
 }
 
 function ehBanca(l) { return (l && l.tipo_loja) === 'banca'; }
+function lojaExpirou(l) { return ehBanca(l) ? bancaExpirada(l) : !!(l.data_expiracao && new Date(l.data_expiracao) <= new Date()); }
+// ===== Contagem até expirar (atualiza a cada segundo; para quando chega a zero) =====
+function _fmtConta(ms) {
+  const t = Math.max(0, Math.floor(ms / 1000)), d = Math.floor(t / 86400), h = Math.floor((t % 86400) / 3600), m = Math.floor((t % 3600) / 60), x = t % 60;
+  return '<b>' + d + '</b>d <b>' + String(h).padStart(2, '0') + '</b>:<b>' + String(m).padStart(2, '0') + '</b>:<b>' + String(x).padStart(2, '0') + '</b>';
+}
+function _estadoConta(el) {
+  const exp = new Date(el.dataset.exp), ms = exp - Date.now(), dias = ms / 864e5;
+  const cls = ms <= 0 ? 'fim' : dias <= 3 ? 'perigo' : dias <= 7 ? 'aviso' : 'ok';
+  if (el.dataset.cls !== cls) { el.className = 'lc-conta ' + cls; el.dataset.cls = cls; }
+  if (ms <= 0) {
+    el.innerHTML = '<span class="lcc-lbl">⛔ Expirou a ' + exp.toLocaleDateString('pt-PT') + ' às ' + exp.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }) + '</span><span class="lcc-t">' + _fmtConta(0) + '</span><span class="lcc-par">Contagem parada · ' + (el.dataset.tipo === 'banca' ? 'banca fechada' : 'loja fechada') + '</span>';
+    return true;
+  }
+  el.innerHTML = '<span class="lcc-lbl">⏳ Expira em</span><span class="lcc-t">' + _fmtConta(ms) + '</span><span class="lcc-par">' + exp.toLocaleDateString('pt-PT') + '</span>';
+  return false;
+}
+function contagemHtml(l) {
+  if (!l.data_expiracao) return ehBanca(l) ? '<div class="lc-conta fim"><span class="lcc-lbl">⛔ Sem plano ativo</span><span class="lcc-par">Contagem parada · banca fechada</span></div>' : '';
+  return '<div class="lc-conta" data-exp="' + l.data_expiracao + '" data-tipo="' + (ehBanca(l) ? 'banca' : 'loja') + '"></div>';
+}
+function _tickContas() {
+  let mudou = false;
+  document.querySelectorAll('.lc-conta[data-exp]').forEach(el => {
+    const antes = el.dataset.cls === 'fim';
+    const agora = _estadoConta(el);
+    if (agora && !antes && el.dataset.cls0) mudou = true;   // acabou de expirar → atualiza selos e contadores
+    el.dataset.cls0 = '1';
+  });
+  if (mudou) { try { renderLojas(); } catch (e) {} try { renderBancas(); } catch (e) {} }
+}
+setInterval(_tickContas, 1000);
 function bancaExpirada(l) { return !l.data_expiracao || new Date(l.data_expiracao) <= new Date(); }
 const PLANOS_BANCA_DEFAULT = { gratis_dias: 15, mensal: 500, anual_desconto: 5 };
 let _planosBanca = PLANOS_BANCA_DEFAULT;
@@ -896,6 +937,7 @@ function renderLojas() {
 
   div.innerHTML = lista.map(cartaoLoja).join('');
   _infoLista('info-lojas', lista.length, 'loja', 'lojas');
+  _tickContas();
 }
 function _infoLista(id, n, um, varios) {
   const el = document.getElementById(id); if (!el) return;
@@ -913,9 +955,9 @@ function cartaoLoja(l) {
       const exp = new Date(l.data_expiracao);
       const dias = Math.ceil((exp - new Date()) / 86400000);
       const cor = dias < 0 ? '#dc2626' : (dias <= 3 ? '#dc2626' : (dias <= 7 ? '#d97706' : '#16a34a'));
-      const txt = dias < 0 ? ('⚠️ EXPIROU há ' + Math.abs(dias) + ' dia(s)') : (dias + ' dia(s) restantes');
+      const txt = exp <= new Date() ? '⛔ Expirada' : (dias + ' dia(s) restantes');
       expHtml = `<br>⏳ Expira: ${exp.toLocaleDateString('pt-PT')} · <b style="color:${cor}">${txt}</b>`;
-      if (dias <= 3) alerta = true;
+      if (dias <= 3 && exp > new Date()) alerta = true;
     }
     const upgHtml = upg ? `<br>⬆️ Upgrade em ${upg}` : '';
     return `
@@ -928,12 +970,13 @@ function cartaoLoja(l) {
         </div>
         <div class="lc-selos">
           ${ehBanca(l) && l.estado === 'pendente_pagamento' ? '<span class="badge pendente"><img src="icons3d/hourglass.png" alt="">A confirmar</span>'
-            : ehBanca(l) && bancaExpirada(l) && en !== 'suspenso' ? '<span class="badge suspenso"><img src="icons3d/prohibited.png" alt="">Bloqueada</span>'
+            : lojaExpirou(l) && en !== 'suspenso' ? '<span class="badge suspenso"><img src="icons3d/prohibited.png" alt="">' + (ehBanca(l) ? 'Bloqueada' : 'Expirada') + '</span>'
             : `<span class="badge ${en}">${textoEstado(l.estado)}</span>`}
           <button type="button" class="badge trial plano-btn" title="Mudar plano" onclick="event.stopPropagation(); abrirEscolhaPlano('${l.id}', this)">${textoPlano(l.plano)}<svg class="pb-seta" viewBox="0 0 24 24"><path fill="currentColor" d="M7 10l5 5 5-5z"/></svg></button>
-          ${alerta && !(ehBanca(l) && bancaExpirada(l)) ? '<span class="lc-alerta">🔔 A expirar!</span>' : ''}
+          ${alerta && !lojaExpirou(l) ? '<span class="lc-alerta">🔔 A expirar!</span>' : ''}
         </div>
       </div>
+      ${contagemHtml(l)}
       <div id="body-${l.id}" style="display:none;">
         <div class="lc-info2">
           <div><span>📧</span>${l.email_dono ? String(l.email_dono).replace(/</g,'&lt;') : '<i>sem email registado</i>'}</div>
@@ -1175,6 +1218,7 @@ function renderBancas() {
   lista = lista.slice().sort((a, b) => (grupoBanca(a) === 'pagamento' ? 0 : 1) - (grupoBanca(b) === 'pagamento' ? 0 : 1));
   div.innerHTML = lista.length ? lista.map(cartaoLoja).join('') : '<div class="vazio">Nenhuma banca' + (filtroBancas !== 'todas' ? ' neste filtro' : '') + '.</div>';
   _infoLista('info-bancas', lista.length, 'banca', 'bancas');
+  _tickContas();
 }
 
 async function sair() {

@@ -21,7 +21,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.246"></script>
+<script src="spap-leitor.js?v=2.9.247"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -276,7 +276,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
             background:#fff; border-radius:20px; padding:8px; box-shadow:0 22px 50px rgba(8,30,90,.28); animation:sa-entrar .18s ease; }
   @keyframes sa-entrar { from { opacity:0; transform:translate(-50%,-8px); } }
   .sa-item { display:flex; align-items:center; gap:10px; width:100%; padding:11px 12px; border:none; background:none; border-radius:13px;
-             font:700 14.5px/1.2 inherit; font-family:inherit; color:var(--nv); text-align:left; cursor:pointer; }
+             font-weight:700;font-size:14.5px;line-height:1.2; font-family:inherit; color:var(--nv); text-align:left; cursor:pointer; }
   .sa-item img { width:26px; height:26px; flex-shrink:0; }
   .sa-item span { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .sa-item .sa-txt { display:flex; flex-direction:column; min-width:0; text-align:left; }
@@ -405,7 +405,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   .store-header { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:16px 16px 8px; }
   .store-header h2 { font-size:21px; font-weight:800; color:var(--nv); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #btn-personalizar-gestao { flex-shrink:0; background:linear-gradient(180deg,#ffffff,#edf3ff); border:1px solid #d6e4fb; border-radius:999px; padding:9px 16px;
-                             color:var(--az); font:800 14px/1 inherit; font-family:inherit; cursor:pointer; box-shadow:var(--sombra); white-space:nowrap; }
+                             color:var(--az); font-weight:800;font-size:14px;line-height:1; font-family:inherit; cursor:pointer; box-shadow:var(--sombra); white-space:nowrap; }
   .grade-gestao { grid-template-columns:repeat(4,1fr); gap:12px; padding:8px 16px 20px; }
   .card-gestao { position:relative; overflow:hidden; display:flex; flex-direction:column; align-items:center; min-height:118px; padding:14px 5px 12px;
                  background:linear-gradient(165deg,#ffffff 0%,#f3f7ff 100%); border:1px solid #fff; border-radius:22px; box-shadow:var(--sombra);
@@ -432,7 +432,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   .vd-logo { position:relative; width:58px; height:58px; object-fit:contain; margin-left:auto; flex-shrink:0; filter:drop-shadow(0 0 10px rgba(130,190,255,.65)); }
   .historico-filtros { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; padding:0 16px 12px; overflow:visible; }
   .filtro-btn { display:flex; align-items:center; justify-content:center; gap:6px; height:44px; padding:0 6px; border-radius:999px;
-                background:linear-gradient(180deg,#ffffff,#f0f5ff); border:1px solid #dce7fb; color:var(--nv); font:700 13px/1 inherit; font-family:inherit;
+                background:linear-gradient(180deg,#ffffff,#f0f5ff); border:1px solid #dce7fb; color:var(--nv); font-weight:700;font-size:13px;line-height:1; font-family:inherit;
                 box-shadow:var(--sombra); white-space:nowrap; min-width:0; }
   .filtro-btn svg { width:18px; height:18px; flex-shrink:0; }
   .filtro-btn.ativo { background:var(--az-grad); color:#fff; border-color:transparent; box-shadow:0 8px 18px rgba(13,95,240,.35); }
@@ -462,7 +462,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   .vv-tit { font-size:21px; font-weight:800; color:var(--nv); }
   .vv-sub { font-size:14px; color:#475569; font-weight:600; margin-top:4px; }
   .vv-btn { margin-top:18px; display:inline-flex; align-items:center; gap:10px; padding:13px 34px; border:none; border-radius:999px; cursor:pointer;
-            background:var(--az-grad); color:#fff; font:800 17px/1 inherit; font-family:inherit; box-shadow:0 10px 22px rgba(13,95,240,.35); }
+            background:var(--az-grad); color:#fff; font-weight:800;font-size:17px;line-height:1; font-family:inherit; box-shadow:0 10px 22px rgba(13,95,240,.35); }
   .vv-btn svg { width:22px; height:22px; }
   .vv-btn:active { transform:scale(.96); }
 
@@ -498,7 +498,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   .def-fechar { margin-left:auto; width:36px; height:36px; border-radius:50%; border:1px solid #dbe6fb; background:#fff; color:var(--nv); font-size:15px; cursor:pointer; }
   .def-lista { display:flex; flex-direction:column; gap:8px; }
   .def-item { display:flex; align-items:center; gap:12px; width:100%; padding:11px 14px; border:1px solid #e3ebfa; border-radius:16px; background:#fff; cursor:pointer;
-              font:700 15px/1.2 inherit; font-family:inherit; color:var(--nv); text-align:left; box-shadow:0 3px 10px rgba(29,85,190,.06); }
+              font-weight:700;font-size:15px;line-height:1.2; font-family:inherit; color:var(--nv); text-align:left; box-shadow:0 3px 10px rgba(29,85,190,.06); }
   .def-item:active { transform:scale(.98); }
   .def-item img { width:32px; height:32px; flex-shrink:0; }
   .def-item span { flex:1; }
@@ -807,7 +807,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   .att-sub { font-size:13.5px; color:#5b6b91; font-weight:600; margin-top:4px; }
   .att-sub b { color:var(--az); }
   .att-acoes { display:flex; flex-direction:column; gap:10px; margin-top:16px; }
-  .att-btn { border:none; border-radius:16px; padding:14px; font:800 15.5px/1 inherit; font-family:inherit; cursor:pointer; color:#fff;
+  .att-btn { border:none; border-radius:16px; padding:14px; font-weight:800;font-size:15.5px;line-height:1; font-family:inherit; cursor:pointer; color:#fff;
              background:var(--az-grad); box-shadow:0 10px 22px rgba(13,95,240,.30); }
   .att-btn:disabled { opacity:.6; cursor:default; }
   .att-btn:active { transform:scale(.98); }
@@ -976,7 +976,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   @keyframes ph-in { from{opacity:0; transform:translateY(-6px) scale(.97)} to{opacity:1; transform:none} }
   .ph-tit { font-size:13px; font-weight:800; color:var(--nv2); margin:0 2px 8px; }
   .ph-grade { display:grid; grid-template-columns:repeat(6,1fr); gap:6px; }
-  .ph-op { border:1px solid #e1eafa; background:#f5f9ff; color:var(--nv); border-radius:12px; padding:9px 0; font:800 13px/1 inherit; font-family:inherit; cursor:pointer; }
+  .ph-op { border:1px solid #e1eafa; background:#f5f9ff; color:var(--nv); border-radius:12px; padding:9px 0; font-weight:800;font-size:13px;line-height:1; font-family:inherit; cursor:pointer; }
   .ph-op:active { transform:scale(.94); }
   .ph-op.ativo { background:var(--az-grad); color:#fff; border-color:transparent; box-shadow:0 6px 14px rgba(13,95,240,.32); }
   .graf-anim #svg-grafico rect { animation:graf-barra .5s cubic-bezier(.3,1.3,.5,1) both; transform-box:fill-box; transform-origin:50% 100%; }
@@ -1036,7 +1036,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 .gc-topo-ico img{width:32px;height:32px;}
 .gc-topo-tit{font-size:17px;font-weight:800;color:#0f172a;}
 .gc-topo-sub{font-size:12.5px;color:#475569;line-height:1.45;margin-top:2px;}
-.gc-novo{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:14px;border:0;border-radius:16px;cursor:pointer;font:800 15.5px/1 inherit;font-family:inherit;color:#fff;background:linear-gradient(135deg,#16a34a,#15803d);box-shadow:0 10px 22px rgba(22,163,74,.3);transition:transform .15s;}
+.gc-novo{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:14px;border:0;border-radius:16px;cursor:pointer;font-weight:800;font-size:15.5px;line-height:1;font-family:inherit;color:#fff;background:linear-gradient(135deg,#16a34a,#15803d);box-shadow:0 10px 22px rgba(22,163,74,.3);transition:transform .15s;}
 .gc-novo:active{transform:scale(.98);} .gc-novo:disabled{opacity:.65;cursor:default;}
 .gc-novo svg{width:20px;height:20px;}
 .gc-nota{font-size:11.5px;color:#64748b;margin:8px 2px 14px;line-height:1.45;}
@@ -1056,7 +1056,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 .gc-barra i{display:block;height:100%;background:linear-gradient(90deg,#22c55e,#16a34a);border-radius:99px;transition:width .5s;}
 .gc-barra.pouco i{background:linear-gradient(90deg,#f59e0b,#d97706);}
 .gc-acoes{display:flex;gap:8px;padding:10px 14px 12px;}
-.gc-acoes button{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 6px;border-radius:11px;border:1.5px solid #e2e8f0;background:#f8fafc;color:#334155;font:700 12.5px/1 inherit;font-family:inherit;cursor:pointer;}
+.gc-acoes button{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 6px;border-radius:11px;border:1.5px solid #e2e8f0;background:#f8fafc;color:#334155;font-weight:700;font-size:12.5px;line-height:1;font-family:inherit;cursor:pointer;}
 .gc-acoes button svg{width:16px;height:16px;flex-shrink:0;}
 .gc-acoes .gc-wa{color:#15803d;border-color:#bbf7d0;background:#f0fdf4;}
 .gc-acoes .gc-del{color:#dc2626;border-color:#fecaca;background:#fef2f2;}
@@ -1067,6 +1067,8 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 .gc-av{width:34px;height:34px;border-radius:50%;background:#dbeafe;color:#1e40af;font-weight:800;display:grid;place-items:center;flex-shrink:0;font-size:14px;}
 .gc-pes-info{flex:1;min-width:0;}
 .gc-pes-info b{display:block;font-size:14px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.gc-crono{font-variant-numeric:tabular-nums;letter-spacing:.02em;}
+.gc-pes-info .gc-chip b{display:inline;font-size:inherit;color:inherit;}
 .gc-chip{display:inline-block;font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:99px;margin-top:2px;}
 .gc-chip.activo{background:#dcfce7;color:#15803d;} .gc-chip.pendente{background:#fef3c7;color:#b45309;} .gc-chip.cancelado{background:#f1f5f9;color:#64748b;}
 .gc-sw{position:relative;width:46px;height:27px;flex-shrink:0;cursor:pointer;}
@@ -1090,12 +1092,12 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 .gcm p{margin:6px 0 14px;text-align:center;font-size:13.5px;color:#475569;line-height:1.5;}
 .gcm-link{display:flex;align-items:center;gap:8px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:14px;padding:6px 6px 6px 12px;}
 .gcm-link input{flex:1;min-width:0;border:0;background:transparent;font-size:13px;color:#0f172a;font-family:ui-monospace,Menlo,Consolas,monospace;outline:none;}
-.gcm-link button{border:0;border-radius:10px;padding:10px 12px;background:#0f172a;color:#fff;font:700 13px/1 inherit;font-family:inherit;cursor:pointer;white-space:nowrap;}
+.gcm-link button{border:0;border-radius:10px;padding:10px 12px;background:#0f172a;color:#fff;font-weight:700;font-size:13px;line-height:1;font-family:inherit;cursor:pointer;white-space:nowrap;}
 .gcm-link button.copiado{background:#16a34a;}
 .gcm-val{display:flex;align-items:center;gap:8px;margin:12px 0 14px;padding:10px 12px;border-radius:12px;background:#fffbeb;color:#92400e;font-size:12.5px;font-weight:600;line-height:1.4;}
 .gcm-val svg{width:18px;height:18px;flex-shrink:0;}
 .gcm-bts{display:flex;flex-direction:column;gap:8px;}
-.gcm-bts button{display:flex;align-items:center;justify-content:center;gap:9px;height:50px;border:0;border-radius:15px;font:800 15px/1 inherit;font-family:inherit;cursor:pointer;}
+.gcm-bts button{display:flex;align-items:center;justify-content:center;gap:9px;height:50px;border:0;border-radius:15px;font-weight:800;font-size:15px;line-height:1;font-family:inherit;cursor:pointer;}
 .gcm-bts svg{width:20px;height:20px;}
 .gcm-wa{background:#16a34a;color:#fff;box-shadow:0 8px 18px rgba(22,163,74,.28);}
 .gcm-par{background:#eef2ff;color:#3730a3;}
@@ -1114,7 +1116,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.246" defer></script>
+<script src="app-android.js?v=2.9.247" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -1734,7 +1736,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
   <div class="gc-wrap">
     <div class="gc-topo">
       <div class="gc-topo-ico"><img src="icons3d/people.png" alt=""></div>
-      <div class="gc-topo-txt"><div class="gc-topo-tit">Convites de gerente</div><div class="gc-topo-sub">Cada link vale <b>24 horas</b>. Quem entra pelo link fica na lista desse link, à espera que ativares o acesso.</div></div>
+      <div class="gc-topo-txt"><div class="gc-topo-tit">Convites de gerente</div><div class="gc-topo-sub">Quem entra pelo link fica na lista, à espera que o ativares. Ao ativar, começa um <b>cronómetro de 24 horas</b>; ao chegar a zero, o gerente perde o acesso.</div></div>
     </div>
     <button type="button" class="gc-novo" id="gc-btn-novo" onclick="adicionarGerente()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
@@ -1765,6 +1767,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
 <script src="spap-avisos.js?v=5"></script>
 <script src="spap-backup.js?v=7"></script>
 <script src="spap-imagem.js?v=1"></script>
+<script src="spap-expirou.js?v=1"></script>
 <script>
 let sessao = null, lojaId = null, nomeLoja = '';
 let todasVendas = [], todosProdutos = [], todosMemb = [];
@@ -1922,7 +1925,8 @@ async function iniciar() {
       const _est = (membros[0].lojas && membros[0].lojas.estado) || 'pendente';
       const _exp = (membros[0].lojas && membros[0].lojas.data_expiracao) ? new Date(membros[0].lojas.data_expiracao) : null;
       const _expirou = _exp && _exp < new Date();
-      if (_est !== 'activo' || _expirou) {
+      if (_expirou) { spapIrPlanosExpirou(_exp, 'monitor'); return; }   // plano expirou → lista de planos
+      if (_est !== 'activo') {
         const _motivo = _expirou ? ('A subscrição expirou em ' + _exp.toLocaleDateString('pt-PT') + '.') : (_est === 'pendente' ? 'A tua loja ainda não foi activada.' : 'A tua loja está suspensa.');
         mostrarEcraSuspenso(_motivo);
         return;
@@ -1974,6 +1978,7 @@ async function iniciar() {
     _pintarLojaTopo(nomeLoja);
     // Mostra o alerta de expiração do pacote (se o super-admin o definiu)
     mostrarAlertaExpiracao(membros[0].lojas && membros[0].lojas.data_expiracao, membros[0].lojas && membros[0].lojas.estado);
+    if (!modoGerente) spapVigiarExpiracao(lojaId, membros[0].lojas && membros[0].lojas.data_expiracao, 'monitor');   // fecha sozinho ao expirar
     verificarLembreteBackup();
     window._lojaPin = (membros[0].lojas && membros[0].lojas.pin_monitor) || '';
     // Categorias conforme o tipo de loja (farmacia, boutique, etc.)
@@ -3400,7 +3405,7 @@ function renderFuncionariosSubPainel() {
 }
 
 // ===== CONVITES DE GERENTE (cada link vale 24 horas) =====
-const GC_SQL = 'atualizacao-v2.9.246-convites-gerente-24h.sql';
+const GC_SQL = 'atualizacao-v2.9.247-gerente-cronometro-e-recuperar-senha.sql';
 const GC_ICO = {
   link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
   copiar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
@@ -3420,6 +3425,13 @@ function gcFaltam(exp) {
   const h = Math.floor(ms / 36e5), m = Math.floor((ms % 36e5) / 6e4);
   return h > 0 ? h + 'h ' + String(m).padStart(2, '0') + 'min' : (m > 0 ? m + ' min' : 'menos de 1 min');
 }
+function gcRelogio(fim) {
+  const ms = new Date(fim).getTime() - gcAgora();
+  if (!(ms > 0)) return '00:00:00';
+  const t = Math.floor(ms / 1000), h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), x = t % 60;
+  return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(x).padStart(2, '0');
+}
+const gcVivo = fim => fim && new Date(fim).getTime() > gcAgora();
 function gcData(d) { const x = new Date(d); return x.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' }) + ' às ' + x.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }); }
 function gcErroSql(e) { const m = String((e && (e.message || e.code)) || e || ''); return /gerente_|function|PGRST202|does not exist|schema cache/i.test(m); }
 
@@ -3442,52 +3454,74 @@ async function carregarAcessosGerente() {
 function gcRender() {
   const div = document.getElementById('lista-acessos-gerente');
   if (!div || !_gcDados) return;
-  const convites = (_gcDados.convites || []).filter(c => gcFaltam(c.expira_em));
+  // o cartão fica enquanto o link estiver aberto OU houver gerente com o cronómetro a contar
+  const convites = (_gcDados.convites || []).map(c => Object.assign({}, c, {
+    aberto: gcVivo(c.expira_em),
+    acessos: (c.acessos || []).filter(a => a.estado === 'activo' ? (!a.acesso_expira_em || gcVivo(a.acesso_expira_em)) : gcVivo(c.expira_em))
+  })).filter(c => c.aberto || c.acessos.some(a => a.estado === 'activo'));
   if (!convites.length) {
     div.innerHTML = '<div class="gc-vazio">Nenhum link ativo.<br>Toca em <b>Gerar link de convite</b> para convidar um gerente.</div>';
   } else {
     div.innerHTML = convites.map(c => {
-      const total = new Date(c.expira_em) - new Date(c.criado_em) || 864e5;
-      const resta = Math.max(0, new Date(c.expira_em).getTime() - gcAgora());
-      const pct = Math.max(2, Math.min(100, resta / total * 100)), pouco = resta < 3 * 36e5;
-      const ac = c.acessos || [];
+      const ac = c.acessos;
+      const ativos = ac.filter(a => a.estado === 'activo' && a.acesso_expira_em);
+      const fimAcesso = ativos.length ? ativos.map(a => a.acesso_expira_em).sort().pop() : null;
+      // cronómetro principal: tempo de acesso (depois de aceite); antes disso, tempo do link
+      let chip, barra, pouco;
+      if (fimAcesso) {
+        const resta = new Date(fimAcesso).getTime() - gcAgora(); pouco = resta < 3 * 36e5;
+        chip = '<div class="gc-tempo gc-crono' + (pouco ? ' pouco' : '') + '" data-fim="' + fimAcesso + '" title="Tempo de acesso do gerente">⏱ ' + gcRelogio(fimAcesso) + '</div>';
+        barra = Math.max(2, Math.min(100, resta / 864e5 * 100));
+      } else if (c.aberto) {
+        const total = new Date(c.expira_em) - new Date(c.criado_em) || 864e5, resta = new Date(c.expira_em).getTime() - gcAgora(); pouco = resta < 3 * 36e5;
+        chip = '<div class="gc-tempo' + (pouco ? ' pouco' : '') + '" data-exp="' + c.expira_em + '">Link aberto · ' + gcFaltam(c.expira_em) + '</div>';
+        barra = Math.max(2, Math.min(100, resta / total * 100));
+      }
       const pessoas = ac.length ? ac.map(a => {
         const est = a.estado || 'pendente', on = est === 'activo';
-        const chip = on ? 'Ativo' : est === 'cancelado' ? 'Desativado' : 'À espera de ativação';
+        const chipP = on ? (a.acesso_expira_em ? '<span class="gc-chip activo">Ativo · <b class="gc-crono" data-fim="' + a.acesso_expira_em + '">' + gcRelogio(a.acesso_expira_em) + '</b></span>' : '<span class="gc-chip activo">Ativo</span>')
+          : '<span class="gc-chip ' + est + '">' + (est === 'cancelado' ? 'Desativado' : 'À espera de ativação') + '</span>';
+        const podeLigar = on || c.aberto;
         return '<div class="gc-pes" id="gc-p-' + a.id + '">'
           + '<div class="gc-av">' + gcEsc((a.nome || '?').trim().charAt(0).toUpperCase() || '?') + '</div>'
-          + '<div class="gc-pes-info"><b>' + gcEsc(a.nome || 'Gerente') + '</b><span class="gc-chip ' + est + '">' + chip + '</span></div>'
-          + '<label class="gc-sw" title="' + (on ? 'Desativar acesso' : 'Ativar acesso') + '"><input type="checkbox" ' + (on ? 'checked' : '') + ' onchange="gcDefinirEstado(\'' + a.id + '\', this)"><i></i></label>'
+          + '<div class="gc-pes-info"><b>' + gcEsc(a.nome || 'Gerente') + '</b>' + chipP + '</div>'
+          + '<label class="gc-sw" title="' + (on ? 'Desativar acesso' : 'Ativar acesso (começa o cronómetro de 24 horas)') + '"><input type="checkbox" ' + (on ? 'checked' : '') + (podeLigar ? '' : ' disabled') + ' onchange="gcDefinirEstado(\'' + a.id + '\', this)"><i></i></label>'
           + '<button type="button" class="gc-lixo" aria-label="Remover da lista" title="Remover da lista" onclick="gcEliminarPessoa(\'' + a.id + '\')">' + GC_ICO.lixo + '</button>'
           + '</div>';
       }).join('') : '<div class="gc-lista-vazia">Ainda ninguém entrou por este link.</div>';
-      const n = ac.length, ativos = ac.filter(a => a.estado === 'activo').length;
+      const n = ac.length, nAt = ac.filter(a => a.estado === 'activo').length;
+      const sub = (c.aberto ? 'Criado ' + gcData(c.criado_em) : 'Link fechado (já não aceita pessoas)') + ' · ' + n + ' pessoa' + (n === 1 ? '' : 's') + (n ? ' · ' + nAt + ' ativa' + (nAt === 1 ? '' : 's') : '');
       return '<div class="gc-card" id="gc-c-' + c.token + '">'
         + '<div class="gc-cab"><div class="gc-ico">' + GC_ICO.link + '</div>'
-        + '<div class="gc-info"><b>Link de convite</b><small>Criado ' + gcData(c.criado_em) + ' · ' + n + ' pessoa' + (n === 1 ? '' : 's') + (n ? ' · ' + ativos + ' ativa' + (ativos === 1 ? '' : 's') : '') + '</small></div>'
-        + '<div class="gc-tempo' + (pouco ? ' pouco' : '') + '" data-exp="' + c.expira_em + '">Expira em ' + gcFaltam(c.expira_em) + '</div></div>'
-        + '<div class="gc-barra' + (pouco ? ' pouco' : '') + '"><i style="width:' + pct.toFixed(1) + '%"></i></div>'
+        + '<div class="gc-info"><b>' + (fimAcesso ? 'Acesso de gerente' : 'Link de convite') + '</b><small>' + sub + '</small></div>'
+        + (chip || '') + '</div>'
+        + (barra != null ? '<div class="gc-barra' + (pouco ? ' pouco' : '') + '"><i style="width:' + barra.toFixed(1) + '%"></i></div>' : '')
         + '<div class="gc-acoes">'
-        + '<button type="button" onclick="gcCopiar(\'' + c.token + '\', this)">' + GC_ICO.copiar + '<span>Copiar link</span></button>'
-        + '<button type="button" class="gc-wa" onclick="gcWhatsApp(\'' + c.token + '\')">' + GC_ICO.wa + '<span>WhatsApp</span></button>'
+        + (c.aberto ? '<button type="button" onclick="gcCopiar(\'' + c.token + '\', this)">' + GC_ICO.copiar + '<span>Copiar link</span></button>'
+          + '<button type="button" class="gc-wa" onclick="gcWhatsApp(\'' + c.token + '\')">' + GC_ICO.wa + '<span>WhatsApp</span></button>' : '')
         + '<button type="button" class="gc-del" onclick="gcEliminarConvite(\'' + c.token + '\')">' + GC_ICO.lixo + '<span>Eliminar</span></button>'
         + '</div>'
         + '<div class="gc-lista">' + pessoas + '</div></div>';
     }).join('');
   }
-  // contagem decrescente; quando um link passa das 24 h, desaparece sozinho
+  // cronómetro: atualiza a cada segundo; quando chega a zero, a lista atualiza-se sozinha
   clearInterval(_gcTimer);
   _gcTimer = setInterval(() => {
     const pf = document.getElementById('painel-funcionarios');
     if (!pf || !pf.classList.contains('aberto')) return;
-    let expirou = false;
-    document.querySelectorAll('#lista-acessos-gerente .gc-tempo').forEach(el => {
-      const f = gcFaltam(el.dataset.exp);
-      if (!f) { expirou = true; return; }
-      el.textContent = 'Expira em ' + f;
+    let acabou = false;
+    document.querySelectorAll('#lista-acessos-gerente [data-fim]').forEach(el => {
+      const t = gcRelogio(el.dataset.fim);
+      if (t === '00:00:00') acabou = true;
+      el.textContent = (el.classList.contains('gc-tempo') ? '⏱ ' : '') + t;
     });
-    if (expirou) carregarAcessosGerente();
-  }, 20000);
+    document.querySelectorAll('#lista-acessos-gerente [data-exp]').forEach(el => {
+      const f = gcFaltam(el.dataset.exp);
+      if (!f) { acabou = true; return; }
+      el.textContent = 'Link aberto · ' + f;
+    });
+    if (acabou) { clearInterval(_gcTimer); setTimeout(carregarAcessosGerente, 800); }
+  }, 1000);
 }
 
 function gcCopiarTexto(t) {
@@ -3510,12 +3544,12 @@ async function gcDefinirEstado(id, el) {
   try {
     const { error } = await supabaseClient.rpc('gerente_definir_estado', { p_acesso: id, p_ativo: ativar });
     if (error) throw error;
-    mostrarNotif(ativar ? 'Acesso ativado. O gerente já pode usar o Monitor.' : 'Acesso desativado. O gerente deixou de ter acesso.');
+    mostrarNotif(ativar ? 'Acesso ativado. O cronómetro de 24 horas começou a contar.' : 'Acesso desativado. O gerente deixou de ter acesso.');
   } catch (e) {
     el.checked = !ativar;
     const m = String(e.message || e);
     spapAviso('Não foi possível ' + (ativar ? 'ativar' : 'desativar'),
-      /expirado/.test(m) ? 'Este link já passou das 24 horas e deixou de funcionar. Gera um novo link para convidar de novo.'
+      /expirado/.test(m) ? 'Este link já fechou (passou das 24 horas). Gera um novo link para convidar de novo.'
       : /antigo/.test(m) ? 'Este pedido é antigo. Pede à pessoa para abrir um link novo.'
       : gcErroSql(e) ? 'Falta correr no Supabase o ficheiro ' + GC_SQL + '.' : m, { icone: '⚠️' });
   }
@@ -3566,7 +3600,7 @@ function gcJanelaLink(token, expira) {
     + '<h3 id="gcm-t">Link de convite pronto</h3>'
     + '<p>Envia este link ao gerente. Ele entra sem criar conta, escreve o nome e fica na lista à espera que ativares o acesso.</p>'
     + '<div class="gcm-link"><input type="text" readonly value="' + gcEsc(link) + '" onfocus="this.select()"><button type="button" id="gcm-cp">Copiar</button></div>'
-    + '<div class="gcm-val">' + GC_ICO.relogio + '<span>Válido por 24 horas, até ' + gcData(expira) + '. Depois o link deixa de funcionar e a lista desaparece.</span></div>'
+    + '<div class="gcm-val">' + GC_ICO.relogio + '<span>O link aceita pessoas durante 24 horas (até ' + gcData(expira) + '). Quando ativares um gerente, começa o cronómetro de 24 horas dele; ao chegar a zero, perde o acesso.</span></div>'
     + '<div class="gcm-bts">'
     + '<button type="button" class="gcm-wa" id="gcm-wa">' + GC_ICO.wa + 'Enviar por WhatsApp</button>'
     + (navigator.share ? '<button type="button" class="gcm-par" id="gcm-par">' + GC_ICO.partilhar + 'Partilhar…</button>' : '')
@@ -3604,19 +3638,44 @@ function gcEcraGerente(icone, titulo, texto) {
     + '<p style="color:#475569;line-height:1.55;font-size:14.5px;margin:0;">' + texto + '</p></div></div>';
 }
 function gcFimGerente(sit) {
-  if (sit === 'cancelado') gcEcraGerente('prohibited.png', 'Acesso desativado', 'O dono da loja desativou o teu acesso ao Monitor.<br>Se precisares de voltar, pede-lhe um novo link.');
+  try { const b = document.getElementById('gc-banner-ger'); if (b) b.remove(); } catch (e) {}
+  if (sit === 'expirado') gcEcraGerente('hourglass.png', 'O teu tempo de acesso terminou', 'O acesso de gerente dura 24 horas desde que o dono o ativou, e o cronómetro chegou a zero.<br>Pede ao dono um novo link.');
+  else if (sit === 'cancelado') gcEcraGerente('prohibited.png', 'Acesso desativado', 'O dono da loja desativou o teu acesso ao Monitor.<br>Se precisares de voltar, pede-lhe um novo link.');
   else gcEcraGerente('hourglass.png', 'Este link já não funciona', 'O link de convite expirou (vale 24 horas) ou foi eliminado pelo dono da loja.<br>Pede ao dono um novo link.');
 }
-// O Monitor do gerente confirma de minuto a minuto se o acesso continua válido
+// O Monitor do gerente mostra o cronómetro (24 h desde a ativação) e fecha sozinho em zero
 function gcVigiarGerente() {
   if (!modoGerente || window._gcVigia) return;
-  window._gcVigia = setInterval(async () => {
+  let fim = null;
+  const css = document.createElement('style');
+  css.textContent = '#gc-banner-ger{position:sticky;top:0;z-index:600;display:flex;align-items:center;justify-content:center;gap:10px;padding:9px 14px;background:linear-gradient(135deg,#0f172a,#1e3a8a);color:#fff;font-weight:700;font-size:13px;line-height:1.2;font-family:inherit;box-shadow:0 4px 14px rgba(15,23,42,.25);}'
+    + '#gc-banner-ger b{font-variant-numeric:tabular-nums;font-size:15px;letter-spacing:.04em;background:rgba(255,255,255,.14);padding:4px 10px;border-radius:9px;}'
+    + '#gc-banner-ger.pouco{background:linear-gradient(135deg,#b45309,#dc2626);}';
+  document.head.appendChild(css);
+  const banner = () => {
+    let b = document.getElementById('gc-banner-ger');
+    if (!b) { b = document.createElement('div'); b.id = 'gc-banner-ger'; const app = document.getElementById('app') || document.body; app.insertBefore(b, app.firstChild); }
+    return b;
+  };
+  const tic = () => {
+    if (!fim) return;
+    const t = gcRelogio(fim), b = banner();
+    b.classList.toggle('pouco', new Date(fim).getTime() - gcAgora() < 36e5);
+    b.innerHTML = '<span>⏱ Acesso de gerente termina em</span><b>' + t + '</b>';
+    if (t === '00:00:00') { clearInterval(window._gcVigia); clearInterval(window._gcVigia2); gcFimGerente('expirado'); }
+  };
+  const ler = async () => {
     try {
-      const { data, error } = await supabaseClient.rpc('gerente_minha_situacao');
+      const { data, error } = await supabaseClient.rpc('gerente_meu_acesso');
       if (error || !data) return;
-      if (data !== 'activo') { clearInterval(window._gcVigia); gcFimGerente(data); }
+      if (data.agora) _gcDesvio = new Date(data.agora).getTime() - Date.now();
+      if (data.estado !== 'activo') { clearInterval(window._gcVigia); clearInterval(window._gcVigia2); gcFimGerente(data.estado === 'cancelado' ? 'cancelado' : (fim ? 'expirado' : data.estado)); return; }
+      fim = data.expira_em || null; tic();
     } catch (e) {}
-  }, 60000);
+  };
+  ler();
+  window._gcVigia = setInterval(tic, 1000);
+  window._gcVigia2 = setInterval(ler, 30000);
 }
 
 // compatibilidade com chamadas antigas
@@ -6041,7 +6100,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.246';
+const MONITOR_VERSAO = '2.9.247';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });

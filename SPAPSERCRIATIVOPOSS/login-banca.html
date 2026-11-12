@@ -5,13 +5,13 @@
 <script src="spap-migrar.js?v=1"></script>
 <script src="spap-bloqueio.js?v=2"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
-<script src="spap-semzoom.js?v=3.7.33"></script>
+<script src="spap-semzoom.js?v=3.7.34"></script>
 <meta name="theme-color" content="#eef3fb">
 <title>Banca — Entrar</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="spap-premium.css?v=3.7.33">
+<link rel="stylesheet" href="spap-premium.css?v=3.7.34">
 <style>
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   body.pm{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:28px 16px;}
@@ -24,6 +24,7 @@
   .lb-campo:focus-within .lb-ic{color:#f2700f;}
   .lb-campo input{flex:1;min-width:0;border:0 !important;outline:0;background:none !important;box-shadow:none !important;font-size:16px;color:var(--pm-tx);font-weight:500;padding:0 !important;}
   .lb-campo input::placeholder{color:var(--pm-tx3);}
+  .lb-esqueci{display:block;margin:-4px 2px 12px auto;border:0;background:none;color:#1d4ed8;font-weight:700;font-size:13.5px;line-height:1.2;font-family:inherit;cursor:pointer;padding:4px 0;}
   .lb-olho{width:36px;height:36px;margin-right:-8px;border:0;background:none;color:var(--pm-tx3);cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none;}
   .lb-olho svg{width:22px;height:22px;} .lb-olho.on{color:#f2700f;}
   .lb-entrar{width:100%;height:58px;margin-top:6px;border:0;border-radius:16px;font-family:Sora,'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:16px;letter-spacing:.14em;cursor:pointer;color:#fff;
@@ -64,7 +65,7 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="Banca e Vendas">
-<script src="app-android.js?v=3.7.33" defer></script>
+<script src="app-android.js?v=3.7.34" defer></script>
 <link rel="stylesheet" href="spap-carrinho.css?v=1">
 </head>
 <body class="pm">
@@ -78,12 +79,14 @@
   </div>
   <label class="lb-campo"><span class="lb-ic"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M4 6h16v12H4z M4 7l8 6 8-6"/></svg></span><input id="email" type="email" inputmode="email" placeholder="Email" autocomplete="username"></label>
   <label class="lb-campo"><span class="lb-ic"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M6 11h12v9H6z M8.5 11V8a3.5 3.5 0 0 1 7 0v3"/></svg></span><input id="senha" type="password" placeholder="Código (senha)" autocomplete="current-password"><button type="button" class="lb-olho" id="lb-olho" aria-label="Mostrar código" onclick="verCodigo()"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button></label>
+  <button type="button" class="lb-esqueci" onclick="esqueceuSenha()">Esqueci a senha</button>
   <button class="lb-entrar" id="btn" onclick="entrar()">ENTRAR</button>
   <div class="lb-erro" id="erro"></div>
   <div class="lb-rodape">Ainda não tens banca? <a href="registo-banca.html">Cadastrar</a></div>
   <a class="lb-loja" href="login.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M3 9l1.5-5h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6"/></svg>Tenho uma loja grande <b>→</b></a>
 </main>
 <script src="supabase-config.js"></script>
+<script src="spap-recuperar.js?v=1"></script>
 <script>
 document.documentElement.classList.remove('escuro');
 document.addEventListener('DOMContentLoaded',()=>{ document.documentElement.classList.remove('escuro'); const tc=document.querySelector('meta[name="theme-color"]'); if(tc) tc.setAttribute('content','#eef3fb'); });
@@ -91,6 +94,7 @@ const btn=document.getElementById('btn');
 function erro(m){ const e=document.getElementById('erro'); e.textContent=m; e.style.display='block'; }
 try{ if(new URLSearchParams(location.search).get('conta')==='loja') setTimeout(()=>erro('🏪 Essa conta é de uma LOJA. A Loja e a Banca são separadas: entre com a conta da Banca ou crie uma em «Cadastrar».'),50); }catch(e){}
 
+function esqueceuSenha(){ spapRecuperarSenha({ tipo:'banca', email:document.getElementById('email').value.trim(), aoEntrar:function(em,se){ document.getElementById('email').value=em; document.getElementById('senha').value=se; entrar(); } }); }
 function destino(){ return new URLSearchParams(location.search).get('to') || 'mobile.html'; }
 (async()=>{ try{ const {data}=await supabaseClient.auth.getSession(); if(data&&data.session){
   const r=await supabaseClient.from('membros_loja').select('lojas(tipo_loja,estado)').eq('user_id',data.session.user.id).limit(20);

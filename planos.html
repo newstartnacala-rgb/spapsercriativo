@@ -5,12 +5,12 @@
 <script src="spap-migrar.js?v=1"></script>
 <script src="spap-bloqueio.js?v=2"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
-<script src="spap-semzoom.js?v=2.9.246"></script>
+<script src="spap-semzoom.js?v=2.9.247"></script>
 <title>Planos — Spap-Sercriativo</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="spap-premium.css?v=2.9.246">
+<link rel="stylesheet" href="spap-premium.css?v=2.9.247">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family:-apple-system,Arial,sans-serif; background:linear-gradient(135deg,#1a56a0,#0f3460); min-height:100vh; padding:20px; }
@@ -97,6 +97,15 @@ body.pm { padding:24px 16px 40px; }
 .btn-secundario { background:#fff !important; border:1.5px solid var(--pm-ln) !important; color:#334155 !important; }
 .msg { border-radius:12px !important; font-weight:600; }
 @media(max-width:560px) { body.pm { padding:14px 12px 30px; } .pm-marca { width:88px; height:88px; } .pm-nome { font-size:23px; } }
+  .pl-exp { text-align:center; background:linear-gradient(160deg,#fff1f2,#ffffff); border:1.5px solid #fecaca; border-radius:20px; padding:18px 16px 16px; margin-bottom:16px; box-shadow:0 10px 26px rgba(220,38,38,.1); }
+  .pl-exp-ico { width:58px; height:58px; margin:0 auto 8px; border-radius:18px; background:#fee2e2; display:grid; place-items:center; }
+  .pl-exp-ico img { width:36px; height:36px; }
+  .pl-exp-tit { font-size:20px; font-weight:800; color:#b91c1c; }
+  .pl-exp-txt { font-size:13.5px; color:#7f1d1d; line-height:1.5; margin-top:4px; }
+  .pl-exp-conta { display:inline-flex; flex-direction:column; align-items:center; gap:2px; margin-top:12px; padding:8px 16px; border-radius:14px; background:#1f2937; color:#fff; }
+  .pl-exp-conta span { font-size:20px; font-variant-numeric:tabular-nums; letter-spacing:.04em; color:#cbd5e1; text-decoration:line-through; }
+  .pl-exp-conta b { color:#fff; font-weight:800; }
+  .pl-exp-conta small { font-size:10.5px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:#fca5a5; }
 </style>
 </head>
 <body class="pm">
@@ -111,6 +120,12 @@ body.pm { padding:24px 16px 40px; }
   </div>
 
   <div id="secao-planos">
+    <div class="pl-exp" id="pl-expirou" hidden role="alert">
+      <div class="pl-exp-ico"><img src="icons3d/hourglass.png" alt=""></div>
+      <div class="pl-exp-tit">O seu plano expirou</div>
+      <div class="pl-exp-txt" id="pl-exp-txt">A sua Loja e o Monitor foram fechados automaticamente. Escolha um plano abaixo para voltar a usar.</div>
+      <div class="pl-exp-conta"><span><b>0</b>d <b>00</b>:<b>00</b>:<b>00</b></span><small>Contagem parada</small></div>
+    </div>
     <!-- PLANOS -->
     <div class="planos-grid">
       <div class="plano-card" id="card-basico" onclick="selecionarPlano('basico')">
@@ -220,6 +235,24 @@ body.pm { padding:24px 16px 40px; }
 </div>
 
 <script src="supabase-config.js"></script>
+<script>
+  // Plano expirado: a Loja/Monitor fechou e mostra o aviso por cima da lista de planos
+  (async function () {
+    const q = new URLSearchParams(location.search);
+    if (q.get('m') !== 'expirou') return;
+    const box = document.getElementById('pl-expirou'); box.hidden = false;
+    let exp = q.get('exp') ? new Date(q.get('exp')) : null;
+    if (!exp || isNaN(exp)) {
+      try {
+        const s = (await supabaseClient.auth.getSession()).data.session;
+        if (s) { const r = await supabaseClient.from('membros_loja').select('lojas(data_expiracao)').eq('user_id', s.user.id).limit(1);
+          const d = r.data && r.data[0] && r.data[0].lojas && r.data[0].lojas.data_expiracao; if (d) exp = new Date(d); }
+      } catch (e) {}
+    }
+    const onde = q.get('de') === 'monitor' ? 'O Monitor e a Loja foram fechados' : 'A Loja e o Monitor foram fechados';
+    if (exp && !isNaN(exp)) document.getElementById('pl-exp-txt').innerHTML = onde + ' automaticamente em <b>' + exp.toLocaleDateString('pt-PT') + ' às ' + exp.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }) + '</b>.<br>Escolha um plano abaixo para voltar a usar.';
+  })();
+</script>
 <script>
   let plano = null, metodo = null, fotoBase64 = null;
   let PRECOS = {

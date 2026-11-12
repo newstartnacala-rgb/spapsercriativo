@@ -319,6 +319,7 @@
       if (!exp) { if (l.estado === 'pendente' || l.estado === 'pendente_pagamento') irPagamento('pendente'); return; }
       var falta = exp - new Date();
       if (falta <= 0) return irPagamento('expirou');           // bloqueio automático
+      clearTimeout(_plano.t); if (falta < 2147483000) _plano.t = setTimeout(function () { irPagamento('expirou'); }, falta + 500);   // fecha no segundo exato
       var dias = Math.ceil(falta / 864e5);
       mostrarAvisoPlano(l, dias);
       if (!_plano.ok) { _plano.ok = true; boasVindas(l, dias); }

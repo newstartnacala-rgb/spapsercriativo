@@ -5,7 +5,7 @@
 <script src="spap-migrar.js?v=1"></script>
 <script src="spap-bloqueio.js?v=2"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
-<script src="spap-semzoom.js?v=2.9.246"></script>
+<script src="spap-semzoom.js?v=2.9.247"></script>
 <title>Entrar — Spap-Sercriativo</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="ios-loja-180.png">
@@ -94,7 +94,7 @@
   @media (max-width:767px) and (max-height:660px) { .lg-marca { width:60px; height:60px; } .campo { height:44px; } .btn-principal { height:46px; } .btn-google { height:42px; } .lg-sub { margin-top:4px; } }
   @media (max-width:767px) and (max-height:600px) { .lg-marca { width:50px; height:50px; } .langs { margin-bottom:8px; } .lg-topo { margin-bottom:8px; } .ou { margin:7px 0; } .rodape { margin:8px 0 6px; } }
 </style>
-<script src="app-android.js?v=2.9.246" defer></script>
+<script src="app-android.js?v=2.9.247" defer></script>
 <link rel="stylesheet" href="spap-carrinho.css?v=1">
 </head>
 <body>
@@ -140,6 +140,7 @@
 </main>
 
 <script src="supabase-config.js"></script>
+<script src="spap-recuperar.js?v=1"></script>
 <script>
   const btn = document.getElementById('btn-entrar');
   const erroDiv = document.getElementById('erro-msg');
@@ -306,16 +307,11 @@
     } catch(e) { mostrarErro('Erro: ' + (e.message || e)); }
   }
 
-  async function esqueceuSenha() {
-    const email = document.getElementById('email').value.trim();
-    if (!email) { mostrarErro('Escreve primeiro o teu email no campo acima.'); return; }
-    btn.disabled = true;
-    // Link que abre a página onde a pessoa mete a NOVA senha
-    const redirectUrl = window.location.origin + window.location.pathname.replace('login.html', 'reset-senha.html');
-    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: redirectUrl });
-    btn.disabled = false;
-    if (error) { mostrarErro(traduzirErro(error.message)); return; }
-    mostrarSucesso('✅ Email enviado! Abre o email, clica no link, e vais poder escrever a nova senha.');
+  function esqueceuSenha() {
+    spapRecuperarSenha({ tipo: 'loja', email: document.getElementById('email').value.trim(), aoEntrar: function (em, se) {
+      document.getElementById('email').value = em; document.getElementById('senha').value = se;
+      mostrarSucesso('✅ Senha alterada. A entrar…'); fazerLogin();
+    } });
   }
 
   document.querySelectorAll('.campo input').forEach(i => {

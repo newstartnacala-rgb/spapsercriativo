@@ -108,7 +108,7 @@
     }
 
     mostrarSucesso('Senha alterada com sucesso! A entrar...');
-    setTimeout(() => { window.location.href = 'index.html'; }, 2000);
+    setTimeout(() => { var b = ''; try { b = localStorage.getItem('spap_reset_tipo'); localStorage.removeItem('spap_reset_tipo'); } catch(e) {} window.location.href = b === 'banca' ? 'mobile.html' : 'index.html'; }, 2000);
   }
 
   document.querySelectorAll('.campo input').forEach(i => {
