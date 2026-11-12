@@ -8,7 +8,7 @@
 <script>
   // Painel sempre na versão mais recente: se o aparelho mostrar uma cópia antiga, recarrega a nova
   (function () {
-    var VER = '2.9.251';
+    var VER = '2.9.252';
     try {
       fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
         var nova = j && j.versao; if (!nova || nova === VER) return;

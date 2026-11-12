@@ -5,13 +5,13 @@
 <script src="spap-migrar.js?v=1"></script>
 <script src="spap-bloqueio.js?v=2"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
-<script src="spap-semzoom.js?v=3.7.38"></script>
+<script src="spap-semzoom.js?v=3.7.39"></script>
 <meta name="theme-color" content="#eef3fb">
 <title>Banca — Entrar</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="spap-premium.css?v=3.7.38">
+<link rel="stylesheet" href="spap-premium.css?v=3.7.39">
 <style>
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   body.pm{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:28px 16px;}
@@ -65,7 +65,7 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="Banca e Vendas">
-<script src="app-android.js?v=3.7.38" defer></script>
+<script src="app-android.js?v=3.7.39" defer></script>
 <link rel="stylesheet" href="spap-carrinho.css?v=1">
 </head>
 <body class="pm">
@@ -113,7 +113,7 @@ async function entrar(){
   if(error){ erro(error.message.includes('Invalid')?'Email ou código errado.':error.message); btn.disabled=false; btn.textContent='ENTRAR'; return; }
   // Verifica estado da banca
   try{
-    const { data:mTodos }=await supabaseClient.from('membros_loja').select('lojas(estado,nome,tipo_loja)').eq('user_id',data.user.id).limit(20);
+    const { data:mTodos }=await supabaseClient.from('membros_loja').select('lojas(estado,nome,tipo_loja,data_expiracao)').eq('user_id',data.user.id).limit(20);
     const m = spapMembrosDoTipo(mTodos||[],'banca');
     if(mTodos && mTodos.length && !m.length){
       await spapSessaoBancaErrada();
@@ -122,7 +122,12 @@ async function entrar(){
     }
     spapSessaoBancaOk();
     const est = m&&m[0]&&m[0].lojas&&m[0].lojas.estado;
-    if(!spapEuSuper() && (est==='suspenso'||est==='bloqueado')){ await supabaseClient.auth.signOut(); erro('🚫 Banca suspensa. Contacta o suporte: +258 86 657 7722'); btn.disabled=false; btn.textContent='ENTRAR'; return; }
+    // plano por pagar (suspensa, expirada ou à espera): entra, mas fica no ecrã de pagar o plano
+    if(!spapEuSuper()){
+      const _l = (m&&m[0]&&m[0].lojas) || {}, _exp = _l.data_expiracao ? new Date(_l.data_expiracao) : null;
+      const _mot = (est==='suspenso'||est==='bloqueado') ? 'suspenso' : (_exp && _exp <= new Date()) ? 'expirou' : (!_exp && (est==='pendente'||est==='pendente_pagamento')) ? 'pendente' : null;
+      if(_mot){ location.href='planos-banca.html?m='+_mot; return; }
+    }
   }catch(e){}
   location.href=destino();
 }

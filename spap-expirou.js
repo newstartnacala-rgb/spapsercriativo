@@ -5,8 +5,8 @@
    spapIrPlanosExpirou(dataExpiracao, origem) → planos.html com o aviso "O seu plano expirou". */
 (function () {
   function ehSuper() { try { return !!(window.spapEuSuper && spapEuSuper()); } catch (e) { return false; } }
-  window.spapIrPlanosExpirou = function (exp, origem) {
-    var q = '?m=expirou' + (exp ? '&exp=' + encodeURIComponent(new Date(exp).toISOString()) : '') + (origem ? '&de=' + origem : '');
+  window.spapIrPlanosExpirou = function (exp, origem, motivo) {
+    var q = '?m=' + (motivo || 'expirou') + (exp ? '&exp=' + encodeURIComponent(new Date(exp).toISOString()) : '') + (origem ? '&de=' + origem : '');
     try { localStorage.setItem('pdv_login_destino', origem === 'monitor' ? 'monitor.html' : 'index.html'); } catch (e) {}
     location.href = 'planos.html' + q;
   };
@@ -25,6 +25,7 @@
       if (typeof supabaseClient === 'undefined') return;
       supabaseClient.from('lojas').select('data_expiracao, estado').eq('id', lojaId).maybeSingle().then(function (r) {
         var l = r && r.data; if (!l) return;
+        if (l.estado === 'suspenso' || l.estado === 'bloqueado') return spapIrPlanosExpirou(l.data_expiracao, origem, 'suspenso');
         if (l.data_expiracao && new Date(l.data_expiracao) <= new Date()) return spapIrPlanosExpirou(l.data_expiracao, origem);
         agendar(l.data_expiracao);
       }, function () {});

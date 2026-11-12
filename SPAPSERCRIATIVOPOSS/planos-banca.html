@@ -5,7 +5,7 @@
 <script src="spap-migrar.js?v=1"></script>
 <script src="spap-bloqueio.js?v=2"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
-<script src="spap-semzoom.js?v=3.7.38"></script>
+<script src="spap-semzoom.js?v=3.7.39"></script>
 <meta name="theme-color" content="#f4f8ff">
 <title>Planos — Banca</title>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
@@ -64,8 +64,8 @@
   .rodape a{color:var(--lj-esc);font-weight:800;text-decoration:none}
   [hidden]{display:none!important}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.38">
-<script src="banca-tema.js?v=3.7.38" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.39">
+<script src="banca-tema.js?v=3.7.39" defer></script>
 </head>
 <body>
 <div class="pg">
@@ -78,7 +78,7 @@
   <div class="alerta expirou" id="al-expirou" hidden><div class="ai">⏳</div><div><h1>O seu plano expirou</h1><p>Para continuar a vender, escolha o plano Pro ou Anual e faça o pagamento. A banca volta a abrir assim que o pagamento for confirmado.</p></div></div>
   <div class="alerta info" id="al-ativo" hidden><div class="ai">⭐</div><div><h1 id="al-ativo-tit">O seu plano</h1><p id="al-ativo-txt"></p></div></div>
   <div class="alerta espera" id="al-espera" hidden><div class="ai">⏳</div><div><h1>Pagamento em verificação</h1><p>Recebemos o seu pedido. Assim que o pagamento for confirmado, a banca abre sozinha neste ecrã.</p></div></div>
-  <div class="alerta expirou" id="al-suspenso" hidden><div class="ai">🚫</div><div><h1>Banca suspensa</h1><p>Contacte o suporte para resolver: <a id="lk-sup2" href="https://chat.whatsapp.com/I8lB2zT6hxfFNJ3xcqJ8Sh?s=cl&amp;p=a&amp;iam=2">WhatsApp</a>.</p></div></div>
+  <div class="alerta expirou" id="al-suspenso" hidden><div class="ai">🚫</div><div><h1>Banca bloqueada — falta pagar o plano</h1><p>Para voltar a usar a Banca e o Monitor, escolha um plano abaixo e faça o pagamento. A banca abre sozinha assim que o pagamento for confirmado. Dúvidas: <a id="lk-sup2" href="https://chat.whatsapp.com/I8lB2zT6hxfFNJ3xcqJ8Sh?s=cl&amp;p=a&amp;iam=2">suporte</a>.</p></div></div>
 
   <div id="escolha">
     <h2>Escolha o plano</h2>
@@ -160,7 +160,7 @@ function estadoLoja(){
 function mostrarEstado(){
   const e=estadoLoja(), ver=new URLSearchParams(location.search).get('ver');
   ['al-expirou','al-ativo','al-espera','al-suspenso'].forEach(id=>document.getElementById(id).hidden=true);
-  if(loja.estado==='suspenso'||loja.estado==='bloqueado'){ document.getElementById('al-suspenso').hidden=false; document.getElementById('escolha').hidden=true; return; }
+  if(loja.estado==='suspenso'||loja.estado==='bloqueado'){ document.getElementById('al-suspenso').hidden=false; document.getElementById('escolha').hidden=false; return; }
   if(loja.estado==='pendente_pagamento') document.getElementById('al-espera').hidden=false;
   if(e.expirou){ document.getElementById('al-expirou').hidden=false; return; }
   const nomes={banca_free:P.nGratis, banca_mensal:P.nPro, banca_anual:P.nAnual};

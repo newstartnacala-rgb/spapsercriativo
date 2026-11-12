@@ -5,7 +5,7 @@
 <script src="spap-migrar.js?v=1"></script>
 <script src="spap-bloqueio.js?v=2"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
-<script src="spap-semzoom.js?v=2.9.251"></script>
+<script src="spap-semzoom.js?v=2.9.252"></script>
 <title>Entrar — Spap-Sercriativo</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="ios-loja-180.png">
@@ -94,7 +94,7 @@
   @media (max-width:767px) and (max-height:660px) { .lg-marca { width:60px; height:60px; } .campo { height:44px; } .btn-principal { height:46px; } .btn-google { height:42px; } .lg-sub { margin-top:4px; } }
   @media (max-width:767px) and (max-height:600px) { .lg-marca { width:50px; height:50px; } .langs { margin-bottom:8px; } .lg-topo { margin-bottom:8px; } .ou { margin:7px 0; } .rodape { margin:8px 0 6px; } }
 </style>
-<script src="app-android.js?v=2.9.251" defer></script>
+<script src="app-android.js?v=2.9.252" defer></script>
 <link rel="stylesheet" href="spap-carrinho.css?v=1">
 </head>
 <body>
@@ -259,7 +259,7 @@
     btn.textContent = 'A verificar conta...';
     const { data: membros } = await supabaseClient
       .from('membros_loja')
-      .select('loja_id, lojas(estado, nome, tipo_loja)')
+      .select('loja_id, lojas(estado, nome, tipo_loja, data_expiracao)')
       .eq('user_id', data.user.id)
       .limit(20).then(r => { const todos = r.data || []; r.data = spapMembrosDoTipo(todos, 'loja'); r.soBanca = todos.length > 0 && !r.data.length; return r; })
       .then(r => { window._soBanca = r.soBanca; return r; });
@@ -277,19 +277,17 @@
       const nomeLoja = (membros[0].lojas && membros[0].lojas.nome) || 'a tua loja';
       const tipoLoja = (membros[0].lojas && membros[0].lojas.tipo_loja) || '';
 
-      if (!spapEhSuper(email) && (estadoLoja === 'pendente' || estadoLoja === 'pendente_pagamento')) {
-        // Loja pendente de confirmação
-        await supabaseClient.auth.signOut();
-        mostrarErro('⏳ A tua loja "' + nomeLoja + '" está a aguardar confirmação de pagamento. Envia o comprovativo via WhatsApp e aguarda a aprovação. Se não responderem em 5 minutos, liga para o suporte: +258 86 657 7722');
-        btn.disabled = false; btn.textContent = 'ENTRAR';
-        return;
-      }
-
-      if (!spapEhSuper(email) && (estadoLoja === 'suspenso' || estadoLoja === 'bloqueado')) {
-        await supabaseClient.auth.signOut();
-        mostrarErro('🚫 A tua loja foi suspensa. Contacta o suporte: +258 86 657 7722');
-        btn.disabled = false; btn.textContent = 'ENTRAR';
-        return;
+      // Plano por pagar (expirado, suspenso ou à espera de pagamento): entra, mas fica no ecrã de pagar o plano
+      if (!spapEhSuper(email)) {
+        const _exp = membros[0].lojas && membros[0].lojas.data_expiracao ? new Date(membros[0].lojas.data_expiracao) : null;
+        const _mot = (estadoLoja === 'suspenso' || estadoLoja === 'bloqueado') ? 'suspenso'
+          : (_exp && _exp <= new Date()) ? 'expirou'
+          : (estadoLoja === 'pendente' || estadoLoja === 'pendente_pagamento') ? 'pendente' : null;
+        if (_mot) {
+          const _de = /monitor/.test(localStorage.getItem('pdv_login_destino') || '') ? 'monitor' : 'loja';
+          window.location.href = 'planos.html?m=' + _mot + (_exp ? '&exp=' + encodeURIComponent(_exp.toISOString()) : '') + '&de=' + _de;
+          return;
+        }
       }
 
     }
