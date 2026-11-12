@@ -88,9 +88,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.40">
-<script src="banca-tema.js?v=3.7.40" defer></script>
-<script src="app-android.js?v=3.7.40" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.41">
+<script src="banca-tema.js?v=3.7.41" defer></script>
+<script src="app-android.js?v=3.7.41" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -132,7 +132,7 @@
     </button>
     <input type="hidden" id="pb-dia">
     <div class="cards">
-      <div class="stat wide"><div class="lbl">💰 Vendido no período</div><div class="val verde" id="s-vendido">MT 0,00</div></div>
+      <div class="stat wide"><div class="sv-linha"><div><div class="lbl">💰 Vendido no período</div><div class="val verde" id="s-vendido">MT 0,00</div></div><div class="sv-custo"><div class="lbl">📦 Custo do que vendeu</div><div class="val" id="s-custo">MT 0,00</div></div></div></div>
       <div class="stat"><div class="lbl">🧾 Nº de vendas</div><div class="val" id="s-nvendas">0</div></div>
       <div class="stat"><div class="lbl">📈 Lucro estimado</div><div class="val laranja" id="s-lucro">MT 0,00</div></div>
     </div>
@@ -450,12 +450,16 @@ function mostrarAvisoOffline(t){
   el.textContent='📡 Sem internet — a mostrar os dados guardados às '+new Date(t).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'})+'. Atualiza sozinho quando a internet voltar.';
 }
 window.addEventListener('online', function(){ try{ carregarProdutos(); carregarResumo(); }catch(e){} });
+// botão «Atualizar» do topo: recarrega os dados sem sair do ecrã (não volta ao login)
+window.spapAtualizarPagina = async function(){ if(!sessao) return; await carregarProdutos(); await Promise.all([carregarResumo(), (typeof carregarDescontos==='function'?carregarDescontos():null)]); };
 // o ecrã de carregamento nunca fica preso: some ao fim de 10 segundos aconteça o que acontecer
 setTimeout(function(){ const c=document.getElementById('carregando'); if(c && c.style.display!=='none'){ c.style.display='none'; } }, 10000);
 (async function init(){
   let ses=null;
   try{ ses=(await supabaseClient.auth.getSession()).data.session; }catch(e){}
+  if(!ses && navigator.onLine===false){ const uid=localStorage.getItem('spap_ult_uid_bm'); if(uid) ses={ user:{ id:uid } }; }
   if(!ses){ location.href='login-banca.html?to='+encodeURIComponent('mobile-monitor.html'); return; }
+  try{ if(ses.user && ses.user.id) localStorage.setItem('spap_ult_uid_bm', ses.user.id); }catch(e){}
   try{
     // sem internet: usa a última conta guardada neste telemóvel (nunca manda para o login só por falta de rede)
     let _rm = await supabaseClient.from('membros_loja')
@@ -795,12 +799,13 @@ async function carregarResumo(){
   { const _e=document.getElementById('s-nvendas'); spapNum(_e, String(vendas.length), { cartao:_e.closest('.stat'), mais:'+1' }); }
   // Lucro estimado: venda - custo (custo atual do produto pelo nome)
   const custoDe = {}; produtos.forEach(p=>{ custoDe[(p.nome||'').toLowerCase()] = parseFloat(p.preco_compra)||0; });
-  let lucro=0;
+  let lucro=0, custoVend=0;
   vendas.forEach(v=>(v.venda_itens||[]).forEach(it=>{
     const pv=parseFloat(it.preco_unitario)||0, q=parseFloat(it.qtd)||0;
     const pc=custoDe[(it.produto_nome||'').toLowerCase()]||0;
-    lucro += (pv-pc)*q;
+    lucro += (pv-pc)*q; custoVend += pc*q;
   }));
+  { const _e=document.getElementById('s-custo'); if(_e) spapNum(_e, fmt(custoVend), { cartao:_e.closest('.stat') }); }
   { const _e=document.getElementById('s-lucro'); spapNum(_e, fmt(lucro), { cartao:_e.closest('.stat'), lucro:true }); }
   try{ desenharGrafico(vendas, r); }catch(e){}
   const div=document.getElementById('lista-vendas');

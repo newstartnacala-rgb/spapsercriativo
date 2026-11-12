@@ -5,13 +5,13 @@
 <script src="spap-migrar.js?v=1"></script>
 <script src="spap-bloqueio.js?v=2"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
-<script src="spap-semzoom.js?v=3.7.40"></script>
+<script src="spap-semzoom.js?v=3.7.41"></script>
 <meta name="theme-color" content="#eef3fb">
 <title>Banca — Entrar</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="spap-premium.css?v=3.7.40">
+<link rel="stylesheet" href="spap-premium.css?v=3.7.41">
 <style>
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   body.pm{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:28px 16px;}
@@ -65,7 +65,7 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="Banca e Vendas">
-<script src="app-android.js?v=3.7.40" defer></script>
+<script src="app-android.js?v=3.7.41" defer></script>
 <link rel="stylesheet" href="spap-carrinho.css?v=1">
 </head>
 <body class="pm">
@@ -86,6 +86,7 @@
   <a class="lb-loja" href="login.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M3 9l1.5-5h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6"/></svg>Tenho uma loja grande <b>→</b></a>
 </main>
 <script src="supabase-config.js"></script>
+<script src="banca-offline.js"></script>
 <script src="spap-recuperar.js?v=1"></script>
 <script>
 document.documentElement.classList.remove('escuro');
@@ -109,8 +110,17 @@ async function entrar(){
   btn.disabled=true; btn.textContent='A entrar…';
   let data,error;
   try{ const r=await supabaseClient.auth.signInWithPassword({email,password:senha}); data=r.data; error=r.error; }
-  catch(e){ error={message:'Sem internet. Tenta de novo.'}; }
+  catch(e){ error={message:'Failed to fetch'}; }
+  if(error && spapEhErroDeRede(error.message)){
+    // SEM INTERNET: entra no modo offline se este telemóvel já entrou antes com este email e esta senha
+    const ok = await spapVerificarAcessoOffline(email, senha);
+    const temDados = (window.bancaSessaoGuardada && bancaSessaoGuardada()) || localStorage.getItem('spap_ult_uid_bm');
+    if(ok && temDados){ btn.textContent='A entrar offline…'; try{ sessionStorage.setItem('spap_modo_offline','1'); }catch(e){} location.href=destino(); return; }
+    erro(ok===false ? 'Email ou código errado.' : '📡 Sem internet. Para entrar sem internet, este telemóvel tem de ter entrado uma vez com internet nesta conta.');
+    btn.disabled=false; btn.textContent='ENTRAR'; return;
+  }
   if(error){ erro(error.message.includes('Invalid')?'Email ou código errado.':error.message); btn.disabled=false; btn.textContent='ENTRAR'; return; }
+  try{ await spapGuardarAcessoOffline(email, senha); localStorage.setItem('spap_ult_uid_bm', data.user.id); }catch(e){}
   // Verifica estado da banca
   try{
     const { data:mTodos }=await supabaseClient.from('membros_loja').select('lojas(estado,nome,tipo_loja,data_expiracao)').eq('user_id',data.user.id).limit(20);

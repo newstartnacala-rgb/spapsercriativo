@@ -21,7 +21,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.254"></script>
+<script src="spap-leitor.js?v=2.9.255"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -1117,7 +1117,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.254" defer></script>
+<script src="app-android.js?v=2.9.255" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -1887,9 +1887,14 @@ async function iniciar() {
       history.replaceState({}, '', location.pathname + '?modo=gerente');
     } catch (e) { alert('Erro no link de gerente: ' + (e.message || e)); }
   }
-  const { data: sd } = await supabaseClient.auth.getSession();
-  if (!sd.session) { localStorage.setItem('pdv_login_destino','monitor.html'); window.location.href = 'login.html'; return; }
+  let { data: sd } = await supabaseClient.auth.getSession().then(x => x, () => ({ data: {} }));
+  // Sem internet: abre com a última conta deste aparelho (os dados vêm do que ficou guardado)
+  if (!(sd && sd.session) && navigator.onLine === false) {
+    try { const u = JSON.parse(localStorage.getItem('spap_ult_user_mon') || 'null'); if (u && u.id) sd = { session: { user: u, offline: true } }; } catch (e) {}
+  }
+  if (!(sd && sd.session)) { localStorage.setItem('pdv_login_destino','monitor.html'); window.location.href = 'login.html'; return; }
   sessao = sd.session;
+  try { if (!sessao.offline) localStorage.setItem('spap_ult_user_mon', JSON.stringify({ id: sessao.user.id, email: sessao.user.email })); } catch (e) {}
 
   isSuperAdmin = SUPER_ADMIN_EMAILS.includes((sessao.user.email || '').trim().toLowerCase());
   if (isSuperAdmin) document.getElementById('btn-admin').style.display = 'flex';
@@ -6203,7 +6208,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.254';
+const MONITOR_VERSAO = '2.9.255';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });

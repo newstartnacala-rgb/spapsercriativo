@@ -625,8 +625,12 @@
       setTimeout(function () { btn.classList.remove('gira'); }, 900);
       return;
     }
-    // com internet: recarrega a página toda (dados e versão mais recentes)
-    setTimeout(function () { location.reload(); }, 250);
+    // com internet: volta a buscar os dados SEM recarregar a página (nunca volta ao login)
+    var f = window.spapAtualizarPagina;
+    if (typeof f !== 'function') { setTimeout(function () { btn.classList.remove('gira'); }, 900); return; }
+    Promise.resolve().then(f).then(function () {
+      btn.classList.remove('gira'); try { (window.toast || function () {})('✅ Atualizado', 'ok'); } catch (e) {}
+    }, function () { btn.classList.remove('gira'); try { (window.toast || function () {})('Não foi possível atualizar agora', 'erro'); } catch (e) {} });
   }
   function por() {
     document.querySelectorAll('.tp-acoes').forEach(function (a) {

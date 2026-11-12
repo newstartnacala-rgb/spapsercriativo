@@ -834,3 +834,16 @@ html.escuro .tp-refresh{background:#1e293b;border-color:#334155;color:#fdba74;}
 .bv-hora{font-size:11.5px;font-weight:600;color:#64748b;margin-left:4px;}
 .bv-quais{font-size:12.5px;color:#0f172a;font-weight:600;margin-top:2px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 html.escuro .bv-explica{background:#1e293b;border-color:#334155;color:#cbd5e1;} html.escuro .bv-quais{color:#e2e8f0;}
+
+/* Vendido + Custo do que vendeu (Monitor da Banca) */
+.sv-linha{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.sv-custo{text-align:right;}
+.sv-custo .val{font-size:18px;color:#475569;}
+html.escuro .sv-custo .val{color:#cbd5e1;}
+/* Limpar o carrinho */
+.cart-limpar{display:inline-flex;align-items:center;gap:6px;border:1.5px solid #fecaca;background:#fef2f2;color:#b91c1c;border-radius:12px;padding:8px 12px;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer;}
+html.escuro .cart-limpar{background:rgba(220,38,38,.15);border-color:rgba(248,113,113,.4);color:#fca5a5;}
+/* Ler código no retorno */
+.ret-busca-linha{display:flex;gap:8px;align-items:stretch;}
+.ret-busca-linha input{flex:1;min-width:0;}
+.ret-scan{flex-shrink:0;width:52px;border:0;border-radius:14px;background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;font-size:22px;cursor:pointer;box-shadow:0 6px 14px rgba(234,88,12,.3);}

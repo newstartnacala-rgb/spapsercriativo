@@ -68,6 +68,26 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY,
   : (SPAP_PAGINA_BANCA && !SPAP_SUPER_UNIFICADO) ? _spapOpcoes({ storageKey: SPAP_CHAVE_BANCA, persistSession: true, autoRefreshToken: true })
   : _spapOpcoes(null)
 );
+// Entrar SEM internet: guarda neste aparelho uma impressão da senha (nunca a senha em si) depois de um login com internet;
+// sem rede, compara o que a pessoa escreve com essa impressão.
+function _spapHash(t) {
+  try { return crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)).then(function (b) { return Array.from(new Uint8Array(b)).map(function (x) { return x.toString(16).padStart(2, '0'); }).join(''); }); }
+  catch (e) { return Promise.resolve(null); }
+}
+function spapGuardarAcessoOffline(email, senha, extra) {
+  var em = String(email || '').trim().toLowerCase(); if (!em || !senha) return Promise.resolve();
+  var sal = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  return _spapHash(sal + '|' + em + '|' + senha).then(function (h) {
+    if (!h) return; try { localStorage.setItem('spap_acesso_off_' + em, JSON.stringify({ s: sal, h: h, t: Date.now(), x: extra || null })); } catch (e) {}
+  });
+}
+function spapVerificarAcessoOffline(email, senha) {
+  var em = String(email || '').trim().toLowerCase(), r = null;
+  try { r = JSON.parse(localStorage.getItem('spap_acesso_off_' + em) || 'null'); } catch (e) {}
+  if (!r || !senha) return Promise.resolve(null);
+  return _spapHash(r.s + '|' + em + '|' + senha).then(function (h) { return h && h === r.h ? r : false; });
+}
+function spapEhErroDeRede(msg) { return (typeof navigator !== 'undefined' && navigator.onLine === false) || /fetch|network|internet|abort|timeout|failed/i.test(String(msg || '')); }
 // Dados guardados no telemóvel para abrir sem internet (último resultado bom de cada pedido)
 function spapGuardarLocal(chave, valor) { try { localStorage.setItem('spap_cache_' + chave, JSON.stringify({ t: Date.now(), v: valor })); } catch (e) {} }
 function spapLerLocal(chave) { try { var x = JSON.parse(localStorage.getItem('spap_cache_' + chave) || 'null'); return x ? x : null; } catch (e) { return null; } }

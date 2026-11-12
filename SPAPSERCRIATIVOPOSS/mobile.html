@@ -112,9 +112,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="Banca e Vendas">
-<link rel="stylesheet" href="banca-tema.css?v=3.7.40">
-<script src="banca-tema.js?v=3.7.40" defer></script>
-<script src="app-android.js?v=3.7.40" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.41">
+<script src="banca-tema.js?v=3.7.41" defer></script>
+<script src="app-android.js?v=3.7.41" defer></script>
 </head>
 <body>
 
@@ -214,7 +214,7 @@
     <div class="rodape">
       <div class="linha-desc" id="cart-desc" style="display:none"></div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <span style="color:var(--suave);font-weight:700;">Total</span>
+        <span style="display:flex;align-items:center;gap:10px;"><span style="color:var(--suave);font-weight:700;">Total</span><button type="button" class="cart-limpar" onclick="limparCarrinho()">🗑️ Limpar</button></span>
         <span id="cart-tot2" style="font-size:22px;font-weight:800;">MT 0,00</span>
       </div>
       <button class="btn laranja" onclick="abrirPagamento()">💳 Receber / Pagar</button>
@@ -325,7 +325,7 @@
     <div class="cab"><h3>↩️ Devolver produto</h3><button onclick="fecharFolha('folha-retornar')">✕</button></div>
     <div class="conteudo">
       <div style="font-size:12px;color:var(--suave);margin-bottom:10px;">O cliente trouxe um produto de volta? Procura-o, diz a quantidade, e o stock volta a entrar. Serve para qualquer produto, mesmo vendido há dias.</div>
-      <div class="campo"><label>🔎 Qual produto foi devolvido?</label><input id="ret-busca" type="text" placeholder="Nome do produto…" oninput="retFiltrar()" autocomplete="off"></div>
+      <div class="campo"><label>🔎 Qual produto foi devolvido?</label><div class="ret-busca-linha"><input id="ret-busca" type="text" placeholder="Nome ou código do produto…" oninput="retFiltrar()" autocomplete="off"><button type="button" class="ret-scan" onclick="retLerCodigo()" aria-label="Ler o código com a câmara" title="Ler o código com a câmara">📷</button></div></div>
       <div id="ret-result"></div>
     </div>
   </div>
@@ -398,7 +398,7 @@
 <script src="spap-suporte.js?v=1"></script>
 <script src="spap-avisos.js?v=5"></script>
 <script src="spap-imagem.js?v=1"></script>
-<script src="banca-offline.js?v=3.7.40"></script>
+<script src="banca-offline.js?v=3.7.41"></script>
 <script>
 // ===================== ESTADO =====================
 let sessao = null;        // { lojaId, nomeLoja, userId, vendedor }
@@ -1246,11 +1246,35 @@ function abrirRetornar(){
   const r=document.getElementById('ret-result'); if(r) r.innerHTML='';
   abrirFolha('folha-retornar');
 }
+// Retorno: ler o código do produto com a câmara (evita escrever)
+function retLerCodigo(){
+  const usar = code => {
+    code = String(code||'').trim(); if(!code) return;
+    const k = code.toLowerCase();
+    const p = produtos.find(x => [x.codbarras, x.codigo, x.nome].some(c => String(c||'').trim().toLowerCase() === k));
+    const inp = document.getElementById('ret-busca');
+    if (p) { inp.value = p.nome; retFiltrar(); fecharScanner && fecharScanner(); setTimeout(()=>retDevolver(p.id), 150); }
+    else { inp.value = code; retFiltrar(); toast('Código «'+code+'» não encontrado nos produtos','erro'); }
+  };
+  if (window.bancaScanner) { bancaScanner(usar); return; }
+  if (window.bancaLerPorFoto) { bancaLerPorFoto(usar); return; }
+  toast('Câmara indisponível neste telemóvel','erro');
+}
+async function limparCarrinho(){
+  if(!carrinho || !carrinho.length) return;
+  const ok = typeof bancaConfirmar==='function' ? await bancaConfirmar('Limpar o carrinho?', 'Vais tirar os '+carrinho.length+' produto(s) do carrinho. Nada é vendido nem sai do stock.', { ok:'🗑️ Limpar', icone:'🗑️' }) : true;
+  if(!ok) return;
+  carrinho.length = 0;
+  try{ renderCarrinho(); }catch(e){} try{ atualizarCarrinho(); }catch(e){}
+  fecharFolha('folha-carrinho'); toast('🗑️ Carrinho limpo','ok');
+}
+// botão «Atualizar» do topo: recarrega produtos e envia o que estiver por enviar, sem sair do ecrã
+window.spapAtualizarPagina = async function(){ try{ if(window.bancaSincronizar) await bancaSincronizar(); }catch(e){} await carregarProdutos(); };
 function retFiltrar(){
   const termo=(document.getElementById('ret-busca').value||'').trim().toLowerCase();
   const res=document.getElementById('ret-result');
   if(!termo){ res.innerHTML=''; return; }
-  const achados=produtos.filter(p=>(p.nome||'').toLowerCase().includes(termo)||(p.codbarras||'').toLowerCase().includes(termo)).slice(0,30);
+  const achados=produtos.filter(p=>(p.nome||'').toLowerCase().includes(termo)||(p.codbarras||'').toLowerCase().includes(termo)||(p.codigo||'').toLowerCase().includes(termo)).slice(0,30);
   if(!achados.length){ res.innerHTML='<div class="vazio">Nenhum produto com esse nome.</div>'; return; }
   res.innerHTML=achados.map(p=>`<div class="item" onclick="retDevolver('${p.id}')">
     <div class="in"><div class="nn">${esc(p.nome)}</div><div class="pp"><b>${fmt(p.preco)}</b></div></div>
