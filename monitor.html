@@ -21,7 +21,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.245"></script>
+<script src="spap-leitor.js?v=2.9.246"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -1028,6 +1028,79 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   .kpi-grid-3 .kpi:nth-child(3)::after { animation-delay:-2.8s; }
   @keyframes agua-canto { 0%,100% { transform:translateX(0) scaleY(1); } 25% { transform:translateX(-6px) scaleY(1.12); } 50% { transform:translateX(-2px) scaleY(.94); } 75% { transform:translateX(4px) scaleY(1.08); } }
   @media (prefers-reduced-motion:reduce) { #app, .secao-card, .vazio-vendas, .att-hero, .kpi::after { animation:none !important; } }
+
+/* ===== Convites de gerente (24 h) ===== */
+.gc-wrap{padding:14px 16px 4px;}
+.gc-topo{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;}
+.gc-topo-ico{width:48px;height:48px;border-radius:15px;background:linear-gradient(145deg,#e0ecff,#c7dbff);display:grid;place-items:center;flex-shrink:0;box-shadow:inset 0 2px 3px rgba(255,255,255,.7);}
+.gc-topo-ico img{width:32px;height:32px;}
+.gc-topo-tit{font-size:17px;font-weight:800;color:#0f172a;}
+.gc-topo-sub{font-size:12.5px;color:#475569;line-height:1.45;margin-top:2px;}
+.gc-novo{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:14px;border:0;border-radius:16px;cursor:pointer;font:800 15.5px/1 inherit;font-family:inherit;color:#fff;background:linear-gradient(135deg,#16a34a,#15803d);box-shadow:0 10px 22px rgba(22,163,74,.3);transition:transform .15s;}
+.gc-novo:active{transform:scale(.98);} .gc-novo:disabled{opacity:.65;cursor:default;}
+.gc-novo svg{width:20px;height:20px;}
+.gc-nota{font-size:11.5px;color:#64748b;margin:8px 2px 14px;line-height:1.45;}
+.gc-vazio{text-align:center;color:#94a3b8;font-size:13px;padding:18px 10px;border:1.5px dashed #e2e8f0;border-radius:16px;background:#fff;}
+.gc-sec-tit{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#64748b;padding:14px 16px 4px;}
+.gc-card{background:#fff;border:1px solid #e2e8f0;border-radius:18px;margin-bottom:12px;box-shadow:0 6px 18px rgba(15,23,42,.06);overflow:hidden;transition:opacity .3s,transform .3s;}
+.gc-card.sair{opacity:0;transform:translateX(30px);}
+.gc-cab{display:flex;align-items:center;gap:11px;padding:13px 14px 10px;}
+.gc-ico{width:40px;height:40px;border-radius:12px;background:#ecfdf5;color:#16a34a;display:grid;place-items:center;flex-shrink:0;}
+.gc-ico svg{width:20px;height:20px;}
+.gc-info{flex:1;min-width:0;}
+.gc-info b{display:block;font-size:14.5px;color:#0f172a;}
+.gc-info small{display:block;font-size:11.5px;color:#64748b;margin-top:1px;line-height:1.35;}
+.gc-tempo{font-size:11.5px;font-weight:800;color:#15803d;background:#dcfce7;padding:5px 9px;border-radius:99px;white-space:nowrap;flex-shrink:0;}
+.gc-tempo.pouco{color:#b45309;background:#fef3c7;}
+.gc-barra{height:4px;background:#f1f5f9;margin:0 14px;border-radius:99px;overflow:hidden;}
+.gc-barra i{display:block;height:100%;background:linear-gradient(90deg,#22c55e,#16a34a);border-radius:99px;transition:width .5s;}
+.gc-barra.pouco i{background:linear-gradient(90deg,#f59e0b,#d97706);}
+.gc-acoes{display:flex;gap:8px;padding:10px 14px 12px;}
+.gc-acoes button{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 6px;border-radius:11px;border:1.5px solid #e2e8f0;background:#f8fafc;color:#334155;font:700 12.5px/1 inherit;font-family:inherit;cursor:pointer;}
+.gc-acoes button svg{width:16px;height:16px;flex-shrink:0;}
+.gc-acoes .gc-wa{color:#15803d;border-color:#bbf7d0;background:#f0fdf4;}
+.gc-acoes .gc-del{color:#dc2626;border-color:#fecaca;background:#fef2f2;}
+.gc-lista{border-top:1px solid #f1f5f9;padding:6px 10px 8px;}
+.gc-lista-vazia{font-size:12.5px;color:#94a3b8;text-align:center;padding:10px;}
+.gc-pes{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid #f8fafc;}
+.gc-pes:last-child{border-bottom:0;}
+.gc-av{width:34px;height:34px;border-radius:50%;background:#dbeafe;color:#1e40af;font-weight:800;display:grid;place-items:center;flex-shrink:0;font-size:14px;}
+.gc-pes-info{flex:1;min-width:0;}
+.gc-pes-info b{display:block;font-size:14px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.gc-chip{display:inline-block;font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:99px;margin-top:2px;}
+.gc-chip.activo{background:#dcfce7;color:#15803d;} .gc-chip.pendente{background:#fef3c7;color:#b45309;} .gc-chip.cancelado{background:#f1f5f9;color:#64748b;}
+.gc-sw{position:relative;width:46px;height:27px;flex-shrink:0;cursor:pointer;}
+.gc-sw input{position:absolute;opacity:0;width:0;height:0;}
+.gc-sw i{position:absolute;inset:0;border-radius:99px;background:#cbd5e1;transition:background .2s;}
+.gc-sw i::after{content:'';position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.2);transition:transform .2s;}
+.gc-sw input:checked + i{background:#16a34a;} .gc-sw input:checked + i::after{transform:translateX(19px);}
+.gc-sw input:disabled + i{opacity:.5;}
+.gc-lixo{width:34px;height:34px;border-radius:10px;border:0;background:#fef2f2;color:#dc2626;display:grid;place-items:center;cursor:pointer;flex-shrink:0;}
+.gc-lixo svg{width:17px;height:17px;}
+/* janela do link criado */
+#gc-modal{position:fixed;inset:0;z-index:100040;background:rgba(8,15,35,.5);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);display:flex;align-items:flex-end;justify-content:center;opacity:0;transition:opacity .2s;}
+#gc-modal.on{opacity:1;}
+#gc-modal .gcm{width:100%;max-width:460px;background:#fff;border-radius:26px 26px 0 0;padding:10px 20px calc(20px + env(safe-area-inset-bottom));transform:translateY(40px);transition:transform .28s cubic-bezier(.2,.9,.3,1);box-shadow:0 -20px 60px rgba(8,15,35,.3);}
+#gc-modal.on .gcm{transform:none;}
+@media(min-width:600px){#gc-modal{align-items:center;} #gc-modal .gcm{border-radius:26px;}}
+.gcm-puxa{width:42px;height:5px;border-radius:99px;background:#e2e8f0;margin:0 auto 14px;}
+.gcm-ok{width:64px;height:64px;margin:0 auto 10px;border-radius:20px;background:linear-gradient(145deg,#22c55e,#15803d);color:#fff;display:grid;place-items:center;box-shadow:0 12px 24px rgba(22,163,74,.32);}
+.gcm-ok svg{width:32px;height:32px;}
+.gcm h3{margin:0;text-align:center;font-size:19px;font-weight:800;color:#0f172a;}
+.gcm p{margin:6px 0 14px;text-align:center;font-size:13.5px;color:#475569;line-height:1.5;}
+.gcm-link{display:flex;align-items:center;gap:8px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:14px;padding:6px 6px 6px 12px;}
+.gcm-link input{flex:1;min-width:0;border:0;background:transparent;font-size:13px;color:#0f172a;font-family:ui-monospace,Menlo,Consolas,monospace;outline:none;}
+.gcm-link button{border:0;border-radius:10px;padding:10px 12px;background:#0f172a;color:#fff;font:700 13px/1 inherit;font-family:inherit;cursor:pointer;white-space:nowrap;}
+.gcm-link button.copiado{background:#16a34a;}
+.gcm-val{display:flex;align-items:center;gap:8px;margin:12px 0 14px;padding:10px 12px;border-radius:12px;background:#fffbeb;color:#92400e;font-size:12.5px;font-weight:600;line-height:1.4;}
+.gcm-val svg{width:18px;height:18px;flex-shrink:0;}
+.gcm-bts{display:flex;flex-direction:column;gap:8px;}
+.gcm-bts button{display:flex;align-items:center;justify-content:center;gap:9px;height:50px;border:0;border-radius:15px;font:800 15px/1 inherit;font-family:inherit;cursor:pointer;}
+.gcm-bts svg{width:20px;height:20px;}
+.gcm-wa{background:#16a34a;color:#fff;box-shadow:0 8px 18px rgba(22,163,74,.28);}
+.gcm-par{background:#eef2ff;color:#3730a3;}
+.gcm-fechar{background:#f1f5f9;color:#334155;}
+html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
 </style>
 <link rel="manifest" href="manifest-monitor.json">
 <link rel="apple-touch-icon" href="ios-monitor-180.png">
@@ -1041,7 +1114,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.245" defer></script>
+<script src="app-android.js?v=2.9.246" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -1658,18 +1731,23 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     <button class="btn-voltar" onclick="fecharSubPainel('painel-funcionarios')">←</button>
     <div class="sub-titulo">👥 Funcionários</div>
   </div>
-  <div style="padding:12px 16px 0;">
-    <button onclick="adicionarGerente()" style="width:100%;padding:12px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-weight:bold;cursor:pointer;">➕ Adicionar gerente (gerar link)</button>
-    <div style="font-size:11px;color:#64748b;margin-top:6px;">O gerente abre o link e entra sem criar conta, em modo restrito (sem dinheiro, sem mudar quantidades).</div>
+  <div class="gc-wrap">
+    <div class="gc-topo">
+      <div class="gc-topo-ico"><img src="icons3d/people.png" alt=""></div>
+      <div class="gc-topo-txt"><div class="gc-topo-tit">Convites de gerente</div><div class="gc-topo-sub">Cada link vale <b>24 horas</b>. Quem entra pelo link fica na lista desse link, à espera que ativares o acesso.</div></div>
+    </div>
+    <button type="button" class="gc-novo" id="gc-btn-novo" onclick="adicionarGerente()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      <span>Gerar link de convite</span>
+    </button>
+    <div class="gc-nota">O gerente entra sem criar conta, em modo restrito (sem dinheiro e sem mudar quantidades). Os produtos que registar ficam sempre na loja.</div>
+    <div id="lista-acessos-gerente"><div class="gc-vazio">A carregar…</div></div>
   </div>
+  <div class="gc-sec-tit">Equipa da loja</div>
   <div id="lista-funcionarios-painel">
     <div class="estado-vazio"><div class="estado-vazio-icon">👥</div>A carregar...</div>
   </div>
-  <div style="padding:8px 16px 20px;">
-    <div style="border-top:1px solid #e2e8f0;margin-bottom:12px;"></div>
-    <div style="font-weight:bold;color:#64748b;font-size:13px;margin-bottom:8px;">🔑 Quem entrou pelo link do gerente</div>
-    <div id="lista-acessos-gerente"><div style="color:#cbd5e1;font-size:13px;">A carregar...</div></div>
-  </div>
+  <div style="height:24px"></div>
 </div>
 
 <!-- RELATÓRIOS -->
@@ -1762,18 +1840,20 @@ async function iniciar() {
         if (eAnon) { alert('⚠️ Falta ativar "Anonymous sign-ins" no Supabase (Authentication → Providers → ON).'); }
       }
       const { data: _rLoja, error: eRes } = await supabaseClient.rpc('resgatar_convite_gerente', { p_token: _gTok });
-      if (eRes) { alert('⚠️ Link de gerente inválido. Pede um novo ao dono.'); }
-      else {
-        const _uid = (await supabaseClient.auth.getSession()).data.session.user.id;
-        // Já sou membro aprovado? Se não, criar/garantir PEDIDO PENDENTE com o meu nome
-        const { data: _mem } = await supabaseClient.from('membros_loja').select('papel').eq('user_id', _uid).limit(1);
-        if (!_mem || _mem.length === 0) {
-          const { data: _ped } = await supabaseClient.from('gerente_acessos').select('id').eq('user_id', _uid).eq('loja_id', _rLoja).limit(1);
-          if (!_ped || _ped.length === 0) {
-            let _nome = (prompt('👋 Escreve o teu nome para pedir acesso ao dono:') || '').trim() || 'Gerente';
-            localStorage.setItem('inv_contador_nome', _nome);
-            try { await supabaseClient.from('gerente_acessos').insert({ user_id: _uid, loja_id: _rLoja, nome: _nome, estado: 'pendente' }); } catch(e) {}
-          }
+      if (eRes) { gcFimGerente('sem_convite'); return; }
+      const _uid = (await supabaseClient.auth.getSession()).data.session.user.id;
+      const { data: _mem } = await supabaseClient.from('membros_loja').select('papel').eq('user_id', _uid).limit(1);
+      if (!_mem || _mem.length === 0) {
+        try { const _tc0 = document.getElementById('tela-carregando'); if (_tc0) _tc0.style.display = 'none'; } catch(e) {}
+        let _nome = (localStorage.getItem('inv_contador_nome') || '').trim();
+        const _n2 = await spapPedir('Bem-vindo(a)', 'Escreve o teu nome para pedir acesso ao Monitor da loja. O dono vai ativar o teu acesso.', _nome, { placeholder: 'O teu nome', ok: 'Pedir acesso' });
+        _nome = ((_n2 || _nome || '').trim()) || 'Gerente';
+        localStorage.setItem('inv_contador_nome', _nome);
+        const { error: ePed } = await supabaseClient.rpc('gerente_pedir_acesso', { p_token: _gTok, p_nome: _nome });
+        if (ePed) {
+          if (/expirado|invalido/.test(ePed.message || '')) { gcFimGerente('sem_convite'); return; }
+          // base de dados sem o SQL novo: guarda o pedido à moda antiga
+          try { await supabaseClient.from('gerente_acessos').insert({ user_id: _uid, loja_id: _rLoja, nome: _nome, estado: 'pendente' }); } catch(e) {}
         }
       }
       history.replaceState({}, '', location.pathname + '?modo=gerente');
@@ -1851,14 +1931,14 @@ async function iniciar() {
 
     if (!membros || membros.length === 0 || (membros[0].papel !== 'admin' && membros[0].papel !== 'gerente')) {
       // Gerente à espera da decisão do dono?
-      let _ped = null;
-      try { const r = await supabaseClient.from('gerente_acessos').select('estado').eq('user_id', sessao.user.id).order('criado_em',{ascending:false}).limit(1); _ped = r.data; } catch(e) {}
-      if (_ped && _ped.length > 0 && _ped[0].estado === 'pendente') { mostrarEcraAguardandoGerente(); return; }
-      if (_ped && _ped.length > 0 && _ped[0].estado === 'cancelado') {
-        const _tc = document.getElementById('tela-carregando'); if (_tc) _tc.style.display = 'none';
-        document.body.innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif;color:#334155;padding:32px;text-align:center;">🚫 O teu acesso foi cancelado pelo dono.<br>Pede um novo link se precisares.</div>';
-        return;
+      let _sit = null;
+      try { const r = await supabaseClient.rpc('gerente_minha_situacao'); if (!r.error) _sit = r.data; } catch(e) {}
+      if (_sit === null) {
+        try { const r = await supabaseClient.from('gerente_acessos').select('estado').eq('user_id', sessao.user.id).order('criado_em',{ascending:false}).limit(1); if (r.data && r.data.length) _sit = r.data[0].estado; } catch(e) {}
       }
+      if (_sit === 'pendente') { mostrarEcraAguardandoGerente(); return; }
+      if (_sit === 'cancelado') { gcFimGerente('cancelado'); return; }
+      if (sessao.user.is_anonymous === true) { gcFimGerente('sem_convite'); return; }
       alert('Acesso negado. Só administradores podem usar este monitor.');
       localStorage.setItem('pdv_login_destino','monitor.html'); window.location.href = 'login.html'; return;
     }
@@ -1879,6 +1959,7 @@ async function iniciar() {
     if (modoGerente) {
       // Já foi APROVADO pelo dono (tem membros_loja). Sem código: o controlo é a aprovação.
       window._gerenteNome = (membros[0].nome_exibicao || localStorage.getItem('inv_contador_nome') || 'Gerente');
+      setTimeout(gcVigiarGerente, 0);
     } else {
       window._donoNome = (membros[0].nome_exibicao || 'Dono');
     }
@@ -3300,12 +3381,13 @@ function renderStockSubPainel() {
 }
 
 function renderFuncionariosSubPainel() {
+  carregarAcessosGerente();
   const div = document.getElementById('lista-funcionarios-painel');
   if (todosMemb.length === 0) { div.innerHTML = '<div class="estado-vazio"><div class="estado-vazio-icon">👥</div>Nenhum funcionário</div>'; return; }
   div.innerHTML = todosMemb.map(m => {
     const inicial = (m.nome_exibicao || m.papel || '?')[0].toUpperCase();
     const papelCls = m.papel === 'admin' ? 'papel-admin' : 'papel-vendedor';
-    const papelTxt = m.papel === 'admin' ? '👑 Admin' : '🛒 Vendedor';
+    const papelTxt = m.papel === 'admin' ? '👑 Admin' : m.papel === 'gerente' ? '🧭 Gerente' : '🛒 Vendedor';
     return `<div class="func-item">
       <div class="func-avatar">${inicial}</div>
       <div class="func-info">
@@ -3315,74 +3397,232 @@ function renderFuncionariosSubPainel() {
       <span class="badge-papel ${papelCls}">${papelTxt}</span>
     </div>`;
   }).join('');
-  carregarAcessosGerente();
 }
+
+// ===== CONVITES DE GERENTE (cada link vale 24 horas) =====
+const GC_SQL = 'atualizacao-v2.9.246-convites-gerente-24h.sql';
+const GC_ICO = {
+  link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+  copiar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+  wa: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2a9.9 9.9 0 0 0-8.5 15l-1.4 5 5.2-1.4A9.9 9.9 0 1 0 12.04 2zm0 18.1a8.2 8.2 0 0 1-4.2-1.15l-.3-.18-3.1.82.83-3-.2-.31a8.2 8.2 0 1 1 6.97 3.82zm4.5-6.14c-.25-.12-1.46-.72-1.69-.8-.23-.08-.39-.12-.55.12-.16.25-.63.8-.78.97-.14.16-.29.18-.53.06a6.7 6.7 0 0 1-3.34-2.92c-.25-.43.25-.4.72-1.34.08-.16.04-.3-.02-.42-.06-.12-.55-1.33-.76-1.82-.2-.48-.4-.41-.55-.42h-.47a.9.9 0 0 0-.65.3 2.75 2.75 0 0 0-.86 2.04 4.8 4.8 0 0 0 1 2.53 10.9 10.9 0 0 0 4.18 3.7c1.56.67 2.17.73 2.95.62.48-.07 1.46-.6 1.67-1.18.2-.58.2-1.07.14-1.18-.06-.1-.22-.16-.47-.28z"/></svg>',
+  lixo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>',
+  ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  relogio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+  partilhar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>'
+};
+let _gcDados = null, _gcDesvio = 0, _gcTimer = null;
+const gcEsc = s => (s == null ? '' : String(s)).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const gcLink = t => new URL('monitor.html', location.href).href.split('?')[0] + '?g=' + t;
+const gcAgora = () => Date.now() + _gcDesvio;
+function gcFaltam(exp) {
+  const ms = new Date(exp).getTime() - gcAgora();
+  if (ms <= 0) return null;
+  const h = Math.floor(ms / 36e5), m = Math.floor((ms % 36e5) / 6e4);
+  return h > 0 ? h + 'h ' + String(m).padStart(2, '0') + 'min' : (m > 0 ? m + ' min' : 'menos de 1 min');
+}
+function gcData(d) { const x = new Date(d); return x.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' }) + ' às ' + x.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }); }
+function gcErroSql(e) { const m = String((e && (e.message || e.code)) || e || ''); return /gerente_|function|PGRST202|does not exist|schema cache/i.test(m); }
 
 async function carregarAcessosGerente() {
   const div = document.getElementById('lista-acessos-gerente');
-  if (!div) return;
-  const esc = s => (s==null?'':s.toString()).replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  if (!div || !lojaId) return;
   try {
-    const { data, error } = await supabaseClient.from('gerente_acessos')
-      .select('*').eq('loja_id', lojaId).order('criado_em', { ascending: false }).limit(50);
-    if (error) { div.innerHTML = '<div style="color:#94a3b8;font-size:12px;">Corre o SQL <b>atualizacao-gerente-aprovacao.sql</b> para ativar.</div>'; return; }
-    if (!data || !data.length) { div.innerHTML = '<div style="color:#cbd5e1;font-size:13px;">Ainda ninguém pediu acesso pelo link.</div>'; return; }
-    const pend = data.filter(a => (a.estado||'pendente')==='pendente').length;
-    div.innerHTML = (pend>0
-        ? `<div style="font-size:12px;color:#f59e0b;font-weight:bold;margin-bottom:8px;">⏳ ${pend} pedido(s) a aguardar a tua decisão</div>`
-        : `<div style="font-size:12px;color:#16a34a;font-weight:bold;margin-bottom:8px;">${data.length} pessoa(s) no link</div>`) +
-      data.map(a => {
-        const est = a.estado || 'pendente';
-        const dt = new Date(a.criado_em).toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-        const ini = esc((a.nome||'?').charAt(0).toUpperCase());
-        const badge = est==='activo' ? '<span style="color:#16a34a;font-weight:bold;">✅ Activo</span>'
-          : est==='cancelado' ? '<span style="color:#dc2626;font-weight:bold;">🚫 Cancelado</span>'
-          : '<span style="color:#f59e0b;font-weight:bold;">⏳ Pendente</span>';
-        let botoes = '';
-        if (est !== 'activo') botoes += `<button onclick="aprovarGerente('${a.user_id}')" style="padding:8px 12px;background:#16a34a;border:none;border-radius:8px;color:white;font-size:12px;font-weight:bold;cursor:pointer;">Activar</button>`;
-        if (est !== 'cancelado') botoes += `<button onclick="cancelarGerenteAcesso('${a.user_id}')" style="padding:8px 12px;background:#dc2626;border:none;border-radius:8px;color:white;font-size:12px;font-weight:bold;cursor:pointer;">Cancelar</button>`;
-        else botoes += `<button onclick="eliminarGerenteAcesso('${a.id}')" style="padding:8px 12px;background:#64748b;border:none;border-radius:8px;color:white;font-size:12px;font-weight:bold;cursor:pointer;">🗑 Excluir</button>`;
-        return `<div style="display:flex;align-items:center;gap:10px;background:white;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:6px;">
-          <div style="width:32px;height:32px;border-radius:50%;background:#dbeafe;color:#1e40af;font-weight:bold;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${ini}</div>
-          <div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:600;">${esc(a.nome||'Sem nome')}</div>
-          <div style="font-size:11px;color:#94a3b8;">${dt} · ${badge}</div></div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">${botoes}</div>
-        </div>`;
-      }).join('');
-  } catch(e) { div.innerHTML = '<div style="color:#94a3b8;font-size:12px;">Erro: ' + esc(e.message||e) + '</div>'; }
+    const { data, error } = await supabaseClient.rpc('gerente_painel', { p_loja: lojaId });
+    if (error) throw error;
+    _gcDados = data || { convites: [] };
+    if (_gcDados.agora) _gcDesvio = new Date(_gcDados.agora).getTime() - Date.now();
+    gcRender();
+  } catch (e) {
+    div.innerHTML = gcErroSql(e)
+      ? '<div class="gc-vazio" style="color:#b45309;border-color:#fde68a;background:#fffbeb;">Para os convites de 24 horas funcionarem, corre no Supabase o ficheiro <b>' + GC_SQL + '</b>.</div>'
+      : '<div class="gc-vazio" style="color:#dc2626;">Não foi possível carregar os convites. ' + gcEsc(e.message || e) + '</div>';
+  }
 }
 
-async function aprovarGerente(uid) {
-  if (!uid || uid==='null') { alert('Pedido antigo (sem utilizador). Pede à pessoa para abrir o link outra vez.'); return; }
-  try {
-    const { error } = await supabaseClient.rpc('aprovar_gerente', { p_user: uid, p_loja: lojaId });
-    if (error) { alert('Erro ao activar: ' + error.message); return; }
-    try { mostrarNotif('✅ Gerente activado'); } catch(e) {}
-    carregarAcessosGerente();
-  } catch(e) { alert('Erro: ' + (e.message||e)); }
+function gcRender() {
+  const div = document.getElementById('lista-acessos-gerente');
+  if (!div || !_gcDados) return;
+  const convites = (_gcDados.convites || []).filter(c => gcFaltam(c.expira_em));
+  if (!convites.length) {
+    div.innerHTML = '<div class="gc-vazio">Nenhum link ativo.<br>Toca em <b>Gerar link de convite</b> para convidar um gerente.</div>';
+  } else {
+    div.innerHTML = convites.map(c => {
+      const total = new Date(c.expira_em) - new Date(c.criado_em) || 864e5;
+      const resta = Math.max(0, new Date(c.expira_em).getTime() - gcAgora());
+      const pct = Math.max(2, Math.min(100, resta / total * 100)), pouco = resta < 3 * 36e5;
+      const ac = c.acessos || [];
+      const pessoas = ac.length ? ac.map(a => {
+        const est = a.estado || 'pendente', on = est === 'activo';
+        const chip = on ? 'Ativo' : est === 'cancelado' ? 'Desativado' : 'À espera de ativação';
+        return '<div class="gc-pes" id="gc-p-' + a.id + '">'
+          + '<div class="gc-av">' + gcEsc((a.nome || '?').trim().charAt(0).toUpperCase() || '?') + '</div>'
+          + '<div class="gc-pes-info"><b>' + gcEsc(a.nome || 'Gerente') + '</b><span class="gc-chip ' + est + '">' + chip + '</span></div>'
+          + '<label class="gc-sw" title="' + (on ? 'Desativar acesso' : 'Ativar acesso') + '"><input type="checkbox" ' + (on ? 'checked' : '') + ' onchange="gcDefinirEstado(\'' + a.id + '\', this)"><i></i></label>'
+          + '<button type="button" class="gc-lixo" aria-label="Remover da lista" title="Remover da lista" onclick="gcEliminarPessoa(\'' + a.id + '\')">' + GC_ICO.lixo + '</button>'
+          + '</div>';
+      }).join('') : '<div class="gc-lista-vazia">Ainda ninguém entrou por este link.</div>';
+      const n = ac.length, ativos = ac.filter(a => a.estado === 'activo').length;
+      return '<div class="gc-card" id="gc-c-' + c.token + '">'
+        + '<div class="gc-cab"><div class="gc-ico">' + GC_ICO.link + '</div>'
+        + '<div class="gc-info"><b>Link de convite</b><small>Criado ' + gcData(c.criado_em) + ' · ' + n + ' pessoa' + (n === 1 ? '' : 's') + (n ? ' · ' + ativos + ' ativa' + (ativos === 1 ? '' : 's') : '') + '</small></div>'
+        + '<div class="gc-tempo' + (pouco ? ' pouco' : '') + '" data-exp="' + c.expira_em + '">Expira em ' + gcFaltam(c.expira_em) + '</div></div>'
+        + '<div class="gc-barra' + (pouco ? ' pouco' : '') + '"><i style="width:' + pct.toFixed(1) + '%"></i></div>'
+        + '<div class="gc-acoes">'
+        + '<button type="button" onclick="gcCopiar(\'' + c.token + '\', this)">' + GC_ICO.copiar + '<span>Copiar link</span></button>'
+        + '<button type="button" class="gc-wa" onclick="gcWhatsApp(\'' + c.token + '\')">' + GC_ICO.wa + '<span>WhatsApp</span></button>'
+        + '<button type="button" class="gc-del" onclick="gcEliminarConvite(\'' + c.token + '\')">' + GC_ICO.lixo + '<span>Eliminar</span></button>'
+        + '</div>'
+        + '<div class="gc-lista">' + pessoas + '</div></div>';
+    }).join('');
+  }
+  // contagem decrescente; quando um link passa das 24 h, desaparece sozinho
+  clearInterval(_gcTimer);
+  _gcTimer = setInterval(() => {
+    const pf = document.getElementById('painel-funcionarios');
+    if (!pf || !pf.classList.contains('aberto')) return;
+    let expirou = false;
+    document.querySelectorAll('#lista-acessos-gerente .gc-tempo').forEach(el => {
+      const f = gcFaltam(el.dataset.exp);
+      if (!f) { expirou = true; return; }
+      el.textContent = 'Expira em ' + f;
+    });
+    if (expirou) carregarAcessosGerente();
+  }, 20000);
 }
 
-async function cancelarGerenteAcesso(uid) {
-  if (!uid || uid==='null') { alert('Pedido antigo sem utilizador.'); return; }
-  if (!confirm('Cancelar o acesso deste gerente? Ele deixa de conseguir entrar.')) return;
+function gcCopiarTexto(t) {
+  if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(t).then(() => true, () => gcCopiarAntigo(t));
+  return Promise.resolve(gcCopiarAntigo(t));
+}
+function gcCopiarAntigo(t) {
+  try { const x = document.createElement('textarea'); x.value = t; x.setAttribute('readonly', ''); x.style.cssText = 'position:fixed;opacity:0;'; document.body.appendChild(x); x.select(); const ok = document.execCommand('copy'); x.remove(); return ok; } catch (e) { return false; }
+}
+async function gcCopiar(token, btn) {
+  const ok = await gcCopiarTexto(gcLink(token));
+  if (btn) { const sp = btn.querySelector('span'); const ant = sp ? sp.textContent : ''; if (sp) sp.textContent = ok ? 'Copiado' : 'Copie à mão'; setTimeout(() => { if (sp) sp.textContent = ant; }, 1800); }
+  if (!ok) spapPedir('Copiar link', 'Seleciona e copia o link:', gcLink(token), { ok: 'Fechar' });
+}
+function gcMensagem(token) { return 'Olá! Este é o teu link de acesso como gerente da loja ' + (nomeLoja || '') + ':\n' + gcLink(token) + '\n\nAbre o link, escreve o teu nome e aguarda que eu ative o acesso. O link é válido por 24 horas.'; }
+function gcWhatsApp(token) { window.open('https://wa.me/?text=' + encodeURIComponent(gcMensagem(token)), '_blank'); }
+
+async function gcDefinirEstado(id, el) {
+  const ativar = el.checked; el.disabled = true;
   try {
-    const { error } = await supabaseClient.rpc('cancelar_gerente', { p_user: uid, p_loja: lojaId });
-    if (error) { alert('Erro ao cancelar: ' + error.message); return; }
-    try { mostrarNotif('🚫 Acesso cancelado'); } catch(e) {}
-    carregarAcessosGerente();
-  } catch(e) { alert('Erro: ' + (e.message||e)); }
+    const { error } = await supabaseClient.rpc('gerente_definir_estado', { p_acesso: id, p_ativo: ativar });
+    if (error) throw error;
+    mostrarNotif(ativar ? 'Acesso ativado. O gerente já pode usar o Monitor.' : 'Acesso desativado. O gerente deixou de ter acesso.');
+  } catch (e) {
+    el.checked = !ativar;
+    const m = String(e.message || e);
+    spapAviso('Não foi possível ' + (ativar ? 'ativar' : 'desativar'),
+      /expirado/.test(m) ? 'Este link já passou das 24 horas e deixou de funcionar. Gera um novo link para convidar de novo.'
+      : /antigo/.test(m) ? 'Este pedido é antigo. Pede à pessoa para abrir um link novo.'
+      : gcErroSql(e) ? 'Falta correr no Supabase o ficheiro ' + GC_SQL + '.' : m, { icone: '⚠️' });
+  }
+  el.disabled = false; carregarAcessosGerente();
 }
 
-async function eliminarGerenteAcesso(id) {
-  if (!id) return;
-  if (!confirm('Excluir este registo de vez? Some da lista. (Só funciona para já cancelados.)')) return;
+async function gcEliminarPessoa(id) {
+  let nome = 'esta pessoa';
+  ((_gcDados && _gcDados.convites) || []).forEach(c => (c.acessos || []).forEach(a => { if (a.id === id) nome = a.nome || nome; }));
+  const ok = await spapConfirmar('Remover ' + nome + ' da lista?',
+    nome + ' deixa de ter acesso ao Monitor desta loja de imediato.\nOs produtos que registou continuam guardados na loja.',
+    { ok: 'Remover', cancelar: 'Cancelar', perigo: true, icone: '<img src="icons3d/lixo.png" alt="" style="width:36px;height:36px">' });
+  if (!ok) return;
   try {
-    const { error } = await supabaseClient.from('gerente_acessos').delete().eq('id', id).eq('loja_id', lojaId);
-    if (error) { alert('Não deu para excluir: ' + error.message + '\n(Pode ser preciso uma permissão no Supabase.)'); return; }
-    try { mostrarNotif('🗑 Registo excluído'); } catch(e){}
-    carregarAcessosGerente();
-  } catch(e) { alert('Erro: ' + (e.message||e)); }
+    const { error } = await supabaseClient.rpc('gerente_eliminar_acesso', { p_acesso: id });
+    if (error) throw error;
+    const el = document.getElementById('gc-p-' + id); if (el) { el.style.transition = 'opacity .25s'; el.style.opacity = '0'; }
+    mostrarNotif(nome + ' foi removido(a) da lista.');
+    setTimeout(carregarAcessosGerente, 260);
+  } catch (e) { spapAviso('Não foi possível remover', gcErroSql(e) ? 'Falta correr no Supabase o ficheiro ' + GC_SQL + '.' : String(e.message || e), { icone: '⚠️' }); }
 }
+
+async function gcEliminarConvite(token) {
+  const c = ((_gcDados && _gcDados.convites) || []).find(x => x.token === token) || { acessos: [] };
+  const n = (c.acessos || []).length;
+  const ok = await spapConfirmar('Eliminar este link de convite?',
+    'O link deixa de funcionar de imediato e a lista desaparece.'
+    + (n ? '\n' + n + (n === 1 ? ' pessoa desta lista perde' : ' pessoas desta lista perdem') + ' o acesso ao Monitor.' : '')
+    + '\nOs produtos registados por este link continuam guardados na loja.',
+    { ok: 'Eliminar link', cancelar: 'Cancelar', perigo: true, icone: '<img src="icons3d/lixo.png" alt="" style="width:36px;height:36px">' });
+  if (!ok) return;
+  try {
+    const { error } = await supabaseClient.rpc('gerente_eliminar_convite', { p_token: token });
+    if (error) throw error;
+    const el = document.getElementById('gc-c-' + token); if (el) el.classList.add('sair');
+    if (_gcDados) _gcDados.convites = (_gcDados.convites || []).filter(x => x.token !== token);
+    setTimeout(gcRender, 300);
+    mostrarNotif('Link eliminado. O convite deixou de funcionar' + (n ? ' e ' + n + (n === 1 ? ' pessoa ficou' : ' pessoas ficaram') + ' sem acesso.' : '.'));
+  } catch (e) { spapAviso('Não foi possível eliminar', gcErroSql(e) ? 'Falta correr no Supabase o ficheiro ' + GC_SQL + '.' : String(e.message || e), { icone: '⚠️' }); }
+}
+
+function gcJanelaLink(token, expira) {
+  const ant = document.getElementById('gc-modal'); if (ant) ant.remove();
+  const link = gcLink(token), d = document.createElement('div');
+  d.id = 'gc-modal';
+  d.innerHTML = '<div class="gcm" role="dialog" aria-modal="true" aria-labelledby="gcm-t">'
+    + '<div class="gcm-puxa"></div><div class="gcm-ok">' + GC_ICO.ok + '</div>'
+    + '<h3 id="gcm-t">Link de convite pronto</h3>'
+    + '<p>Envia este link ao gerente. Ele entra sem criar conta, escreve o nome e fica na lista à espera que ativares o acesso.</p>'
+    + '<div class="gcm-link"><input type="text" readonly value="' + gcEsc(link) + '" onfocus="this.select()"><button type="button" id="gcm-cp">Copiar</button></div>'
+    + '<div class="gcm-val">' + GC_ICO.relogio + '<span>Válido por 24 horas, até ' + gcData(expira) + '. Depois o link deixa de funcionar e a lista desaparece.</span></div>'
+    + '<div class="gcm-bts">'
+    + '<button type="button" class="gcm-wa" id="gcm-wa">' + GC_ICO.wa + 'Enviar por WhatsApp</button>'
+    + (navigator.share ? '<button type="button" class="gcm-par" id="gcm-par">' + GC_ICO.partilhar + 'Partilhar…</button>' : '')
+    + '<button type="button" class="gcm-fechar" id="gcm-x">Concluir</button></div></div>';
+  document.body.appendChild(d);
+  requestAnimationFrame(() => d.classList.add('on'));
+  const fechar = () => { d.classList.remove('on'); setTimeout(() => d.remove(), 220); };
+  d.addEventListener('click', e => { if (e.target === d) fechar(); });
+  d.querySelector('#gcm-x').onclick = fechar;
+  d.querySelector('#gcm-wa').onclick = () => gcWhatsApp(token);
+  const par = d.querySelector('#gcm-par'); if (par) par.onclick = () => { navigator.share({ title: 'Convite de gerente', text: gcMensagem(token) }).catch(() => {}); };
+  d.querySelector('#gcm-cp').onclick = async e => { const b = e.currentTarget, ok = await gcCopiarTexto(link); b.textContent = ok ? 'Copiado ✓' : 'Seleciona e copia'; b.classList.toggle('copiado', ok); if (!ok) d.querySelector('.gcm-link input').select(); setTimeout(() => { b.textContent = 'Copiar'; b.classList.remove('copiado'); }, 2000); };
+}
+
+async function adicionarGerente() {
+  const btn = document.getElementById('gc-btn-novo'); if (btn) btn.disabled = true;
+  try {
+    const { data, error } = await supabaseClient.rpc('gerente_criar_convite', { p_loja: lojaId });
+    if (error) throw error;
+    const r = typeof data === 'string' ? JSON.parse(data) : data;
+    gcJanelaLink(r.token, r.expira_em);
+    carregarAcessosGerente();
+  } catch (e) {
+    spapAviso('Não foi possível gerar o link', gcErroSql(e) ? 'Para os convites de 24 horas funcionarem, corre no Supabase o ficheiro ' + GC_SQL + ' e tenta de novo.' : String(e.message || e), { icone: '⚠️' });
+  } finally { if (btn) btn.disabled = false; }
+}
+
+// Ecrã final do gerente (link expirado, eliminado ou acesso desativado)
+function gcEcraGerente(icone, titulo, texto) {
+  const tc = document.getElementById('tela-carregando'); if (tc) tc.style.display = 'none';
+  document.body.innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:\'Plus Jakarta Sans\',system-ui,-apple-system,\'Segoe UI\',Roboto,sans-serif;background:linear-gradient(160deg,#eef4ff,#f8fafc);padding:24px;">'
+    + '<div style="max-width:380px;width:100%;text-align:center;background:#fff;border-radius:24px;padding:32px 24px;box-shadow:0 20px 50px rgba(15,23,42,.12);">'
+    + '<div style="width:72px;height:72px;margin:0 auto 14px;border-radius:22px;background:#f1f5f9;display:grid;place-items:center;"><img src="icons3d/' + icone + '" alt="" style="width:44px;height:44px"></div>'
+    + '<h2 style="margin:0 0 8px;color:#0f172a;font-size:20px;font-weight:800;">' + titulo + '</h2>'
+    + '<p style="color:#475569;line-height:1.55;font-size:14.5px;margin:0;">' + texto + '</p></div></div>';
+}
+function gcFimGerente(sit) {
+  if (sit === 'cancelado') gcEcraGerente('prohibited.png', 'Acesso desativado', 'O dono da loja desativou o teu acesso ao Monitor.<br>Se precisares de voltar, pede-lhe um novo link.');
+  else gcEcraGerente('hourglass.png', 'Este link já não funciona', 'O link de convite expirou (vale 24 horas) ou foi eliminado pelo dono da loja.<br>Pede ao dono um novo link.');
+}
+// O Monitor do gerente confirma de minuto a minuto se o acesso continua válido
+function gcVigiarGerente() {
+  if (!modoGerente || window._gcVigia) return;
+  window._gcVigia = setInterval(async () => {
+    try {
+      const { data, error } = await supabaseClient.rpc('gerente_minha_situacao');
+      if (error || !data) return;
+      if (data !== 'activo') { clearInterval(window._gcVigia); gcFimGerente(data); }
+    } catch (e) {}
+  }, 60000);
+}
+
+// compatibilidade com chamadas antigas
+async function aprovarGerente() { carregarAcessosGerente(); }
+async function cancelarGerenteAcesso() { carregarAcessosGerente(); }
+async function eliminarGerenteAcesso() { carregarAcessosGerente(); }
 
 function renderRelatoriosSubPainel() {
   const agora = new Date();
@@ -5801,7 +6041,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.245';
+const MONITOR_VERSAO = '2.9.246';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -6666,16 +6906,6 @@ function vgRender(inicio, fim, rotulo) {
     <div style="font-size:11px;color:#94a3b8;margin-top:12px;line-height:1.5;">O lucro só é exato se os produtos tiverem o preço de compra definido. Produtos sem custo contam a venda toda como lucro.</div>`;
 }
 
-async function adicionarGerente() {
-  try {
-    const token = 'g' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-    const { error } = await supabaseClient.from('gerente_convites').insert({ token, loja_id: lojaId });
-    if (error) throw error;
-    const link = new URL('monitor.html', location.href).href + '?g=' + token;
-    prompt('✅ Link do gerente criado! Copia e envia ao gerente (ele entra sem criar conta):', link);
-  } catch (e) { mostrarNotif('❌ ' + (e.message || e) + ' (corre o SQL do gerente?)', true); }
-}
-
 // ===== MODO GERENTE (monitor extra restrito) =====
 function toggleModoEscuro() {
   const on = !document.documentElement.classList.contains('escuro');
@@ -6708,7 +6938,9 @@ function mostrarEcraAguardandoGerente() {
       const s = (await supabaseClient.auth.getSession()).data.session;
       if (!s) return;
       const { data: m } = await supabaseClient.from('membros_loja').select('papel').eq('user_id', s.user.id).limit(1);
-      if (m && m.length > 0) { clearInterval(_timer); location.reload(); }
+      if (m && m.length > 0) { clearInterval(_timer); location.reload(); return; }
+      const r = await supabaseClient.rpc('gerente_minha_situacao');
+      if (!r.error && r.data && r.data !== 'pendente' && r.data !== 'activo') { clearInterval(_timer); gcFimGerente(r.data); }
     } catch(e) {}
   }, 7000);
 }

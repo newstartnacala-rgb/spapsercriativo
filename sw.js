@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spap-pdv-v320';
+const CACHE_NAME = 'spap-pdv-v321';
 const FICHEIROS = [
   './',
   './index.html',
