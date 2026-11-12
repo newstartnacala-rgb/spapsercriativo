@@ -88,9 +88,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.36">
-<script src="banca-tema.js?v=3.7.36" defer></script>
-<script src="app-android.js?v=3.7.36" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.37">
+<script src="banca-tema.js?v=3.7.37" defer></script>
+<script src="app-android.js?v=3.7.37" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -415,6 +415,7 @@
 
 <script src="supabase-config.js"></script>
 <script src="spap-suporte.js?v=1"></script>
+<script src="spap-contador.js?v=1"></script>
 <script src="spap-avisos.js?v=5"></script>
 <script src="spap-backup.js?v=7"></script>
 <script src="spap-imagem.js?v=1"></script>
@@ -747,8 +748,8 @@ async function carregarResumo(){
   window._vendasResumo = vendas;
   carregarTop10(periodo==='hoje' ? vendas : null);
   const totalVend = vendas.reduce((s,v)=>s+(parseFloat(v.total)||0),0);
-  document.getElementById('s-vendido').textContent = fmt(totalVend);
-  document.getElementById('s-nvendas').textContent = vendas.length;
+  { const _e=document.getElementById('s-vendido'); spapNum(_e, fmt(totalVend), { cartao:_e.closest('.stat') }); }
+  { const _e=document.getElementById('s-nvendas'); spapNum(_e, String(vendas.length), { cartao:_e.closest('.stat'), mais:'+1' }); }
   // Lucro estimado: venda - custo (custo atual do produto pelo nome)
   const custoDe = {}; produtos.forEach(p=>{ custoDe[(p.nome||'').toLowerCase()] = parseFloat(p.preco_compra)||0; });
   let lucro=0;
@@ -757,7 +758,7 @@ async function carregarResumo(){
     const pc=custoDe[(it.produto_nome||'').toLowerCase()]||0;
     lucro += (pv-pc)*q;
   }));
-  document.getElementById('s-lucro').textContent = fmt(lucro);
+  { const _e=document.getElementById('s-lucro'); spapNum(_e, fmt(lucro), { cartao:_e.closest('.stat'), lucro:true }); }
   try{ desenharGrafico(vendas, r); }catch(e){}
   const div=document.getElementById('lista-vendas');
   if(!vendas.length){ div.innerHTML='<div class="vazio">Sem vendas no período.</div>'; return; }

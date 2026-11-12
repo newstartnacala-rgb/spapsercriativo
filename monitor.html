@@ -21,7 +21,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.249"></script>
+<script src="spap-leitor.js?v=2.9.250"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -1116,7 +1116,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.249" defer></script>
+<script src="app-android.js?v=2.9.250" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -1772,6 +1772,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
 <script src="spap-imagem.js?v=1"></script>
 <script src="spap-expirou.js?v=1"></script>
 <script src="spap-suporte.js?v=1"></script>
+<script src="spap-contador.js?v=1"></script>
 <script>
 let sessao = null, lojaId = null, nomeLoja = '';
 let todasVendas = [], todosProdutos = [], todosMemb = [];
@@ -2683,7 +2684,7 @@ function renderHome(vendasHoje) {
   const itens = vendasHoje.reduce((s,v) => s + v.venda_itens.reduce((si,i) => si+i.qtd, 0), 0);
   const media = vendasHoje.length > 0 ? total / vendasHoje.length : 0;
 
-  document.getElementById('ov-total').textContent = 'MT ' + total.toFixed(2);
+  { const _e = document.getElementById('ov-total'); spapNum(_e, 'MT ' + total.toFixed(2), { cartao: _e.closest('.kpi') }); }
   // LUCRO do dia = (venda - custo) x qtd de cada item.
   // Nos RETORNOS a qtd é negativa, por isso o lucro desse produto é subtraído automaticamente.
   let lucroDia = 0, lucroVendas = 0, lucroRetornos = 0;
@@ -2698,7 +2699,7 @@ function renderHome(vendasHoje) {
     });
   });
   const elLucro = document.getElementById('ov-recebido');
-  elLucro.textContent = 'MT ' + lucroDia.toFixed(2);
+  spapNum(elLucro, 'MT ' + lucroDia.toFixed(2), { cartao: elLucro.closest('.kpi'), lucro: true });
   // Se houve retornos, mostra a justificação no rótulo
   const elVar = document.getElementById('ov-var-recebido');
   if (elVar) {
@@ -2708,7 +2709,7 @@ function renderHome(vendasHoje) {
       elVar.textContent = '↑ estimado';
     }
   }
-  document.getElementById('ov-num-vendas').textContent = vendasHoje.length;
+  { const _e = document.getElementById('ov-num-vendas'); spapNum(_e, String(vendasHoje.length), { cartao: _e.closest('.kpi'), mais: '+1' }); }
   document.getElementById('ov-itens').textContent = itens;
   document.getElementById('ov-media').textContent = 'MT ' + media.toFixed(0);
   document.getElementById('home-vendas-count').textContent = vendasHoje.length + ' hoje';
@@ -6166,7 +6167,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.249';
+const MONITOR_VERSAO = '2.9.250';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
