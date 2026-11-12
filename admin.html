@@ -8,7 +8,7 @@
 <script>
   // Painel sempre na versão mais recente: se o aparelho mostrar uma cópia antiga, recarrega a nova
   (function () {
-    var VER = '2.9.244';
+    var VER = '2.9.245';
     try {
       fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
         var nova = j && j.versao; if (!nova || nova === VER) return;
@@ -255,6 +255,58 @@ body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; c
   .lc-ico { width:28px; height:28px; }
   .loja-nome { font-size:15px; }
 }
+/* Como o cliente paga */
+.ad-divisao.pagar::before { background:linear-gradient(180deg,#34d399,#059669); }
+.pg-topo { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+.pg-cont { font-size:12.5px; font-weight:800; color:#065f46; background:#d1fae5; padding:5px 11px; border-radius:99px; }
+.pg-sujo { font-size:12px; font-weight:700; color:#b45309; display:none; }
+.pg-sujo.on { display:inline; }
+.pg-lista { display:flex; flex-direction:column; gap:10px; }
+.pg-met { --c:#0d5ff0; border:1.5px solid #e2e8f0; border-radius:18px; background:#fff; transition:border-color .2s, box-shadow .2s; overflow:hidden; }
+.pg-mpesa { --c:#e60000; --g:linear-gradient(145deg,#ff3b3b,#c40000); }
+.pg-emola { --c:#f2700f; --g:linear-gradient(145deg,#ffa14a,#e2620a); }
+.pg-banco { --c:#0d5ff0; --g:linear-gradient(145deg,#4b97ff,#0b3fb0); }
+.pg-met.ativo { border-color:color-mix(in srgb,var(--c) 45%,#fff); box-shadow:0 8px 20px color-mix(in srgb,var(--c) 14%,transparent); }
+.pg-cab { display:flex; align-items:center; gap:12px; padding:12px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.pg-logo { width:50px; height:50px; border-radius:15px; background:var(--g); display:grid; place-items:center; flex-shrink:0; box-shadow:0 6px 14px color-mix(in srgb,var(--c) 35%,transparent), inset 0 2px 3px rgba(255,255,255,.35); }
+.pg-logo svg { width:34px; height:34px; }
+.pg-met:not(.ativo) .pg-logo { filter:grayscale(.85); opacity:.65; }
+.pg-info { flex:1; min-width:0; }
+.pg-nome { font-size:15.5px; font-weight:800; color:var(--nv); display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.pg-princ { display:none; font-size:10.5px; font-weight:800; color:#92400e; background:#fef3c7; padding:2px 7px; border-radius:99px; }
+.pg-met.principal .pg-princ { display:inline-block; }
+.pg-sub { font-size:12px; color:#64748b; margin-top:1px; }
+.pg-resumo { font-size:12.5px; color:#334155; font-weight:700; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pg-estado { font-size:11px; font-weight:800; padding:4px 9px; border-radius:99px; background:#f1f5f9; color:#64748b; flex-shrink:0; }
+.pg-met.ativo .pg-estado { background:#dcfce7; color:#15803d; }
+.pg-eng { width:40px; height:40px; border-radius:12px; border:1.5px solid #e2e8f0; background:#f8fafc; color:#475569; display:grid; place-items:center; cursor:pointer; flex-shrink:0; transition:transform .35s, background .2s, color .2s; }
+.pg-eng svg { width:22px; height:22px; }
+.pg-met.aberto .pg-eng { transform:rotate(90deg); background:var(--c); border-color:var(--c); color:#fff; }
+.pg-corpo { display:grid; grid-template-rows:0fr; transition:grid-template-rows .3s ease; }
+.pg-met.aberto .pg-corpo { grid-template-rows:1fr; }
+.pg-corpo-in { overflow:hidden; padding:0 12px; }
+.pg-met.aberto .pg-corpo-in { padding:0 12px 12px; border-top:1px dashed #e2e8f0; }
+.pg-opcoes { display:flex; flex-direction:column; gap:6px; margin:12px 0 10px; }
+.pg-opt { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:13px; background:#f8fafc; cursor:pointer; }
+.pg-opt span { flex:1; display:flex; flex-direction:column; font-size:13.5px; color:var(--nv); }
+.pg-opt small { font-size:11.5px; color:#64748b; margin-top:1px; }
+.pg-opt input { position:absolute; opacity:0; pointer-events:none; }
+.pg-sw { width:44px; height:26px; border-radius:99px; background:#cbd5e1; position:relative; flex-shrink:0; transition:background .2s; }
+.pg-sw::after { content:''; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff; box-shadow:0 2px 4px rgba(0,0,0,.2); transition:transform .2s; }
+.pg-opt input:checked + .pg-sw { background:var(--c); }
+.pg-opt input:checked + .pg-sw::after { transform:translateX(18px); }
+.pg-rd { width:22px; height:22px; border-radius:50%; border:2px solid #cbd5e1; flex-shrink:0; position:relative; transition:border-color .2s; }
+.pg-opt input:checked + .pg-rd { border-color:var(--c); }
+.pg-opt input:checked + .pg-rd::after { content:''; position:absolute; inset:3px; border-radius:50%; background:var(--c); }
+.pg-opt input:focus-visible + i { outline:2px solid var(--c); outline-offset:2px; }
+.pg-campo { display:flex; flex-direction:column; gap:4px; margin-top:8px; }
+.pg-campo span { font-size:12px; font-weight:800; color:#475569; }
+.pg-campo input { width:100%; box-sizing:border-box; padding:11px 13px; border:1.5px solid #d6e4fb; border-radius:12px; font-size:14.5px; color:var(--nv); background:#fff; font-family:inherit; }
+.pg-campo input:focus { outline:none; border-color:var(--c); }
+.pg-campo input.erro { border-color:#dc2626; background:#fef2f2; }
+.pg-erro { font-size:12px; color:#dc2626; font-weight:700; margin-top:6px; }
+.pg-erro:empty { display:none; }
+.pg-guardar:disabled { opacity:.6; cursor:default; }
 /* Bancas */
 .ad-divisao { display:flex; align-items:center; gap:14px; margin:34px 0 14px; padding:16px 18px; border-radius:22px; background:linear-gradient(135deg,#14244f,#0b1b4d); color:#fff; box-shadow:0 12px 28px rgba(11,27,77,.25); position:relative; overflow:hidden; }
 .ad-divisao::before { content:''; position:absolute; left:0; top:0; bottom:0; width:5px; background:linear-gradient(180deg,#ffa24a,#f26a0c); }
@@ -353,22 +405,81 @@ body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; c
       <div class="ad-nota">Colunas: Nome · Preço mensal (MT) · Desconto (%). No Anual o desconto aplica-se sobre 12 meses.</div>
       <div class="ad-nota" id="cfg-banca-previa"></div>
 
-      <div class="ad-sec"><img src="icons3d/card.png" alt="">Como o cliente paga a subscrição</div>
-      <div class="ad-campos">
-        <input type="text" id="cfg-mpesa" placeholder="Número M-Pesa (84 xxx xxxx)">
-        <input type="text" id="cfg-mpesa-nome" placeholder="Nome da conta M-Pesa (ex: João Mateus)">
-        <input type="text" id="cfg-emola" placeholder="Número e-Mola (86 xxx xxxx)">
-        <input type="text" id="cfg-emola-nome" placeholder="Nome da conta e-Mola (ex: João Mateus)">
-        <input type="text" id="cfg-banco-nome" placeholder="Nome do banco (ex: BCI, BIM)">
-        <input type="text" id="cfg-banco-conta" placeholder="Número da conta / NIB">
-        <input type="text" id="cfg-banco-titular" placeholder="Nome do titular">
+      <button class="ad-btn-grande" onclick="guardarPlanos()"><img src="icons3d/floppy.png" alt="">Guardar planos</button>
+      <div id="cfg-estado" class="ad-estado"></div>
+    </div>
+
+    <!-- ===== COMO O CLIENTE PAGA A SUBSCRIÇÃO — divisão própria ===== -->
+    <div class="ad-divisao pagar" id="sec-pagamento">
+      <img src="icons3d/card.png" alt="">
+      <div><div class="ad-div-tit">Como o cliente paga a subscrição</div><div class="ad-div-sub">Escolhe as formas de pagamento que o cliente vê na página de planos (Loja e Banca). Toca na engrenagem de cada uma para configurar.</div></div>
+    </div>
+    <div class="ad-card pg-card">
+      <div class="pg-topo"><span class="pg-cont" id="pg-cont">0 de 3 ativos</span><span class="pg-sujo" id="pg-sujo">● Alterações por guardar</span></div>
+      <div class="pg-lista">
+        <div class="pg-met pg-mpesa" id="pg-mpesa" data-m="mpesa">
+          <div class="pg-cab" onclick="pgAbrir('mpesa')">
+            <span class="pg-logo"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="14" y="5" width="20" height="38" rx="4.5" fill="#fff"/><rect x="17" y="10" width="14" height="22" rx="1.5" fill="#e60000"/><circle cx="24" cy="38" r="2" fill="#e60000"/><path d="M20 26V16l4 5 4-5v10" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <div class="pg-info"><div class="pg-nome">M-Pesa<span class="pg-princ" id="pg-mpesa-princ">★ Principal</span></div><div class="pg-sub">Vodacom · Envio de dinheiro</div><div class="pg-resumo" id="pg-mpesa-resumo">Não configurado</div></div>
+            <span class="pg-estado" id="pg-mpesa-estado">Desativado</span>
+            <button type="button" class="pg-eng" aria-label="Configurar M-Pesa" title="Configurar M-Pesa"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.47.47 0 0 0-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg></button>
+          </div>
+          <div class="pg-corpo"><div class="pg-corpo-in">
+            <div class="pg-opcoes">
+              <label class="pg-opt"><span><b>Mostrar ao cliente</b><small>Aparece na página de planos como forma de pagar</small></span><input type="checkbox" id="pg-mpesa-ativo" onchange="pgMudou(this)"><i class="pg-sw"></i></label>
+              <label class="pg-opt"><span><b>Método principal</b><small>Já vem escolhido quando o cliente abre os planos</small></span><input type="radio" name="pg-principal" value="mpesa" id="pg-mpesa-p" onchange="pgMudou(this)"><i class="pg-rd"></i></label>
+            </div>
+            <label class="pg-campo"><span>Número M-Pesa</span><input type="text" inputmode="tel" id="cfg-mpesa" placeholder="84 xxx xxxx" oninput="pgMudou()" autocomplete="off"></label>
+            <label class="pg-campo"><span>Nome que aparece na conta</span><input type="text" inputmode="text" id="cfg-mpesa-nome" placeholder="Ex: João Mateus" oninput="pgMudou()" autocomplete="off"></label>
+
+            <div class="pg-erro" id="pg-mpesa-erro"></div>
+          </div></div>
+        </div>
+        <div class="pg-met pg-emola" id="pg-emola" data-m="emola">
+          <div class="pg-cab" onclick="pgAbrir('emola')">
+            <span class="pg-logo"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M9 15a4 4 0 0 1 4-4h20l3 4" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><rect x="7" y="14" width="34" height="25" rx="5" fill="#fff"/><rect x="27" y="22" width="14" height="9" rx="3" fill="#ffd2a6"/><circle cx="32" cy="26.5" r="2.2" fill="#f2700f"/><path d="M14 22.5h8M14 28h6" stroke="#f2700f" stroke-width="2.6" stroke-linecap="round"/></svg></span>
+            <div class="pg-info"><div class="pg-nome">e-Mola<span class="pg-princ" id="pg-emola-princ">★ Principal</span></div><div class="pg-sub">Movitel · Transferência</div><div class="pg-resumo" id="pg-emola-resumo">Não configurado</div></div>
+            <span class="pg-estado" id="pg-emola-estado">Desativado</span>
+            <button type="button" class="pg-eng" aria-label="Configurar e-Mola" title="Configurar e-Mola"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.47.47 0 0 0-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg></button>
+          </div>
+          <div class="pg-corpo"><div class="pg-corpo-in">
+            <div class="pg-opcoes">
+              <label class="pg-opt"><span><b>Mostrar ao cliente</b><small>Aparece na página de planos como forma de pagar</small></span><input type="checkbox" id="pg-emola-ativo" onchange="pgMudou(this)"><i class="pg-sw"></i></label>
+              <label class="pg-opt"><span><b>Método principal</b><small>Já vem escolhido quando o cliente abre os planos</small></span><input type="radio" name="pg-principal" value="emola" id="pg-emola-p" onchange="pgMudou(this)"><i class="pg-rd"></i></label>
+            </div>
+            <label class="pg-campo"><span>Número e-Mola</span><input type="text" inputmode="tel" id="cfg-emola" placeholder="86 xxx xxxx" oninput="pgMudou()" autocomplete="off"></label>
+            <label class="pg-campo"><span>Nome que aparece na conta</span><input type="text" inputmode="text" id="cfg-emola-nome" placeholder="Ex: João Mateus" oninput="pgMudou()" autocomplete="off"></label>
+
+            <div class="pg-erro" id="pg-emola-erro"></div>
+          </div></div>
+        </div>
+        <div class="pg-met pg-banco" id="pg-banco" data-m="banco">
+          <div class="pg-cab" onclick="pgAbrir('banco')">
+            <span class="pg-logo"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 6 6 15v4h36v-4z" fill="#fff"/><circle cx="24" cy="13" r="2.3" fill="#0d5ff0"/><path d="M11 22v12M19 22v12M29 22v12M37 22v12" stroke="#fff" stroke-width="4" stroke-linecap="round"/><rect x="6" y="36" width="36" height="5" rx="2" fill="#fff"/></svg></span>
+            <div class="pg-info"><div class="pg-nome">Banco<span class="pg-princ" id="pg-banco-princ">★ Principal</span></div><div class="pg-sub">Transferência ou depósito</div><div class="pg-resumo" id="pg-banco-resumo">Não configurado</div></div>
+            <span class="pg-estado" id="pg-banco-estado">Desativado</span>
+            <button type="button" class="pg-eng" aria-label="Configurar Banco" title="Configurar Banco"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.47.47 0 0 0-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg></button>
+          </div>
+          <div class="pg-corpo"><div class="pg-corpo-in">
+            <div class="pg-opcoes">
+              <label class="pg-opt"><span><b>Mostrar ao cliente</b><small>Aparece na página de planos como forma de pagar</small></span><input type="checkbox" id="pg-banco-ativo" onchange="pgMudou(this)"><i class="pg-sw"></i></label>
+              <label class="pg-opt"><span><b>Método principal</b><small>Já vem escolhido quando o cliente abre os planos</small></span><input type="radio" name="pg-principal" value="banco" id="pg-banco-p" onchange="pgMudou(this)"><i class="pg-rd"></i></label>
+            </div>
+            <label class="pg-campo"><span>Banco</span><input type="text" inputmode="text" id="cfg-banco-nome" placeholder="Ex: BCI, BIM, Standard Bank" oninput="pgMudou()" autocomplete="off"></label>
+            <label class="pg-campo"><span>Número da conta</span><input type="text" inputmode="text" id="cfg-banco-conta" placeholder="Ex: 0001 2345 6789" oninput="pgMudou()" autocomplete="off"></label>
+            <label class="pg-campo"><span>NIB</span><input type="text" inputmode="numeric" id="cfg-banco-nib" placeholder="21 dígitos" oninput="pgMudou()" autocomplete="off"></label>
+            <label class="pg-campo"><span>Titular da conta</span><input type="text" inputmode="text" id="cfg-banco-titular" placeholder="Ex: Spap-Sercriativo, Lda" oninput="pgMudou()" autocomplete="off"></label>
+
+            <div class="pg-erro" id="pg-banco-erro"></div>
+          </div></div>
+        </div>
       </div>
 
-      <div class="ad-sec ad-sec-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span>Link de pagamento — conversa DIRETA contigo <small>(o cliente envia o comprovativo aqui para ativares)</small></span></div>
-      <div class="ad-campos"><input type="text" id="cfg-wa-pagamento" placeholder="Ex: https://wa.me/258861667843"></div>
+      <div class="ad-sec ad-sec-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span>Para onde o cliente envia o comprovativo <small>(conversa direta contigo, para ativares a conta)</small></span></div>
+      <div class="ad-campos"><input type="text" id="cfg-wa-pagamento" placeholder="Ex: https://wa.me/258861667843" oninput="pgMudou()"></div>
 
-      <button class="ad-btn-grande" onclick="guardarConfigSubscricao()"><img src="icons3d/floppy.png" alt="">Guardar configuração</button>
-      <div id="cfg-estado" class="ad-estado"></div>
+      <button class="ad-btn-grande pg-guardar" id="pg-btn" onclick="guardarPagamento()"><img src="icons3d/floppy.png" alt="">Guardar formas de pagamento</button>
+      <div id="pg-estado-geral" class="ad-estado"></div>
     </div>
 
     <!-- ===== LOJAS (app Loja / Monitor) — lista própria ===== -->
@@ -534,12 +645,8 @@ async function carregarConfigSubscricao() {
     if (d) d.value = (p.desconto != null ? p.desconto : 0);
   });
   const m = (await lerConfig('metodos_subscricao')) || {};
-  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
-  set('cfg-mpesa', m.mpesa); set('cfg-emola', m.emola);
-  set('cfg-mpesa-nome', m.mpesa_nome); set('cfg-emola-nome', m.emola_nome);
-  set('cfg-banco-nome', m.banco_nome); set('cfg-banco-conta', m.banco_conta); set('cfg-banco-titular', m.banco_titular);
   const wa = await lerConfig('link_whatsapp_pagamento');
-  set('cfg-wa-pagamento', typeof wa === 'string' ? wa : '');
+  pgPreencher(m, typeof wa === 'string' ? wa : '');
   const pbc = await lerConfig('planos_banca');
   if (pbc && typeof pbc === 'object') _planosBanca = pbc;
   const pb = precosBanca();
@@ -562,7 +669,8 @@ function previaBanca() {
   document.getElementById('cfg-banca-previa').innerHTML = '<b>' + p.nomeGratis + '</b> ' + p.dias + ' dias (só na primeira conta) · <b>' + p.nomePro + '</b> MT ' + f(p.mensal) + '/mês'
     + (p.descPro ? ' (−' + p.descPro + '%)' : '') + ' · <b>' + p.nomeAnual + '</b> MT ' + f(p.anual) + '/ano (poupa ' + p.desc + '%, MT ' + f(p.baseAnual * 12 - p.anual) + ')';
 }
-async function guardarConfigSubscricao() {
+// ---------- Planos (preços) ----------
+async function guardarPlanos() {
   const estado = document.getElementById('cfg-estado');
   const num = id => parseFloat(document.getElementById(id).value) || 0;
   const txt = id => (document.getElementById(id).value || '').trim();
@@ -571,29 +679,147 @@ async function guardarConfigSubscricao() {
     pro:    { nome: txt('cfg-pro-nome')    || 'Médio',    preco: num('cfg-pro-preco'),    desconto: num('cfg-pro-desc') },
     anual:  { nome: txt('cfg-anual-nome')  || 'Avançado', preco: num('cfg-anual-preco'),  desconto: num('cfg-anual-desc') }
   };
-  const metodos = {
-    mpesa: txt('cfg-mpesa'), emola: txt('cfg-emola'),
-    mpesa_nome: txt('cfg-mpesa-nome'), emola_nome: txt('cfg-emola-nome'),
-    banco_nome: txt('cfg-banco-nome'), banco_conta: txt('cfg-banco-conta'), banco_titular: txt('cfg-banco-titular')
-  };
-  const waPag = txt('cfg-wa-pagamento');
   const planosBanca = lerPlanosBancaForm();
   estado.innerHTML = '<span style="color:#64748b;">A guardar...</span>';
   try {
-    const rows = [
-      { chave: 'planos_config', valor: JSON.stringify(planos), atualizado_em: new Date().toISOString() },
-      { chave: 'metodos_subscricao', valor: JSON.stringify(metodos), atualizado_em: new Date().toISOString() },
-      { chave: 'link_whatsapp_pagamento', valor: JSON.stringify(waPag), atualizado_em: new Date().toISOString() },
-      { chave: 'planos_banca', valor: JSON.stringify(planosBanca), atualizado_em: new Date().toISOString() }
-    ];
-    const { error } = await supabaseClient.from('config_global').upsert(rows, { onConflict: 'chave' });
+    const agora = new Date().toISOString();
+    const { error } = await supabaseClient.from('config_global').upsert([
+      { chave: 'planos_config', valor: JSON.stringify(planos), atualizado_em: agora },
+      { chave: 'planos_banca', valor: JSON.stringify(planosBanca), atualizado_em: agora }
+    ], { onConflict: 'chave' });
     if (error) throw error;
-    _planosBanca = planosBanca; renderBancas();
-    estado.innerHTML = '<span style="color:#16a34a;">✅ Guardado! A página de planos já mostra os novos valores.</span>';
+    _planosCfg = planos; _planosBanca = planosBanca; renderBancas();
+    estado.innerHTML = '<span style="color:#16a34a;">✅ Planos guardados! A página de planos já mostra os novos valores.</span>';
   } catch(e) {
     estado.innerHTML = '<span style="color:#dc2626;">❌ ' + e.message + ' (corre o SQL v2.6.8 se a tabela não existir)</span>';
   }
 }
+
+// ---------- Como o cliente paga a subscrição ----------
+const PG_METODOS = ['mpesa', 'emola', 'banco'];
+let _pgGuardado = '';
+const pgV = id => (document.getElementById(id).value || '').trim();
+const pgDig = t => String(t || '').replace(/\D/g, '');
+function pgFmtTel(t) { const d = pgDig(t).replace(/^258/, ''); return d.length === 9 ? d.slice(0,2) + ' ' + d.slice(2,5) + ' ' + d.slice(5) : String(t || '').trim(); }
+function pgLer() {
+  const princ = (document.querySelector('input[name="pg-principal"]:checked') || {}).value || '';
+  return {
+    mpesa: pgFmtTel(pgV('cfg-mpesa')), mpesa_nome: pgV('cfg-mpesa-nome'), mpesa_ativo: document.getElementById('pg-mpesa-ativo').checked,
+    emola: pgFmtTel(pgV('cfg-emola')), emola_nome: pgV('cfg-emola-nome'), emola_ativo: document.getElementById('pg-emola-ativo').checked,
+    banco_nome: pgV('cfg-banco-nome'), banco_conta: pgV('cfg-banco-conta'), banco_nib: pgDig(pgV('cfg-banco-nib')), banco_titular: pgV('cfg-banco-titular'),
+    banco_ativo: document.getElementById('pg-banco-ativo').checked,
+    principal: princ, ativo: princ
+  };
+}
+function pgPreencher(m, wa) {
+  m = m || {};
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+  set('cfg-mpesa', m.mpesa); set('cfg-mpesa-nome', m.mpesa_nome);
+  set('cfg-emola', m.emola); set('cfg-emola-nome', m.emola_nome);
+  set('cfg-banco-nome', m.banco_nome); set('cfg-banco-conta', m.banco_conta); set('cfg-banco-nib', m.banco_nib); set('cfg-banco-titular', m.banco_titular);
+  set('cfg-wa-pagamento', wa);
+  // contas antigas (sem o campo *_ativo): ativo se tiver número
+  const at = { mpesa: m.mpesa_ativo != null ? !!m.mpesa_ativo : !!m.mpesa,
+               emola: m.emola_ativo != null ? !!m.emola_ativo : !!m.emola,
+               banco: m.banco_ativo != null ? !!m.banco_ativo : !!(m.banco_conta || m.banco_nib) };
+  PG_METODOS.forEach(k => { document.getElementById('pg-' + k + '-ativo').checked = at[k]; });
+  let pr = m.principal || m.ativo || '';
+  if (!at[pr]) pr = PG_METODOS.find(k => at[k]) || '';
+  PG_METODOS.forEach(k => { document.getElementById('pg-' + k + '-p').checked = (k === pr); });
+  pgAtualizar(); _pgGuardado = pgAssinatura(); pgSujo();
+}
+function pgAssinatura() { return JSON.stringify(pgLer()) + '|' + pgV('cfg-wa-pagamento'); }
+function pgSujo() {
+  const sujo = _pgGuardado && pgAssinatura() !== _pgGuardado;
+  document.getElementById('pg-sujo').classList.toggle('on', !!sujo);
+}
+function pgValidar(k, m, marcar) {
+  const erros = [], campos = [];
+  if (k === 'mpesa' || k === 'emola') {
+    const d = pgDig(m[k]).replace(/^258/, ''), pref = k === 'mpesa' ? ['84','85'] : ['86','87'];
+    if (!d) { erros.push('Falta o número.'); campos.push('cfg-' + k); }
+    else if (d.length !== 9 || pref.indexOf(d.slice(0,2)) < 0) { erros.push('Número inválido: deve ter 9 dígitos e começar por ' + pref.join(' ou ') + '.'); campos.push('cfg-' + k); }
+    if (!m[k + '_nome']) { erros.push('Falta o nome da conta.'); campos.push('cfg-' + k + '-nome'); }
+  } else {
+    if (!m.banco_nome) { erros.push('Falta o nome do banco.'); campos.push('cfg-banco-nome'); }
+    if (!m.banco_conta && !m.banco_nib) { erros.push('Põe o número da conta ou o NIB.'); campos.push('cfg-banco-conta'); }
+    if (m.banco_nib && m.banco_nib.length !== 21) { erros.push('O NIB tem 21 dígitos (tem ' + m.banco_nib.length + ').'); campos.push('cfg-banco-nib'); }
+    if (!m.banco_titular) { erros.push('Falta o titular da conta.'); campos.push('cfg-banco-titular'); }
+  }
+  if (marcar) {
+    document.querySelectorAll('#pg-' + k + ' .pg-campo input').forEach(i => i.classList.toggle('erro', campos.indexOf(i.id) >= 0));
+    document.getElementById('pg-' + k + '-erro').textContent = erros.join(' ');
+  }
+  return erros;
+}
+function pgAtualizar() {
+  const m = pgLer();
+  let n = 0;
+  PG_METODOS.forEach(k => {
+    const box = document.getElementById('pg-' + k), ativo = m[k + '_ativo'];
+    if (ativo) n++;
+    box.classList.toggle('ativo', ativo);
+    box.classList.toggle('principal', ativo && m.principal === k);
+    document.getElementById('pg-' + k + '-estado').textContent = ativo ? 'Ativo' : 'Desativado';
+    let r;
+    if (k === 'banco') r = [m.banco_nome, m.banco_nib ? 'NIB ' + m.banco_nib : m.banco_conta, m.banco_titular].filter(Boolean).join(' · ');
+    else r = [m[k], m[k + '_nome']].filter(Boolean).join(' · ');
+    document.getElementById('pg-' + k + '-resumo').textContent = r || 'Não configurado — toca na engrenagem';
+    if (document.getElementById('pg-' + k + '-erro').textContent) pgValidar(k, m, true);
+  });
+  document.getElementById('pg-cont').textContent = n + ' de 3 ativo' + (n === 1 ? '' : 's');
+}
+function pgMudou(el) {
+  const ch = k => document.getElementById('pg-' + k + '-ativo'), rd = k => document.getElementById('pg-' + k + '-p');
+  if (el && el.type === 'radio' && el.checked) ch(el.value).checked = true;          // escolher principal liga o método
+  const atual = (document.querySelector('input[name="pg-principal"]:checked') || {}).value;
+  if (!atual || !ch(atual).checked) {                                                  // principal desligado → passa ao próximo ativo
+    const outro = PG_METODOS.find(k => ch(k).checked);
+    PG_METODOS.forEach(k => { rd(k).checked = (k === outro); });
+  }
+  pgAtualizar(); pgSujo();
+  document.getElementById('pg-estado-geral').innerHTML = '';
+}
+function pgAbrir(k) {
+  const box = document.getElementById('pg-' + k), abrir = !box.classList.contains('aberto');
+  PG_METODOS.forEach(x => document.getElementById('pg-' + x).classList.toggle('aberto', abrir && x === k));
+  if (abrir) setTimeout(() => { const i = box.querySelector('.pg-campo input'); if (i && !i.value) i.focus({ preventScroll: true }); }, 320);
+}
+async function guardarPagamento() {
+  const estado = document.getElementById('pg-estado-geral'), btn = document.getElementById('pg-btn');
+  const m = pgLer(), wa = pgV('cfg-wa-pagamento');
+  const ativos = PG_METODOS.filter(k => m[k + '_ativo']);
+  if (!ativos.length) { estado.innerHTML = '<span style="color:#dc2626;">❌ Ativa pelo menos uma forma de pagamento — senão o cliente não consegue pagar.</span>'; return; }
+  let primeiroErro = '';
+  PG_METODOS.forEach(k => { const e = m[k + '_ativo'] ? pgValidar(k, m, true) : (pgValidar(k, m, false), document.getElementById('pg-' + k + '-erro').textContent = '', []); if (e.length && !primeiroErro) primeiroErro = k; });
+  if (primeiroErro) {
+    if (!document.getElementById('pg-' + primeiroErro).classList.contains('aberto')) pgAbrir(primeiroErro);
+    setTimeout(() => document.getElementById('pg-' + primeiroErro).scrollIntoView({ behavior: 'smooth', block: 'start' }), 330);
+    estado.innerHTML = '<span style="color:#dc2626;">❌ Corrige os campos marcados a vermelho antes de guardar.</span>'; return;
+  }
+  if (wa && !/^https?:\/\//i.test(wa)) { estado.innerHTML = '<span style="color:#dc2626;">❌ O link do comprovativo deve começar por https:// (ex: https://wa.me/258861667843).</span>'; return; }
+  btn.disabled = true;
+  estado.innerHTML = '<span style="color:#64748b;">A guardar...</span>';
+  try {
+    const agora = new Date().toISOString();
+    const { error } = await supabaseClient.from('config_global').upsert([
+      { chave: 'metodos_subscricao', valor: JSON.stringify(m), atualizado_em: agora },
+      { chave: 'link_whatsapp_pagamento', valor: JSON.stringify(wa), atualizado_em: agora }
+    ], { onConflict: 'chave' });
+    if (error) throw error;
+    // confirma lendo de volta da base de dados
+    const lido = await lerConfig('metodos_subscricao');
+    if (!lido || lido.mpesa !== m.mpesa || lido.banco_ativo !== m.banco_ativo) throw new Error('A base de dados não confirmou a gravação. Tenta de novo.');
+    pgPreencher(lido, wa);
+    const nomes = { mpesa: 'M-Pesa', emola: 'e-Mola', banco: 'Banco' };
+    estado.innerHTML = '<span style="color:#16a34a;">✅ Guardado! O cliente vê agora: <b>' + ativos.map(k => nomes[k]).join(', ') + '</b> (principal: ' + nomes[m.principal] + ').</span>';
+    PG_METODOS.forEach(k => document.getElementById('pg-' + k).classList.remove('aberto'));
+  } catch(e) {
+    estado.innerHTML = '<span style="color:#dc2626;">❌ ' + e.message + '</span>';
+  } finally { btn.disabled = false; }
+}
+// compatibilidade: botão antigo
+async function guardarConfigSubscricao() { await guardarPlanos(); await guardarPagamento(); }
 
 function estadoNorm(e) {
   if (!e || e === 'pendente' || e === 'pendente_pagamento') return 'pendente';

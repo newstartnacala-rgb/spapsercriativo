@@ -5,7 +5,7 @@
 <script src="spap-migrar.js?v=1"></script>
 <script src="spap-bloqueio.js?v=2"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
-<script src="spap-semzoom.js?v=3.7.32"></script>
+<script src="spap-semzoom.js?v=3.7.33"></script>
 <meta name="theme-color" content="#f4f8ff">
 <title>Planos — Banca</title>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
@@ -44,7 +44,7 @@
   .plano .p b{font-size:22px;font-weight:800}
   .plano .p small{display:block;font-size:12px;color:#64748b;font-weight:700}
   .selo{position:absolute;top:-10px;right:16px;background:var(--lj-grad);color:#fff;font-size:11.5px;font-weight:800;border-radius:999px;padding:3px 10px;box-shadow:0 4px 10px rgba(242,112,15,.3)}
-  .metodos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .metodos{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
   .metodo{background:#fff;border:2px solid #e3ebfa;border-radius:18px;padding:14px 10px;font:800 15px inherit;font-family:inherit;color:var(--nv);cursor:pointer;box-shadow:var(--sombra)}
   .metodo small{display:block;font-weight:600;font-size:12px;color:#64748b;margin-top:2px}
   .metodo.sel{border-color:var(--lj);background:#fff7ef}
@@ -64,8 +64,8 @@
   .rodape a{color:var(--lj-esc);font-weight:800;text-decoration:none}
   [hidden]{display:none!important}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.32">
-<script src="banca-tema.js?v=3.7.32" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.33">
+<script src="banca-tema.js?v=3.7.33" defer></script>
 </head>
 <body>
 <div class="pg">
@@ -99,6 +99,7 @@
       <div class="metodos">
         <button class="metodo" type="button" data-m="mpesa" onclick="metodo('mpesa')">M-Pesa<small id="mp-num">—</small></button>
         <button class="metodo" type="button" data-m="emola" onclick="metodo('emola')">e-Mola<small id="em-num">—</small></button>
+        <button class="metodo" type="button" data-m="banco" onclick="metodo('banco')" hidden>Banco<small id="bc-num">—</small></button>
       </div>
       <ol class="passos" id="passos" hidden></ol>
       <button class="btn btn-pagar" type="button" id="btn-pagar" hidden onclick="enviar()">Já paguei, enviar comprovativo</button>
@@ -117,7 +118,7 @@
 
 <script src="supabase-config.js"></script>
 <script>
-let sessao=null, loja=null, plano=null, met=null;
+let sessao=null, loja=null, plano=null, met=null, metPadrao=null;
 let P={dias:15,base:500,descPro:0,mensal:500,baseAnual:500,desc:5,anual:5700,nGratis:'Grátis',nPro:'Pro',nAnual:'Anual'}, M={}, WA_PAG='https://wa.me/258861667843';
 const fmtMT=n=>String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,'.');
 function toast(m,t){ const e=document.getElementById('toast'); e.textContent=m; e.className='toast '+(t||''); e.style.display='block'; clearTimeout(window._tt); window._tt=setTimeout(()=>e.style.display='none',2800); }
@@ -142,6 +143,10 @@ async function ler(ch){ try{ const {data}=await supabaseClient.from('config_glob
   document.getElementById('anual-sub').textContent='12 meses, equivale a '+fmtMT(P.anual/12)+' MT por mês';
   document.getElementById('mp-num').textContent=M.mpesa||'—';
   document.getElementById('em-num').textContent=M.emola||'—';
+  document.getElementById('bc-num').textContent=M.banco_nome||'—';
+  const AT=ativos(M);
+  document.querySelectorAll('.metodo').forEach(b=>{ b.hidden=!AT[b.dataset.m]; });
+  const pr0=M.principal||M.ativo; metPadrao=AT[pr0]?pr0:['mpesa','emola','banco'].find(k=>AT[k])||null;
   mostrarEstado();
   setInterval(confirmar, 8000);
 })();
@@ -168,15 +173,30 @@ function escolher(p){
   plano=p;
   document.querySelectorAll('.plano').forEach(b=>b.classList.toggle('sel', b.dataset.p===p));
   document.getElementById('sec-metodo').hidden=false;
-  if(met) metodo(met);
+  if(met||metPadrao) metodo(met||metPadrao);
   setTimeout(()=>document.getElementById('sec-metodo').scrollIntoView({behavior:'smooth',block:'start'}),60);
 }
 function valor(){ return plano==='banca_anual'?P.anual:P.mensal; }
+function ativos(m){
+  return { mpesa: m.mpesa_ativo!=null?!!m.mpesa_ativo:!!m.mpesa, emola: m.emola_ativo!=null?!!m.emola_ativo:!!m.emola,
+           banco: m.banco_ativo!=null?!!m.banco_ativo:!!(m.banco_conta||m.banco_nib) };
+}
+const NOMES_MET={mpesa:'M-Pesa', emola:'e-Mola', banco:'Transferência bancária'};
+function esc(t){ return String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function metodo(m){
   met=m;
   document.querySelectorAll('.metodo').forEach(b=>b.classList.toggle('sel', b.dataset.m===m));
-  const num=m==='mpesa'?(M.mpesa||'—'):(M.emola||'—'), nome=m==='mpesa'?M.mpesa_nome:M.emola_nome;
   const ol=document.getElementById('passos');
+  if(m==='banco'){
+    ol.innerHTML='<li><span>Abra a app do seu banco ou vá ao balcão.</span></li>'
+      +'<li><span>Transfira <b>MT '+fmtMT(valor())+'</b> para o <b>'+esc(M.banco_nome||'banco')+'</b>'
+      +(M.banco_conta?'<br>Conta: <b>'+esc(M.banco_conta)+'</b>':'')+(M.banco_nib?'<br>NIB: <b>'+esc(M.banco_nib)+'</b>':'')
+      +(M.banco_titular?'<br>Titular: <b>'+esc(M.banco_titular)+'</b>':'')+'</span></li>'
+      +'<li><span>Tire uma fotografia ou captura do comprovativo.</span></li>'
+      +'<li><span>Toque em «Já paguei» e envie a fotografia no WhatsApp.</span></li>';
+    ol.hidden=false; document.getElementById('btn-pagar').hidden=false; return;
+  }
+  const num=m==='mpesa'?(M.mpesa||'—'):(M.emola||'—'), nome=m==='mpesa'?M.mpesa_nome:M.emola_nome;
   ol.innerHTML='<li><span>Abra o <b>'+(m==='mpesa'?'M-Pesa':'e-Mola')+'</b> no telemóvel.</span></li>'
     +'<li><span>Envie <b>MT '+fmtMT(valor())+'</b> para <b>'+num+'</b>'+(nome?' ('+nome+')':'')+'.</span></li>'
     +'<li><span>Tire uma fotografia ou captura do comprovativo.</span></li>'
@@ -188,7 +208,7 @@ async function enviar(){
   const b=document.getElementById('btn-pagar'); b.disabled=true; b.textContent='A enviar…';
   const nomes={banca_mensal:P.nPro, banca_anual:P.nAnual};
   const msg=encodeURIComponent('💳 *Pagamento Banca*\n\n🏪 *Banca:* '+(loja.nome||'')+'\n📧 *Email:* '+(sessao.email||'')
-    +'\n💎 *Plano:* '+nomes[plano]+'\n💰 *Valor:* MT '+fmtMT(valor())+'\n💳 *Método:* '+(met==='mpesa'?'M-Pesa':'e-Mola')+'\n\nSegue o comprovativo. Por favor activar.');
+    +'\n💎 *Plano:* '+nomes[plano]+'\n💰 *Valor:* MT '+fmtMT(valor())+'\n💳 *Método:* '+(NOMES_MET[met]||met)+'\n\nSegue o comprovativo. Por favor activar.');
   window.open(WA_PAG+(WA_PAG.includes('?')?'&':'?')+'text='+msg,'_blank');
   try{ await supabaseClient.from('lojas').update({ plano, estado:'pendente_pagamento' }).eq('id', sessao.lojaId); loja.estado='pendente_pagamento'; }catch(e){}
   document.getElementById('escolha').hidden=true; document.getElementById('ok-box').hidden=false;
