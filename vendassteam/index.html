@@ -497,7 +497,7 @@ section{padding:88px 0}
         <p>Respondemos pelo WhatsApp e ajudamos a instalar as apps.</p>
       </div>
       <div class="acoes">
-        <a class="bt bt-zap" id="lk-zap" href="https://wa.me/258866577722" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3a.5.5 0 0 0 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7a2.8 2.8 0 0 0 1.8-1.3 2.3 2.3 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3z"/></svg>Falar no WhatsApp</a>
+        <a class="bt bt-zap" id="lk-zap" href="https://chat.whatsapp.com/I8lB2zT6hxfFNJ3xcqJ8Sh?s=cl&amp;p=a&amp;iam=2" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.1-5.6A8.4 8.4 0 1 1 21 11.5z"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01" stroke-width="3"/></svg>Grupo de suporte no WhatsApp</a>
         <a class="bt bt-linha" href="tel:+258866577722">Ligar +258 86 657 7722</a>
       </div>
     </div>
@@ -624,7 +624,7 @@ section{padding:88px 0}
     .then(function (linhas) {
       (linhas || []).forEach(function (l) {
         var v = l.valor; try { v = JSON.parse(v); } catch (e) {}
-        if (l.chave === 'link_suporte_whatsapp' && typeof v === 'string' && /^https?:/.test(v.trim())) document.getElementById('lk-zap').href = v.trim();
+        if (l.chave === 'link_suporte_whatsapp' && typeof v === 'string' && /^https:\/\/chat\.whatsapp\.com\//i.test(v.trim())) document.getElementById('lk-zap').href = v.trim();
         if (l.chave === 'planos_banca' && v && typeof v === 'object') {
           var m = parseFloat(v.mensal) || 500, dp = parseFloat(v.mensal_desconto) || 0, ba = parseFloat(v.anual_preco) || m, da = parseFloat(v.anual_desconto); if (!(da >= 0)) da = 5;
           var pm = m * (1 - dp / 100), an = ba * 12 * (1 - da / 100), set = function (id, t) { var e = document.getElementById(id); if (e) e.textContent = t; };
@@ -645,5 +645,6 @@ section{padding:88px 0}
     }).catch(function () {});
 })();
 </script>
+<script src="../spap-suporte.js?v=1"></script>
 </body>
 </html>

@@ -352,7 +352,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
   [tabindex]:focus-visible { outline: 2px solid #1a56a0; outline-offset: 1px; }
 </style>
-<script src="app-android.js?v=2.9.247" defer></script>
+<script src="app-android.js?v=2.9.248" defer></script>
 <style>/* a interface antiga nunca aparece: o ecrã antigo fica invisível até o novo abrir (sem piscar) */ body:not(.modo2) #tela-pdv { visibility:hidden !important; }</style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
@@ -1367,6 +1367,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 <script src="supabase-config.js"></script>
 <script src="spap-avisos.js?v=5"></script>
 <script src="spap-expirou.js?v=1"></script>
+<script src="spap-suporte.js?v=1"></script>
 <script>
   // Estado global da sessão atual (preenchido após verificar login com o Supabase)
   let sessaoAtual = null;   // { user, lojaId, nomeLoja, papel, nomeExibicao }
@@ -3145,19 +3146,7 @@ async function scannerFechar() {
   let ultimaVendaInfo = null; // { itens, total, metodo, dataISO }
 
   // Suporte: abre o WhatsApp da equipa (link definido pelo super-admin)
-  async function abrirSuporteLoja() {
-    let link = 'https://wa.me/258866577722';
-    try {
-      if (navigator.onLine && sessaoAtual) {
-        const { data } = await supabaseClient.from('config_global')
-          .select('valor').eq('chave', 'link_suporte_whatsapp').maybeSingle();
-        if (data && data.valor) link = data.valor;
-      }
-    } catch(e) {}
-    if (await spapConfirmar('Precisas de ajuda?', 'Vais falar diretamente com a equipa Spap-Sercriativo pelo WhatsApp.', { icone:'💬', ok:'Abrir WhatsApp' })) {
-      window.open(link, '_blank');
-    }
-  }
+  function abrirSuporteLoja() { spapAbrirSuporte(); }
 
   // Próximo número do dia = maior número existente hoje + 1 (conta vendas E retornos, nunca repete)
   function proximoNumeroDoDia(agora) {
@@ -5959,7 +5948,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.247';
+  const VERSAO_ATUAL = '2.9.248';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.

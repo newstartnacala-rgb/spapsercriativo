@@ -8,7 +8,7 @@
 <script>
   // Painel sempre na versão mais recente: se o aparelho mostrar uma cópia antiga, recarrega a nova
   (function () {
-    var VER = '2.9.247';
+    var VER = '2.9.248';
     try {
       fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
         var nova = j && j.versao; if (!nova || nova === VER) return;
@@ -382,7 +382,7 @@ body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; c
       <div class="ad-linha">
         <div class="ad-input-ico">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-          <input type="text" id="input-link-suporte" placeholder="https://wa.me/258...">
+          <input type="text" id="input-link-suporte" placeholder="https://chat.whatsapp.com/..." value="https://chat.whatsapp.com/I8lB2zT6hxfFNJ3xcqJ8Sh?s=cl&amp;p=a&amp;iam=2">
         </div>
         <button class="ad-btn-verde" onclick="guardarLinkSuporte()"><img src="icons3d/floppy.png" alt="">Guardar</button>
       </div>
@@ -606,7 +606,7 @@ async function carregarLinkSuporte() {
   try {
     const { data } = await supabaseClient.from('config_global')
       .select('valor').eq('chave', 'link_suporte_whatsapp').maybeSingle();
-    if (data && data.valor) document.getElementById('input-link-suporte').value = data.valor;
+    if (data && data.valor && /chat\.whatsapp\.com\//i.test(data.valor)) document.getElementById('input-link-suporte').value = data.valor;
   } catch(e) {}
 }
 
@@ -614,7 +614,7 @@ async function guardarLinkSuporte() {
   const link = (document.getElementById('input-link-suporte').value || '').trim();
   const estado = document.getElementById('link-suporte-estado');
   if (!link) { estado.innerHTML = '<span style="color:#dc2626;">Escreve um link primeiro.</span>'; return; }
-  if (!link.startsWith('http')) { estado.innerHTML = '<span style="color:#dc2626;">O link deve começar por https://</span>'; return; }
+  if (!/^https:\/\/chat\.whatsapp\.com\//i.test(link)) { estado.innerHTML = '<span style="color:#dc2626;">O suporte usa um GRUPO do WhatsApp: o link deve começar por https://chat.whatsapp.com/</span>'; return; }
   estado.innerHTML = '<span style="color:#64748b;">A guardar...</span>';
   const { error } = await supabaseClient.from('config_global')
     .upsert({ chave: 'link_suporte_whatsapp', valor: link, atualizado_em: new Date().toISOString() }, { onConflict: 'chave' });

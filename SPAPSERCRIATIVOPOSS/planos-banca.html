@@ -5,7 +5,7 @@
 <script src="spap-migrar.js?v=1"></script>
 <script src="spap-bloqueio.js?v=2"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
-<script src="spap-semzoom.js?v=3.7.34"></script>
+<script src="spap-semzoom.js?v=3.7.35"></script>
 <meta name="theme-color" content="#f4f8ff">
 <title>Planos — Banca</title>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
@@ -64,8 +64,8 @@
   .rodape a{color:var(--lj-esc);font-weight:800;text-decoration:none}
   [hidden]{display:none!important}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.34">
-<script src="banca-tema.js?v=3.7.34" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.35">
+<script src="banca-tema.js?v=3.7.35" defer></script>
 </head>
 <body>
 <div class="pg">
@@ -78,7 +78,7 @@
   <div class="alerta expirou" id="al-expirou" hidden><div class="ai">⏳</div><div><h1>O seu plano expirou</h1><p>Para continuar a vender, escolha o plano Pro ou Anual e faça o pagamento. A banca volta a abrir assim que o pagamento for confirmado.</p></div></div>
   <div class="alerta info" id="al-ativo" hidden><div class="ai">⭐</div><div><h1 id="al-ativo-tit">O seu plano</h1><p id="al-ativo-txt"></p></div></div>
   <div class="alerta espera" id="al-espera" hidden><div class="ai">⏳</div><div><h1>Pagamento em verificação</h1><p>Recebemos o seu pedido. Assim que o pagamento for confirmado, a banca abre sozinha neste ecrã.</p></div></div>
-  <div class="alerta expirou" id="al-suspenso" hidden><div class="ai">🚫</div><div><h1>Banca suspensa</h1><p>Contacte o suporte para resolver: <a id="lk-sup2" href="https://wa.me/258866577722">WhatsApp</a>.</p></div></div>
+  <div class="alerta expirou" id="al-suspenso" hidden><div class="ai">🚫</div><div><h1>Banca suspensa</h1><p>Contacte o suporte para resolver: <a id="lk-sup2" href="https://chat.whatsapp.com/I8lB2zT6hxfFNJ3xcqJ8Sh?s=cl&amp;p=a&amp;iam=2">WhatsApp</a>.</p></div></div>
 
   <div id="escolha">
     <h2>Escolha o plano</h2>
@@ -112,11 +112,12 @@
     <p>Envie a fotografia do comprovativo na conversa do WhatsApp que abriu. Esta página verifica sozinha e abre a banca assim que o pagamento for confirmado.</p>
   </div>
 
-  <div class="rodape">Dúvidas? <a id="lk-sup" href="https://wa.me/258866577722" target="_blank" rel="noopener">Falar com o suporte</a></div>
+  <div class="rodape">Dúvidas? <a id="lk-sup" href="https://chat.whatsapp.com/I8lB2zT6hxfFNJ3xcqJ8Sh?s=cl&amp;p=a&amp;iam=2" target="_blank" rel="noopener">Falar com o suporte</a></div>
 </div>
 <div id="toast" class="toast"></div>
 
 <script src="supabase-config.js"></script>
+<script src="spap-suporte.js?v=1"></script>
 <script>
 let sessao=null, loja=null, plano=null, met=null, metPadrao=null;
 let P={dias:15,base:500,descPro:0,mensal:500,baseAnual:500,desc:5,anual:5700,nGratis:'Grátis',nPro:'Pro',nAnual:'Anual'}, M={}, WA_PAG='https://wa.me/258861667843';
@@ -136,7 +137,7 @@ async function ler(ch){ try{ const {data}=await supabaseClient.from('config_glob
   document.getElementById('n-pro').textContent=P.nPro; document.getElementById('n-anual').textContent=P.nAnual;
   document.getElementById('pro-sub').textContent=P.descPro?('Desconto '+P.descPro+'%, era '+fmtMT(P.base)+' MT'):'Renova todos os meses';
   M=met||{}; if(typeof wa==='string'&&wa.trim()) WA_PAG=wa.trim();
-  if(typeof sup==='string'&&sup.trim()){ document.getElementById('lk-sup').href=sup.trim(); document.getElementById('lk-sup2').href=sup.trim(); }
+  if(typeof sup==='string'&&sup.trim()){ document.getElementById('lk-sup').href=spapLinkSuporte(sup); document.getElementById('lk-sup2').href=spapLinkSuporte(sup); }
   document.getElementById('pr-mensal').textContent=fmtMT(P.mensal);
   document.getElementById('pr-anual').textContent=fmtMT(P.anual);
   document.getElementById('selo-anual').textContent='Poupa '+P.desc+'% ('+fmtMT(P.baseAnual*12-P.anual)+' MT)';

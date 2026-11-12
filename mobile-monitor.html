@@ -88,9 +88,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.34">
-<script src="banca-tema.js?v=3.7.34" defer></script>
-<script src="app-android.js?v=3.7.34" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.35">
+<script src="banca-tema.js?v=3.7.35" defer></script>
+<script src="app-android.js?v=3.7.35" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -403,6 +403,7 @@
 <div id="toast" class="toast"></div>
 
 <script src="supabase-config.js"></script>
+<script src="spap-suporte.js?v=1"></script>
 <script src="spap-avisos.js?v=5"></script>
 <script src="spap-backup.js?v=7"></script>
 <script src="spap-imagem.js?v=1"></script>
@@ -1092,7 +1093,7 @@ function ligarTempoRealBanca(){
 function abrirFolha(id){ document.getElementById(id).classList.add('ativa'); }
 function fecharFolha(id){ document.getElementById(id).classList.remove('ativa'); }
 function abrirMenu(){ abrirFolha('folha-menu'); }
-function suporte(){ fecharFolha('folha-menu'); window.open('https://wa.me/258866577722?text='+encodeURIComponent('Olá, preciso de ajuda com o monitor da minha banca.'),'_blank'); }
+function suporte(){ fecharFolha('folha-menu'); spapAbrirSuporte(); }
 function sobre(){ fecharFolha('folha-menu'); bancaAviso('Mobile POSS — Monitor','Spap-Sercriativo\nBanca: '+(sessao?sessao.nomeLoja:''),{icone:'ℹ️'}); }
 async function atualizarDados(){ fecharFolha('folha-menu'); toast('🔄 A atualizar…'); await carregarProdutos(); await Promise.all([carregarResumo(), carregarDescontos()]); toast('✅ Atualizado','ok'); }
 async function sairBanca(){ try{ sessionStorage.removeItem('banca_vend_ok'); }catch(e){} try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='login-banca.html'; }
