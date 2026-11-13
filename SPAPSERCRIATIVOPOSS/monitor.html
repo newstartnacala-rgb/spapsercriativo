@@ -21,7 +21,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.257"></script>
+<script src="spap-leitor.js?v=2.9.258"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -1117,7 +1117,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.257" defer></script>
+<script src="app-android.js?v=2.9.258" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -2129,6 +2129,15 @@ function pedirPinMonitor(onOk) {
   inp.addEventListener('keydown', function(e){ if (e.key === 'Enter') validarPinMonitor(); });
 }
 
+// Monitor com PIN: sempre que a app vai para trás e volta, pede o PIN outra vez (exceto quando abriu a câmara/galeria)
+let _monSaiu = false, _monSemPin = 0;
+document.addEventListener('click', e => { if (e.target.closest && e.target.closest('input[type=file],label[for]')) _monSemPin = Date.now(); }, true);
+(function () { const _c = HTMLInputElement.prototype.click; HTMLInputElement.prototype.click = function () { if (this.type === 'file') _monSemPin = Date.now(); return _c.apply(this, arguments); }; })();
+document.addEventListener('visibilitychange', () => {
+  if (!window._lojaPin || modoGeral || modoGerente) return;
+  if (document.hidden) { if (Date.now() - _monSemPin > 60000) _monSaiu = true; return; }
+  if (_monSaiu && !document.getElementById('overlay-pin-monitor')) { _monSaiu = false; pedirPinMonitor(function () {}); }
+});
 async function validarPinMonitor() {
   const inp = document.getElementById('pin-input');
   const erro = document.getElementById('pin-erro');
@@ -6210,7 +6219,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.257';
+const MONITOR_VERSAO = '2.9.258';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -7992,6 +8001,11 @@ document.addEventListener('visibilitychange',()=>{ if(!document.hidden) verifica
 .ct-acao.vermelho{background:#fef2f2;border-color:#fecaca;color:#b91c1c;} .ct-acao.verde{background:#f0fdf4;border-color:#bbf7d0;color:#15803d;} .ct-acao.cinza{color:#64748b;}
 .ct-vazio{display:flex;flex-direction:column;align-items:center;gap:8px;padding:22px;border:1.5px dashed #e2e8f0;border-radius:16px;color:#94a3b8;font-size:13px;text-align:center;}
 .ct-vazio img{width:44px;height:44px;}
+
+/* Barra do topo sempre FIXA: só o conteúdo faz scroll */
+#app .topbar { position: sticky !important; top: 0 !important; z-index: 900 !important; }
+html, body { overflow-x: clip; }
+#app { overflow: visible !important; }
 </style>
 <div id="modal-inv-calc">
   <div class="ic-box">

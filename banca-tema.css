@@ -865,3 +865,7 @@ html.escuro .cart-limpar{background:rgba(220,38,38,.15);border-color:rgba(248,11
 .bmp-tec button:active{background:rgba(255,255,255,.22);}
 .bmp-tec button.vazio{visibility:hidden;}
 .bmp-nota{font-size:12px;opacity:.7;margin-top:16px;line-height:1.5;}
+
+/* Barra do topo FIXA nos monitores da Banca (o resto da página é que faz scroll) */
+.tela > .topo{position:sticky !important;top:0 !important;z-index:600 !important;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);}
+html,body{overflow-x:clip;}
