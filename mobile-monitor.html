@@ -88,9 +88,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.44">
-<script src="banca-tema.js?v=3.7.44" defer></script>
-<script src="app-android.js?v=3.7.44" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.45">
+<script src="banca-tema.js?v=3.7.45" defer></script>
+<script src="app-android.js?v=3.7.45" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -418,7 +418,7 @@
 <script src="spap-suporte.js?v=1"></script>
 <script src="spap-contador.js?v=1"></script>
 <script src="spap-alertas.js?v=2"></script>
-<script src="spap-personalizar.js?v=1"></script>
+<script src="spap-personalizar.js?v=2"></script>
 <script>
 // Alertas do sistema (irregularidades) — sino no topo do Monitor da Banca
 document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
@@ -1648,16 +1648,6 @@ function bmPedirPin(){
       if(/^\d$/.test(e.key)&&v.length<4){ v+=e.key; pinta(); if(v.length===4) valida(); } else if(e.key==='Backspace'){ v=v.slice(0,-1); pinta(); } });
   });
 }
-// Sempre que a app vai para trás (ecrã apagado, outra app, botão de início) e volta, pede outra vez o código de 4 dígitos.
-// (Não pede quando foi a própria app a abrir a câmara ou a galeria.)
-let _bmSaiu=false, _bmSemPin=0;
-document.addEventListener('click',e=>{ if(e.target.closest && e.target.closest('input[type=file],label[for]')) _bmSemPin=Date.now(); },true);
-(function(){ const _clk=HTMLInputElement.prototype.click; HTMLInputElement.prototype.click=function(){ if(this.type==='file') _bmSemPin=Date.now(); return _clk.apply(this,arguments); }; })();
-document.addEventListener('visibilitychange',async ()=>{
-  if(!sessao || window._souSuper || spapEuSuper()) return;
-  if(document.hidden){ if(Date.now()-_bmSemPin>60000){ _bmSaiu=true; try{ sessionStorage.removeItem('bm_pin_ok_'+sessao.lojaId); }catch(e){} } return; }
-  if(_bmSaiu && !document.getElementById('bm-pin')){ _bmSaiu=false; await bmPedirPin(); }
-});
 async function segTrocarEmail(){
   const inp=document.getElementById('seg-novo-email'), novo=(inp.value||'').trim().toLowerCase();
   if(spapEuSuper() || spapEhSuper(novo)){ toast('🔒 O e-mail do Super Admin é a chave do projeto: não pode ser trocado nem usado por outra conta.','erro'); return; }

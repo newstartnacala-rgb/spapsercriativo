@@ -21,7 +21,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.258"></script>
+<script src="spap-leitor.js?v=2.9.259"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -1117,7 +1117,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.258" defer></script>
+<script src="app-android.js?v=2.9.259" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -1776,7 +1776,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
 <script src="spap-suporte.js?v=1"></script>
 <script src="spap-contador.js?v=1"></script>
 <script src="spap-alertas.js?v=2"></script>
-<script src="spap-personalizar.js?v=1"></script>
+<script src="spap-personalizar.js?v=2"></script>
 <script>
 // Alertas do sistema (irregularidades) — sino no topo do Monitor
 document.addEventListener('DOMContentLoaded', function () { setTimeout(function () {
@@ -2129,15 +2129,6 @@ function pedirPinMonitor(onOk) {
   inp.addEventListener('keydown', function(e){ if (e.key === 'Enter') validarPinMonitor(); });
 }
 
-// Monitor com PIN: sempre que a app vai para trás e volta, pede o PIN outra vez (exceto quando abriu a câmara/galeria)
-let _monSaiu = false, _monSemPin = 0;
-document.addEventListener('click', e => { if (e.target.closest && e.target.closest('input[type=file],label[for]')) _monSemPin = Date.now(); }, true);
-(function () { const _c = HTMLInputElement.prototype.click; HTMLInputElement.prototype.click = function () { if (this.type === 'file') _monSemPin = Date.now(); return _c.apply(this, arguments); }; })();
-document.addEventListener('visibilitychange', () => {
-  if (!window._lojaPin || modoGeral || modoGerente) return;
-  if (document.hidden) { if (Date.now() - _monSemPin > 60000) _monSaiu = true; return; }
-  if (_monSaiu && !document.getElementById('overlay-pin-monitor')) { _monSaiu = false; pedirPinMonitor(function () {}); }
-});
 async function validarPinMonitor() {
   const inp = document.getElementById('pin-input');
   const erro = document.getElementById('pin-erro');
@@ -6219,7 +6210,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.258';
+const MONITOR_VERSAO = '2.9.259';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
