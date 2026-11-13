@@ -8,7 +8,7 @@
 <script>
   // Painel sempre na versão mais recente: se o aparelho mostrar uma cópia antiga, recarrega a nova
   (function () {
-    var VER = '2.9.266';
+    var VER = '2.9.267';
     try {
       fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
         var nova = j && j.versao; if (!nova || nova === VER) return;
@@ -393,9 +393,8 @@ body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; c
     <div class="ad-acoes">
       <button class="ad-pill" onclick="window.location.href='monitor.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Monitor</button>
       <div class="ad-acoes-dir">
-        <button class="ad-pill ad-vidro" id="ad-vidro" onclick="adVidroTrocar()" role="switch" aria-checked="false" title="Liga ou desliga o modo vidro"><svg class="ad-eng" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Modo vidro<i class="ad-sw"></i></button>
+        <button class="ad-pill ad-vidro" id="ad-vidro" onclick="adVidroTrocar()" role="switch" aria-checked="false" title="Liga ou desliga o modo vidro"><svg class="ad-eng" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span class="ad-vidro-t">Vidro</span><i class="ad-sw"></i></button>
         <button class="ad-pill" onclick="carregarLojas()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.4 6.4L3 16"/><path d="M3 21v-5h5"/><path d="M3 12a9 9 0 0 1 15.4-6.4L21 8"/><path d="M21 3v5h-5"/></svg>Atualizar</button>
-        <button class="ad-pill ad-pill-sair" onclick="sair()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M9 16l-4-4 4-4"/><path d="M5 12h11"/></svg>Sair</button>
       </div>
     </div>
 
@@ -1436,7 +1435,9 @@ async function guardarMetodos() {
 
 <script src="spap-rolagem.js?v=1"></script>
 <style>
-.ad-vidro{gap:8px;}
+.ad-vidro{gap:7px;padding:9px 12px !important;}
+.ad-acoes{flex-wrap:nowrap;} .ad-acoes .ad-pill{white-space:nowrap;}
+@media(max-width:380px){.ad-vidro-t{display:none;}}
 .ad-vidro .ad-eng{transition:transform .5s cubic-bezier(.3,1.3,.5,1);}
 .ad-vidro.on .ad-eng{transform:rotate(180deg);color:#6366f1;}
 .ad-vidro .ad-sw{width:34px;height:20px;border-radius:99px;background:#cbd5e1;position:relative;flex-shrink:0;transition:background .2s;margin-left:2px;}
@@ -1453,23 +1454,33 @@ adVidroPintar();
 </script>
 <style>
 /* ===== Código de acesso ao painel ===== */
-#ad-pin{position:fixed;inset:0;z-index:100060;display:flex;align-items:center;justify-content:center;padding:18px;background:radial-gradient(60% 50% at 20% 10%,rgba(212,175,106,.28),transparent 70%),radial-gradient(60% 60% at 90% 90%,rgba(37,99,235,.28),transparent 70%),linear-gradient(160deg,#0b1430,#111c3f 60%,#0b1226);font-family:inherit;}
-#ad-pin .ap-c{width:100%;max-width:340px;text-align:center;color:#fff;animation:apEntra .35s cubic-bezier(.2,.9,.3,1);}
-@keyframes apEntra{from{opacity:0;transform:translateY(14px) scale(.98)}}
-#ad-pin .ap-logo{width:76px;height:76px;border-radius:50%;margin:0 auto 12px;display:block;box-shadow:0 10px 30px rgba(212,175,106,.35);}
-#ad-pin h2{font-size:20px;font-weight:800;margin:0 0 4px;}
-#ad-pin p{font-size:13px;color:rgba(255,255,255,.7);margin:0 0 18px;}
-#ad-pin .ap-pts{display:flex;justify-content:center;gap:14px;margin-bottom:10px;}
-#ad-pin .ap-pts i{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.55);transition:.15s;}
-#ad-pin .ap-pts i.on{background:#d4af6a;border-color:#d4af6a;transform:scale(1.1);box-shadow:0 0 12px rgba(212,175,106,.6);}
-#ad-pin .ap-pts.erro{animation:apTreme .4s;} #ad-pin .ap-pts.erro i{border-color:#f87171;background:#f87171;}
+#ad-pin{position:fixed;inset:0;z-index:100060;display:flex;align-items:center;justify-content:center;padding:18px;overflow:auto;
+  background:radial-gradient(70% 50% at 50% 0%,#dbeafe 0%,transparent 70%),radial-gradient(60% 50% at 100% 100%,#fef3c7 0%,transparent 70%),linear-gradient(180deg,#f8fafc,#eef2f9);font-family:inherit;}
+#ad-pin .ap-c{width:100%;max-width:380px;background:#fff;border-radius:28px;padding:26px 22px 20px;text-align:center;color:#0f172a;
+  box-shadow:0 30px 70px rgba(15,23,42,.16),0 2px 6px rgba(15,23,42,.06);border:1px solid #e2e8f0;animation:apEntra .35s cubic-bezier(.2,.9,.3,1);}
+@keyframes apEntra{from{opacity:0;transform:translateY(16px) scale(.98)}}
+#ad-pin .ap-topo{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:16px;}
+#ad-pin .ap-logo{width:54px;height:54px;border-radius:50%;box-shadow:0 6px 16px rgba(180,133,44,.3);}
+#ad-pin .ap-cad{width:54px;height:54px;border-radius:17px;display:grid;place-items:center;background:linear-gradient(135deg,#2563eb,#1e3a8a);color:#fff;box-shadow:0 8px 18px rgba(37,99,235,.35);}
+#ad-pin .ap-cad svg{width:26px;height:26px;}
+#ad-pin h2{font-size:21px;font-weight:800;margin:0;color:#0f172a;letter-spacing:-.01em;}
+#ad-pin p{font-size:14px;color:#475569;margin:6px 0 20px;font-weight:600;}
+#ad-pin .ap-pts{display:flex;justify-content:center;gap:12px;margin-bottom:8px;}
+#ad-pin .ap-pts i{width:54px;height:62px;border-radius:16px;border:2px solid #cbd5e1;background:#f8fafc;display:grid;place-items:center;transition:.15s;}
+#ad-pin .ap-pts i::after{content:"";width:14px;height:14px;border-radius:50%;background:#0f172a;transform:scale(0);transition:transform .18s cubic-bezier(.3,1.6,.5,1);}
+#ad-pin .ap-pts i.on{border-color:#2563eb;background:#eff6ff;box-shadow:0 0 0 4px rgba(37,99,235,.12);}
+#ad-pin .ap-pts i.on::after{transform:scale(1);}
+#ad-pin .ap-pts.erro{animation:apTreme .4s;} #ad-pin .ap-pts.erro i{border-color:#ef4444;background:#fef2f2;} #ad-pin .ap-pts.erro i::after{background:#ef4444;}
 @keyframes apTreme{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
-#ad-pin .ap-msg{min-height:18px;font-size:12.5px;font-weight:700;color:#fca5a5;margin-bottom:12px;}
-#ad-pin .ap-tec{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
-#ad-pin .ap-tec button{height:62px;border-radius:18px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.08);color:#fff;font-family:inherit;font-size:24px;font-weight:700;cursor:pointer;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:background .12s,transform .08s;}
-#ad-pin .ap-tec button:active{transform:scale(.94);background:rgba(212,175,106,.35);}
-#ad-pin .ap-tec .ap-v{background:transparent;border-color:transparent;font-size:15px;}
-#ad-pin .ap-sair{margin-top:16px;background:none;border:0;color:rgba(255,255,255,.65);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+#ad-pin .ap-msg{min-height:20px;font-size:13px;font-weight:800;color:#dc2626;margin:6px 0 12px;}
+#ad-pin .ap-tec{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+#ad-pin .ap-tec button{height:64px;border-radius:18px;border:1.5px solid #e2e8f0;background:#fff;color:#0f172a;font-family:inherit;font-size:26px;font-weight:800;cursor:pointer;box-shadow:0 2px 0 #e2e8f0;transition:background .1s,transform .08s;}
+#ad-pin .ap-tec button:hover{background:#f8fafc;}
+#ad-pin .ap-tec button:active{transform:scale(.95);background:#eff6ff;border-color:#93c5fd;}
+#ad-pin .ap-tec .ap-v{background:#f1f5f9;border-color:#f1f5f9;box-shadow:none;font-size:20px;color:#475569;}
+#ad-pin .ap-seg{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:16px;font-size:12px;color:#64748b;font-weight:700;}
+#ad-pin .ap-seg svg{width:14px;height:14px;color:#16a34a;}
+html.escuro #ad-pin{filter:none;}
 /* ===== Banco de dados ===== */
 .bd-div{background:#fff;border-radius:20px;padding:16px;margin:18px 0 6px;box-shadow:0 1px 4px rgba(0,0,0,.06);border:1px solid #e2e8f0;}
 .bd-cab{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
@@ -1531,10 +1542,10 @@ async function adHash(pin){
 function adPedirPin(){
   return new Promise(res => {
     const d = document.createElement('div'); d.id = 'ad-pin';
-    d.innerHTML = '<div class="ap-c"><img class="ap-logo" src="ssteam-logo.png" alt=""><h2>Painel de Administração</h2><p>Escreve o código de acesso de 4 dígitos</p>'
+    d.innerHTML = '<div class="ap-c" role="dialog" aria-modal="true" aria-labelledby="ap-t"><div class="ap-topo"><img class="ap-logo" src="ssteam-logo.png" alt=""><span class="ap-cad"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span></div><h2 id="ap-t">Painel de Administração</h2><p>Escreve o código de acesso de 4 dígitos</p>'
       + '<div class="ap-pts"><i></i><i></i><i></i><i></i></div><div class="ap-msg" id="ap-msg"></div>'
       + '<div class="ap-tec">' + ['1','2','3','4','5','6','7','8','9','','0','⌫'].map(k => k === '' ? '<span></span>' : '<button type="button" class="' + (k === '⌫' ? 'ap-v' : '') + '" data-k="' + k + '">' + k + '</button>').join('') + '</div>'
-      + '<button type="button" class="ap-sair" onclick="location.href=\'monitor.html\'">← Voltar ao Monitor</button></div>';
+      + '<div class="ap-seg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>Acesso reservado ao administrador</div></div>';
     document.body.appendChild(d);
     let pin = '', tentativas = 0, bloqueado = false;
     const pts = d.querySelectorAll('.ap-pts i'), caixa = d.querySelector('.ap-pts'), msg = d.querySelector('#ap-msg');
@@ -1610,7 +1621,7 @@ async function bdVerificar(manual){
   else if (lento || D.c === 'aviso' || A.c === 'aviso') { c = 'aviso'; t = 'A funcionar, mas com avisos'; sub = lento ? 'Resposta lenta (' + dados.ms + ' ms).' : 'Algum serviço respondeu com aviso.'; }
   else { c = 'ok'; t = 'Tudo a funcionar'; sub = 'Dados e login a responder normalmente (' + dados.ms + ' ms).'; }
   est.className = 'bd-estado ' + c; est.querySelector('b').textContent = t; est.querySelector('small').textContent = sub;
-  // informação real do servidor (função spap_estado_bd do SQL v2.9.266)
+  // informação real do servidor (função spap_estado_bd do SQL v2.9.267)
   const sv = document.getElementById('bd-servidor');
   let srv = null; try { const r = await supabaseClient.rpc('spap_estado_bd'); srv = r.error ? { erro: r.error.message, cod: r.error.code } : r.data; } catch(e) { srv = { erro: String(e.message || e) }; }
   let sh = '<h4>🖥️ Servidor do banco de dados</h4>', sc = '';
