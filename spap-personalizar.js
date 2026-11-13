@@ -30,6 +30,7 @@
     }
     var c = CORES.filter(function (x) { return x.k === o.cor; })[0] || CORES[0]; return { k: c.k, c: c.c, e: c.e, a: c.a, l: c.l, g1: c.a, g2: c.e };
   }
+  function vidroOn() { return !!(window.spapVidro && window.spapVidro.ligado()); }
   function aplicar(o) {
     o = o || ler();
     var st = document.getElementById('spr-estilo');
@@ -66,6 +67,7 @@
     if (o.nome) { var el = document.getElementById(APP === 'banca' ? 'nome-loja' : 'nome-loja-topo'); if (el && el.dataset.sprOrig === undefined) el.dataset.sprOrig = el.textContent; }
   }
   window.spapPersonalizarAplicar = aplicar;
+  (function () { var o = ler(); if (o.fundo === 'vidro') { o.fundo = 'colorido'; gravar(o); if (window.spapVidro) window.spapVidro.definir(true); } })();
   aplicar();
 
   var css = ''
@@ -111,6 +113,14 @@
     + '.spr-peso{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11.5px;font-weight:700;color:#64748b;} .spr-peso input{flex:1;accent-color:#0f172a;}'
     + '.spr-peso[hidden]{display:none;}'
     + '.spr-bt.prim{margin:12px 0 0;background:#0f172a;color:#fff;border-color:#0f172a;}'
+    + '.spr-vidro{display:flex;align-items:center;gap:12px;padding:12px;border-radius:16px;background:#fff;border:1.5px solid #e2e8f0;cursor:pointer;user-select:none;}'
+    + '.spr-vidro.on{border-color:#818cf8;}'
+    + '.spr-vidro .sv-eng{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:linear-gradient(135deg,#f8fafc,#e2e8f0);color:#334155;flex-shrink:0;transition:transform .5s cubic-bezier(.3,1.3,.5,1),background .2s;}'
+    + '.spr-vidro.on .sv-eng{transform:rotate(180deg);background:linear-gradient(135deg,#a5f3fc,#93c5fd 50%,#c4b5fd);color:#0f172a;}'
+    + '.spr-vidro .sv-t{flex:1;min-width:0;} .spr-vidro b{display:block;font-size:14px;} .spr-vidro small{display:block;font-size:12px;color:#64748b;margin-top:2px;line-height:1.4;}'
+    + '.spr-vidro .sv-sw{width:48px;height:28px;border-radius:99px;background:#cbd5e1;position:relative;flex-shrink:0;transition:background .2s;}'
+    + '.spr-vidro .sv-sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.25);transition:transform .22s cubic-bezier(.3,1.3,.5,1);}'
+    + '.spr-vidro.on .sv-sw{background:linear-gradient(90deg,#38bdf8,#818cf8);} .spr-vidro.on .sv-sw::after{transform:translateX(20px);}'
     + '.spr-nota{font-size:11.5px;color:#94a3b8;text-align:center;margin-top:6px;line-height:1.45;}'
     + 'html.escuro #spr-fundo{filter:invert(1) hue-rotate(180deg);}';
   function estilo() { if (document.getElementById('spr-css')) return; var s = document.createElement('style'); s.id = 'spr-css'; s.textContent = css; document.head.appendChild(s); }
@@ -132,8 +142,10 @@
       + seg('mixModo', [['degrade', '🌈 Degradê das duas'], ['uma', '🧪 Misturar numa só']], o.mixModo)
       + '<div class="spr-peso"' + (o.mixModo === 'uma' ? '' : ' hidden') + '><span>Mais cor 1</span><input type="range" min="0" max="100" step="5" data-num="mixPeso" value="' + o.mixPeso + '"><span>Mais cor 2</span></div>'
       + '<button type="button" class="spr-bt prim" data-acao="usarmix">✔ Usar a minha mistura</button></div>'
-      + '<div class="spr-sec">Fundo</div>' + seg('fundo', [['normal', 'Normal'], ['colorido', '🎨 Colorido'], ['vidro', '🫧 Transparente']], o.fundo)
-      + '<div class="spr-peso" id="spr-transp"' + (o.fundo === 'vidro' ? '' : ' hidden') + '><span>Pouco</span><input type="range" min="10" max="80" step="5" data-num="transp" value="' + o.transp + '"><span>Muito</span></div>'
+      + '<div class="spr-sec">Modo vidro</div>'
+      + '<div class="spr-vidro' + (vidroOn() ? ' on' : '') + '" role="switch" tabindex="0" aria-checked="' + vidroOn() + '"><span class="sv-eng"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span>'
+      + '<span class="sv-t"><b>Modo vidro</b><small id="spr-vtxt">' + (vidroOn() ? 'Ligado — o Monitor e todas as janelas que abrirem ficam em vidro.' : 'Desligado — o Monitor está normal.') + '</small></span><i class="sv-sw"></i></div>'
+      + '<div class="spr-sec">Fundo</div>' + seg('fundo', [['normal', 'Normal'], ['colorido', '🎨 Colorido']], o.fundo === 'vidro' ? 'normal' : o.fundo)
       + '<div class="spr-sec">Tamanho da letra</div>' + seg('letra', [['pequena', 'A−'], ['normal', 'Normal'], ['grande', 'A+'], ['maior', 'A++']], o.letra)
       + '<div class="spr-sec">Cantos dos cartões</div>' + seg('cantos', [['redondos', '◯ Redondos'], ['retos', '▢ Mais retos']], o.cantos)
       + '<div class="spr-sec">Efeitos</div>'
@@ -161,10 +173,14 @@
       else if (b.dataset.acao === 'usarmix') { usarMix(); try { (window.toast || window.mostrarNotif || function () {})('🎨 A tua mistura foi aplicada'); } catch (er) {} }
       else if (b.dataset.v) { var sg = b.closest('[data-seg]'); sg.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
         if (sg.dataset.seg === 'mixModo') { o.mixModo = b.dataset.v; d.querySelector('.spr-mix .spr-peso').hidden = b.dataset.v !== 'uma'; usarMix(); }
-        else { mudar(sg.dataset.seg, b.dataset.v); if (sg.dataset.seg === 'fundo') d.querySelector('#spr-transp').hidden = b.dataset.v !== 'vidro'; } }
+        else { mudar(sg.dataset.seg, b.dataset.v); } }
       else if (b.dataset.acao === 'sino') { if (window.spapSinoRepor) spapSinoRepor(); try { (window.toast || window.mostrarNotif || function () {})('🔔 O sino voltou ao sítio de origem'); } catch (er) {} }
       else if (b.dataset.acao === 'repor') { o = JSON.parse(JSON.stringify(PADRAO)); gravar(o); aplicar(o); if (window.spapSinoRepor) spapSinoRepor(); fechar(); setTimeout(spapPersonalizarAbrir, 240); }
     });
+    function trocarVidro() { var on = !vidroOn(); if (window.spapVidro) window.spapVidro.definir(on); var v = d.querySelector('.spr-vidro'); v.classList.toggle('on', on); v.setAttribute('aria-checked', on);
+      d.querySelector('#spr-vtxt').textContent = on ? 'Ligado — o Monitor e todas as janelas que abrirem ficam em vidro.' : 'Desligado — o Monitor está normal.'; try { (window.toast || window.mostrarNotif || function () {})(on ? '🪟 Modo vidro ligado' : 'Modo vidro desligado'); } catch (er) {} }
+    d.querySelector('.spr-vidro').addEventListener('click', trocarVidro);
+    d.querySelector('.spr-vidro').addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); trocarVidro(); } });
     d.addEventListener('change', function (e) { var i = e.target; if (i.dataset.opt) mudar(i.dataset.opt, i.checked); });
     d.addEventListener('input', function (e) { var i = e.target;
       if (i.dataset.mix) { o[i.dataset.mix] = i.value; usarMix(); }

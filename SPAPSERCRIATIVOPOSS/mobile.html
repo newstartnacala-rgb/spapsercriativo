@@ -112,9 +112,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="Banca e Vendas">
-<link rel="stylesheet" href="banca-tema.css?v=3.7.45">
-<script src="banca-tema.js?v=3.7.45" defer></script>
-<script src="app-android.js?v=3.7.45" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.46">
+<script src="banca-tema.js?v=3.7.46" defer></script>
+<script src="app-android.js?v=3.7.46" defer></script>
 </head>
 <body>
 
@@ -309,6 +309,7 @@
   <div class="folha">
     <div class="cab"><h3>⚙️ Definições</h3><button onclick="fecharFolha('folha-definicoes')">✕</button></div>
     <div class="conteudo">
+      <div class="bvd" id="bvd" role="switch" tabindex="0" onclick="bancaVidroTrocar()"><span class="bvd-eng"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span><span class="bvd-t"><b>Modo vidro</b><small id="bvd-txt">Desligado — a Banca está normal.</small></span><i class="bvd-sw"></i></div>
       <div class="menu-grid">
         <div class="mi" onclick="fecharFolha('folha-definicoes');window.spapInstalarApp&&spapInstalarApp('android')"><div class="e">📲</div><div class="t">App para Android</div></div>
         <div class="mi" onclick="fecharFolha('folha-definicoes');window.spapInstalarApp&&spapInstalarApp('ios')"><div class="e">📱</div><div class="t">App para iPhone</div></div>
@@ -398,7 +399,7 @@
 <script src="spap-suporte.js?v=1"></script>
 <script src="spap-avisos.js?v=5"></script>
 <script src="spap-imagem.js?v=1"></script>
-<script src="banca-offline.js?v=3.7.45"></script>
+<script src="banca-offline.js?v=3.7.46"></script>
 <script>
 // ===================== ESTADO =====================
 let sessao = null;        // { lojaId, nomeLoja, userId, vendedor }
@@ -1265,7 +1266,7 @@ async function limparCarrinho(){
   const ok = typeof bancaConfirmar==='function' ? await bancaConfirmar('Limpar o carrinho?', 'Vais tirar os '+carrinho.length+' produto(s) do carrinho. Nada é vendido nem sai do stock.', { ok:'🗑️ Limpar', icone:'🗑️' }) : true;
   if(!ok) return;
   carrinho.length = 0;
-  try{ renderCarrinho(); }catch(e){} try{ atualizarCarrinho(); }catch(e){}
+  try{ renderCarrinho(); }catch(e){} try{ atualizarBarraCarrinho(); }catch(e){} try{ renderProdutos(); }catch(e){}
   fecharFolha('folha-carrinho'); toast('🗑️ Carrinho limpo','ok');
 }
 // botão «Atualizar» do topo: recarrega produtos e envia o que estiver por enviar, sem sair do ecrã
@@ -1368,6 +1369,25 @@ function toast(msg, tipo){
   clearTimeout(toastT);
   toastT=setTimeout(()=>{ t.style.display='none'; }, 2200);
 }
+</script>
+<style>
+.bvd{display:flex;align-items:center;gap:12px;padding:12px;margin-bottom:12px;border-radius:16px;background:#fff;border:1.5px solid #e2e8f0;cursor:pointer;user-select:none;-webkit-user-select:none;}
+.bvd.on{border-color:#818cf8;}
+.bvd-eng{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:linear-gradient(135deg,#f8fafc,#e2e8f0);color:#334155;flex-shrink:0;transition:transform .5s cubic-bezier(.3,1.3,.5,1),background .2s;}
+.bvd.on .bvd-eng{transform:rotate(180deg);background:linear-gradient(135deg,#a5f3fc,#93c5fd 50%,#c4b5fd);color:#0f172a;}
+.bvd-t{flex:1;min-width:0;} .bvd-t b{display:block;font-size:14px;color:#0f172a;} .bvd-t small{display:block;font-size:12px;color:#64748b;margin-top:2px;line-height:1.4;}
+.bvd-sw{width:48px;height:28px;border-radius:99px;background:#cbd5e1;position:relative;flex-shrink:0;transition:background .2s;}
+.bvd-sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.25);transition:transform .22s cubic-bezier(.3,1.3,.5,1);}
+.bvd.on .bvd-sw{background:linear-gradient(90deg,#38bdf8,#818cf8);} .bvd.on .bvd-sw::after{transform:translateX(20px);}
+</style>
+<script src="spap-vidro.js?v=1"></script>
+<script>
+// Modo vidro da Banca: liga/desliga nas Definições; todas as folhas e janelas que abrirem ficam em vidro
+function bancaVidroPintar(){ var on=!!(window.spapVidro&&spapVidro.ligado()), b=document.getElementById('bvd'); if(!b) return;
+  b.classList.toggle('on',on); b.setAttribute('aria-checked',on); document.getElementById('bvd-txt').textContent = on ? 'Ligado — a Banca e todas as janelas ficam em vidro.' : 'Desligado — a Banca está normal.'; }
+function bancaVidroTrocar(){ if(!window.spapVidro) return; var on=!spapVidro.ligado(); spapVidro.definir(on); bancaVidroPintar(); try{ toast(on?'🪟 Modo vidro ligado':'Modo vidro desligado','ok'); }catch(e){} }
+document.getElementById('bvd').addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); bancaVidroTrocar(); } });
+bancaVidroPintar();
 </script>
 </body>
 </html>
