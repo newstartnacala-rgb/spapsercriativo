@@ -13,7 +13,7 @@
         { k: 'rosa', n: 'Rosa', c: '#db2777', e: '#be185d', a: '#f472b6', l: '#fdf0f6' }, { k: 'dourado', n: 'Dourado', c: '#b8860b', e: '#92680a', a: '#e0b84a', l: '#fbf5e6' } ];
   var COMBOS = [ { k: 'pordosol', n: 'Pôr do sol', a: '#f97316', b: '#db2777' }, { k: 'oceano', n: 'Oceano', a: '#0ea5e9', b: '#10b981' }, { k: 'galaxia', n: 'Galáxia', a: '#4f46e5', b: '#c026d3' },
     { k: 'tropical', n: 'Tropical', a: '#facc15', b: '#16a34a' }, { k: 'aurora', n: 'Aurora', a: '#22d3ee', b: '#8b5cf6' }, { k: 'fogo', n: 'Fogo', a: '#ef4444', b: '#f59e0b' } ];
-  var PADRAO = { cor: CORES[0].k, mixA: '#1d6ff2', mixB: '#db2777', mixModo: 'degrade', mixPeso: 50, fundo: 'normal', transp: 35, letra: 'normal', cantos: 'redondos', ondas: true, animacoes: true, sino: true, nome: '' };
+  var PADRAO = { interface: 'classica', cor: CORES[0].k, mixA: '#1d6ff2', mixB: '#db2777', mixModo: 'degrade', mixPeso: 50, fundo: 'normal', transp: 35, letra: 'normal', cantos: 'redondos', ondas: true, animacoes: true, sino: true, nome: '' };
   function ler() { var o = {}; try { o = JSON.parse(localStorage.getItem(CHAVE) || '{}') || {}; } catch (e) {} var r = {}; for (var k in PADRAO) r[k] = (k in o) ? o[k] : PADRAO[k]; return r; }
   function gravar(o) { try { localStorage.setItem(CHAVE, JSON.stringify(o)); } catch (e) {} }
 
@@ -23,6 +23,7 @@
   function rgba(h, al) { var r = hx(h); return 'rgba(' + r.join(',') + ',' + al + ')'; }
   // devolve {c,e,a,l,g1,g2} da cor escolhida (cor simples ou mistura de duas)
   function corAtual(o) {
+    if (o.interface === 'noite' || o.interface === 'marfim') return { k: 'gd', c: '#c9962f', e: '#9c7424', a: '#f3d27a', l: '#fbf3df', g1: '#f6dc8c', g2: '#a77a26', mix: true };
     if (o.cor === 'mix') {
       var A = o.mixA, B = o.mixB, m;
       if (o.mixModo === 'uma') { m = junta(A, B, (o.mixPeso || 50) / 100); return { c: m, e: junta(m, '#000000', .18), a: junta(m, '#ffffff', .28), l: junta(m, '#ffffff', .9), g1: junta(m, '#ffffff', .28), g2: junta(m, '#000000', .12), mix: true }; }
@@ -31,6 +32,7 @@
     var c = CORES.filter(function (x) { return x.k === o.cor; })[0] || CORES[0]; return { k: c.k, c: c.c, e: c.e, a: c.a, l: c.l, g1: c.a, g2: c.e };
   }
   function vidroOn() { return !!(window.spapVidro && window.spapVidro.ligado()); }
+  var _ifaceAntes = null, _noiteVigia = false;
   function aplicar(o) {
     o = o || ler();
     var st = document.getElementById('spr-estilo');
@@ -63,6 +65,25 @@
     if (!o.ondas) css += 'body .stat,body .kpi{background-image:none !important;animation:none !important;}';
     if (!o.animacoes) css += '*,*::before,*::after{animation-duration:.001s !important;animation-iteration-count:1 !important;transition-duration:.001s !important;}';
     if (!o.sino) css += '#sal-sino{display:none !important;}';
+    // Interface Dourada (Noite = escura, Marfim = clara)
+    var gd = o.interface === 'noite' || o.interface === 'marfim';
+    if (gd) {
+      var CART = APP === 'banca'
+        ? '.tela .cartao,.tela .stat,.tela .bv-venda,.tela .graf-card,.tela .item,.tela .rt-kpi,.tela .cat-item,.tela .seg-caixa,.tela .bv-card,.tela .data-escolha,.nav'
+        : '#app .kpi,#app .card,#app .card-gestao,#app .venda-item,#app .ct-card,#app .sc-item,#app .sc-tile,#app .gc-card,#app .btn-filtro-data,#app .indicador-live,.bottom-nav,.nav-bottom';
+      css += CART.split(',').map(function (x) { return 'body ' + x; }).join(',') + '{border-color:rgba(201,150,47,.32) !important;box-shadow:0 10px 26px rgba(120,90,30,.12),inset 0 1px 0 rgba(255,236,180,.5) !important;}';
+      css += (APP === 'banca' ? '.tela > .topo' : '#app .topbar') + '{border-bottom:1px solid rgba(201,150,47,.4) !important;}';
+      css += (APP === 'banca' ? '#nome-loja,.topo .nome' : '#nome-loja-topo,.topbar-titulo') + '{background:linear-gradient(180deg,#d9a93f,#9c7424);-webkit-background-clip:text;background-clip:text;color:transparent !important;-webkit-text-fill-color:transparent;}';
+      if (o.interface === 'marfim' && o.fundo !== 'colorido' && !vidroOn()) css += 'html,body{background:radial-gradient(900px 420px at 90% -10%,rgba(232,195,106,.22),transparent 60%),linear-gradient(180deg,#fbf8f1,#f4ecdb) fixed !important;}';
+    }
+    var html = document.documentElement, chEsc = APP === 'banca' ? 'banca_escuro' : 'monitor_escuro';
+    if (o.interface === 'noite') { html.classList.add('escuro');
+      // o tema da página pode repor o claro ao arrancar: volta a pôr o escuro logo a seguir
+      if (!_noiteVigia) { _noiteVigia = true; [300, 1200, 3000].forEach(function (t) { setTimeout(function () { if (ler().interface === 'noite') html.classList.add('escuro'); }, t); });
+        window.addEventListener('load', function () { if (ler().interface === 'noite') html.classList.add('escuro'); }); } }
+    else if (_ifaceAntes === 'noite') { var esc = false; try { esc = localStorage.getItem(chEsc) === '1'; } catch (e) {} html.classList.toggle('escuro', esc); }
+    _ifaceAntes = o.interface;
+    if (document.body) { document.body.classList.toggle('spr-gd', gd); document.body.classList.toggle('spr-gd-marfim', o.interface === 'marfim'); }
     st.textContent = css;
     if (o.nome) { var el = document.getElementById(APP === 'banca' ? 'nome-loja' : 'nome-loja-topo'); if (el && el.dataset.sprOrig === undefined) el.dataset.sprOrig = el.textContent; }
   }
@@ -121,6 +142,15 @@
     + '.spr-vidro .sv-sw{width:48px;height:28px;border-radius:99px;background:#cbd5e1;position:relative;flex-shrink:0;transition:background .2s;}'
     + '.spr-vidro .sv-sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.25);transition:transform .22s cubic-bezier(.3,1.3,.5,1);}'
     + '.spr-vidro.on .sv-sw{background:linear-gradient(90deg,#38bdf8,#818cf8);} .spr-vidro.on .sv-sw::after{transform:translateX(20px);}'
+    + '.spr-ifs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}'
+    + '.spr-if{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:8px;border-radius:14px;border:2px solid #e2e8f0;background:#fff;font-family:inherit;cursor:pointer;text-align:left;color:#0f172a;}'
+    + '.spr-if.on{border-color:#c9962f;box-shadow:0 0 0 3px rgba(212,167,60,.18);}'
+    + '.spr-if[data-if="classica"].on{border-color:#0f172a;box-shadow:none;}'
+    + '.spr-if-m{width:100%;height:46px;border-radius:9px;display:flex;align-items:flex-end;gap:4px;padding:6px;margin-bottom:4px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);}'
+    + '.spr-if-m i{flex:1;height:12px;border-radius:4px;}'
+    + '.spr-if b{font-size:12px;line-height:1.2;} .spr-if small{font-size:10.5px;color:#64748b;font-weight:600;}'
+    + '.spr-gd-nota{display:none;margin-top:8px;padding:10px 12px;border-radius:12px;background:#fbf3df;color:#7a5a17;font-size:12px;font-weight:700;line-height:1.4;}'
+    + '#spr-fundo.gd .spr-gd-nota{display:block;} #spr-fundo.gd .spr-so-cl{display:none;}'
     + '.spr-nota{font-size:11.5px;color:#94a3b8;text-align:center;margin-top:6px;line-height:1.45;}'
     + 'html.escuro #spr-fundo{filter:invert(1) hue-rotate(180deg);}';
   function estilo() { if (document.getElementById('spr-css')) return; var s = document.createElement('style'); s.id = 'spr-css'; s.textContent = css; document.head.appendChild(s); }
@@ -135,6 +165,10 @@
     var o = ler(), ant = document.getElementById('spr-fundo'); if (ant) ant.remove();
     var d = document.createElement('div'); d.id = 'spr-fundo';
     d.innerHTML = '<div class="spr-p" role="dialog" aria-modal="true" aria-labelledby="spr-t"><div class="spr-cab"><div class="ic">🎨</div><div><b id="spr-t">Personalizar</b><small>Muda o aspeto do Monitor ao teu gosto. Fica guardado neste aparelho.</small></div><button type="button" class="spr-x" aria-label="Fechar">✕</button></div><div class="spr-corpo">'
+      + '<div class="spr-sec">Interface</div><div class="spr-ifs">' + [['classica', 'Clássica', 'A de sempre', 'linear-gradient(135deg,#eef2f6,#ffffff)', '#1d6ff2'], ['noite', 'Dourada · Noite', 'Escura com dourado', 'linear-gradient(135deg,#0b0b0d,#1d1d22)', 'linear-gradient(135deg,#f9e29a,#c99a35)'], ['marfim', 'Dourada · Marfim', 'Clara com dourado', 'linear-gradient(135deg,#fbf8f1,#f1e8d4)', 'linear-gradient(135deg,#f3d27a,#b8862b)']].map(function (x) {
+          return '<button type="button" class="spr-if' + (o.interface === x[0] ? ' on' : '') + '" data-if="' + x[0] + '"><span class="spr-if-m" style="background:' + x[3] + '"><i style="background:' + x[4] + '"></i><i style="background:' + x[4] + ';opacity:.55"></i><i style="background:' + x[4] + ';opacity:.3"></i></span><b>' + x[1] + '</b><small>' + x[2] + '</small></button>'; }).join('') + '</div>'
+      + '<div class="spr-gd-nota">Na interface Dourada a cor é dourada. Para escolher outra cor, volta à Clássica.</div>'
+      + '<div class="spr-so-cl">'
       + '<div class="spr-sec">Cor principal</div><div class="spr-cores">' + CORES.map(function (c) { return '<button type="button" class="spr-cor' + (c.k === o.cor ? ' on' : '') + '" data-cor="' + c.k + '"><i style="background:linear-gradient(135deg,' + c.a + ',' + c.e + ')"></i>' + c.n + (c.k === CORES[0].k ? ' ★' : '') + '</button>'; }).join('') + '</div>'
       + '<div class="spr-sec">Misturar cores</div><div class="spr-combos">' + COMBOS.map(function (m) { return '<button type="button" class="spr-combo" data-combo="' + m.k + '" style="background:linear-gradient(135deg,' + m.a + ',' + m.b + ')">' + m.n + '</button>'; }).join('') + '</div>'
       + '<div class="spr-mix' + (o.cor === 'mix' ? ' on' : '') + '"><div class="spr-mix-cab"><b>A tua mistura</b><small>Escolhe duas cores e vê o resultado</small></div>'
@@ -142,6 +176,7 @@
       + seg('mixModo', [['degrade', '🌈 Degradê das duas'], ['uma', '🧪 Misturar numa só']], o.mixModo)
       + '<div class="spr-peso"' + (o.mixModo === 'uma' ? '' : ' hidden') + '><span>Mais cor 1</span><input type="range" min="0" max="100" step="5" data-num="mixPeso" value="' + o.mixPeso + '"><span>Mais cor 2</span></div>'
       + '<button type="button" class="spr-bt prim" data-acao="usarmix">✔ Usar a minha mistura</button></div>'
+      + '</div>'
       + '<div class="spr-sec">Modo vidro</div>'
       + '<div class="spr-vidro' + (vidroOn() ? ' on' : '') + '" role="switch" tabindex="0" aria-checked="' + vidroOn() + '"><span class="sv-eng"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span>'
       + '<span class="sv-t"><b>Modo vidro</b><small id="spr-vtxt">' + (vidroOn() ? 'Ligado — o Monitor e todas as janelas que abrirem ficam em vidro.' : 'Desligado — o Monitor está normal.') + '</small></span><i class="sv-sw"></i></div>'
@@ -156,6 +191,7 @@
       + '<button type="button" class="spr-bt" data-acao="sino">↩️ Pôr o sino no sítio de origem</button>'
       + '<div class="spr-sec">Repor</div><button type="button" class="spr-bt perigo" data-acao="repor">Voltar ao aspeto original</button>'
       + '<div class="spr-nota">As mudanças aplicam-se logo. Cada telemóvel ou computador guarda as suas.</div></div></div>';
+    if (o.interface !== 'classica') d.classList.add('gd');
     document.body.appendChild(d);
     requestAnimationFrame(function () { d.classList.add('on'); });
     function fechar() { d.classList.remove('on'); setTimeout(function () { d.remove(); }, 220); }
@@ -168,7 +204,9 @@
     d.addEventListener('click', function (e) {
       if (e.target === d) return fechar();
       var b = e.target.closest('button'); if (!b) return;
-      if (b.dataset.cor) { mudar('cor', b.dataset.cor); marcar(); }
+      if (b.dataset.if) { mudar('interface', b.dataset.if); d.querySelectorAll('.spr-if').forEach(function (x) { x.classList.toggle('on', x === b); }); d.classList.toggle('gd', b.dataset.if !== 'classica');
+        try { (window.toast || window.mostrarNotif || function () {})('🎨 Interface ' + b.querySelector('b').textContent + ' aplicada'); } catch (er) {} }
+      else if (b.dataset.cor) { mudar('cor', b.dataset.cor); marcar(); }
       else if (b.dataset.combo) { var m = COMBOS.filter(function (k) { return k.k === b.dataset.combo; })[0]; o.mixA = m.a; o.mixB = m.b; o.mixModo = 'degrade'; d.querySelector('[data-mix=mixA]').value = m.a; d.querySelector('[data-mix=mixB]').value = m.b; d.querySelectorAll('[data-seg=mixModo] button').forEach(function (x) { x.classList.toggle('on', x.dataset.v === 'degrade'); }); d.querySelector('.spr-mix .spr-peso').hidden = true; usarMix(); }
       else if (b.dataset.acao === 'usarmix') { usarMix(); try { (window.toast || window.mostrarNotif || function () {})('🎨 A tua mistura foi aplicada'); } catch (er) {} }
       else if (b.dataset.v) { var sg = b.closest('[data-seg]'); sg.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
