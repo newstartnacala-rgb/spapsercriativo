@@ -134,7 +134,7 @@
     'body.modo2.gd .m2-pop{color:var(--gd2);}',
     'body.modo2.gd .m2-voar{background:var(--gd-sup3) !important;box-shadow:0 10px 24px rgba(0,0,0,.4),0 0 0 2px rgba(212,167,60,.5) !important;}',
     /* barra de atalhos (rodapé) */
-    '#gd-rodape{display:none;}',
+    '#gd-rodape{display:none !important;}',
     'body.modo2.gd #gd-rodape{display:flex;align-items:center;gap:16px;flex-shrink:0;height:36px;padding:0 22px;background:var(--gd-sup);border-top:1px solid var(--gd-borda);font-size:11.5px;font-weight:700;color:var(--gd-tx2);overflow:hidden;white-space:nowrap;}',
     '#gd-rodape kbd{font-family:inherit;font-size:10.5px;font-weight:800;line-height:1;padding:4px 6px;border-radius:6px;background:var(--gd-sup3);border:1px solid var(--gd-borda);color:var(--gd2);margin-right:5px;}',
     '#gd-rodape .gr-dir{margin-left:auto;display:flex;align-items:center;gap:14px;}',
@@ -267,7 +267,7 @@
       var wrap = document.createElement('div'); top.parentNode.insertBefore(wrap, top); wrap.appendChild(top);
       var r = document.createElement('div'); r.id = 'gd-cart-resumo'; r.textContent = 'Sem produtos'; wrap.appendChild(r);
     }
-    var main = el('m2-main');
+    var main = null; // barra de atalhos de baixo removida a pedido
     if (main && !el('gd-rodape')) {
       var f = document.createElement('div'); f.id = 'gd-rodape';
       f.innerHTML = '<span><kbd>F2</kbd>Pesquisar</span><span><kbd>F3</kbd>Menu</span><span><kbd>F4</kbd>Pagamento</span><span><kbd>Enter</kbd>Finalizar</span><span><kbd>F9</kbd>Emergência</span>' +
