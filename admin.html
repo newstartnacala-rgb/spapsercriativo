@@ -8,7 +8,7 @@
 <script>
   // Painel sempre na versão mais recente: se o aparelho mostrar uma cópia antiga, recarrega a nova
   (function () {
-    var VER = '2.9.265';
+    var VER = '2.9.266';
     try {
       fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
         var nova = j && j.versao; if (!nova || nova === VER) return;
@@ -393,6 +393,7 @@ body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; c
     <div class="ad-acoes">
       <button class="ad-pill" onclick="window.location.href='monitor.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Monitor</button>
       <div class="ad-acoes-dir">
+        <button class="ad-pill ad-vidro" id="ad-vidro" onclick="adVidroTrocar()" role="switch" aria-checked="false" title="Liga ou desliga o modo vidro"><svg class="ad-eng" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Modo vidro<i class="ad-sw"></i></button>
         <button class="ad-pill" onclick="carregarLojas()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.4 6.4L3 16"/><path d="M3 21v-5h5"/><path d="M3 12a9 9 0 0 1 15.4-6.4L21 8"/><path d="M21 3v5h-5"/></svg>Atualizar</button>
         <button class="ad-pill ad-pill-sair" onclick="sair()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M9 16l-4-4 4-4"/><path d="M5 12h11"/></svg>Sair</button>
       </div>
@@ -405,6 +406,9 @@ body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; c
       <img class="ad-banner-logo" src="ssteam-logo.png" alt="SSTEAM">
     </div>
 
+
+    <!-- Alerta geral: aparece logo em cima quando há algo errado no sistema -->
+    <div id="ad-alerta-sis" class="ad-alerta-sis" style="display:none" onclick="document.getElementById('sec-bd').scrollIntoView({behavior:'smooth'})"></div>
 
     <!-- Link de suporte -->
     <div class="ad-card">
@@ -569,12 +573,43 @@ body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; c
     <div class="lista-info" id="info-bancas"></div>
     <div id="lista-bancas"></div>
 
+    <!-- Estado do banco de dados -->
+    <div class="bd-div" id="sec-bd">
+      <div class="bd-cab">
+        <span class="bd-cab-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg></span>
+        <div><b>Banco de dados</b><small>Informação real do servidor (Supabase): se está a funcionar, se falhou, se o plano acabou, se está em manutenção. Verifica sozinho a cada minuto.</small></div>
+        <button class="bd-atual" onclick="bdVerificar(true)" title="Verificar agora"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></svg></button>
+      </div>
+      <div class="bd-estado" id="bd-estado"><span class="bd-pt"></span><div><b>A verificar…</b><small>A testar a ligação ao banco de dados</small></div></div>
+      <div class="bd-grelha">
+        <div class="bd-it" id="bd-dados"><small>Dados (tabelas)</small><b>—</b><em></em></div>
+        <div class="bd-it" id="bd-auth"><small>Login (contas)</small><b>—</b><em></em></div>
+        <div class="bd-it" id="bd-tempo"><small>Tempo de resposta</small><b>—</b><em></em></div>
+      </div>
+      <div class="bd-bloco" id="bd-servidor"></div>
+      <div class="bd-bloco" id="bd-manut"></div>
+      <div class="bd-rod" id="bd-rod">Última verificação: —</div>
+    </div>
+
+    <!-- Erros do sistema -->
+    <div class="bd-div" id="sec-erros">
+      <div class="bd-cab">
+        <span class="bd-cab-ic er-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg></span>
+        <div><b>Erros do sistema</b><small>Tudo o que corre mal na Loja, nos Monitores, na Banca e no login aparece aqui, com a loja, a hora e quantas vezes aconteceu.</small></div>
+        <button class="bd-atual" onclick="erCarregar(true)" title="Atualizar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></svg></button>
+      </div>
+      <div class="er-resumo" id="er-resumo"></div>
+      <div class="er-filtros" id="er-filtros"></div>
+      <div id="er-lista"><div class="er-vazio">A carregar…</div></div>
+    </div>
+
     <div class="ad-rodape"><img src="ssteam-logo.png" alt=""><span>SSTEAM · Tecnologia Varejista de Ponta</span></div>
   </div>
 </div>
 
 <div class="notif" id="notif"></div>
 
+<script src="spap-erros.js?v=1"></script>
 <script src="supabase-config.js"></script>
 <script>
 // Super admins (a mesma lista está no monitor.html e na função eh_super_admin() do Supabase)
@@ -603,7 +638,11 @@ async function iniciar() {
     return;
   }
   document.getElementById('tela-carregando').style.display = 'none';
+  // o código de acesso está no fim da página: espera que esteja carregado
+  for (let i = 0; i < 200 && typeof window.adPedirPin !== 'function'; i++) await new Promise(r => setTimeout(r, 25));
+  await adPedirPin();
   document.getElementById('app').style.display = 'block';
+  setTimeout(bdVerificar, 300);
   await carregarLojas();
   filtrar('todas');
 }
@@ -1396,5 +1435,310 @@ async function guardarMetodos() {
 </div>
 
 <script src="spap-rolagem.js?v=1"></script>
+<style>
+.ad-vidro{gap:8px;}
+.ad-vidro .ad-eng{transition:transform .5s cubic-bezier(.3,1.3,.5,1);}
+.ad-vidro.on .ad-eng{transform:rotate(180deg);color:#6366f1;}
+.ad-vidro .ad-sw{width:34px;height:20px;border-radius:99px;background:#cbd5e1;position:relative;flex-shrink:0;transition:background .2s;margin-left:2px;}
+.ad-vidro .ad-sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.25);transition:transform .22s cubic-bezier(.3,1.3,.5,1);}
+.ad-vidro.on .ad-sw{background:linear-gradient(90deg,#38bdf8,#818cf8);}
+.ad-vidro.on .ad-sw::after{transform:translateX(14px);}
+</style>
+<script src="spap-vidro.js?v=4"></script>
+<script>
+// Modo vidro do Painel de Administração
+function adVidroPintar(){ var on=!!(window.spapVidro&&spapVidro.ligado()), b=document.getElementById('ad-vidro'); if(!b) return; b.classList.toggle('on',on); b.setAttribute('aria-checked',on); }
+function adVidroTrocar(){ if(!window.spapVidro) return; spapVidro.definir(!spapVidro.ligado()); adVidroPintar(); }
+adVidroPintar();
+</script>
+<style>
+/* ===== Código de acesso ao painel ===== */
+#ad-pin{position:fixed;inset:0;z-index:100060;display:flex;align-items:center;justify-content:center;padding:18px;background:radial-gradient(60% 50% at 20% 10%,rgba(212,175,106,.28),transparent 70%),radial-gradient(60% 60% at 90% 90%,rgba(37,99,235,.28),transparent 70%),linear-gradient(160deg,#0b1430,#111c3f 60%,#0b1226);font-family:inherit;}
+#ad-pin .ap-c{width:100%;max-width:340px;text-align:center;color:#fff;animation:apEntra .35s cubic-bezier(.2,.9,.3,1);}
+@keyframes apEntra{from{opacity:0;transform:translateY(14px) scale(.98)}}
+#ad-pin .ap-logo{width:76px;height:76px;border-radius:50%;margin:0 auto 12px;display:block;box-shadow:0 10px 30px rgba(212,175,106,.35);}
+#ad-pin h2{font-size:20px;font-weight:800;margin:0 0 4px;}
+#ad-pin p{font-size:13px;color:rgba(255,255,255,.7);margin:0 0 18px;}
+#ad-pin .ap-pts{display:flex;justify-content:center;gap:14px;margin-bottom:10px;}
+#ad-pin .ap-pts i{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.55);transition:.15s;}
+#ad-pin .ap-pts i.on{background:#d4af6a;border-color:#d4af6a;transform:scale(1.1);box-shadow:0 0 12px rgba(212,175,106,.6);}
+#ad-pin .ap-pts.erro{animation:apTreme .4s;} #ad-pin .ap-pts.erro i{border-color:#f87171;background:#f87171;}
+@keyframes apTreme{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+#ad-pin .ap-msg{min-height:18px;font-size:12.5px;font-weight:700;color:#fca5a5;margin-bottom:12px;}
+#ad-pin .ap-tec{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+#ad-pin .ap-tec button{height:62px;border-radius:18px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.08);color:#fff;font-family:inherit;font-size:24px;font-weight:700;cursor:pointer;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:background .12s,transform .08s;}
+#ad-pin .ap-tec button:active{transform:scale(.94);background:rgba(212,175,106,.35);}
+#ad-pin .ap-tec .ap-v{background:transparent;border-color:transparent;font-size:15px;}
+#ad-pin .ap-sair{margin-top:16px;background:none;border:0;color:rgba(255,255,255,.65);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+/* ===== Banco de dados ===== */
+.bd-div{background:#fff;border-radius:20px;padding:16px;margin:18px 0 6px;box-shadow:0 1px 4px rgba(0,0,0,.06);border:1px solid #e2e8f0;}
+.bd-cab{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.bd-cab-ic{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,#0ea5e9,#2563eb);color:#fff;box-shadow:0 6px 14px rgba(37,99,235,.3);flex-shrink:0;}
+.bd-cab-ic svg{width:24px;height:24px;}
+.bd-cab b{display:block;font-size:16px;color:#0f172a;} .bd-cab small{display:block;font-size:12px;color:#64748b;line-height:1.4;margin-top:2px;}
+.bd-atual{margin-left:auto;width:40px;height:40px;border-radius:12px;border:1px solid #e2e8f0;background:#fff;color:#334155;display:grid;place-items:center;cursor:pointer;flex-shrink:0;}
+.bd-atual svg{width:18px;height:18px;} .bd-atual.gira svg{animation:bdGira .8s linear infinite;}
+@keyframes bdGira{to{transform:rotate(360deg)}}
+.bd-estado{display:flex;align-items:center;gap:12px;padding:14px;border-radius:16px;background:#f8fafc;border:1.5px solid #e2e8f0;margin-bottom:10px;}
+.bd-estado b{display:block;font-size:15px;color:#0f172a;} .bd-estado small{display:block;font-size:12.5px;color:#475569;margin-top:2px;line-height:1.4;}
+.bd-pt{width:14px;height:14px;border-radius:50%;background:#94a3b8;flex-shrink:0;}
+.bd-estado.ok{background:#f0fdf4;border-color:#86efac;} .bd-estado.ok .bd-pt{background:#22c55e;box-shadow:0 0 0 5px rgba(34,197,94,.18);animation:bdPulsa 2s infinite;}
+.bd-estado.aviso{background:#fffbeb;border-color:#fcd34d;} .bd-estado.aviso .bd-pt{background:#f59e0b;box-shadow:0 0 0 5px rgba(245,158,11,.2);}
+.bd-estado.mau{background:#fef2f2;border-color:#fca5a5;} .bd-estado.mau .bd-pt{background:#ef4444;box-shadow:0 0 0 5px rgba(239,68,68,.2);animation:bdPulsa 1.2s infinite;}
+.bd-estado.manut{background:#eff6ff;border-color:#93c5fd;} .bd-estado.manut .bd-pt{background:#3b82f6;box-shadow:0 0 0 5px rgba(59,130,246,.2);}
+@keyframes bdPulsa{50%{box-shadow:0 0 0 9px rgba(0,0,0,0)}}
+.bd-grelha{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
+.bd-it{padding:10px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0;min-width:0;}
+.bd-it small{display:block;font-size:11px;color:#64748b;font-weight:700;}
+.bd-it b{display:block;font-size:14px;color:#0f172a;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bd-it em{display:block;font-style:normal;font-size:11px;color:#94a3b8;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bd-it.ok b{color:#15803d;} .bd-it.aviso b{color:#b45309;} .bd-it.mau b{color:#dc2626;}
+.bd-bloco{padding:12px 14px;border-radius:16px;background:#f8fafc;border:1px solid #e2e8f0;margin-bottom:10px;font-size:13px;color:#334155;}
+.bd-bloco h4{margin:0 0 6px;font-size:13.5px;color:#0f172a;display:flex;align-items:center;gap:6px;}
+.bd-bloco .bd-linha{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;}
+.bd-bloco input,.bd-bloco select{height:38px;border-radius:10px;border:1.5px solid #e2e8f0;padding:0 10px;font-family:inherit;font-size:13px;background:#fff;}
+.bd-bloco button{height:38px;padding:0 14px;border-radius:10px;border:0;background:#2563eb;color:#fff;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer;}
+.bd-bloco .bd-forte{font-size:15px;font-weight:800;}
+.bd-bloco.ok{background:#f0fdf4;border-color:#bbf7d0;} .bd-bloco.aviso{background:#fffbeb;border-color:#fde68a;} .bd-bloco.mau{background:#fef2f2;border-color:#fecaca;} .bd-bloco.manut{background:#eff6ff;border-color:#bfdbfe;}
+.bd-ev{padding:9px 10px;border-radius:12px;background:#fff;border:1px solid #e2e8f0;margin-top:8px;}
+.bd-ev b{display:block;font-size:13px;color:#0f172a;} .bd-ev small{display:block;font-size:12px;color:#475569;margin-top:2px;line-height:1.45;}
+.bd-ev .bd-tag{display:inline-block;font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:99px;margin-right:6px;vertical-align:1px;}
+.bd-tag.manut{background:#dbeafe;color:#1d4ed8;} .bd-tag.inc{background:#fee2e2;color:#b91c1c;} .bd-tag.prog{background:#fef3c7;color:#92400e;}
+.bd-rod{font-size:11.5px;color:#94a3b8;text-align:right;}
+@media(max-width:420px){.bd-grelha{grid-template-columns:1fr 1fr;}.bd-grelha .bd-it:last-child{grid-column:1/-1;}}
+</style>
+<script>
+/* ===== Código de acesso ao Painel de Administração (pedido sempre que se entra) ===== */
+const AD_PIN_HASH = '895c39afa0b7ca5f5ba65fcc3ec9c7e96e5206dfe2de25d0db5aef27c878fad3';
+// SHA-256 em JavaScript puro (para quando o navegador não tem crypto.subtle, ex.: páginas sem https)
+function adSha256(txt){
+  const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  const b=Array.from(new TextEncoder().encode(txt)), l=b.length*8; b.push(0x80); while(b.length%64!==56) b.push(0);
+  for(let i=7;i>=0;i--) b.push(i>3?0:(l>>>(i*8))&255);
+  let H=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19]; const r=(x,n)=>(x>>>n)|(x<<(32-n));
+  for(let o=0;o<b.length;o+=64){ const w=[]; for(let i=0;i<16;i++) w[i]=(b[o+i*4]<<24)|(b[o+i*4+1]<<16)|(b[o+i*4+2]<<8)|b[o+i*4+3];
+    for(let i=16;i<64;i++){ const s0=r(w[i-15],7)^r(w[i-15],18)^(w[i-15]>>>3), s1=r(w[i-2],17)^r(w[i-2],19)^(w[i-2]>>>10); w[i]=(w[i-16]+s0+w[i-7]+s1)|0; }
+    let [a,b2,c,d,e,f,g,h]=H;
+    for(let i=0;i<64;i++){ const t1=(h+(r(e,6)^r(e,11)^r(e,25))+((e&f)^(~e&g))+K[i]+w[i])|0, t2=((r(a,2)^r(a,13)^r(a,22))+((a&b2)^(a&c)^(b2&c)))|0; h=g; g=f; f=e; e=(d+t1)|0; d=c; c=b2; b2=a; a=(t1+t2)|0; }
+    H=[H[0]+a,H[1]+b2,H[2]+c,H[3]+d,H[4]+e,H[5]+f,H[6]+g,H[7]+h].map(x=>x|0); }
+  return H.map(x=>(x>>>0).toString(16).padStart(8,'0')).join('');
+}
+async function adHash(pin){
+  const t = 'spap-admin:' + pin;
+  try { if (window.crypto && crypto.subtle) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2,'0')).join(''); } } catch(e) {}
+  return adSha256(t);
+}
+function adPedirPin(){
+  return new Promise(res => {
+    const d = document.createElement('div'); d.id = 'ad-pin';
+    d.innerHTML = '<div class="ap-c"><img class="ap-logo" src="ssteam-logo.png" alt=""><h2>Painel de Administração</h2><p>Escreve o código de acesso de 4 dígitos</p>'
+      + '<div class="ap-pts"><i></i><i></i><i></i><i></i></div><div class="ap-msg" id="ap-msg"></div>'
+      + '<div class="ap-tec">' + ['1','2','3','4','5','6','7','8','9','','0','⌫'].map(k => k === '' ? '<span></span>' : '<button type="button" class="' + (k === '⌫' ? 'ap-v' : '') + '" data-k="' + k + '">' + k + '</button>').join('') + '</div>'
+      + '<button type="button" class="ap-sair" onclick="location.href=\'monitor.html\'">← Voltar ao Monitor</button></div>';
+    document.body.appendChild(d);
+    let pin = '', tentativas = 0, bloqueado = false;
+    const pts = d.querySelectorAll('.ap-pts i'), caixa = d.querySelector('.ap-pts'), msg = d.querySelector('#ap-msg');
+    const pintar = () => pts.forEach((p, i) => p.classList.toggle('on', i < pin.length));
+    async function tecla(k){
+      if (bloqueado) return;
+      if (k === '⌫') { pin = pin.slice(0, -1); pintar(); return; }
+      if (!/^\d$/.test(k) || pin.length >= 4) return;
+      pin += k; pintar(); msg.textContent = '';
+      if (pin.length < 4) return;
+      if (await adHash(pin) === AD_PIN_HASH) { document.removeEventListener('keydown', teclado); d.style.transition = 'opacity .25s'; d.style.opacity = '0'; setTimeout(() => d.remove(), 250); res(); return; }
+      tentativas++; caixa.classList.add('erro'); msg.textContent = 'Código errado.' + (tentativas >= 3 ? '' : ' Tenta de novo.');
+      setTimeout(() => { caixa.classList.remove('erro'); pin = ''; pintar(); }, 450);
+      if (tentativas >= 3) { bloqueado = true; let t = 30; msg.textContent = 'Muitas tentativas. Espera ' + t + 's…';
+        const iv = setInterval(() => { t--; msg.textContent = 'Muitas tentativas. Espera ' + t + 's…'; if (t <= 0) { clearInterval(iv); bloqueado = false; tentativas = 0; msg.textContent = ''; } }, 1000); }
+    }
+    d.addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (b) tecla(b.dataset.k); });
+    function teclado(e){ if (/^\d$/.test(e.key)) tecla(e.key); else if (e.key === 'Backspace') tecla('⌫'); }
+    document.addEventListener('keydown', teclado);
+  });
+}
+
+/* ===== Estado do banco de dados ===== */
+let _bdIv = null;
+function bdFmtData(d){ try { return new Date(d).toLocaleString('pt-PT', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }); } catch(e) { return d; } }
+function bdDur(ms){ ms = Math.max(0, ms); const m = Math.round(ms / 60000); if (m < 60) return m + ' min'; const h = Math.floor(m / 60), r = m % 60; if (h < 48) return h + ' h' + (r ? ' ' + r + ' min' : ''); return Math.round(h / 24) + ' dias'; }
+function bdEsc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+async function bdPedido(url, ms){
+  const ctl = new AbortController(), t0 = performance.now(), to = setTimeout(() => ctl.abort(), ms || 12000);
+  try { const r = await fetch(url, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY }, cache: 'no-store', signal: ctl.signal });
+    clearTimeout(to); return { ok: r.ok, status: r.status, ms: Math.round(performance.now() - t0) };
+  } catch(e) { clearTimeout(to); return { ok: false, status: 0, ms: Math.round(performance.now() - t0), erro: e.name === 'AbortError' ? 'tempo' : 'rede' }; }
+}
+// Explica cada resposta do servidor em palavras simples
+function bdLer(r){
+  if (r.ok) return { c: 'ok', t: 'A funcionar', e: r.ms + ' ms' };
+  if (r.status === 0) return { c: 'mau', t: r.erro === 'tempo' ? 'Não responde' : 'Sem ligação', e: r.erro === 'tempo' ? 'mais de 12 s' : 'falhou a ligação' };
+  if (r.status === 402) return { c: 'mau', t: 'Plano esgotado', e: 'limite do plano' };
+  if (r.status === 540) return { c: 'mau', t: 'Pausado', e: 'projecto em pausa' };
+  if (r.status === 401 || r.status === 403) return { c: 'aviso', t: 'Sem permissão', e: 'código ' + r.status };
+  if (r.status === 429) return { c: 'aviso', t: 'Sobrecarregado', e: 'pedidos a mais' };
+  if (r.status >= 500) return { c: 'mau', t: 'Em falha', e: 'erro ' + r.status };
+  return { c: 'aviso', t: 'Resposta estranha', e: 'código ' + r.status };
+}
+async function bdVerificar(manual){
+  const bt = document.querySelector('.bd-atual'); if (bt) bt.classList.add('gira');
+  const [dados, auth, plano, sp] = await Promise.all([
+    bdPedido(SUPABASE_URL + '/rest/v1/config_global?select=chave&limit=1'),
+    bdPedido(SUPABASE_URL + '/auth/v1/health'),
+    null,
+    (async () => { try { const ctl = new AbortController(); setTimeout(() => ctl.abort(), 10000); const r = await fetch('https://status.supabase.com/api/v2/summary.json', { cache: 'no-store', signal: ctl.signal }); return r.ok ? await r.json() : null; } catch(e) { return null; } })()
+  ]);
+  if (bt) bt.classList.remove('gira');
+  const D = bdLer(dados), A = bdLer(auth), lento = dados.ok && dados.ms > 2500;
+  const setIt = (id, x, extra) => { const e = document.getElementById(id); if (!e) return; e.className = 'bd-it ' + x.c; e.querySelector('b').textContent = x.t; e.querySelector('em').textContent = extra || x.e; };
+  setIt('bd-dados', D); setIt('bd-auth', A);
+  setIt('bd-tempo', { c: !dados.ok ? 'mau' : lento ? 'aviso' : 'ok', t: dados.ok ? dados.ms + ' ms' : '—', e: !dados.ok ? 'sem resposta' : lento ? 'lento' : dados.ms < 600 ? 'rápido' : 'normal' });
+  // manutenções e incidentes anunciados pela Supabase
+  const agora = Date.now(), manut = [], inc = [];
+  if (sp) {
+    (sp.scheduled_maintenances || []).forEach(m => { const ini = new Date(m.scheduled_for).getTime(), fim = new Date(m.scheduled_until).getTime(); if (fim > agora - 3600e3) manut.push({ nome: m.name, ini, fim, decorre: m.status === 'in_progress' || (ini <= agora && agora < fim), txt: ((m.incident_updates || [])[0] || {}).body || '' }); });
+    (sp.incidents || []).forEach(i => inc.push({ nome: i.name, estado: i.status, impacto: i.impact, txt: ((i.incident_updates || [])[0] || {}).body || '', desde: i.created_at }));
+  }
+  const manutAgora = manut.find(m => m.decorre);
+  // estado geral
+  const est = document.getElementById('bd-estado');
+  let c, t, sub;
+  if (D.c === 'mau' && D.t === 'Plano esgotado') { c = 'mau'; t = 'O plano do banco de dados acabou ou atingiu o limite'; sub = 'As lojas podem não conseguir guardar vendas. Renova ou sobe o plano na Supabase.'; }
+  else if (D.c === 'mau' && D.t === 'Pausado') { c = 'mau'; t = 'O banco de dados está em pausa'; sub = 'A Supabase pausou o projecto (plano gratuito sem uso ou plano terminado). Reativa no painel da Supabase.'; }
+  else if (manutAgora) { c = 'manut'; t = 'Em manutenção agora'; sub = (manutAgora.nome || 'Manutenção da Supabase') + ' · termina às ' + bdFmtData(manutAgora.fim) + ' (faltam ' + bdDur(manutAgora.fim - agora) + ')'; }
+  else if (D.c === 'mau' || A.c === 'mau') { c = 'mau'; t = 'O banco de dados está com falha'; sub = (D.c === 'mau' ? 'Dados: ' + D.t + ' (' + D.e + ')' : '') + (A.c === 'mau' ? (D.c === 'mau' ? ' · ' : '') + 'Login: ' + A.t + ' (' + A.e + ')' : '') + '. As lojas trabalham offline e enviam quando voltar.'; }
+  else if (inc.length) { c = 'aviso'; t = 'A Supabase está com um problema anunciado'; sub = inc[0].nome; }
+  else if (lento || D.c === 'aviso' || A.c === 'aviso') { c = 'aviso'; t = 'A funcionar, mas com avisos'; sub = lento ? 'Resposta lenta (' + dados.ms + ' ms).' : 'Algum serviço respondeu com aviso.'; }
+  else { c = 'ok'; t = 'Tudo a funcionar'; sub = 'Dados e login a responder normalmente (' + dados.ms + ' ms).'; }
+  est.className = 'bd-estado ' + c; est.querySelector('b').textContent = t; est.querySelector('small').textContent = sub;
+  // informação real do servidor (função spap_estado_bd do SQL v2.9.266)
+  const sv = document.getElementById('bd-servidor');
+  let srv = null; try { const r = await supabaseClient.rpc('spap_estado_bd'); srv = r.error ? { erro: r.error.message, cod: r.error.code } : r.data; } catch(e) { srv = { erro: String(e.message || e) }; }
+  let sh = '<h4>🖥️ Servidor do banco de dados</h4>', sc = '';
+  if (srv && srv.ok) {
+    const mb = (srv.tamanho_bytes || 0) / 1048576, uso = srv.ligacoes_max ? Math.round(srv.ligacoes / srv.ligacoes_max * 100) : 0, up = Date.now() - new Date(srv.ligado_desde).getTime();
+    const avisos = [];
+    if (srv.so_leitura === 'on') avisos.push('⛔ O banco de dados está só para LEITURA — as vendas não se conseguem guardar (normalmente acontece quando o disco do plano encheu).');
+    if (srv.em_recuperacao) avisos.push('⚠️ O servidor está em modo de recuperação.');
+    if (mb >= 450 && mb < 500) avisos.push('⚠️ O banco de dados tem ' + mb.toFixed(0) + ' MB — perto do limite de 500 MB do plano gratuito.');
+    if (mb >= 500) avisos.push('⚠️ O banco de dados tem ' + mb.toFixed(0) + ' MB — acima de 500 MB (limite do plano gratuito). Confirma o plano na Supabase.');
+    if (uso >= 80) avisos.push('⚠️ Ligações quase no máximo (' + srv.ligacoes + ' de ' + srv.ligacoes_max + ').');
+    if (srv.consultas_lentas > 0) avisos.push('⚠️ ' + srv.consultas_lentas + ' consulta(s) presa(s) há mais de 30 s (a mais longa: ' + srv.consulta_mais_longa_s + ' s).');
+    if (srv.bloqueios_espera > 0) avisos.push('⚠️ ' + srv.bloqueios_espera + ' pedido(s) à espera de bloqueio.');
+    if (up < 15 * 60000) avisos.push('ℹ️ O servidor foi reiniciado há ' + bdDur(up) + ' (atualização ou manutenção recente).');
+    sc = avisos.some(a => a.startsWith('⛔')) ? 'mau' : avisos.some(a => a.startsWith('⚠️')) ? 'aviso' : 'ok';
+    sh += '<div class="bd-mini"><span><small>Tamanho</small><b>' + (mb < 1024 ? mb.toFixed(1) + ' MB' : (mb / 1024).toFixed(2) + ' GB') + '</b></span><span><small>Ligações</small><b>' + srv.ligacoes + ' / ' + srv.ligacoes_max + '</b></span><span><small>Ligado há</small><b>' + bdDur(up) + '</b></span><span><small>Postgres</small><b>' + bdEsc(String(srv.versao).split(' ')[0]) + '</b></span></div>'
+      + (avisos.length ? avisos.map(a => '<div class="bd-av">' + bdEsc(a) + '</div>').join('') : '<small>✅ Sem problemas no servidor: escrita normal, ligações e consultas dentro do normal.</small>')
+      + (srv.tabelas && srv.tabelas.length ? '<details class="bd-tab"><summary>Maiores tabelas</summary>' + srv.tabelas.map(t => '<div><span>' + bdEsc(t.nome) + '</span><em>' + Math.max(0, t.linhas) + ' linhas</em><b>' + (t.bytes / 1048576).toFixed(2) + ' MB</b></div>').join('') + '</details>' : '');
+    window._bdSrv = srv;
+  } else if (srv && (srv.cod === 'PGRST202' || /spap_estado_bd|function/i.test(srv.erro || ''))) {
+    sc = 'aviso'; sh += '<small>Para ver a informação real do servidor e os erros do sistema, corre no Supabase o SQL <b>atualizacao-v2.9.266-erros-do-sistema.sql</b>.</small>';
+  } else if (dados.ok === false) {
+    sc = 'mau'; sh += '<small>Não foi possível ler o servidor porque o banco de dados não está a responder.</small>';
+  } else { sc = 'aviso'; sh += '<small>Não foi possível ler o servidor: ' + bdEsc((srv && srv.erro) || 'sem resposta') + '</small>'; }
+  sv.className = 'bd-bloco ' + sc; sv.innerHTML = sh;
+  window._bdEstado = { c, t, sub };
+  adAlertaGeral();
+  // manutenções e incidentes
+  const mn = document.getElementById('bd-manut');
+  let mh = '<h4>🛠️ Manutenções e avisos da Supabase</h4>', mc = '';
+  if (!sp) mh += '<small>Não foi possível ler o estado oficial da Supabase agora. Vê em status.supabase.com.</small>';
+  else if (!manut.length && !inc.length) { mc = 'ok'; mh += '<small>Sem manutenções marcadas e sem problemas anunciados.</small>'; }
+  else {
+    mc = inc.length || manutAgora ? (manutAgora ? 'manut' : 'aviso') : 'manut';
+    inc.forEach(i => { mh += '<div class="bd-ev"><b><span class="bd-tag inc">PROBLEMA</span>' + bdEsc(i.nome) + '</b><small>Estado: ' + bdEsc(i.estado) + (i.desde ? ' · desde ' + bdFmtData(i.desde) : '') + (i.txt ? '<br>' + bdEsc(i.txt.slice(0, 220)) : '') + '</small></div>'; });
+    manut.sort((a, b) => a.ini - b.ini).forEach(m => { mh += '<div class="bd-ev"><b><span class="bd-tag ' + (m.decorre ? 'prog' : 'manut') + '">' + (m.decorre ? 'A DECORRER' : 'MARCADA') + '</span>' + bdEsc(m.nome) + '</b><small>' + (m.decorre ? 'Começou ' + bdFmtData(m.ini) + ' · termina ' + bdFmtData(m.fim) + ' · faltam ' + bdDur(m.fim - agora) : 'De ' + bdFmtData(m.ini) + ' a ' + bdFmtData(m.fim) + ' · dura ' + bdDur(m.fim - m.ini) + ' · começa daqui a ' + bdDur(m.ini - agora)) + (m.txt ? '<br>' + bdEsc(m.txt.slice(0, 220)) : '') + '</small></div>'; });
+  }
+  mn.className = 'bd-bloco ' + mc; mn.innerHTML = mh;
+  document.getElementById('bd-rod').textContent = 'Última verificação: ' + new Date().toLocaleTimeString('pt-PT') + (sp ? ' · estado oficial da Supabase incluído' : '');
+  if (!_bdIv) _bdIv = setInterval(() => { if (!document.hidden) bdVerificar(); }, 60000);
+  if (manual) notif('✅ Estado do banco de dados atualizado');
+}
+</script>
+<style>
+.ad-alerta-sis{display:flex;align-items:center;gap:12px;margin:0 0 14px;padding:13px 14px;border-radius:16px;cursor:pointer;animation:apEntra .3s ease;}
+.ad-alerta-sis.mau{background:linear-gradient(135deg,#fef2f2,#fee2e2);border:1.5px solid #fca5a5;color:#991b1b;}
+.ad-alerta-sis.aviso{background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1.5px solid #fcd34d;color:#92400e;}
+.ad-alerta-sis.manut{background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1.5px solid #93c5fd;color:#1e40af;}
+.ad-alerta-sis .aa-i{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:20px;background:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.08);}
+.ad-alerta-sis b{display:block;font-size:14px;} .ad-alerta-sis small{display:block;font-size:12px;opacity:.9;margin-top:1px;line-height:1.4;}
+.ad-alerta-sis .aa-ver{margin-left:auto;font-size:12px;font-weight:800;white-space:nowrap;}
+.bd-mini{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:4px 0 8px;}
+.bd-mini span{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:7px 8px;min-width:0;}
+.bd-mini small{display:block;font-size:10.5px;color:#64748b;font-weight:700;} .bd-mini b{display:block;font-size:13px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bd-av{padding:8px 10px;border-radius:10px;background:#fff;border:1px solid #e2e8f0;margin-top:6px;font-size:12.5px;line-height:1.45;}
+.bd-tab{margin-top:8px;font-size:12.5px;} .bd-tab summary{cursor:pointer;font-weight:700;color:#334155;}
+.bd-tab div{display:flex;gap:8px;padding:4px 0;border-bottom:1px dashed #e2e8f0;} .bd-tab div span{flex:1;} .bd-tab em{font-style:normal;color:#94a3b8;} .bd-tab b{min-width:70px;text-align:right;}
+@media(max-width:420px){.bd-mini{grid-template-columns:1fr 1fr;}}
+.er-ic{background:linear-gradient(135deg,#f97316,#dc2626) !important;box-shadow:0 6px 14px rgba(220,38,38,.3) !important;}
+.er-resumo{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
+.er-resumo span{padding:10px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0;text-align:center;}
+.er-resumo b{display:block;font-size:20px;color:#0f172a;} .er-resumo small{font-size:11px;color:#64748b;font-weight:700;}
+.er-resumo span.mau b{color:#dc2626;} .er-resumo span.ok b{color:#15803d;}
+.er-filtros{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.er-filtros button{height:32px;padding:0 12px;border-radius:99px;border:1.5px solid #e2e8f0;background:#fff;font-family:inherit;font-size:12px;font-weight:700;color:#475569;cursor:pointer;}
+.er-filtros button.on{background:#0f172a;border-color:#0f172a;color:#fff;}
+.er-filtros .er-limpar{margin-left:auto;color:#dc2626;border-color:#fecaca;}
+.er-it{border:1px solid #e2e8f0;border-radius:14px;padding:10px 12px;margin-bottom:8px;background:#fff;position:relative;overflow:hidden;}
+.er-it::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:#f59e0b;}
+.er-it.bd::before,.er-it.rede::before{background:#dc2626;} .er-it.auth::before{background:#8b5cf6;} .er-it.ok{opacity:.6;} .er-it.ok::before{background:#22c55e;}
+.er-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;font-weight:800;}
+.er-tag{padding:2px 7px;border-radius:99px;background:#f1f5f9;color:#334155;}
+.er-tag.t-bd,.er-tag.t-rede{background:#fee2e2;color:#b91c1c;} .er-tag.t-auth{background:#ede9fe;color:#6d28d9;} .er-tag.t-pagina{background:#fef3c7;color:#92400e;}
+.er-vz{margin-left:auto;color:#dc2626;} .er-hora{color:#94a3b8;font-weight:700;}
+.er-msg{font-size:13.5px;font-weight:800;color:#0f172a;margin:5px 0 2px;line-height:1.35;word-break:break-word;}
+.er-onde{font-size:11.5px;color:#64748b;line-height:1.4;word-break:break-word;}
+.er-it details{margin-top:4px;font-size:11.5px;color:#475569;} .er-it details summary{cursor:pointer;font-weight:700;}
+.er-it pre{white-space:pre-wrap;word-break:break-word;background:#f8fafc;border-radius:8px;padding:8px;margin:6px 0 0;font-size:11px;max-height:160px;overflow:auto;}
+.er-acoes{display:flex;gap:6px;margin-top:8px;}
+.er-acoes button{height:30px;padding:0 10px;border-radius:9px;border:1px solid #e2e8f0;background:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;color:#15803d;}
+.er-vazio{padding:22px 10px;text-align:center;color:#64748b;font-size:13px;}
+</style>
+<script>
+/* ===== Erros do sistema (tabela spap_erros) ===== */
+let _erFiltro = 'abertos', _erLista = [];
+const ER_APPS = { loja:'Loja (vendas)', monitor:'Monitor principal', banca:'Banca', 'banca-monitor':'Monitor da Banca', entrada:'Login/Registo', 'banca-entrada':'Login da Banca', admin:'Administração' };
+const ER_TIPOS = { bd:'Banco de dados', rede:'Ligação', auth:'Login/contas', pagina:'Página' };
+function erQuando(d){ const ms = Date.now() - new Date(d).getTime(); if (ms < 60000) return 'agora'; if (ms < 3600e3) return 'há ' + Math.round(ms/60000) + ' min'; if (ms < 86400e3) return 'há ' + Math.round(ms/3600e3) + ' h'; return new Date(d).toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }
+async function erCarregar(manual){
+  const { data, error } = await supabaseClient.from('spap_erros').select('*').order('ultimo_em', { ascending: false }).limit(200);
+  const L = document.getElementById('er-lista');
+  if (error) { _erLista = null; L.innerHTML = '<div class="er-vazio">' + (/spap_erros|relation|PGRST205|42P01/i.test(error.message + error.code) ? 'Para começar a registar os erros do sistema, corre no Supabase o SQL <b>atualizacao-v2.9.266-erros-do-sistema.sql</b>.' : 'Não foi possível ler os erros: ' + bdEsc(error.message)) + '</div>'; document.getElementById('er-resumo').innerHTML = ''; document.getElementById('er-filtros').innerHTML = ''; adAlertaGeral(); return; }
+  _erLista = data || []; erDesenhar(); adAlertaGeral();
+  if (manual) notif('✅ Erros do sistema atualizados');
+}
+function erDesenhar(){
+  const L = document.getElementById('er-lista'), ag = Date.now();
+  const abertos = _erLista.filter(e => !e.resolvido), h24 = abertos.filter(e => ag - new Date(e.ultimo_em) < 864e5), bd = abertos.filter(e => e.tipo === 'bd' || e.tipo === 'rede');
+  document.getElementById('er-resumo').innerHTML = '<span class="' + (h24.length ? 'mau' : 'ok') + '"><b>' + h24.length + '</b><small>Últimas 24 h</small></span><span class="' + (bd.length ? 'mau' : 'ok') + '"><b>' + bd.length + '</b><small>Banco de dados</small></span><span><b>' + abertos.reduce((s, e) => s + (e.vezes || 1), 0) + '</b><small>Ocorrências</small></span>';
+  const F = [['abertos','Por resolver (' + abertos.length + ')'],['bd','Banco de dados'],['pagina','Páginas'],['todos','Todos']];
+  document.getElementById('er-filtros').innerHTML = F.map(f => '<button class="' + (_erFiltro === f[0] ? 'on' : '') + '" onclick="_erFiltro=\'' + f[0] + '\';erDesenhar()">' + f[1] + '</button>').join('') + (_erLista.some(e => e.resolvido) ? '<button class="er-limpar" onclick="erLimpar()">Apagar resolvidos</button>' : '');
+  let v = _erLista;
+  if (_erFiltro === 'abertos') v = abertos; else if (_erFiltro === 'bd') v = abertos.filter(e => e.tipo === 'bd' || e.tipo === 'rede' || e.tipo === 'auth'); else if (_erFiltro === 'pagina') v = abertos.filter(e => e.tipo === 'pagina');
+  if (!v.length) { L.innerHTML = '<div class="er-vazio">✅ ' + (_erFiltro === 'todos' ? 'Ainda não há erros registados.' : 'Nenhum erro por resolver aqui. O sistema está limpo.') + '</div>'; return; }
+  L.innerHTML = v.slice(0, 80).map(e => '<div class="er-it ' + bdEsc(e.tipo) + (e.resolvido ? ' ok' : '') + '"><div class="er-top"><span class="er-tag t-' + bdEsc(e.tipo) + '">' + bdEsc(ER_TIPOS[e.tipo] || e.tipo) + '</span><span class="er-tag">' + bdEsc(ER_APPS[e.app] || e.app || '?') + '</span>' + (e.codigo ? '<span class="er-tag">' + bdEsc(e.codigo) + '</span>' : '') + '<span class="er-hora">' + erQuando(e.ultimo_em) + '</span>' + ((e.vezes || 1) > 1 ? '<span class="er-vz">×' + e.vezes + '</span>' : '') + '</div>'
+    + '<div class="er-msg">' + bdEsc(e.mensagem) + '</div>'
+    + '<div class="er-onde">' + [e.email ? '👤 ' + bdEsc(e.email) : '', e.loja_id ? '🏪 ' + bdEsc(erNomeLoja(e.loja_id)) : '', e.pagina ? '📄 ' + bdEsc(e.pagina) : '', e.versao ? 'v' + bdEsc(e.versao) : '', (e.vezes || 1) > 1 ? 'desde ' + erQuando(e.criado_em) : ''].filter(Boolean).join(' · ') + '</div>'
+    + (e.detalhe || e.agente ? '<details><summary>Detalhes técnicos</summary><pre>' + bdEsc((e.detalhe || '') + (e.agente ? '\n\nAparelho: ' + e.agente : '')) + '</pre></details>' : '')
+    + (e.resolvido ? '' : '<div class="er-acoes"><button onclick="erResolver(' + e.id + ')">✔ Marcar como resolvido</button></div>') + '</div>').join('');
+}
+function erNomeLoja(id){ try { const l = (window.todasLojas || window.lojas || []).find(x => String(x.id) === String(id)); return l ? (l.nome || l.nome_empresa || id) : id; } catch(e) { return id; } }
+async function erResolver(id){ const { error } = await supabaseClient.from('spap_erros').update({ resolvido: true }).eq('id', id); if (error) return notif('Não foi possível: ' + error.message, true); const e = _erLista.find(x => x.id === id); if (e) e.resolvido = true; erDesenhar(); adAlertaGeral(); notif('✅ Marcado como resolvido'); }
+async function erLimpar(){ const { error } = await supabaseClient.from('spap_erros').delete().eq('resolvido', true); if (error) return notif('Não foi possível: ' + error.message, true); _erLista = _erLista.filter(e => !e.resolvido); erDesenhar(); notif('🗑️ Erros resolvidos apagados'); }
+// Alerta no topo do painel com o problema mais importante do sistema
+function adAlertaGeral(){
+  const el = document.getElementById('ad-alerta-sis'); if (!el) return;
+  const b = window._bdEstado, ab = (_erLista || []).filter(e => !e.resolvido && Date.now() - new Date(e.ultimo_em) < 3600e3), abBd = ab.filter(e => e.tipo === 'bd' || e.tipo === 'rede');
+  let c = '', i = '', t = '', s = '';
+  if (b && b.c === 'mau') { c = 'mau'; i = '🚨'; t = b.t; s = b.sub; }
+  else if (b && b.c === 'manut') { c = 'manut'; i = '🛠️'; t = b.t; s = b.sub; }
+  else if (abBd.length) { c = 'mau'; i = '🚨'; t = abBd.length + ' erro(s) do banco de dados na última hora'; s = abBd[0].mensagem + ((abBd[0].vezes || 1) > 1 ? ' (×' + abBd[0].vezes + ')' : ''); }
+  else if (b && b.c === 'aviso') { c = 'aviso'; i = '⚠️'; t = b.t; s = b.sub; }
+  else if (ab.length) { c = 'aviso'; i = '⚠️'; t = ab.length + ' erro(s) no sistema na última hora'; s = ab[0].mensagem; }
+  if (!c) { el.style.display = 'none'; return; }
+  el.className = 'ad-alerta-sis ' + c; el.style.display = 'flex';
+  el.innerHTML = '<span class="aa-i">' + i + '</span><div><b>' + bdEsc(t) + '</b><small>' + bdEsc(s) + '</small></div><span class="aa-ver">Ver ›</span>';
+}
+setTimeout(function erArranque(){ if (document.getElementById('app').style.display !== 'block') return setTimeout(erArranque, 500); erCarregar(); setInterval(() => { if (!document.hidden) erCarregar(); }, 60000); }, 800);
+</script>
 </body>
 </html>

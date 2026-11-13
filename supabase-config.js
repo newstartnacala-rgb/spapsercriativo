@@ -54,13 +54,15 @@ if (SPAP_PAGINA_BANCA && !_ehGerente && !SPAP_SUPER_UNIFICADO) {
 }
 // Sem internet ou com rede fraca, um pedido nunca pode deixar o ecrã parado:
 // sem rede falha logo; com rede fraca desiste ao fim de 15 segundos (a app usa então os dados guardados no telemóvel).
+// Cada resposta com erro do banco de dados é registada para o Painel de Administração (spap-erros.js)
+function spapVigiarResposta(url, r) { try { if (r && r.status >= 400 && window.spapErroBD) window.spapErroBD(url, r.status, r); } catch (e) {} }
 function spapFetch(url, opts) {
   opts = opts || {};
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return Promise.reject(new TypeError('Sem internet'));
-  if (opts.signal || typeof AbortController === 'undefined') return fetch(url, opts);
+  if (opts.signal || typeof AbortController === 'undefined') return fetch(url, opts).then(function (r) { spapVigiarResposta(url, r); return r; });
   var c = new AbortController(), t = setTimeout(function () { try { c.abort(); } catch (e) {} }, 15000);
   var o = {}; for (var k in opts) o[k] = opts[k]; o.signal = c.signal;
-  return fetch(url, o).then(function (r) { clearTimeout(t); return r; }, function (e) { clearTimeout(t); throw e; });
+  return fetch(url, o).then(function (r) { clearTimeout(t); spapVigiarResposta(url, r); return r; }, function (e) { clearTimeout(t); try { if (window.spapErroRede) window.spapErroRede(url, e); } catch (x) {} throw e; });
 }
 function _spapOpcoes(auth) { var o = { global: { fetch: spapFetch } }; if (auth) o.auth = auth; return o; }
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY,

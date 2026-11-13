@@ -7,7 +7,7 @@
 (function () {
   'use strict';
   var P = location.pathname;
-  var APP = /mobile-monitor/.test(P) ? 'banca' : /mobile\.html/.test(P) ? 'bancapdv' : /monitor/.test(P) ? 'loja' : 'pdv';
+  var APP = /admin/.test(P) ? 'admin' : /mobile-monitor/.test(P) ? 'banca' : /mobile\.html/.test(P) ? 'bancapdv' : /monitor/.test(P) ? 'loja' : 'pdv';
   var BANCA = APP === 'banca' || APP === 'bancapdv';
   var CHAVE = APP === 'pdv' ? 'pdv_m2_vidro' : 'spap_vidro_' + APP;
   function ligado() { try { return localStorage.getItem(CHAVE) === '1'; } catch (e) { return false; } }
@@ -121,14 +121,15 @@
   function agendar() { if (_t) return; _t = setTimeout(function () { _t = null; try { marcar(); limparClaros(); } catch (e) {} }, 80); }
 
   /* ---- monitores: cartões e barras principais ---- */
-  var CARTOES = APP === 'bancapdv' ? '#grelha .card,.barra-carrinho,.lista-vendas .venda,.bv-venda'
+  var CARTOES = APP === 'admin' ? '.bd-div,.ad-card,.ad-divisao,.ad-banner,.contador,.loja-card,.ad-pill,.filtro-btn,.ad-busca,.ad-planos > div,.ad-fixo'
+    : APP === 'bancapdv' ? '#grelha .card,.barra-carrinho,.lista-vendas .venda,.bv-venda'
     : APP === 'banca'
     ? '.tela .cartao,.tela .stat,.tela .bv-venda,.tela .graf-card,.tela .item,.tela .rt-kpi,.tela .cat-item,.tela .row,.tela .seg-caixa,.tela .bj,.tela .pl-card,.tela .bv-card,.tela .sc-item,.periodo button:not(.on),.tela .data-escolha'
     : '#app .kpi,#app .card,#app .card-gestao,#app .venda-item,#app .ct-card,#app .sc-item,#app .sc-tile,#app .gc-card,#app .btn-filtro-data,#app .indicador-live,#app .section,#app .box';
-  var BARRAS = APP === 'bancapdv' ? '.topo,.tp-acoes' : APP === 'banca' ? '.tela > .topo,.nav,.tp-acoes' : '#app .topbar,.bottom-nav,.nav-bottom,.nav-tabs';
+  var BARRAS = APP === 'admin' ? '.ad-acoes' : APP === 'bancapdv' ? '.topo,.tp-acoes' : APP === 'banca' ? '.tela > .topo,.nav,.tp-acoes' : '#app .topbar,.bottom-nav,.nav-bottom,.nav-tabs';
   function marcarMonitor() {
     if (APP === 'pdv' || !document.body || !document.body.classList.contains('sv')) return;
-    try { document.querySelectorAll(CARTOES).forEach(function (e) { e.classList.add('sv-cartao'); }); } catch (e) {}
+    try { document.querySelectorAll(CARTOES).forEach(function (e) { if (letraClara(e) || (e.firstElementChild && letraClara(e.firstElementChild) && e.firstElementChild.textContent.trim())) e.classList.remove('sv-cartao'); else e.classList.add('sv-cartao'); }); } catch (e) {}
     try { document.querySelectorAll(BARRAS).forEach(function (e) { e.classList.add('sv-barra'); }); } catch (e) {}
   }
 
