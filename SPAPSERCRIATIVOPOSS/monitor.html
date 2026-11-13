@@ -21,7 +21,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.256"></script>
+<script src="spap-leitor.js?v=2.9.257"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -1117,7 +1117,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.256" defer></script>
+<script src="app-android.js?v=2.9.257" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -1394,6 +1394,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
     </div>
     <div class="def-lista">
       <button class="def-item def-dono" onclick="fecharDefinicoes();abrirMeuPerfil()"><img src="icons3d/person.png" alt=""><span>Meu Perfil</span><i class="def-seta"></i></button>
+      <button class="def-item" onclick="fecharDefinicoes();spapPersonalizarAbrir()"><img src="icons3d/star.png" alt=""><span>Personalizar</span><i class="def-seta"></i></button>
       <button class="def-item" id="def-admin" style="display:none" onclick="window.location.href='admin.html?t='+Date.now()"><img src="icons3d/shield.png" alt=""><span>Painel de Administração</span><i class="def-seta"></i></button>
       <button class="def-item" onclick="toggleModoEscuro()"><img id="def-escuro-ico" src="icons3d/moon.png" alt=""><span>Modo escuro</span><i class="def-switch" id="def-escuro-sw"></i></button>
       <button class="def-item" onclick="fecharDefinicoes();abrirModalLinguaMonitor()"><img src="icons3d/globe.png" alt=""><span>Idioma</span><i class="def-seta"></i></button>
@@ -1774,7 +1775,8 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
 <script src="spap-expirou.js?v=2"></script>
 <script src="spap-suporte.js?v=1"></script>
 <script src="spap-contador.js?v=1"></script>
-<script src="spap-alertas.js?v=1"></script>
+<script src="spap-alertas.js?v=2"></script>
+<script src="spap-personalizar.js?v=1"></script>
 <script>
 // Alertas do sistema (irregularidades) — sino no topo do Monitor
 document.addEventListener('DOMContentLoaded', function () { setTimeout(function () {
@@ -6208,7 +6210,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.256';
+const MONITOR_VERSAO = '2.9.257';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });

@@ -847,3 +847,21 @@ html.escuro .cart-limpar{background:rgba(220,38,38,.15);border-color:rgba(248,11
 .ret-busca-linha{display:flex;gap:8px;align-items:stretch;}
 .ret-busca-linha input{flex:1;min-width:0;}
 .ret-scan{flex-shrink:0;width:52px;border:0;border-radius:14px;background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;font-size:22px;cursor:pointer;box-shadow:0 6px 14px rgba(234,88,12,.3);}
+
+/* Código de acesso do Monitor da Banca */
+#bm-pin{position:fixed;inset:0;z-index:100080;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(120% 90% at 50% 0%,#1e3a8a 0%,#0b1b4d 60%,#050b22 100%);transition:opacity .25s;}
+#bm-pin.ok{opacity:0;}
+.bmp-c{width:100%;max-width:340px;text-align:center;color:#fff;font-family:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;}
+.bmp-ico{width:70px;height:70px;margin:0 auto 12px;border-radius:22px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);display:grid;place-items:center;font-size:34px;}
+.bmp-t{font-size:21px;font-weight:800;} .bmp-s{font-size:13px;opacity:.8;margin-top:4px;}
+.bmp-pontos{display:flex;justify-content:center;gap:16px;margin:24px 0 8px;}
+.bmp-pontos i{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.6);transition:background .15s,transform .15s;}
+.bmp-pontos i.on{background:#fb923c;border-color:#fb923c;transform:scale(1.15);}
+.bmp-pontos.treme{animation:bmpTreme .4s;}
+@keyframes bmpTreme{20%,60%{transform:translateX(-8px);}40%,80%{transform:translateX(8px);}}
+.bmp-erro{min-height:18px;font-size:13px;color:#fca5a5;font-weight:700;}
+.bmp-tec{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px;}
+.bmp-tec button{height:62px;border-radius:18px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:#fff;font-size:24px;font-weight:700;font-family:inherit;cursor:pointer;}
+.bmp-tec button:active{background:rgba(255,255,255,.22);}
+.bmp-tec button.vazio{visibility:hidden;}
+.bmp-nota{font-size:12px;opacity:.7;margin-top:16px;line-height:1.5;}

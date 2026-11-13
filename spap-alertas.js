@@ -18,6 +18,8 @@
     + '@keyframes salToca{0%,80%,100%{transform:rotate(0);}84%{transform:rotate(14deg);}88%{transform:rotate(-12deg);}92%{transform:rotate(8deg);}96%{transform:rotate(-4deg);}}'
     + '.sal-num{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;padding:0 5px;border-radius:99px;background:#dc2626;color:#fff;font:800 11px/20px system-ui,sans-serif;text-align:center;box-shadow:0 0 0 2px #fff;}'
     + '.sal-num.amarelo{background:#d97706;}'
+    + '.sal-sino.sal-solto{position:fixed;z-index:9990;width:48px;height:48px;border-radius:50%;box-shadow:0 10px 24px rgba(15,23,42,.25);}'
+    + '.sal-sino.sal-arrastar{transform:scale(1.12);box-shadow:0 16px 34px rgba(15,23,42,.35);cursor:grabbing;transition:none;}'
     + 'html.escuro .sal-sino{background:#1e293b;border-color:#334155;color:#e2e8f0;}'
     + '#sal-fundo{position:fixed;inset:0;z-index:100045;background:rgba(8,15,35,.5);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center;opacity:0;transition:opacity .2s;font-family:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;}'
     + '#sal-fundo.on{opacity:1;}'
@@ -206,9 +208,54 @@
     cfg = c; estilo(); lerVistos();
     if (c.onde && !document.getElementById('sal-sino')) {
       var b = document.createElement('button'); b.type = 'button'; b.id = 'sal-sino'; b.className = 'sal-sino'; b.setAttribute('aria-label', 'Alertas do sistema'); b.innerHTML = SINO;
-      b.onclick = spapAlertasAbrir;
       c.onde.insertBefore(b, c.onde.firstChild);
+      arrastavel(b);
     }
     spapAlertasAtualizar();
   };
+
+  // ---------- O SINO PODE SER ARRASTADO PARA QUALQUER LUGAR DO ECRÃ ----------
+  // Toque curto abre os alertas; arrastar (com o dedo ou o rato) muda o sítio e fica guardado neste aparelho.
+  var CH_POS = 'spap_sino_pos_' + (/mobile-monitor/.test(location.pathname) ? 'banca' : 'loja');
+  function soltarNoEcra(b, x, y) {
+    var w = b.offsetWidth || 40, h = b.offsetHeight || 40;
+    x = Math.max(6, Math.min(innerWidth - w - 6, x)); y = Math.max(6, Math.min(innerHeight - h - 6, y));
+    if (b.parentNode !== document.body) { b._casa = b._casa || { pai: b.parentNode, prox: b.nextSibling }; document.body.appendChild(b); }
+    b.classList.add('sal-solto');
+    b.style.left = x + 'px'; b.style.top = y + 'px';
+  }
+  function aplicarPos(b) {
+    var p = null; try { p = JSON.parse(localStorage.getItem(CH_POS) || 'null'); } catch (e) {}
+    if (p && typeof p.x === 'number') soltarNoEcra(b, p.x * innerWidth, p.y * innerHeight);
+  }
+  window.spapSinoRepor = function () {
+    try { localStorage.removeItem(CH_POS); } catch (e) {}
+    var b = document.getElementById('sal-sino'); if (!b || !b._casa) return;
+    b.classList.remove('sal-solto'); b.style.left = b.style.top = '';
+    try { b._casa.pai.insertBefore(b, b._casa.prox && b._casa.prox.parentNode === b._casa.pai ? b._casa.prox : b._casa.pai.firstChild); } catch (e) { b._casa.pai.appendChild(b); }
+  };
+  function arrastavel(b) {
+    var ini = null, moveu = false, ultimoArrasto = 0;
+    b.style.touchAction = 'none';
+    function mover(e) {
+      if (!ini) return;
+      if (!moveu && Math.hypot(e.clientX - ini.x, e.clientY - ini.y) < 8) return;
+      if (e.cancelable) e.preventDefault();
+      moveu = true; b.classList.add('sal-arrastar');
+      soltarNoEcra(b, e.clientX - ini.dx, e.clientY - ini.dy);
+    }
+    function fim() {
+      document.removeEventListener('pointermove', mover); document.removeEventListener('pointerup', fim); document.removeEventListener('pointercancel', fim);
+      if (!ini) return; ini = null; b.classList.remove('sal-arrastar');
+      if (moveu) { ultimoArrasto = Date.now(); var r = b.getBoundingClientRect(); try { localStorage.setItem(CH_POS, JSON.stringify({ x: r.left / innerWidth, y: r.top / innerHeight })); } catch (e) {} }
+    }
+    b.addEventListener('pointerdown', function (e) {
+      var r = b.getBoundingClientRect();
+      ini = { x: e.clientX, y: e.clientY, dx: e.clientX - r.left, dy: e.clientY - r.top }; moveu = false;
+      document.addEventListener('pointermove', mover, { passive: false }); document.addEventListener('pointerup', fim); document.addEventListener('pointercancel', fim);
+    });
+    b.addEventListener('click', function (e) { if (moveu || Date.now() - ultimoArrasto < 400) { e.preventDefault(); e.stopPropagation(); moveu = false; return; } spapAlertasAbrir(); });
+    addEventListener('resize', function () { if (b.classList.contains('sal-solto')) aplicarPos(b); });
+    aplicarPos(b);
+  }
 })();
