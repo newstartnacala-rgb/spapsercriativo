@@ -21,7 +21,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.262"></script>
+<script src="spap-leitor.js?v=2.9.263"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -1117,7 +1117,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.262" defer></script>
+<script src="app-android.js?v=2.9.263" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -1258,7 +1258,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
     </div>
 
     <!-- ALERTAS -->
-    <div class="notif-banner" id="notif-banner" onclick="pedirNotif()">
+    <div class="notif-banner" id="notif-banner" onclick="nbClique()">
       <div class="nb-sino"><img src="icons3d/bell.png" alt=""><span class="nb-badge" id="nb-badge">1</span></div>
       <div class="notif-banner-txt" id="notif-txt">Ativar alertas para vendas &gt; MT 500</div>
       <span class="nb-seta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
@@ -1776,7 +1776,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
 <script src="spap-suporte.js?v=1"></script>
 <script src="spap-contador.js?v=1"></script>
 <script src="spap-alertas.js?v=2"></script>
-<script src="spap-vidro.js?v=1"></script>
+<script src="spap-vidro.js?v=2"></script>
 <script src="spap-personalizar.js?v=4"></script>
 <script>
 // Alertas do sistema (irregularidades) — sino no topo do Monitor
@@ -2722,7 +2722,7 @@ function renderTop10() {
 
 }
 function renderHome(vendasHoje) {
-  try { window._salVendasLoja = vendasHoje; if (window.spapAlertasAtualizar) setTimeout(spapAlertasAtualizar, 0); } catch (e) {}
+  try { window._salVendasLoja = vendasHoje; if (window.spapAlertasAtualizar) setTimeout(spapAlertasAtualizar, 0); setTimeout(nbPintar, 0); } catch (e) {}
   const total = vendasHoje.reduce((s,v) => s + parseFloat(v.total), 0);
   const recebido = vendasHoje.filter(v => v.recebido != null).reduce((s,v) => s + parseFloat(v.recebido || v.total), 0);
   const itens = vendasHoje.reduce((s,v) => s + v.venda_itens.reduce((si,i) => si+i.qtd, 0), 0);
@@ -5943,6 +5943,7 @@ function _textoItensVenda(v) {
   }).join('\n');
 }
 function _notificarVenda(v) {
+  try { nbNovaVenda(v); } catch (e) {}
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   const tot = parseFloat(v.total) || 0;
   const nomeL = (isSuperAdmin && modoGeral) ? ((todasLojas || []).find(l => l.id === v.loja_id) || {}).nome : nomeLoja;
@@ -5973,12 +5974,68 @@ function verificarNovasVendas(vendasHoje) {
   }
 }
 
+// ===== Notificações de cada venda dentro do cartão do sino (Home) =====
+// Cada venda nova aparece no cartão com o produto e o preço (com animação) e fica na lista ao tocar.
+function _nbChave() { return 'spap_nb_vistas_' + (_chaveLojaAtual ? _chaveLojaAtual() : ''); }
+function _nbVistasEm() { try { return +localStorage.getItem(_nbChave()) || 0; } catch (e) { return 0; } }
+function _nbVendasHoje() {
+  return (window._salVendasLoja || []).filter(v => (v.venda_itens || []).length).slice()
+    .sort((a, b) => new Date(b.criado_em) - new Date(a.criado_em));
+}
+function _nbHora(d) { try { return new Date(d).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } }
+function _nbResumo(v) { const it = v.venda_itens || []; const p = it[0] || {}; return (p.produto_nome || 'Produto') + (it.length > 1 ? ' + ' + (it.length - 1) + ' produto' + (it.length > 2 ? 's' : '') : ''); }
+function _nbEsc(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function nbPintar() {
+  const b = document.getElementById('notif-banner'), badge = document.getElementById('nb-badge'), t = document.getElementById('notif-txt');
+  if (!b || !t) return;
+  const vs = _nbVendasHoje(), visto = _nbVistasEm();
+  const novas = vs.filter(v => new Date(v.criado_em).getTime() > visto && !(parseFloat(v.total) < 0)).length;
+  if (badge) { badge.textContent = novas > 99 ? '99+' : novas; badge.style.display = novas ? 'block' : 'none'; }
+  b.classList.toggle('nb-tem', vs.length > 0);
+  if (!vs.length) return;               // sem vendas hoje: mantém o texto do estado das notificações
+  const u = vs[0], tot = parseFloat(u.total) || 0;
+  t.innerHTML = '<small class="nb-l1">' + (novas ? '🟢 Nova venda' : 'Última venda') + (u.numero_do_dia ? ' · nº ' + u.numero_do_dia : '') + ' · ' + _nbHora(u.criado_em) + '</small>'
+    + '<span class="nb-l2"><b>' + _nbEsc(_nbResumo(u)) + '</b><em>MT ' + tot.toFixed(2) + '</em></span>';
+}
+function nbNovaVenda(v) {
+  const b = document.getElementById('notif-banner'); if (!b) return;
+  if (!window._salVendasLoja) window._salVendasLoja = [];
+  if (!window._salVendasLoja.some(x => x.id === v.id)) window._salVendasLoja.unshift(v);
+  nbPintar();
+  // animação: o cartão acende, o sino toca, o texto entra de baixo e passa um brilho
+  b.classList.remove('nb-chegou'); void b.offsetWidth; b.classList.add('nb-chegou');
+  clearTimeout(nbNovaVenda._t); nbNovaVenda._t = setTimeout(() => b.classList.remove('nb-chegou'), 2600);
+}
+function nbClique() {
+  if (!_nbVendasHoje().length && (!('Notification' in window) || Notification.permission !== 'granted')) { pedirNotif(); return; }
+  nbAbrirLista();
+}
+function nbAbrirLista() {
+  const ant = document.getElementById('nb-lista'); if (ant) ant.remove();
+  const vs = _nbVendasHoje(), visto = _nbVistasEm(), soma = vs.reduce((s, v) => s + (parseFloat(v.total) || 0), 0);
+  const d = document.createElement('div'); d.id = 'nb-lista';
+  d.innerHTML = '<div class="nbl-p" role="dialog" aria-modal="true" aria-labelledby="nbl-t">'
+    + '<div class="nbl-cab"><span class="nbl-ic"><img src="icons3d/bell.png" alt=""></span><div><b id="nbl-t">Notificações de vendas</b><small>' + vs.length + ' venda(s) hoje · MT ' + soma.toFixed(2) + '</small></div><button type="button" class="nbl-x" aria-label="Fechar">✕</button></div>'
+    + '<div class="nbl-corpo">' + (vs.length ? vs.map((v, i) => {
+        const nova = new Date(v.criado_em).getTime() > visto, ret = parseFloat(v.total) < 0;
+        return '<div class="nbl-v' + (ret ? ' ret' : '') + '" style="animation-delay:' + Math.min(i, 10) * 45 + 'ms"><div class="nbl-vc"><span class="nbl-vi">' + (ret ? '↩️' : '🛒') + '</span><div><b>' + (ret ? 'Devolução' : (v.numero_do_dia ? 'Venda nº ' + v.numero_do_dia : 'Venda')) + (nova && !ret ? '<span class="nbl-nova">NOVA</span>' : '') + '</b><small>' + _nbHora(v.criado_em) + (v.vendedor_nome ? ' · ' + _nbEsc(v.vendedor_nome) : '') + '</small></div><span class="nbl-vt">MT ' + (parseFloat(v.total) || 0).toFixed(2) + '</span></div>'
+          + (v.venda_itens || []).map(it => { const q = parseFloat(it.qtd) || 0, pu = parseFloat(it.preco_unitario) || 0; return '<div class="nbl-li"><span>' + _nbEsc(it.produto_nome || 'Produto') + '</span><em>' + q + '×</em><b>MT ' + (q * pu).toFixed(2) + '</b></div>'; }).join('') + '</div>';
+      }).join('') : '<div class="nbl-vazio"><img src="icons3d/bell.png" alt=""><b>Ainda sem vendas hoje</b><small>Cada venda aparece aqui com o produto e o preço, assim que for feita.</small></div>')
+    + '</div>' + ((!('Notification' in window) || Notification.permission !== 'granted') ? '<button type="button" class="nbl-ativar">🔔 Receber também no telemóvel</button>' : '') + '</div>';
+  document.body.appendChild(d);
+  requestAnimationFrame(() => d.classList.add('on'));
+  const fechar = () => { d.classList.remove('on'); setTimeout(() => d.remove(), 220); };
+  d.addEventListener('click', e => { if (e.target === d || e.target.closest('.nbl-x')) fechar(); else if (e.target.closest('.nbl-ativar')) { fechar(); pedirNotif(); } });
+  try { localStorage.setItem(_nbChave(), String(Date.now())); } catch (e) {}
+  setTimeout(nbPintar, 300);
+}
 function verificarNotifStatus() {
   const b = document.getElementById('notif-banner');
   const t = document.getElementById('notif-txt');
   if (Notification.permission === 'granted') {
     b.classList.remove('bloqueado'); b.classList.add('ativo');
     t.textContent = 'Notificação de cada venda ativa';
+    try { nbPintar(); } catch (e) {}
   } else if (Notification.permission === 'denied') {
     b.classList.add('bloqueado'); b.classList.remove('ativo');
     t.textContent = 'Notificações bloqueadas no browser';
@@ -6211,7 +6268,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.262';
+const MONITOR_VERSAO = '2.9.263';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -7995,9 +8052,58 @@ document.addEventListener('visibilitychange',()=>{ if(!document.hidden) verifica
 .ct-vazio img{width:44px;height:44px;}
 
 /* Barra do topo sempre FIXA: só o conteúdo faz scroll */
-#app .topbar { position: sticky !important; top: 0 !important; z-index: 900 !important; }
+#app .topbar { position: sticky !important; top: 0 !important; z-index: 100 !important; }
 html, body { overflow-x: clip; }
 #app { overflow: visible !important; }
+
+/* ===== Cartão do sino: vendas a chegar ===== */
+.notif-banner { position:relative; overflow:hidden; transition:box-shadow .3s, border-color .3s; }
+.notif-banner .nb-l1 { display:block; font-size:11px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:#059669; }
+.notif-banner .nb-l2 { display:flex; align-items:baseline; gap:8px; margin-top:2px; min-width:0; }
+.notif-banner .nb-l2 b { flex:1; min-width:0; font-size:15px; font-weight:800; color:var(--nv); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.notif-banner .nb-l2 em { font-style:normal; font-size:15px; font-weight:900; color:#047857; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.notif-banner.nb-tem { background:linear-gradient(90deg,#ecfdf5,#f6fffb) !important; border-color:#a7f3d0 !important; }
+.notif-banner.nb-tem .nb-seta { background:linear-gradient(135deg,#10b981,#059669); box-shadow:0 6px 14px rgba(5,150,105,.35); }
+.notif-banner.nb-chegou { animation:nbAcende 2.4s ease; border-color:#34d399 !important; }
+.notif-banner.nb-chegou .nb-sino img { animation:nbToca 1s ease-in-out 2; transform-origin:50% 12%; }
+.notif-banner.nb-chegou .notif-banner-txt { animation:nbEntra .5s cubic-bezier(.2,1.2,.4,1); }
+.notif-banner.nb-chegou .nb-badge { animation:nbPop .45s cubic-bezier(.3,1.8,.5,1); }
+.notif-banner.nb-chegou::after { content:""; position:absolute; top:0; bottom:0; left:-40%; width:40%; background:linear-gradient(100deg,transparent,rgba(255,255,255,.75),transparent); animation:nbBrilho 1.1s ease .15s; pointer-events:none; }
+@keyframes nbAcende { 0%{box-shadow:0 0 0 0 rgba(16,185,129,.55),var(--sombra);} 40%{box-shadow:0 0 0 10px rgba(16,185,129,0),0 14px 30px rgba(5,150,105,.25);} 100%{box-shadow:var(--sombra);} }
+@keyframes nbToca { 0%,100%{transform:rotate(0);} 15%{transform:rotate(16deg);} 30%{transform:rotate(-14deg);} 45%{transform:rotate(10deg);} 60%{transform:rotate(-6deg);} 75%{transform:rotate(3deg);} }
+@keyframes nbEntra { from{opacity:0; transform:translateY(14px);} to{opacity:1; transform:none;} }
+@keyframes nbPop { from{transform:scale(.3);} }
+@keyframes nbBrilho { from{left:-40%;} to{left:120%;} }
+#nb-lista { position:fixed; inset:0; z-index:100045; background:rgba(8,15,35,.5); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); display:flex; align-items:flex-end; justify-content:center; opacity:0; transition:opacity .2s; }
+#nb-lista.on { opacity:1; }
+#nb-lista .nbl-p { width:100%; max-width:560px; max-height:86vh; max-height:86dvh; display:flex; flex-direction:column; background:#f8fafc; border-radius:24px 24px 0 0; box-shadow:0 -20px 60px rgba(8,15,35,.3); transform:translateY(30px); transition:transform .28s cubic-bezier(.2,.9,.3,1); }
+#nb-lista.on .nbl-p { transform:none; }
+@media(min-width:620px){ #nb-lista { align-items:center; padding:16px; } #nb-lista .nbl-p { border-radius:24px; } }
+#nb-lista .nbl-cab { display:flex; align-items:center; gap:12px; padding:16px 16px 12px; background:#fff; border-radius:24px 24px 0 0; border-bottom:1px solid #e2e8f0; }
+#nb-lista .nbl-ic { width:46px; height:46px; border-radius:14px; display:grid; place-items:center; background:linear-gradient(145deg,#ecfdf5,#d1fae5); flex-shrink:0; }
+#nb-lista .nbl-ic img { width:30px; height:30px; }
+#nb-lista .nbl-cab b { display:block; font-size:17px; color:var(--nv); } #nb-lista .nbl-cab small { display:block; font-size:12.5px; color:#64748b; margin-top:1px; font-weight:600; }
+#nb-lista .nbl-x { margin-left:auto; width:38px; height:38px; border-radius:12px; border:0; background:#f1f5f9; font-size:17px; font-weight:800; cursor:pointer; color:#334155; }
+#nb-lista .nbl-corpo { overflow:auto; padding:12px 14px calc(18px + env(safe-area-inset-bottom)); }
+#nb-lista .nbl-v { background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:11px 12px; margin-bottom:9px; box-shadow:0 4px 12px rgba(15,23,42,.05); position:relative; overflow:hidden; animation:nbEntra .35s ease both; }
+#nb-lista .nbl-v::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:linear-gradient(180deg,#10b981,#0d9488); }
+#nb-lista .nbl-v.ret::before { background:#dc2626; }
+#nb-lista .nbl-vc { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+#nb-lista .nbl-vi { width:32px; height:32px; border-radius:10px; display:grid; place-items:center; background:#ecfdf5; font-size:16px; flex-shrink:0; }
+#nb-lista .nbl-v.ret .nbl-vi { background:#fee2e2; }
+#nb-lista .nbl-vc b { font-size:13.5px; font-weight:800; color:#0f172a; } #nb-lista .nbl-vc small { display:block; font-size:11.5px; color:#64748b; font-weight:600; }
+#nb-lista .nbl-vt { margin-left:auto; font-size:15px; font-weight:900; color:#047857; white-space:nowrap; font-variant-numeric:tabular-nums; }
+#nb-lista .nbl-v.ret .nbl-vt { color:#dc2626; }
+#nb-lista .nbl-nova { font-size:10px; font-weight:900; letter-spacing:.05em; padding:3px 7px; border-radius:99px; background:linear-gradient(135deg,#10b981,#059669); color:#fff; margin-left:6px; vertical-align:2px; }
+#nb-lista .nbl-li { display:flex; align-items:baseline; gap:8px; padding:5px 0 5px 40px; border-top:1px dashed #e2e8f0; font-size:13px; }
+#nb-lista .nbl-li span { flex:1; min-width:0; color:#334155; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#nb-lista .nbl-li em { font-style:normal; color:#94a3b8; font-weight:700; font-size:12px; }
+#nb-lista .nbl-li b { font-weight:800; color:#0f172a; white-space:nowrap; font-variant-numeric:tabular-nums; }
+#nb-lista .nbl-vazio { text-align:center; padding:30px 16px; color:#475569; }
+#nb-lista .nbl-vazio img { width:64px; margin-bottom:8px; } #nb-lista .nbl-vazio b { display:block; font-size:16px; color:var(--nv); } #nb-lista .nbl-vazio small { display:block; font-size:13px; margin-top:4px; line-height:1.5; }
+#nb-lista .nbl-ativar { margin:0 14px calc(14px + env(safe-area-inset-bottom)); height:46px; border:0; border-radius:14px; background:linear-gradient(135deg,#10b981,#059669); color:#fff; font-family:inherit; font-size:14px; font-weight:800; cursor:pointer; }
+html.escuro #nb-lista { filter:invert(1) hue-rotate(180deg); }
+html.escuro #nb-lista img { filter:invert(1) hue-rotate(180deg); }
 </style>
 <div id="modal-inv-calc">
   <div class="ic-box">

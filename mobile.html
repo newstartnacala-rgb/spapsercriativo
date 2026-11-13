@@ -112,9 +112,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="Banca e Vendas">
-<link rel="stylesheet" href="banca-tema.css?v=3.7.47">
-<script src="banca-tema.js?v=3.7.47" defer></script>
-<script src="app-android.js?v=3.7.47" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.48">
+<script src="banca-tema.js?v=3.7.48" defer></script>
+<script src="app-android.js?v=3.7.48" defer></script>
 </head>
 <body>
 
@@ -399,7 +399,7 @@
 <script src="spap-suporte.js?v=1"></script>
 <script src="spap-avisos.js?v=5"></script>
 <script src="spap-imagem.js?v=1"></script>
-<script src="banca-offline.js?v=3.7.47"></script>
+<script src="banca-offline.js?v=3.7.48"></script>
 <script>
 // ===================== ESTADO =====================
 let sessao = null;        // { lojaId, nomeLoja, userId, vendedor }
@@ -567,7 +567,7 @@ function addCarrinho(id){
   if (ex) ex.qtd++;
   else carrinho.push({ id:p.id, nome:p.nome, preco:parseFloat(p.preco)||0, qtd:1, stock:parseInt(p.stock)||0, imagem:p.imagem, codbarras:p.codbarras });
   atualizarBarraCarrinho();
-  toast('🛒 ' + p.nome, 'ok');
+  toastProduto(p);
 }
 function atualizarBarraCarrinho(){
   const n = carrinho.reduce((s,i)=>s+i.qtd,0);
@@ -1362,6 +1362,21 @@ function fecharFolha(id){ document.getElementById(id).classList.remove('ativa');
 document.querySelectorAll('.folha-fundo').forEach(f=>{ f.addEventListener('click', e=>{ if(e.target===f) f.classList.remove('ativa'); }); });
 
 let toastT=null;
+// Aviso profissional quando um produto entra no carrinho: foto, nome, preço, quantidade e total do carrinho
+let _tpT=null;
+function toastProduto(p){
+  let t=document.getElementById('toast-prod');
+  if(!t){ t=document.createElement('div'); t.id='toast-prod'; t.setAttribute('role','status'); t.setAttribute('aria-live','polite'); document.body.appendChild(t); }
+  const it=carrinho.find(i=>i.id===p.id)||{qtd:1}, q=it.qtd||1;
+  const totalCarr=carrinho.reduce((s,i)=>s+(i.preco||0)*(i.qtd||0),0), nItens=carrinho.reduce((s,i)=>s+(i.qtd||0),0);
+  const foto=p.imagem?'<img src="'+esc(p.imagem)+'" alt="">':'<span class="tp-sem">🛍️</span>';
+  t.innerHTML='<div class="tp-foto">'+foto+'<b class="tp-q">×'+q+'</b></div>'
+    +'<div class="tp-txt"><small><i></i>Adicionado ao carrinho</small><strong>'+esc(p.nome)+'</strong><span>'+fmt(p.preco)+(q>1?' · '+q+' no carrinho':'')+'</span></div>'
+    +'<div class="tp-tot"><small>'+nItens+(nItens===1?' item':' itens')+'</small><b>'+fmt(totalCarr)+'</b></div><em class="tp-barra"></em>';
+  t.classList.remove('on'); void t.offsetWidth; t.classList.add('on');
+  const vt=document.getElementById('toast'); if(vt) vt.style.display='none';
+  clearTimeout(_tpT); _tpT=setTimeout(()=>t.classList.remove('on'),2400);
+}
 function toast(msg, tipo){
   const t=document.getElementById('toast');
   t.textContent=msg; t.className='toast ' + (tipo||'');
@@ -1380,7 +1395,7 @@ function toast(msg, tipo){
 .bvd-sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.25);transition:transform .22s cubic-bezier(.3,1.3,.5,1);}
 .bvd.on .bvd-sw{background:linear-gradient(90deg,#38bdf8,#818cf8);} .bvd.on .bvd-sw::after{transform:translateX(20px);}
 </style>
-<script src="spap-vidro.js?v=1"></script>
+<script src="spap-vidro.js?v=2"></script>
 <script>
 // Modo vidro da Banca: liga/desliga nas Definições; todas as folhas e janelas que abrirem ficam em vidro
 function bancaVidroPintar(){ var on=!!(window.spapVidro&&spapVidro.ligado()), b=document.getElementById('bvd'); if(!b) return;
@@ -1389,5 +1404,31 @@ function bancaVidroTrocar(){ if(!window.spapVidro) return; var on=!spapVidro.lig
 document.getElementById('bvd').addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); bancaVidroTrocar(); } });
 bancaVidroPintar();
 </script>
+<style>
+#toast-prod{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 64px);z-index:2100;width:min(92vw,420px);display:flex;align-items:center;gap:12px;padding:10px 12px 12px 10px;border-radius:20px;
+  background:linear-gradient(135deg,#10b981 0%,#059669 45%,#0d9488 100%);color:#fff;box-shadow:0 18px 40px rgba(5,150,105,.42),0 2px 6px rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.35);
+  transform:translate(-50%,-24px) scale(.96);opacity:0;pointer-events:none;transition:transform .32s cubic-bezier(.2,1.3,.4,1),opacity .2s;overflow:hidden;font-family:inherit;}
+#toast-prod::before{content:"";position:absolute;inset:0;background:radial-gradient(120% 140% at 0% 0%,rgba(255,255,255,.28),transparent 45%);pointer-events:none;}
+#toast-prod.on{transform:translate(-50%,0) scale(1);opacity:1;}
+#toast-prod .tp-foto{position:relative;width:52px;height:52px;border-radius:14px;background:rgba(255,255,255,.95);display:grid;place-items:center;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,.15);}
+#toast-prod .tp-foto img{width:100%;height:100%;object-fit:cover;border-radius:14px;}
+#toast-prod .tp-sem{font-size:26px;}
+#toast-prod .tp-q{position:absolute;right:-6px;top:-6px;min-width:24px;height:24px;padding:0 6px;border-radius:99px;background:#fff;color:#047857;font-size:12px;font-weight:900;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.2);animation:tpPop .4s cubic-bezier(.3,1.7,.5,1);}
+@keyframes tpPop{from{transform:scale(.3)}}
+#toast-prod .tp-txt{flex:1;min-width:0;position:relative;}
+#toast-prod .tp-txt small{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;opacity:.92;}
+#toast-prod .tp-txt small i{width:16px;height:16px;border-radius:50%;background:#fff;display:inline-block;position:relative;flex-shrink:0;}
+#toast-prod .tp-txt small i::after{content:"";position:absolute;left:5px;top:3px;width:4px;height:7px;border:solid #059669;border-width:0 2px 2px 0;transform:rotate(45deg);}
+#toast-prod .tp-txt strong{display:block;font-size:16px;font-weight:800;line-height:1.25;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toast-prod .tp-txt span{display:block;font-size:12.5px;font-weight:700;opacity:.92;margin-top:1px;}
+#toast-prod .tp-tot{text-align:right;padding-left:10px;border-left:1px solid rgba(255,255,255,.3);flex-shrink:0;position:relative;}
+#toast-prod .tp-tot small{display:block;font-size:10.5px;font-weight:700;opacity:.88;text-transform:uppercase;letter-spacing:.04em;}
+#toast-prod .tp-tot b{display:block;font-size:15px;font-weight:900;white-space:nowrap;}
+#toast-prod .tp-barra{position:absolute;left:0;bottom:0;height:3px;width:100%;background:rgba(255,255,255,.7);transform-origin:left;}
+#toast-prod.on .tp-barra{animation:tpBarra 2.4s linear forwards;}
+@keyframes tpBarra{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+html.escuro #toast-prod{filter:invert(1) hue-rotate(180deg);}
+html.escuro #toast-prod .tp-foto img{filter:invert(1) hue-rotate(180deg);}
+</style>
 </body>
 </html>

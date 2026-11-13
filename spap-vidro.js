@@ -17,16 +17,25 @@
     + 'body.sv{--svc:rgba(255,255,255,.56);--svc2:rgba(255,255,255,.42);--svb:rgba(255,255,255,.7);--svf:rgba(10,16,30,.26);}'
     + 'body.sv.sv-escuro{--svc:rgba(255,255,255,.74);--svc2:rgba(255,255,255,.55);--svb:rgba(255,255,255,.35);--svf:rgba(0,0,0,.4);}'
     + 'body.sv.sv-escuro.gd{--svb:rgba(232,195,106,.22);}'
-    /* fundo escurecido das janelas: mais leve, para se ver a página por trás */
-    + 'html body.sv :is(#sv-x,.sv-fundo).sv-fundo{background:var(--svf) !important;-webkit-backdrop-filter:blur(3px) !important;backdrop-filter:blur(3px) !important;}'
+    /* Ponto de Venda: o fundo colorido da página principal (muda com a interface: Clássica, Dourada Noite/Marfim, escuro) */
+    + 'body.sv.gv{--sv-bg:radial-gradient(45% 55% at 12% 18%,var(--gv-a),transparent 70%),radial-gradient(40% 50% at 88% 12%,var(--gv-b),transparent 70%),radial-gradient(55% 60% at 70% 95%,var(--gv-c),transparent 70%),radial-gradient(35% 40% at 30% 85%,var(--gv-b),transparent 70%),var(--gv-base);}'
+    /* Atrás de qualquer janela aberta aparece SÓ o fundo colorido da tela inicial (nada de imagens nem textos da página por baixo).
+       Uma luz suave no topo e uma sombra leve nos cantos dão profundidade. */
+    + 'html body.sv :is(#sv-x,.sv-fundo).sv-fundo,html body.sv.gv.m2-menu-aberto #m2-backdrop{background:radial-gradient(120% 80% at 50% -10%,rgba(255,255,255,.18),transparent 55%),radial-gradient(140% 120% at 50% 50%,transparent 55%,rgba(0,0,0,.14) 100%),var(--sv-bg,linear-gradient(180deg,#e9eef7,#dfe7f3)) !important;background-attachment:fixed !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important;animation:svEntra .22s ease both;}'
+    + 'html body.sv #gd-pers{background:radial-gradient(120% 80% at 50% -10%,rgba(255,255,255,.18),transparent 55%),var(--sv-bg) !important;background-attachment:fixed !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important;}'
+    + '@keyframes svEntra{from{opacity:0}to{opacity:1}}'
+    /* páginas que cobrem o ecrã todo (sem caixa por dentro): ficam com o mesmo fundo */
+    + 'html body.sv :is(#sv-x,.sv-pagina).sv-pagina{background:var(--sv-bg,linear-gradient(180deg,#e9eef7,#dfe7f3)) !important;background-attachment:fixed !important;}'
+    + 'html body.sv .sv-pagina :is(#sv-x,.sv-limpo).sv-limpo{background-color:transparent !important;box-shadow:none !important;border-color:transparent !important;}'
+    + 'html body.sv .sv-pagina :is(#sv-x,.sv-dentro).sv-dentro{background-color:var(--svc) !important;-webkit-backdrop-filter:blur(18px) saturate(1.6);backdrop-filter:blur(18px) saturate(1.6);}'
     /* a caixa da janela / folha / painel */
     + 'html body.sv :is(#sv-x,.sv-caixa).sv-caixa.sv-caixa{background:var(--svc) !important;background-image:none !important;-webkit-backdrop-filter:blur(26px) saturate(1.8) !important;backdrop-filter:blur(26px) saturate(1.8) !important;'
     + 'border:1px solid var(--svb) !important;box-shadow:0 28px 70px rgba(0,0,0,.26),inset 0 1px 0 rgba(255,255,255,.45) !important;}'
     /* dentro do vidro, os blocos brancos ficam meio-transparentes (continuam a ler-se bem) */
     + 'html body.sv .sv-caixa :is(#sv-x,.sv-dentro).sv-dentro.sv-dentro{background-color:var(--svc2) !important;background-image:none !important;border-color:var(--svb) !important;}'
     /* Monitores: fundo colorido por trás do vidro e cartões em vidro */
-    + 'body.sv.sv-mon{background:radial-gradient(45% 50% at 10% 15%,rgba(59,130,246,.42),transparent 70%),radial-gradient(40% 45% at 90% 10%,rgba(168,85,247,.32),transparent 70%),radial-gradient(55% 55% at 75% 95%,rgba(16,185,129,.36),transparent 70%),radial-gradient(35% 40% at 25% 85%,rgba(236,72,153,.22),transparent 70%),linear-gradient(180deg,#eef3fb,#e7eefa) !important;background-attachment:fixed !important;}'
-    + 'body.sv.sv-mon.sv-banca{background:radial-gradient(45% 50% at 10% 15%,rgba(249,115,22,.4),transparent 70%),radial-gradient(40% 45% at 90% 10%,rgba(59,130,246,.32),transparent 70%),radial-gradient(55% 55% at 75% 95%,rgba(236,72,153,.28),transparent 70%),radial-gradient(35% 40% at 25% 85%,rgba(250,204,21,.25),transparent 70%),linear-gradient(180deg,#f6f2ee,#eef1f8) !important;background-attachment:fixed !important;}'
+    + 'body.sv.sv-mon{--sv-bg:radial-gradient(45% 50% at 10% 15%,rgba(59,130,246,.42),transparent 70%),radial-gradient(40% 45% at 90% 10%,rgba(168,85,247,.32),transparent 70%),radial-gradient(55% 55% at 75% 95%,rgba(16,185,129,.36),transparent 70%),radial-gradient(35% 40% at 25% 85%,rgba(236,72,153,.22),transparent 70%),linear-gradient(180deg,#eef3fb,#e7eefa);background:var(--sv-bg) !important;background-attachment:fixed !important;}'
+    + 'body.sv.sv-mon.sv-banca{--sv-bg:radial-gradient(45% 50% at 10% 15%,rgba(249,115,22,.4),transparent 70%),radial-gradient(40% 45% at 90% 10%,rgba(59,130,246,.32),transparent 70%),radial-gradient(55% 55% at 75% 95%,rgba(236,72,153,.28),transparent 70%),radial-gradient(35% 40% at 25% 85%,rgba(250,204,21,.25),transparent 70%),linear-gradient(180deg,#f6f2ee,#eef1f8);}'
     + 'html:has(body.sv.sv-mon){background:transparent !important;}'
     + 'html body.sv.sv-mon :is(#sv-x,.sv-cartao).sv-cartao{background-color:rgba(255,255,255,.46) !important;background-image:none !important;-webkit-backdrop-filter:blur(16px) saturate(1.6);backdrop-filter:blur(16px) saturate(1.6);border-color:rgba(255,255,255,.7) !important;}'
     + 'html body.sv.sv-mon :is(#sv-x,.sv-barra).sv-barra{background:rgba(255,255,255,.55) !important;-webkit-backdrop-filter:blur(20px) saturate(1.7) !important;backdrop-filter:blur(20px) saturate(1.7) !important;border-color:rgba(255,255,255,.65) !important;}';
@@ -63,13 +72,17 @@
     return null;
   }
   // blocos brancos dentro da caixa (cartões internos, listas) → meio-transparentes
-  function dentro(cx) {
+  function dentro(cx, pagina) {
     var l = cx.querySelectorAll('div,section,label,li,ul,aside,header,footer,button,a');
-    for (var i = 0; i < l.length && i < 400; i++) {
-      var e = l[i]; if (e.classList.contains('sv-dentro')) continue;
-      var cs = getComputedStyle(e); if (!opaco(cs)) continue;
+    for (var i = 0; i < l.length && i < 500; i++) {
+      var e = l[i]; if (e.classList.contains('sv-dentro') || e.classList.contains('sv-limpo')) continue;
+      var cs = getComputedStyle(e);
+      if (!opaco(cs) || cs.backgroundImage !== 'none') continue;          // cabeçalhos com cor/imagem ficam como estão
       var m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(cs.backgroundColor || '');
-      if (m && +m[1] > 225 && +m[2] > 225 && +m[3] > 225 && cs.backgroundImage === 'none') e.classList.add('sv-dentro');
+      if (!(m && +m[1] > 225 && +m[2] > 225 && +m[3] > 225)) continue;   // só os blocos brancos/claros
+      // numa página inteira, os contentores da largura toda ficam limpos (sem caixa); barras fixas ficam em vidro
+      if (pagina && e.getBoundingClientRect().width >= innerWidth * 0.97 && cs.position !== 'sticky' && cs.position !== 'fixed') e.classList.add('sv-limpo');
+      else e.classList.add('sv-dentro');
     }
   }
   function marcar() {
@@ -84,16 +97,27 @@
       if (!visivel(e, cs)) continue;
       var r = e.getBoundingClientRect();
       if (cs.position === 'fixed' && ecraTodo(r)) {
-        e.classList.add('sv-fundo');
-        var cx = caixaDe(e); if (cx) { cx.classList.add('sv-caixa'); dentro(cx); }
-        else if (opaco(cs) && e.children.length) { /* ecrã inteiro opaco (ex.: página em cima de página): fica todo em vidro */ e.classList.add('sv-caixa'); }
+        // (decide só uma vez: depois de marcado, o nosso próprio fundo não conta como «opaco»)
+        if (!e.classList.contains('sv-fundo') && (e.classList.contains('sv-pagina') || (opaco(cs) && e.children.length))) {
+          // página de ecrã inteiro (sub-painéis, ecrãs de gestão): fundo da tela inicial e blocos em vidro
+          e.classList.remove('sv-fundo'); e.classList.add('sv-pagina');
+          var errados = e.querySelectorAll('.sv-caixa'); for (var k = 0; k < errados.length; k++) { if (getComputedStyle(errados[k]).position !== 'fixed') errados[k].classList.remove('sv-caixa'); }
+          dentro(e, true);
+        } else {
+          // janela com fundo escurecido: o fundo passa a ser o da tela inicial e a caixa fica em vidro
+          e.classList.add('sv-fundo');
+          var cx = caixaDe(e); if (cx && !cx.closest('.sv-pagina')) { cx.classList.add('sv-caixa'); dentro(cx); }
+        }
       } else if (cs.position === 'fixed' && opaco(cs) && r.width > 160 && r.height > 90 && !e.closest('#modo2-app')) {
         e.classList.add('sv-caixa'); dentro(e);   // folhas que sobem de baixo, menus soltos, avisos grandes
       }
     }
   }
+  // cabeçalhos com letra branca vivem do seu fundo de cor: nunca os pôr em vidro (a letra deixaria de se ler)
+  function letraClara(e) { var m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(getComputedStyle(e).color || ''); return !!m && (0.299 * m[1] + 0.587 * m[2] + 0.114 * m[3]) > 215; }
+  function limparClaros() { var l = document.querySelectorAll('.sv-caixa,.sv-dentro'); for (var i = 0; i < l.length; i++) { if (!l[i].closest('#gd-pers') && letraClara(l[i])) l[i].classList.remove('sv-caixa', 'sv-dentro'); } }
   var _t = null;
-  function agendar() { if (_t) return; _t = setTimeout(function () { _t = null; try { marcar(); } catch (e) {} }, 80); }
+  function agendar() { if (_t) return; _t = setTimeout(function () { _t = null; try { marcar(); limparClaros(); } catch (e) {} }, 80); }
 
   /* ---- monitores: cartões e barras principais ---- */
   var CARTOES = APP === 'bancapdv' ? '#grelha .card,.barra-carrinho,.lista-vendas .venda,.bv-venda'
