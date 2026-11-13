@@ -14,22 +14,23 @@
 
   var CSS = ''
     /* cores do vidro (claro por defeito; escuro quando a interface é escura) */
-    + 'body.sv{--svc:rgba(255,255,255,.56);--svc2:rgba(255,255,255,.42);--svb:rgba(255,255,255,.7);--svf:rgba(10,16,30,.26);}'
-    + 'body.sv.sv-escuro{--svc:rgba(255,255,255,.74);--svc2:rgba(255,255,255,.55);--svb:rgba(255,255,255,.35);--svf:rgba(0,0,0,.4);}'
+    + 'body.sv{--svc:rgba(255,255,255,.42);--svc2:rgba(255,255,255,.42);--svb:rgba(255,255,255,.7);--svf:rgba(10,16,30,.26);}'
+    + 'body.sv.sv-escuro{--svc:rgba(255,255,255,.62);--svc2:rgba(255,255,255,.55);--svb:rgba(255,255,255,.35);--svf:rgba(0,0,0,.4);}'
     + 'body.sv.sv-escuro.gd{--svb:rgba(232,195,106,.22);}'
     /* Ponto de Venda: o fundo colorido da página principal (muda com a interface: Clássica, Dourada Noite/Marfim, escuro) */
     + 'body.sv.gv{--sv-bg:radial-gradient(45% 55% at 12% 18%,var(--gv-a),transparent 70%),radial-gradient(40% 50% at 88% 12%,var(--gv-b),transparent 70%),radial-gradient(55% 60% at 70% 95%,var(--gv-c),transparent 70%),radial-gradient(35% 40% at 30% 85%,var(--gv-b),transparent 70%),var(--gv-base);}'
     /* Atrás de qualquer janela aberta aparece SÓ o fundo colorido da tela inicial (nada de imagens nem textos da página por baixo).
        Uma luz suave no topo e uma sombra leve nos cantos dão profundidade. */
-    + 'html body.sv :is(#sv-x,.sv-fundo).sv-fundo,html body.sv.gv.m2-menu-aberto #m2-backdrop{background:radial-gradient(120% 80% at 50% -10%,rgba(255,255,255,.18),transparent 55%),radial-gradient(140% 120% at 50% 50%,transparent 55%,rgba(0,0,0,.14) 100%),var(--sv-bg,linear-gradient(180deg,#e9eef7,#dfe7f3)) !important;background-attachment:fixed !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important;animation:svEntra .22s ease both;}'
-    + 'html body.sv #gd-pers{background:radial-gradient(120% 80% at 50% -10%,rgba(255,255,255,.18),transparent 55%),var(--sv-bg) !important;background-attachment:fixed !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important;}'
+    + 'html body.sv :is(#sv-x,.sv-fundo).sv-fundo,html body.sv.gv.m2-menu-aberto #m2-backdrop{background:var(--svf) !important;-webkit-backdrop-filter:blur(3px) !important;backdrop-filter:blur(3px) !important;animation:svEntra .22s ease both;}'
+    + 'html body.sv #gd-pers{background:var(--svf) !important;}'
+    + 'html body.sv #gd-pers .gp-caixa{background:linear-gradient(rgba(255,255,255,.45),rgba(255,255,255,.45)),var(--sv-bg) !important;background-attachment:local,fixed !important;}'
     + '@keyframes svEntra{from{opacity:0}to{opacity:1}}'
     /* páginas que cobrem o ecrã todo (sem caixa por dentro): ficam com o mesmo fundo */
     + 'html body.sv :is(#sv-x,.sv-pagina).sv-pagina{background:var(--sv-bg,linear-gradient(180deg,#e9eef7,#dfe7f3)) !important;background-attachment:fixed !important;}'
     + 'html body.sv .sv-pagina :is(#sv-x,.sv-limpo).sv-limpo{background-color:transparent !important;box-shadow:none !important;border-color:transparent !important;}'
     + 'html body.sv .sv-pagina :is(#sv-x,.sv-dentro).sv-dentro{background-color:var(--svc) !important;-webkit-backdrop-filter:blur(18px) saturate(1.6);backdrop-filter:blur(18px) saturate(1.6);}'
     /* a caixa da janela / folha / painel */
-    + 'html body.sv :is(#sv-x,.sv-caixa).sv-caixa.sv-caixa{background:var(--svc) !important;background-image:none !important;-webkit-backdrop-filter:blur(26px) saturate(1.8) !important;backdrop-filter:blur(26px) saturate(1.8) !important;'
+    + 'html body.sv :is(#sv-x,.sv-caixa).sv-caixa.sv-caixa{background:linear-gradient(var(--svc),var(--svc)),radial-gradient(120% 70% at 50% -10%,rgba(255,255,255,.35),transparent 60%),var(--sv-bg,linear-gradient(180deg,#e9eef7,#dfe7f3)) !important;background-attachment:local,local,fixed !important;-webkit-backdrop-filter:blur(26px) saturate(1.8) !important;backdrop-filter:blur(26px) saturate(1.8) !important;'
     + 'border:1px solid var(--svb) !important;box-shadow:0 28px 70px rgba(0,0,0,.26),inset 0 1px 0 rgba(255,255,255,.45) !important;}'
     /* dentro do vidro, os blocos brancos ficam meio-transparentes (continuam a ler-se bem) */
     + 'html body.sv .sv-caixa :is(#sv-x,.sv-dentro).sv-dentro.sv-dentro{background-color:var(--svc2) !important;background-image:none !important;border-color:var(--svb) !important;}'

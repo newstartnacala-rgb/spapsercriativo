@@ -8,7 +8,7 @@
 <script>
   // Painel sempre na versão mais recente: se o aparelho mostrar uma cópia antiga, recarrega a nova
   (function () {
-    var VER = '2.9.263';
+    var VER = '2.9.264';
     try {
       fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
         var nova = j && j.versao; if (!nova || nova === VER) return;
@@ -1395,5 +1395,6 @@ async function guardarMetodos() {
   </div>
 </div>
 
+<script src="spap-rolagem.js?v=1"></script>
 </body>
 </html>

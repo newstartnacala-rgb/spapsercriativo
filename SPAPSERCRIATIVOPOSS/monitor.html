@@ -21,7 +21,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.263"></script>
+<script src="spap-leitor.js?v=2.9.264"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -1117,7 +1117,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.263" defer></script>
+<script src="app-android.js?v=2.9.264" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -1776,7 +1776,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
 <script src="spap-suporte.js?v=1"></script>
 <script src="spap-contador.js?v=1"></script>
 <script src="spap-alertas.js?v=2"></script>
-<script src="spap-vidro.js?v=2"></script>
+<script src="spap-vidro.js?v=3"></script>
 <script src="spap-personalizar.js?v=4"></script>
 <script>
 // Alertas do sistema (irregularidades) — sino no topo do Monitor
@@ -3269,9 +3269,17 @@ async function editarProdutoCompleto(id) {
       </div>
 
       <label style="font-size:12px;font-weight:bold;color:#374151;">📷 Imagem</label>
-      <div style="display:flex;gap:10px;align-items:center;margin:6px 0 12px;">
-        <img id="ed-img-preview" src="${imgAtual}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0;${imgAtual?'':'display:none;'}">
-        <input type="file" id="ed-img-input" accept="image/*" onclick="if(imagensBloqueadas()){event.preventDefault();avisarUpgradeImagem();}" onchange="editPreviewImagem(event)" style="flex:1;font-size:12px;">
+      <div class="ed-foto">
+        <div class="ed-foto-pv">
+          <img id="ed-img-preview" src="${imgAtual}" alt="" style="${imgAtual?'':'display:none;'}">
+          <span id="ed-img-vazio" style="${imgAtual?'display:none;':''}">📦</span>
+        </div>
+        <div class="ed-foto-bts">
+          <button type="button" class="ed-foto-bt cam" onclick="edEscolherFoto('ed-img-camera')"><span>📷</span>Tirar foto</button>
+          <button type="button" class="ed-foto-bt" onclick="edEscolherFoto('ed-img-input')"><span>🖼️</span>Galeria</button>
+        </div>
+        <input type="file" id="ed-img-camera" accept="image/*" capture="environment" onchange="editPreviewImagem(event)" style="display:none">
+        <input type="file" id="ed-img-input" accept="image/*" onchange="editPreviewImagem(event)" style="display:none">
       </div>
 
       <div style="display:flex;gap:8px;margin-top:8px;">
@@ -3283,6 +3291,11 @@ async function editarProdutoCompleto(id) {
   document.body.appendChild(ov);
 }
 
+// Editar produto: tirar foto com a câmara ou escolher da galeria
+function edEscolherFoto(id) {
+  if (imagensBloqueadas()) { avisarUpgradeImagem(); return; }
+  const i = document.getElementById(id); if (i) { i.value = ''; i.click(); }
+}
 function editPreviewImagem(event) {
   const f = event.target.files[0];
   if (!f) return;
@@ -3297,6 +3310,7 @@ function editPreviewImagem(event) {
       editImagemBase64 = cv.toDataURL('image/jpeg',0.72);
       const pv = document.getElementById('ed-img-preview');
       pv.src = editImagemBase64; pv.style.display = 'block';
+      const vz = document.getElementById('ed-img-vazio'); if (vz) vz.style.display = 'none';
     };
     img.src = e.target.result;
   };
@@ -6268,7 +6282,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.263';
+const MONITOR_VERSAO = '2.9.264';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -8104,6 +8118,17 @@ html, body { overflow-x: clip; }
 #nb-lista .nbl-ativar { margin:0 14px calc(14px + env(safe-area-inset-bottom)); height:46px; border:0; border-radius:14px; background:linear-gradient(135deg,#10b981,#059669); color:#fff; font-family:inherit; font-size:14px; font-weight:800; cursor:pointer; }
 html.escuro #nb-lista { filter:invert(1) hue-rotate(180deg); }
 html.escuro #nb-lista img { filter:invert(1) hue-rotate(180deg); }
+
+/* Editar produto: foto com câmara ou galeria */
+.ed-foto { display:flex; align-items:center; gap:12px; margin:6px 0 14px; }
+.ed-foto-pv { width:72px; height:72px; border-radius:14px; border:1.5px dashed #cbd5e1; background:#f8fafc; display:grid; place-items:center; overflow:hidden; flex-shrink:0; }
+.ed-foto-pv img { width:100%; height:100%; object-fit:cover; }
+.ed-foto-pv span { font-size:28px; opacity:.6; }
+.ed-foto-bts { flex:1; display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.ed-foto-bt { display:flex; flex-direction:column; align-items:center; gap:3px; padding:10px 6px; border-radius:12px; border:1.5px solid #e2e8f0; background:#fff; font-family:inherit; font-size:12.5px; font-weight:800; color:#334155; cursor:pointer; }
+.ed-foto-bt span { font-size:20px; }
+.ed-foto-bt.cam { background:linear-gradient(135deg,#2563eb,#1d4ed8); border-color:#1d4ed8; color:#fff; box-shadow:0 6px 14px rgba(37,99,235,.3); }
+.ed-foto-bt:active { transform:scale(.97); }
 </style>
 <div id="modal-inv-calc">
   <div class="ic-box">
@@ -8360,5 +8385,6 @@ html.escuro #nb-lista img { filter:invert(1) hue-rotate(180deg); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', preparar); else preparar();
 })();
 </script>
+<script src="spap-rolagem.js?v=1"></script>
 </body>
 </html>
