@@ -88,9 +88,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.49">
-<script src="banca-tema.js?v=3.7.49" defer></script>
-<script src="app-android.js?v=3.7.49" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.50">
+<script src="banca-tema.js?v=3.7.50" defer></script>
+<script src="app-android.js?v=3.7.50" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -242,7 +242,7 @@
       <div class="menu-grid">
         <div class="mi" onclick="fecharFolha('folha-definicoes');abrirCodigoBalconista()"><div class="e">🔐</div><div class="t">Código do balconista</div></div>
         <div class="mi" onclick="fecharFolha('folha-definicoes');mPerfil()"><div class="e">🪪</div><div class="t">Meu Perfil</div></div>
-        <div class="mi" onclick="fecharFolha('folha-definicoes');spapPersonalizarAbrir()"><div class="e">🎨</div><div class="t">Personalizar</div></div>
+        <div class="mi" onclick="fecharFolha('folha-definicoes');spapPersonalizarAbrir()"><div class="e"><img src="icons3d/personalizar.svg" alt="" style="width:1.15em;height:1.15em;vertical-align:-.15em"></div><div class="t">Personalizar</div></div>
         <div class="mi" onclick="fecharFolha('folha-definicoes');mBackup()"><div class="e">💾</div><div class="t">Backup · Recuperar · Migrar</div></div>
         <div class="mi" onclick="fecharFolha('folha-definicoes');window.spapInstalarApp?spapInstalarApp('android'):mInstalar()"><div class="e">📲</div><div class="t">App para Android</div></div>
         <div class="mi" onclick="fecharFolha('folha-definicoes');window.spapInstalarApp?spapInstalarApp('ios'):mInstalar()"><div class="e">📱</div><div class="t">App para iPhone</div></div>
@@ -419,7 +419,7 @@
 <script src="spap-contador.js?v=1"></script>
 <script src="spap-alertas.js?v=2"></script>
 <script src="spap-vidro.js?v=3"></script>
-<script src="spap-personalizar.js?v=4"></script>
+<script src="spap-personalizar.js?v=5"></script>
 <script>
 // Alertas do sistema (irregularidades) — sino no topo do Monitor da Banca
 document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){

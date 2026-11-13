@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <defs>
+    <linearGradient id="fundo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7c5cff"/>
+      <stop offset=".5" stop-color="#e14bd2"/>
+      <stop offset="1" stop-color="#ff8a3d"/>
+    </linearGradient>
+    <radialGradient id="luz" cx=".3" cy=".18" r=".75">
+      <stop offset="0" stop-color="#fff" stop-opacity=".55"/>
+      <stop offset=".55" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="paleta" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#eef0ff"/>
+    </linearGradient>
+    <linearGradient id="cabo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffe7a3"/>
+      <stop offset="1" stop-color="#d79b2b"/>
+    </linearGradient>
+    <filter id="sombra" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2.5" stdDeviation="2.2" flood-color="#3b0764" flood-opacity=".35"/>
+    </filter>
+  </defs>
+  <!-- base -->
+  <rect x="4" y="4" width="88" height="88" rx="26" fill="url(#fundo)"/>
+  <rect x="4" y="4" width="88" height="88" rx="26" fill="url(#luz)"/>
+  <rect x="4.75" y="4.75" width="86.5" height="86.5" rx="25.25" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="1.5"/>
+  <!-- paleta -->
+  <g filter="url(#sombra)">
+    <path d="M47 21c-15.5 0-27 11.2-27 25.6 0 13.6 10.8 25.4 24.4 25.4 4.4 0 6.6-2.6 6.6-5.6 0-1.7-.7-3-1.6-4.1-.8-1-1.3-2-1.3-3.3 0-2.6 2.1-4.6 4.7-4.6h5.4C67.7 54.4 75 48.6 75 40.3 75 29.4 62.6 21 47 21z" fill="url(#paleta)"/>
+    <circle cx="35" cy="45" r="4.6" fill="#f43f5e"/>
+    <circle cx="38.5" cy="33" r="4.6" fill="#f59e0b"/>
+    <circle cx="50" cy="28.5" r="4.6" fill="#22c55e"/>
+    <circle cx="61.5" cy="33.5" r="4.6" fill="#3b82f6"/>
+  </g>
+  <!-- pincel -->
+  <g filter="url(#sombra)">
+    <path d="M79.5 50.5 61 69l-4.2-4.2 18.5-18.5a3 3 0 0 1 4.2 4.2z" fill="url(#cabo)"/>
+    <path d="M56.6 64.6 61.2 69.2c-1.4 4.8-5.1 7.4-11.2 7.3 1.2-1.6 1.4-3.6 1.8-5.6.6-3.2 2-5.2 4.8-6.3z" fill="#1e1b4b"/>
+  </g>
+  <!-- brilho -->
+  <path d="M73 18.5l1.5 3.8 3.8 1.5-3.8 1.5L73 29.1l-1.5-3.8-3.8-1.5 3.8-1.5z" fill="#fff"/>
+</svg>

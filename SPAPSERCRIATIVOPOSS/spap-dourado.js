@@ -163,6 +163,7 @@
     '#gd-pers .gp-cab .gp-ic{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,#f9e29a,#d9ad45 45%,#a77a26);color:#1a1306;box-shadow:0 8px 18px rgba(180,133,44,.35);}',
     '#gd-pers .gp-cab b{display:block;font-size:19px;font-weight:800;}',
     '#gd-pers .gp-cab small{display:block;font-size:13px;color:#64748b;font-weight:500;margin-top:2px;}',
+    '#gd-pers .gp-ic-img{background:none !important;box-shadow:none !important;} #gd-pers .gp-ic-img img{width:46px;height:46px;filter:drop-shadow(0 6px 12px rgba(124,92,255,.35));}',
     '#gd-pers .gp-x{margin-left:auto;width:38px;height:38px;border-radius:12px;border:0;background:#f1f5f9;color:#334155;font-size:16px;font-weight:800;cursor:pointer;}',
     '#gd-pers .gp-ops{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:16px 22px 8px;}',
     '@media(max-width:760px){#gd-pers .gp-ops{grid-template-columns:1fr;}}',
@@ -338,7 +339,7 @@
     if (!el('gd-entrada')) {
       var a = document.createElement('div'); a.id = 'gd-entrada'; a.className = 'm2-nav m2-sub gd-entrada';
       a.setAttribute('onclick', "document.body.classList.remove('m2-menu-aberto'); spapInterfaceAbrir();");
-      a.innerHTML = '<span class="ico">' + SVG(IC.paleta, 19) + '</span><span>Personalizar interface</span><span class="gd-atual" id="gd-atual"></span>';
+      a.innerHTML = '<span class="ico"><img src="icons3d/personalizar.svg" alt="" style="width:24px;height:24px;display:block"></span><span>Personalizar interface</span><span class="gd-atual" id="gd-atual"></span>';
       var tit = document.createElement('div'); tit.className = 'm2-def-titulo'; tit.textContent = 'Interface';
       pn.insertBefore(a, pn.firstChild); pn.insertBefore(tit, pn.firstChild);
       // marca os títulos «Modo» e «Cor» para se esconderem na dourada
@@ -396,7 +397,7 @@
     var e = { iface: at === 'classica' ? 'classica' : 'dourada', tom: at === 'marfim' ? 'marfim' : 'noite', modo: lerModo(), cor: lerCor(), vidro: lerVidro() };
     var d = document.createElement('div'); d.id = 'gd-pers';
     d.innerHTML = '<div class="gp-caixa" role="dialog" aria-modal="true" aria-labelledby="gp-t">' +
-      '<div class="gp-cab"><span class="gp-ic">' + SVG(IC.paleta, 22) + '</span><div><b id="gp-t">Personalizar interface</b><small>Escolhe a interface e as cores. Nada muda até carregares em «Aplicar».</small></div><button class="gp-x" aria-label="Fechar">✕</button></div>' +
+      '<div class="gp-cab"><span class="gp-ic gp-ic-img"><img src="icons3d/personalizar.svg" alt=""></span><div><b id="gp-t">Personalizar interface</b><small>Escolhe a interface e as cores. Nada muda até carregares em «Aplicar».</small></div><button class="gp-x" aria-label="Fechar">✕</button></div>' +
       '<div class="gp-sec">1 · Interface</div><div class="gp-ops"></div>' +
       '<div class="gp-sec">2 · Cores</div><div class="gp-cores"></div>' +
       '<div class="gp-sec">3 · Efeito</div>' +
