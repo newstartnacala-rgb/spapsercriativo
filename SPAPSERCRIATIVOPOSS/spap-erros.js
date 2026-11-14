@@ -102,13 +102,34 @@
       if (resp && resp.clone) resp.clone().json().then(go, function () { go(null); }); else go(null);
     } catch (e) {}
   };
+  // Falha de ligação: só conta como erro do sistema se for REAL.
+  // No telemóvel, quando o ecrã apaga ou se muda de app, o Android corta os pedidos a meio («Failed to fetch»)
+  // sem o banco de dados ter problema nenhum. Por isso: ignora se a app esteve em segundo plano há pouco,
+  // e antes de registar confirma de novo — só regista se o servidor continuar sem responder.
+  var escondidoEm = document.hidden ? Date.now() : 0;
+  document.addEventListener('visibilitychange', function () { escondidoEm = Date.now(); });
+  window.addEventListener('pagehide', function () { escondidoEm = Date.now(); });
+  var aConfirmar = false;
   window.spapErroRede = function (u, e) {
     try {
       if (navigator.onLine === false) return;      // sem internet no telemóvel: não é falha do sistema
+      if (document.hidden || Date.now() - escondidoEm < 8000) return;   // pedido cortado pelo telemóvel (ecrã apagado / outra app)
       var caminho = String(u).replace(url(), '').split('?')[0]; if (/rpc\/spap_registar_erro/.test(caminho)) return;
       var tempo = e && e.name === 'AbortError';
-      registar({ tipo: 'rede', codigo: tempo ? 'tempo' : 'ligacao', mensagem: tempo ? 'O banco de dados não respondeu a tempo (15 s)' : 'Não foi possível ligar ao banco de dados', detalhe: caminho + (e && e.message ? '\n' + e.message : '') });
-    } catch (er) {}
+      if (aConfirmar) return; aConfirmar = true;
+      setTimeout(function () {
+        if (document.hidden || navigator.onLine === false || Date.now() - escondidoEm < 8000) { aConfirmar = false; return; }
+        var ctl = typeof AbortController !== 'undefined' ? new AbortController() : null, to = setTimeout(function () { if (ctl) ctl.abort(); }, 10000);
+        fetch(url() + '/auth/v1/health', { headers: { apikey: chave() }, cache: 'no-store', signal: ctl ? ctl.signal : undefined })
+          .then(function (r) { clearTimeout(to); aConfirmar = false;
+            if (r.ok) return;                         // o servidor responde: foi só a rede do aparelho, não é erro do sistema
+            registar({ tipo: 'bd', codigo: String(r.status), mensagem: explicar(r.status, null), detalhe: caminho + '\nConfirmado: o servidor respondeu ' + r.status });
+          }, function (e2) { clearTimeout(to); aConfirmar = false;
+            if (document.hidden || navigator.onLine === false) return;
+            registar({ tipo: 'rede', codigo: tempo ? 'tempo' : 'ligacao', mensagem: tempo ? 'O banco de dados não respondeu a tempo (15 s)' : 'Não foi possível ligar ao banco de dados', detalhe: caminho + (e && e.message ? '\n' + e.message : '') + '\nConfirmado: o servidor continuou sem responder 4 s depois.' });
+          });
+      }, 4000);
+    } catch (er) { aConfirmar = false; }
   };
   window.spapErro = function (mensagem, detalhe, tipo) { registar({ tipo: tipo || 'pagina', mensagem: mensagem, detalhe: detalhe }); };
 

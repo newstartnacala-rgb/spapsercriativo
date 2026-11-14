@@ -8,7 +8,7 @@
 <script>
   // Painel sempre na versão mais recente: se o aparelho mostrar uma cópia antiga, recarrega a nova
   (function () {
-    var VER = '2.9.267';
+    var VER = '2.9.268';
     try {
       fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
         var nova = j && j.versao; if (!nova || nova === VER) return;
@@ -608,7 +608,7 @@ body { font-family:"Segoe UI",-apple-system,system-ui,Roboto,Arial,sans-serif; c
 
 <div class="notif" id="notif"></div>
 
-<script src="spap-erros.js?v=1"></script>
+<script src="spap-erros.js?v=2"></script>
 <script src="supabase-config.js"></script>
 <script>
 // Super admins (a mesma lista está no monitor.html e na função eh_super_admin() do Supabase)
@@ -1621,7 +1621,7 @@ async function bdVerificar(manual){
   else if (lento || D.c === 'aviso' || A.c === 'aviso') { c = 'aviso'; t = 'A funcionar, mas com avisos'; sub = lento ? 'Resposta lenta (' + dados.ms + ' ms).' : 'Algum serviço respondeu com aviso.'; }
   else { c = 'ok'; t = 'Tudo a funcionar'; sub = 'Dados e login a responder normalmente (' + dados.ms + ' ms).'; }
   est.className = 'bd-estado ' + c; est.querySelector('b').textContent = t; est.querySelector('small').textContent = sub;
-  // informação real do servidor (função spap_estado_bd do SQL v2.9.267)
+  // informação real do servidor (função spap_estado_bd do SQL v2.9.268)
   const sv = document.getElementById('bd-servidor');
   let srv = null; try { const r = await supabaseClient.rpc('spap_estado_bd'); srv = r.error ? { erro: r.error.message, cod: r.error.code } : r.data; } catch(e) { srv = { erro: String(e.message || e) }; }
   let sh = '<h4>🖥️ Servidor do banco de dados</h4>', sc = '';
