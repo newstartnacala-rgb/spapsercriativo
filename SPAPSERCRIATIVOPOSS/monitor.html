@@ -21,7 +21,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.269"></script>
+<script src="spap-leitor.js?v=2.9.270"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -1117,7 +1117,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.269" defer></script>
+<script src="app-android.js?v=2.9.270" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -4718,7 +4718,7 @@ async function registarPerda() {
 async function carregarPerdasMonitor() {
   const div = document.getElementById('lista-perdas-monitor');
   const { data, error } = await supabaseClient.from('perdas').select('*').eq('loja_id', lojaId).order('criado_em',{ascending:false}).limit(20);
-  if (error) { div.innerHTML = '<div style="color:#94a3b8;font-size:12px;">Corre o SQL v2.3.0 para activar.</div>'; return; }
+  if (error) { div.innerHTML = _msgErroLista(_erroDeSql(error) ? 'A tabela das perdas ainda não existe. Corre no Supabase o SQL <b>atualizacao-v2.3.0.sql</b>.' : 'Não foi possível carregar as perdas agora.', error, 'carregarPerdasMonitor()'); return; }
   if (!data || !data.length) { div.innerHTML = '<div style="color:#cbd5e1;font-size:13px;text-align:center;padding:12px;">Nenhuma perda ainda.</div>'; return; }
   const badgeDe = est => est === 'pendente' ? '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold;white-space:nowrap;">⏳ Aguarda loja</span>'
       : est === 'cancelado' ? '<span style="background:#e2e8f0;color:#475569;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold;white-space:nowrap;">✖️ Cancelada</span>'
@@ -4755,14 +4755,26 @@ function toggleMPerdaLote(gi) {
   if (c) c.style.transform = abrir ? 'rotate(90deg)' : 'rotate(0deg)';
 }
 
+// Mensagem de erro clara: explica a causa real e dá botão para tentar de novo
+function _erroDeSql(err) { const t = String((err && (err.code || '')) + ' ' + (err && err.message || '')); return /42P01|PGRST205|PGRST200|does not exist|Could not find the table/i.test(t); }
+function _msgErroLista(txt, err, repetir) {
+  const det = err ? String(err.message || err).replace(/[<>&]/g, '') : '';
+  return '<div style="text-align:center;padding:22px 14px;background:#fff;border:1px solid #fecaca;border-radius:16px;margin:8px 0;">'
+    + '<div style="font-size:30px;margin-bottom:6px;">⚠️</div><div style="font-weight:800;color:#0f172a;font-size:14px;line-height:1.45;">' + txt + '</div>'
+    + (det ? '<div style="font-size:11.5px;color:#94a3b8;margin-top:6px;word-break:break-word;">' + det + '</div>' : '')
+    + (repetir ? '<button onclick="' + repetir + '" style="margin-top:12px;height:40px;padding:0 18px;border:0;border-radius:12px;background:#2563eb;color:#fff;font-weight:800;font-family:inherit;cursor:pointer;">↻ Tentar de novo</button>' : '') + '</div>';
+}
 // ===== ENTREGAS DOS VENDEDORES =====
 async function abrirEntregas() {
   if (modoGeral) { alert('Escolhe uma loja específica no seletor do topo.'); return; }
   document.getElementById('painel-entregas').classList.add('aberto'); try{history.pushState({subpainel:'painel-entregas'},'');}catch(e){}
   const div = document.getElementById('lista-entregas');
   div.innerHTML = '<div style="text-align:center;color:#888;padding:20px;">A carregar...</div>';
-  const { data, error } = await supabaseClient.from('entregas').select('*').eq('loja_id', lojaId).order('criado_em',{ascending:false}).limit(60);
-  if (error) { div.innerHTML = '<div style="color:#dc2626;font-size:13px;text-align:center;padding:20px;">Corre o SQL v2.3.0 para activar.</div>'; return; }
+  if (!lojaId) { div.innerHTML = _msgErroLista('Escolhe primeiro uma loja no seletor do topo.', null); return; }
+  let { data, error } = await supabaseClient.from('entregas').select('*').eq('loja_id', lojaId).order('criado_em',{ascending:false}).limit(60);
+  // falha passageira (ligação cortada / demorou): tenta outra vez antes de mostrar erro
+  if (error && !_erroDeSql(error)) { await new Promise(r => setTimeout(r, 1200)); ({ data, error } = await supabaseClient.from('entregas').select('*').eq('loja_id', lojaId).order('criado_em',{ascending:false}).limit(60)); }
+  if (error) { div.innerHTML = _msgErroLista(_erroDeSql(error) ? 'A tabela das entregas ainda não existe neste banco de dados. Corre no Supabase o SQL <b>atualizacao-v2.3.0.sql</b>.' : 'Não foi possível carregar as entregas agora.', error, 'abrirEntregas()'); return; }
   if (!data || !data.length) { div.innerHTML = '<div style="color:#cbd5e1;text-align:center;padding:30px;">Nenhuma entrega ainda.<br><span style="font-size:12px;">Aparecem aqui quando os vendedores fecham o dia.</span></div>'; return; }
 
   // Agrupa por dia
@@ -6283,7 +6295,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.269';
+const MONITOR_VERSAO = '2.9.270';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });

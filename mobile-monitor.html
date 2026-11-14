@@ -88,9 +88,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.52">
-<script src="banca-tema.js?v=3.7.52" defer></script>
-<script src="app-android.js?v=3.7.52" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.53">
+<script src="banca-tema.js?v=3.7.53" defer></script>
+<script src="app-android.js?v=3.7.53" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -1555,22 +1555,51 @@ async function vendEditar(i){ const cods=(window._vendedores||['0000']).slice();
 async function vendApagar(i){ const cods=(window._vendedores||['0000']).slice(); if(cods.length<=1){ toast('Tem de existir pelo menos 1 código','erro'); return; } if(!(await bancaConfirmar('Apagar código?','O código '+cods[i]+' deixa de abrir a caixa.',{perigo:true,ok:'Apagar'})))return; cods.splice(i,1); _guardarVendedores(cods); }
 async function vendAdicionar(){ const cods=(window._vendedores||['0000']).slice(); const n=await bancaPedir('Novo código','Código do novo balconista.','',{icone:'🔐',placeholder:'Ex: 1234',ok:'Adicionar'}); if(n===null||!n.trim())return; cods.push(n.trim()); _guardarVendedores(cods); }
 
-// ===== AUDITORIA DE CAIXA =====
+// ===== AUDITORIA DE CAIXA (relatório do dinheiro entregue) =====
+function _auDia(d){ const x=new Date(d); return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0'); }
 async function mAuditoria(){
   mostrarInfo('🔍 Auditoria de Caixa','<div class="vazio">A carregar…</div>');
   const ini=new Date(); ini.setDate(ini.getDate()-13); ini.setHours(0,0,0,0);
-  let ent=[],vendas=[];
-  try{ const r=await supabaseClient.from('entregas').select('*').eq('loja_id',sessao.lojaId).gte('criado_em',ini.toISOString()).order('criado_em',{ascending:false}).limit(60); ent=r.data||[]; }catch(e){}
-  try{ const r=await supabaseClient.from('vendas').select('total,criado_em').eq('loja_id',sessao.lojaId).gte('criado_em',ini.toISOString()).limit(2000); vendas=r.data||[]; }catch(e){}
-  const porDia={}; vendas.forEach(v=>{ const d=new Date(v.criado_em).toISOString().slice(0,10); porDia[d]=(porDia[d]||0)+(parseFloat(v.total)||0); });
-  let html='';
-  if(!ent.length){ html='<div class="vazio">Ainda não há entregas registadas. O balconista usa 📦 Dia na loja para entregar o caixa.</div>'; }
-  else html='<div class="cartao">'+ent.map(e=>{ const d=new Date(e.criado_em); const dia=d.toISOString().slice(0,10); const vend=porDia[dia]||0; const entregue=parseFloat(e.total_entregue)||0; const gastos=parseFloat(e.gastos)||0; const dif=Math.round((entregue-(vend-gastos))*100)/100;
-    const nota=(e.gastos_nota||'').trim(); const hora=d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});
-    const notaHtml = nota ? '<div class="au-nota"><div class="au-rot">📝 Nota de quem entregou</div><div class="au-txt">'+esc(nota)+'</div></div>'
-      : (gastos>0 ? '<div class="au-nota au-falta">⚠️ Declarou '+fmt(gastos)+' de gastos mas não escreveu nenhuma nota.</div>' : '<div class="au-sem">Sem nota · sem gastos</div>');
-    return '<div class="au-item"><div class="row" style="border:0;padding:0"><div class="in"><div class="nn">'+d.toLocaleDateString('pt-PT')+' · '+hora+'</div><div class="mt">👤 '+esc(e.vendedor_codigo||'Balconista')+' · Vendas '+fmt(vend)+' · Entregue '+fmt(entregue)+(gastos?(' · Gastos '+fmt(gastos)):'')+'</div></div><div class="vv" style="color:'+(dif<0?'#dc2626':(dif>0?'#c2410c':'#16a34a'))+'">'+(dif>0?'+':'')+fmt(dif)+'</div></div>'+notaHtml+'</div>'; }).join('')+'</div><div style="font-size:11px;color:var(--suave);margin-top:8px;">Diferença = dinheiro entregue − (vendas − gastos). Vermelho = falta; laranja = sobra.</div>';
-  document.getElementById('info-conteudo').innerHTML=html;
+  let ent=[],vendas=[],erro='';
+  try{ const r=await supabaseClient.from('entregas').select('*').eq('loja_id',sessao.lojaId).gte('criado_em',ini.toISOString()).order('criado_em',{ascending:false}).limit(60); if(r.error) erro=r.error.message; ent=r.data||[]; }catch(e){ erro=e.message||String(e); }
+  try{ const r=await supabaseClient.from('vendas').select('total,criado_em').eq('loja_id',sessao.lojaId).gte('criado_em',ini.toISOString()).limit(3000); vendas=r.data||[]; }catch(e){}
+  if(erro && !ent.length){ document.getElementById('info-conteudo').innerHTML='<div class="vazio">Não foi possível carregar as entregas.<br><small>'+esc(erro)+'</small><br><br><button class="btn" type="button" onclick="mAuditoria()" style="max-width:220px;margin:0 auto;">↻ Tentar de novo</button></div>'; return; }
+  if(!ent.length){ document.getElementById('info-conteudo').innerHTML='<div class="vazio">Ainda não há entregas registadas nos últimos 14 dias.<br>O balconista usa <b>📦 Dia</b> na Banca para entregar o caixa.</div>'; return; }
+  // vendas por dia (hora local)
+  const vendDia={}; vendas.forEach(v=>{ const k=_auDia(v.criado_em); vendDia[k]=(vendDia[k]||0)+(parseFloat(v.total)||0); });
+  // entregas agrupadas por dia: a diferença é calculada com tudo o que foi entregue nesse dia
+  const dias={}; ent.forEach(e=>{ const k=_auDia(e.criado_em); (dias[k]=dias[k]||[]).push(e); });
+  const chaves=Object.keys(dias).sort().reverse();
+  let tV=0,tE=0,tG=0,nFalta=0,nSobra=0,nCerto=0;
+  const linhas=chaves.map(k=>{
+    const es=dias[k], vend=Math.round((vendDia[k]||0)*100)/100;
+    const entregue=es.reduce((s,e)=>s+(parseFloat(e.total_entregue)||0),0), gastos=es.reduce((s,e)=>s+(parseFloat(e.gastos)||0),0);
+    const esperado=Math.round((vend-gastos)*100)/100, dif=Math.round((entregue-esperado)*100)/100;
+    tV+=vend; tE+=entregue; tG+=gastos; if(dif<0) nFalta++; else if(dif>0) nSobra++; else nCerto++;
+    const est = dif<0 ? {c:'falta',t:'Falta '+fmt(Math.abs(dif))} : dif>0 ? {c:'sobra',t:'Sobra '+fmt(dif)} : {c:'certo',t:'✓ Certo'};
+    const d=new Date(es[0].criado_em);
+    const dataTxt=d.toLocaleDateString('pt-PT',{weekday:'short',day:'2-digit',month:'2-digit'}).replace('.','');
+    const quem=[...new Set(es.map(e=>e.vendedor_codigo||'Balconista'))].join(', ');
+    const horas=es.map(e=>new Date(e.criado_em).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'})).reverse().join(' · ');
+    const notas=es.map(e=>(e.gastos_nota||'').trim()).filter(Boolean);
+    const notaHtml = notas.length ? '<div class="au2-nota"><span>📝 Nota de quem entregou</span>'+notas.map(n=>'<p>'+esc(n)+'</p>').join('')+'</div>'
+      : (gastos>0 ? '<div class="au2-nota au2-alerta"><span>⚠️ Sem nota</span><p>Declarou '+fmt(gastos)+' de gastos mas não explicou em quê.</p></div>' : '');
+    return '<div class="au2-dia '+est.c+'">'
+      +'<div class="au2-top"><div><b>'+esc(dataTxt)+'</b><small>👤 '+esc(quem)+' · '+esc(horas)+(es.length>1?' · '+es.length+' entregas':'')+'</small></div><span class="au2-est">'+est.t+'</span></div>'
+      +'<div class="au2-grid">'
+        +'<div><small>Vendido</small><b>'+fmt(vend)+'</b></div>'
+        +'<div><small>Gastos</small><b class="neg">− '+fmt(gastos)+'</b></div>'
+        +'<div><small>Devia entregar</small><b>'+fmt(esperado)+'</b></div>'
+        +'<div class="au2-ent"><small>Entregou</small><b>'+fmt(entregue)+'</b></div>'
+      +'</div>'+notaHtml+'</div>';
+  }).join('');
+  const tDif=Math.round((tE-(tV-tG))*100)/100;
+  const resumo='<div class="au2-res">'
+    +'<div class="au2-res-top"><div><small>Últimos '+chaves.length+' dia(s) com entrega</small><b>Diferença total</b></div><span class="au2-big '+(tDif<0?'falta':tDif>0?'sobra':'certo')+'">'+(tDif>0?'+':'')+fmt(tDif)+'</span></div>'
+    +'<div class="au2-grid au2-grid-res"><div><small>Vendido</small><b>'+fmt(tV)+'</b></div><div><small>Gastos</small><b class="neg">− '+fmt(tG)+'</b></div><div><small>Devia entregar</small><b>'+fmt(tV-tG)+'</b></div><div class="au2-ent"><small>Entregou</small><b>'+fmt(tE)+'</b></div></div>'
+    +'<div class="au2-chips"><span class="certo">✓ '+nCerto+' certo</span><span class="falta">'+nFalta+' com falta</span><span class="sobra">'+nSobra+' com sobra</span></div></div>';
+  document.getElementById('info-conteudo').innerHTML=resumo+linhas
+    +'<div class="au2-leg"><b>Como se calcula:</b> Devia entregar = Vendido − Gastos. A diferença é o que entregou a mais (<span style="color:#c2410c">sobra</span>) ou a menos (<span style="color:#dc2626">falta</span>).</div>';
 }
 
 // ===== RASTREIO DO GERENTE (atividade: descontos, devoluções, perdas) =====
@@ -1710,5 +1739,36 @@ function toast(msg,tipo){ const t=document.getElementById('toast'); t.textConten
 document.querySelectorAll('.folha-fundo').forEach(f=>{ f.addEventListener('click', e=>{ if(e.target===f) f.classList.remove('ativa'); }); });
 </script>
 <script src="spap-rolagem.js?v=1"></script>
+<style>
+.au2-res{background:linear-gradient(135deg,#0f172a,#1e3a8a);color:#fff;border-radius:20px;padding:14px;margin-bottom:12px;box-shadow:0 10px 24px rgba(15,23,42,.25);}
+.au2-res-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;}
+.au2-res-top small{display:block;font-size:11.5px;opacity:.75;font-weight:700;} .au2-res-top b{display:block;font-size:16px;}
+.au2-big{font-size:22px;font-weight:900;padding:6px 12px;border-radius:12px;background:rgba(255,255,255,.12);white-space:nowrap;}
+.au2-big.falta{color:#fca5a5;} .au2-big.sobra{color:#fdba74;} .au2-big.certo{color:#86efac;}
+.au2-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.au2-grid>div{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 8px;min-width:0;}
+.au2-grid small{display:block;font-size:10.5px;color:#64748b;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.au2-grid b{display:block;font-size:15px;color:#0f172a;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
+.au2-grid b.neg{color:#b45309;}
+.au2-grid .au2-ent{background:#eff6ff;border-color:#bfdbfe;} .au2-grid .au2-ent b{color:#1d4ed8;}
+.au2-grid-res>div{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.15);} .au2-grid-res small{color:rgba(255,255,255,.75);} .au2-grid-res b{color:#fff;} .au2-grid-res b.neg{color:#fde68a;}
+.au2-grid-res .au2-ent{background:rgba(96,165,250,.25);border-color:rgba(147,197,253,.4);} .au2-grid-res .au2-ent b{color:#fff;}
+.au2-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;} .au2-chips span{font-size:11.5px;font-weight:800;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,.14);}
+.au2-chips .certo{color:#86efac;} .au2-chips .falta{color:#fca5a5;} .au2-chips .sobra{color:#fdba74;}
+.au2-dia{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:12px;margin-bottom:10px;position:relative;overflow:hidden;box-shadow:0 4px 12px rgba(15,23,42,.05);}
+.au2-dia::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:#22c55e;}
+.au2-dia.falta::before{background:#dc2626;} .au2-dia.sobra::before{background:#f97316;}
+.au2-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px;padding-left:4px;}
+.au2-top b{display:block;font-size:15px;color:#0f172a;text-transform:capitalize;} .au2-top small{display:block;font-size:11.5px;color:#64748b;margin-top:2px;}
+.au2-est{font-size:12.5px;font-weight:900;padding:5px 10px;border-radius:99px;white-space:nowrap;background:#dcfce7;color:#15803d;}
+.au2-dia.falta .au2-est{background:#fee2e2;color:#b91c1c;} .au2-dia.sobra .au2-est{background:#ffedd5;color:#c2410c;}
+.au2-dia .au2-grid{padding-left:4px;}
+.au2-nota{margin:10px 0 0 4px;padding:10px 12px;border-radius:12px;background:#fffbeb;border:1px solid #fde68a;}
+.au2-nota span{display:block;font-size:11px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:#92400e;margin-bottom:3px;}
+.au2-nota p{margin:2px 0 0;font-size:14px;font-weight:700;color:#422006;line-height:1.4;}
+.au2-nota.au2-alerta{background:#fef2f2;border-color:#fecaca;} .au2-nota.au2-alerta span{color:#b91c1c;} .au2-nota.au2-alerta p{color:#7f1d1d;font-weight:600;font-size:13px;}
+.au2-leg{font-size:11.5px;color:#64748b;line-height:1.5;margin:4px 2px 0;}
+html.escuro .au2-res{filter:invert(1) hue-rotate(180deg);}
+</style>
 </body>
 </html>
