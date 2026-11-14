@@ -8,7 +8,7 @@
 <script>
   // Painel sempre na versão mais recente: se o aparelho mostrar uma cópia antiga, recarrega a nova
   (function () {
-    var VER = '2.9.268';
+    var VER = '2.9.269';
     try {
       fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
         var nova = j && j.versao; if (!nova || nova === VER) return;
@@ -1621,7 +1621,7 @@ async function bdVerificar(manual){
   else if (lento || D.c === 'aviso' || A.c === 'aviso') { c = 'aviso'; t = 'A funcionar, mas com avisos'; sub = lento ? 'Resposta lenta (' + dados.ms + ' ms).' : 'Algum serviço respondeu com aviso.'; }
   else { c = 'ok'; t = 'Tudo a funcionar'; sub = 'Dados e login a responder normalmente (' + dados.ms + ' ms).'; }
   est.className = 'bd-estado ' + c; est.querySelector('b').textContent = t; est.querySelector('small').textContent = sub;
-  // informação real do servidor (função spap_estado_bd do SQL v2.9.268)
+  // informação real do servidor (função spap_estado_bd do SQL v2.9.269)
   const sv = document.getElementById('bd-servidor');
   let srv = null; try { const r = await supabaseClient.rpc('spap_estado_bd'); srv = r.error ? { erro: r.error.message, cod: r.error.code } : r.data; } catch(e) { srv = { erro: String(e.message || e) }; }
   let sh = '<h4>🖥️ Servidor do banco de dados</h4>', sc = '';
@@ -1702,6 +1702,12 @@ async function bdVerificar(manual){
 .er-it pre{white-space:pre-wrap;word-break:break-word;background:#f8fafc;border-radius:8px;padding:8px;margin:6px 0 0;font-size:11px;max-height:160px;overflow:auto;}
 .er-acoes{display:flex;gap:6px;margin-top:8px;}
 .er-acoes button{height:30px;padding:0 10px;border-radius:9px;border:1px solid #e2e8f0;background:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;color:#15803d;}
+.er-acoes .er-auto{background:linear-gradient(135deg,#2563eb,#1d4ed8);border-color:#1d4ed8;color:#fff;box-shadow:0 4px 10px rgba(37,99,235,.25);}
+.er-filtros .er-tudo{background:linear-gradient(135deg,#2563eb,#1d4ed8);border-color:#1d4ed8;color:#fff;}
+.er-res{display:none;margin-top:8px;padding:9px 11px;border-radius:10px;font-size:12.5px;line-height:1.45;font-weight:600;}
+.er-res.a,.er-res.ok,.er-res.mau{display:block;animation:apEntra .25s ease;}
+.er-res.a{background:#eff6ff;color:#1e40af;} .er-res.ok{background:#f0fdf4;color:#166534;} .er-res.mau{background:#fff7ed;color:#9a3412;}
+.er-spin{display:inline-block;width:12px;height:12px;border-radius:50%;border:2px solid #93c5fd;border-top-color:#1d4ed8;margin-right:7px;vertical-align:-2px;animation:bdGira .7s linear infinite;}
 .er-vazio{padding:22px 10px;text-align:center;color:#64748b;font-size:13px;}
 </style>
 <script>
@@ -1722,7 +1728,8 @@ function erDesenhar(){
   const abertos = _erLista.filter(e => !e.resolvido), h24 = abertos.filter(e => ag - new Date(e.ultimo_em) < 864e5), bd = abertos.filter(e => e.tipo === 'bd' || e.tipo === 'rede');
   document.getElementById('er-resumo').innerHTML = '<span class="' + (h24.length ? 'mau' : 'ok') + '"><b>' + h24.length + '</b><small>Últimas 24 h</small></span><span class="' + (bd.length ? 'mau' : 'ok') + '"><b>' + bd.length + '</b><small>Banco de dados</small></span><span><b>' + abertos.reduce((s, e) => s + (e.vezes || 1), 0) + '</b><small>Ocorrências</small></span>';
   const F = [['abertos','Por resolver (' + abertos.length + ')'],['bd','Banco de dados'],['pagina','Páginas'],['todos','Todos']];
-  document.getElementById('er-filtros').innerHTML = F.map(f => '<button class="' + (_erFiltro === f[0] ? 'on' : '') + '" onclick="_erFiltro=\'' + f[0] + '\';erDesenhar()">' + f[1] + '</button>').join('') + (_erLista.some(e => e.resolvido) ? '<button class="er-limpar" onclick="erLimpar()">Apagar resolvidos</button>' : '');
+  const nAuto = abertos.length;
+  document.getElementById('er-filtros').innerHTML = (nAuto ? '<button class="er-tudo" onclick="erResolverTudo()">🔧 Resolver todos (' + nAuto + ')</button>' : '') + F.map(f => '<button class="' + (_erFiltro === f[0] ? 'on' : '') + '" onclick="_erFiltro=\'' + f[0] + '\';erDesenhar()">' + f[1] + '</button>').join('') + (_erLista.some(e => e.resolvido) ? '<button class="er-limpar" onclick="erLimpar()">Apagar resolvidos</button>' : '');
   let v = _erLista;
   if (_erFiltro === 'abertos') v = abertos; else if (_erFiltro === 'bd') v = abertos.filter(e => e.tipo === 'bd' || e.tipo === 'rede' || e.tipo === 'auth'); else if (_erFiltro === 'pagina') v = abertos.filter(e => e.tipo === 'pagina');
   if (!v.length) { L.innerHTML = '<div class="er-vazio">✅ ' + (_erFiltro === 'todos' ? 'Ainda não há erros registados.' : 'Nenhum erro por resolver aqui. O sistema está limpo.') + '</div>'; return; }
@@ -1730,9 +1737,78 @@ function erDesenhar(){
     + '<div class="er-msg">' + bdEsc(e.mensagem) + '</div>'
     + '<div class="er-onde">' + [e.email ? '👤 ' + bdEsc(e.email) : '', e.loja_id ? '🏪 ' + bdEsc(erNomeLoja(e.loja_id)) : '', e.pagina ? '📄 ' + bdEsc(e.pagina) : '', e.versao ? 'v' + bdEsc(e.versao) : '', (e.vezes || 1) > 1 ? 'desde ' + erQuando(e.criado_em) : ''].filter(Boolean).join(' · ') + '</div>'
     + (e.detalhe || e.agente ? '<details><summary>Detalhes técnicos</summary><pre>' + bdEsc((e.detalhe || '') + (e.agente ? '\n\nAparelho: ' + e.agente : '')) + '</pre></details>' : '')
-    + (e.resolvido ? '' : '<div class="er-acoes"><button onclick="erResolver(' + e.id + ')">✔ Marcar como resolvido</button></div>') + '</div>').join('');
+    + (e.resolvido ? '' : '<div class="er-res" id="er-res-' + e.id + '"></div><div class="er-acoes"><button class="er-auto" onclick="erResolverAuto(' + e.id + ')">🔧 Resolver este erro</button><button onclick="erResolver(' + e.id + ')">✔ Marcar como resolvido</button></div>') + '</div>').join('');
 }
 function erNomeLoja(id){ try { const l = (window.todasLojas || window.lojas || []).find(x => String(x.id) === String(id)); return l ? (l.nome || l.nome_empresa || id) : id; } catch(e) { return id; } }
+/* ===== Resolver um erro específico =====
+   Cada tipo de erro é verificado de verdade:
+   • ligação / servidor em falha → testa agora o servidor e a mesma tabela; se já responde, fica resolvido
+   • erro de página → se já existe uma versão da app mais nova que a do erro, fica resolvido (a correção já foi publicada)
+   • plano esgotado / projecto em pausa / tabela ou coluna em falta → explica exatamente o que fazer */
+let _erVersoes = null;
+async function erVersoes(){
+  if (_erVersoes) return _erVersoes;
+  const ler = async f => { try { const r = await fetch(f + '?t=' + Date.now(), { cache: 'no-store' }); return (await r.json()).versao; } catch(e) { return null; } };
+  const [loja, banca] = await Promise.all([ler('version.json'), ler('banca-version.json')]);
+  return (_erVersoes = { loja, banca });
+}
+function erCmpVer(a, b){ const x = String(a || '').split('.').map(Number), y = String(b || '').split('.').map(Number); for (let i = 0; i < 3; i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) - (y[i] || 0); } return 0; }
+async function erTestar(e){
+  const caminho = String(e.detalhe || '').split('\n')[0].trim();
+  const t0 = performance.now();
+  const saude = await bdPedido(SUPABASE_URL + '/auth/v1/health', 10000);
+  if (!saude.ok) return { ok: false, msg: 'O servidor continua sem responder (' + (saude.status || saude.erro) + '). O problema ainda existe — volta a tentar daqui a pouco ou vê o estado em cima.' };
+  const m = /^\/rest\/v1\/([a-z0-9_]+)$/i.exec(caminho);
+  if (m && !/^rpc$/i.test(m[1])) {
+    const { error } = await supabaseClient.from(m[1]).select('*', { head: true, count: 'exact' }).limit(1);
+    if (error && !/permission|policy|42501/i.test(error.message + error.code)) return { ok: false, msg: 'O servidor responde, mas a tabela «' + m[1] + '» ainda dá erro: ' + error.message };
+    return { ok: true, msg: 'Testado agora: o servidor e a tabela «' + m[1] + '» respondem normalmente (' + Math.round(performance.now() - t0) + ' ms). Foi uma falha passageira da ligação.' };
+  }
+  return { ok: true, msg: 'Testado agora: o servidor responde normalmente (' + saude.ms + ' ms). Foi uma falha passageira da ligação.' };
+}
+async function erDiagnostico(e){
+  const cod = String(e.codigo || ''), msg = String(e.mensagem || '');
+  if (e.tipo === 'rede' || /^5\d\d/.test(cod) || /^(429|540)/.test(cod) || e.tipo === 'auth' && /^5/.test(cod)) {
+    if (/^540/.test(cod)) return { ok: false, msg: '⛔ O projecto da Supabase está em pausa. Entra em supabase.com → o teu projecto → «Restore project». Depois volta aqui e carrega de novo em Resolver.', teste: true };
+    return erTestar(e);
+  }
+  if (/^402/.test(cod)) { const t = await erTestar(e); if (t.ok) return { ok: true, msg: 'O servidor voltou a aceitar pedidos: o limite do plano já não está a bloquear. ' + t.msg }; return { ok: false, msg: '⛔ O plano da Supabase atingiu o limite. Entra em supabase.com → Billing para renovar ou subir o plano. Depois carrega de novo em Resolver.' }; }
+  if (/42703|42P01|PGRST20[0-9]|PGRST205|does not exist|could not find/i.test(cod + ' ' + msg)) {
+    const t = await erTestar(e); if (t.ok && /tabela/.test(t.msg)) return { ok: true, msg: 'A tabela já responde sem erro: o SQL em falta já foi corrido. ' + t.msg };
+    return { ok: false, msg: '🗄️ Falta uma tabela, coluna ou função no banco de dados (' + bdEsc(cod) + '). Corre no Supabase → SQL Editor o último ficheiro de atualização (.sql) que te foi enviado. Depois carrega de novo em Resolver.' };
+  }
+  if (/^40[13]/.test(cod)) return { ok: false, msg: '🔒 O banco de dados recusou por falta de permissão. Normalmente resolve-se ao sair e entrar de novo na conta, ou correndo o SQL de permissões mais recente.' };
+  if (e.tipo === 'pagina') {
+    const v = await erVersoes(), atual = /banca/.test(e.app || '') ? v.banca : v.loja;
+    if (e.versao && atual && erCmpVer(e.versao, atual) < 0) return { ok: true, msg: 'Este erro aconteceu na versão ' + bdEsc(e.versao) + '. Já está publicada a versão ' + bdEsc(atual) + ', que traz as correções. Quem atualizar a app deixa de o ter.' };
+    return { ok: false, msg: '🛠️ Erro dentro da app (versão ' + bdEsc(e.versao || 'atual') + '). Precisa de uma correção no código: manda uma imagem deste erro (com os Detalhes técnicos) ao programador. Se voltar a acontecer, o contador ×' + (e.vezes || 1) + ' sobe.' };
+  }
+  return erTestar(e);
+}
+async function erResolverAuto(id, silencioso){
+  const e = (_erLista || []).find(x => x.id === id); if (!e) return false;
+  const box = document.getElementById('er-res-' + id);
+  if (box) { box.className = 'er-res a'; box.innerHTML = '<i class="er-spin"></i>A verificar este erro…'; }
+  let r; try { r = await erDiagnostico(e); } catch(x) { r = { ok: false, msg: 'Não foi possível verificar: ' + (x.message || x) }; }
+  if (r.ok) {
+    const { error } = await supabaseClient.from('spap_erros').update({ resolvido: true }).eq('id', id);
+    if (error) { if (box) { box.className = 'er-res mau'; box.textContent = 'Verificado, mas não foi possível marcar como resolvido: ' + error.message; } return false; }
+    e.resolvido = true;
+    if (box) { box.className = 'er-res ok'; box.innerHTML = '✅ <b>Resolvido.</b> ' + r.msg; }
+    if (!silencioso) { notif('✅ Erro resolvido'); setTimeout(() => { erDesenhar(); adAlertaGeral(); }, 2600); }
+    return true;
+  }
+  if (box) { box.className = 'er-res mau'; box.innerHTML = r.msg; }
+  if (!silencioso) notif('Este erro ainda não está resolvido', true);
+  return false;
+}
+async function erResolverTudo(){
+  const ab = (_erLista || []).filter(e => !e.resolvido); let n = 0;
+  notif('🔧 A verificar ' + ab.length + ' erro(s)…');
+  for (const e of ab) { if (await erResolverAuto(e.id, true)) n++; }
+  setTimeout(() => { erDesenhar(); adAlertaGeral(); }, 2200);
+  notif(n ? '✅ ' + n + ' de ' + ab.length + ' erro(s) resolvido(s)' : 'Nenhum erro ficou resolvido — vê a explicação em cada um', !n);
+}
 async function erResolver(id){ const { error } = await supabaseClient.from('spap_erros').update({ resolvido: true }).eq('id', id); if (error) return notif('Não foi possível: ' + error.message, true); const e = _erLista.find(x => x.id === id); if (e) e.resolvido = true; erDesenhar(); adAlertaGeral(); notif('✅ Marcado como resolvido'); }
 async function erLimpar(){ const { error } = await supabaseClient.from('spap_erros').delete().eq('resolvido', true); if (error) return notif('Não foi possível: ' + error.message, true); _erLista = _erLista.filter(e => !e.resolvido); erDesenhar(); notif('🗑️ Erros resolvidos apagados'); }
 // Alerta no topo do painel com o problema mais importante do sistema
