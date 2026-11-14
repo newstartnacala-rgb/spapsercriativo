@@ -352,7 +352,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
   [tabindex]:focus-visible { outline: 2px solid #1a56a0; outline-offset: 1px; }
 </style>
-<script src="app-android.js?v=2.9.270" defer></script>
+<script src="app-android.js?v=2.9.271" defer></script>
 <style>/* a interface antiga nunca aparece: o ecrã antigo fica invisível até o novo abrir (sem piscar) */ body:not(.modo2) #tela-pdv { visibility:hidden !important; }</style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
@@ -1624,7 +1624,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
         const { data: lj } = await supabaseClient.from('lojas')
           .select('logo, recibo_rodape, endereco, nome, nome_empresa, telefone, codigo_desconto').eq('id', sessaoAtual.lojaId).maybeSingle();
         if (lj) {
-          sessaoAtual.logo = lj.logo || null;
+          sessaoAtual.logo = lj.logo || null; try { m2PintarBanner(); } catch(e){}
           if (sessaoAtual.logo) { try { _logoParaPB(sessaoAtual.logo, pb => { sessaoAtual.logoPB = pb; }); } catch(e){} } else { sessaoAtual.logoPB = null; }
           sessaoAtual.reciboRodape = lj.recibo_rodape || null;
           sessaoAtual.codigoDesconto = lj.codigo_desconto || null;
@@ -3424,7 +3424,7 @@ async function scannerFechar() {
     if (error || !lj) return;
     sessaoAtual.codigoDesconto = lj.codigo_desconto || null;
     sessaoAtual.reciboRodape = lj.recibo_rodape || null;
-    sessaoAtual.logo = lj.logo || null;
+    sessaoAtual.logo = lj.logo || null; try { m2PintarBanner(); } catch(e){}
     if (lj.endereco != null) sessaoAtual.endereco = lj.endereco;
     if (lj.nome) sessaoAtual.nomeLoja = lj.nome;
     if (lj.nome_empresa != null) sessaoAtual.nomeEmpresa = lj.nome_empresa;
@@ -5949,7 +5949,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.270';
+  const VERSAO_ATUAL = '2.9.271';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -6841,9 +6841,14 @@ body.modo2.m2-escuro #modal-pagamento #toggle-imprimir, body.modo2.m2-escuro #mo
         <input type="text" id="m2-busca-input" placeholder="Pesquisar produto ou código de barras..." oninput="_m2Busca=this.value; renderM2Grid();">
         <span class="barra" title="Ler com câmara" onclick="abrirScannerLoja()" data-ico="camera"></span>
       </div>
-      <div class="m2-loja"><span data-ico="store"></span><span id="m2-loja-nome">Loja</span></div>
+      <div class="m2-cat-wrap">
+        <button class="m2-cat-btn" onclick="m2ToggleCategorias(event)" title="Categorias e subcategorias"><span class="m2-cat-ico" data-ico="grid"></span><span id="m2-cat-label">Todas as categorias</span><span class="m2-cat-seta" data-ico="chevron"></span></button>
+        <div class="m2-cat-menu" id="m2-cat-menu"></div>
+      </div>
+      <div class="m2-esp"></div>
       <button class="m2-sos" onclick="acionarEmergencia()" title="Emergência (F9)"><span class="m2-sos-ico" data-ico="alert"></span><span class="m2-sos-txt">Emergência</span></button>
       <div class="m2-user"><button class="m2-atualizar" id="m2-atualizar" onclick="this.classList.add('m2-a-girar'); var b=this; try{atualizarLojaManual();}catch(e){} setTimeout(function(){b.classList.remove('m2-a-girar');},1600);" title="Atualizar dados"><span data-ico="refresh"></span></button><span id="m2-user-nome" class="m2-edit-nome" onclick="m2EditarNome()" title="Clica para editar o teu nome">—</span></div>
+      <div class="m2-loja m2-banner" id="m2-banner" title="Banner da loja (muda-se no Monitor › Meu Perfil)"><img class="m2-b-img" id="m2-banner-img" alt="" style="display:none"><img class="m2-b-logo" id="m2-banner-logo" alt="" style="display:none"><span class="m2-b-ico" data-ico="store"></span><span id="m2-loja-nome">Loja</span></div>
     </div>
 
     <div id="m2-corpo">
@@ -6853,13 +6858,6 @@ body.modo2.m2-escuro #modal-pagamento #toggle-imprimir, body.modo2.m2-escuro #mo
           <div><h1>PONTO DE VENDA</h1><p>Gestão de vendas</p></div>
         </div>
         <div id="m2-painel">
-          <div id="m2-subrow">
-            <input type="text" id="m2-busca2" placeholder="Pesquisar produtos..." oninput="_m2Busca=this.value; document.getElementById('m2-busca-input').value=this.value; renderM2Grid();">
-            <div class="m2-cat-wrap">
-              <button class="m2-cat-btn" onclick="m2ToggleCategorias(event)"><span class="m2-cat-ico" data-ico="grid"></span><span id="m2-cat-label">Todas as categorias</span><span class="m2-cat-seta" data-ico="chevron"></span></button>
-              <div class="m2-cat-menu" id="m2-cat-menu"></div>
-            </div>
-          </div>
           <div id="m2-grid"></div>
         </div>
       </div>
@@ -7059,11 +7057,46 @@ document.addEventListener('click', function(e){
     var e;
     if (e=document.getElementById('m2-logo-nome')) e.textContent = 'Loja';
     if (e=document.getElementById('m2-loja-nome')) e.textContent = nome;
+    try { m2PintarBanner(); } catch(err){}
     try { var _op = localStorage.getItem('pdv_m2_operador'); if (_op && typeof sessaoAtual!=='undefined' && sessaoAtual) sessaoAtual.nomeExibicao = _op; } catch(err){}
     if (e=document.getElementById('m2-user-nome')) { var vn=(typeof sessaoAtual!=='undefined'&&sessaoAtual)?(sessaoAtual.nomeExibicao||''):''; e.textContent = vn || 'Pôr o teu nome'; }
     if (e=document.getElementById('m2-versao')) e.textContent = 'v' + (typeof VERSAO_ATUAL!=='undefined'?VERSAO_ATUAL:'');
   }
 
+  // Banner da loja no topo: imagem comprida (Monitor › Meu Perfil). Sem banner: logótipo + nome da loja.
+  var _m2BannerLoja = null;
+  function m2PintarBanner(){
+    var cx = document.getElementById('m2-banner'); if (!cx) return;
+    var S = (typeof sessaoAtual!=='undefined' && sessaoAtual) ? sessaoAtual : null, id = S && S.lojaId;
+    var ch = 'spap_banner_' + (id||''), ban = '';
+    try { ban = (S && S.banner !== undefined) ? (S.banner||'') : (id ? (localStorage.getItem(ch)||'') : ''); } catch(e){}
+    var bi = document.getElementById('m2-banner-img'), li = document.getElementById('m2-banner-logo'), logo = (S && S.logo) || '';
+    cx.classList.toggle('tem-banner', !!ban); cx.classList.toggle('tem-logo', !ban && !!logo);
+    if (bi) { if (ban) { if (bi.getAttribute('src') !== ban) bi.src = ban; bi.style.display = ''; } else { bi.removeAttribute('src'); bi.style.display = 'none'; } }
+    if (li) { if (!ban && logo) { if (li.getAttribute('src') !== logo) li.src = logo; li.style.display = ''; } else { li.removeAttribute('src'); li.style.display = 'none'; } }
+    if (id && _m2BannerLoja !== id && navigator.onLine !== false && typeof supabaseClient !== 'undefined') {
+      _m2BannerLoja = id;
+      supabaseClient.from('lojas').select('banner').eq('id', id).maybeSingle().then(function(r){
+        if (!r || r.error) return;   // coluna ainda não existe (SQL do banner por correr): fica o logótipo + nome
+        var b = (r.data && r.data.banner) || '';
+        if (sessaoAtual && sessaoAtual.lojaId === id) sessaoAtual.banner = b;
+        try { if (b) localStorage.setItem(ch, b); else localStorage.removeItem(ch); } catch(e){}
+        m2PintarBanner();
+      }, function(){});
+    }
+  }
+  setInterval(function(){ _m2BannerLoja = null; try { if (document.body.classList.contains('modo2')) m2PintarBanner(); } catch(e){} }, 300000);
+
+  var _m2Sub = null;
+  // subcategorias de uma categoria: as definidas pelo dono no Monitor + as que já existem nos produtos
+  function _m2Subs(c){
+    if (!c || c==='Todos' || c==='__kg__') return [];
+    var out = [], vistos = {};
+    function junta(v){ v = (v && String(v).trim()) || ''; if (!v) return; var k = v.toLowerCase(); if (vistos[k]) return; vistos[k] = 1; out.push(v); }
+    try { ((sessaoAtual && sessaoAtual.subcategorias && sessaoAtual.subcategorias[c]) || []).forEach(junta); } catch(e){}
+    (produtos||[]).forEach(function(p){ var pc=(p.categoria&&String(p.categoria).trim())?p.categoria.trim():'Outros'; if (pc===c) junta(p.subcategoria); });
+    return out;
+  }
   function _m2TemKg(){ try { return (produtos||[]).some(function(p){ return p.unidade==='kg'; }); } catch(e){ return false; } }
   function _m2RotuloCat(c){ return c==='Todos' ? 'Todas as categorias' : (c==='__kg__' ? 'Por quilo (kg)' : c); }
   function renderM2Chips(){
@@ -7077,11 +7110,17 @@ document.addEventListener('click', function(e){
       if (c==='__kg__') return m2Svg('scale');
       try { var em=(typeof categoriasInfo!=='undefined'&&categoriasInfo[c])?categoriasInfo[c]:null; return em?('<span style="font-size:15px">'+em+'</span>'):m2Svg('box'); } catch(e){ return m2Svg('box'); }
     }
+    function _h(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+    function _j(t){ return _h(String(t).replace(/\\/g,'\\\\').replace(/'/g,"\\'")); }
     menu.innerHTML = itens.map(function(c){
-      var cj = String(c).replace(/'/g,"\\'");
-      return '<div class="m2-cat-item'+(_m2Cat===c?' ativo':'')+'" onclick="m2EscolherCat(\''+cj+'\')"><span class="m2-cat-item-ico">'+_ico(c)+'</span>'+_m2RotuloCat(c)+'</div>';
+      var subs = _m2Subs(c), aberto = (_m2Cat===c && subs.length);
+      var h = '<div class="m2-cat-item'+(_m2Cat===c?' ativo':'')+(subs.length?' tem-sub':'')+'" onclick="event.stopPropagation(); m2EscolherCat(\''+_j(c)+'\')"><span class="m2-cat-item-ico">'+_ico(c)+'</span><span class="m2-cat-item-txt">'+_h(_m2RotuloCat(c))+'</span>'
+        + (subs.length ? '<span class="m2-cat-n">'+subs.length+'</span><span class="m2-cat-sub-seta'+(aberto?' aberto':'')+'">'+m2Svg('chevron')+'</span>' : '')+'</div>';
+      if (aberto) h += '<div class="m2-sub-lista"><div class="m2-sub-item'+(!_m2Sub?' ativo':'')+'" onclick="event.stopPropagation(); m2EscolherSub(null)">Tudo de '+_h(c)+'</div>'
+        + subs.map(function(sb){ return '<div class="m2-sub-item'+(_m2Sub===sb?' ativo':'')+'" onclick="event.stopPropagation(); m2EscolherSub(\''+_j(sb)+'\')">'+_h(sb)+'</div>'; }).join('')+'</div>';
+      return h;
     }).join('');
-    var lab = document.getElementById('m2-cat-label'); if (lab) lab.textContent = _m2RotuloCat(_m2Cat||'Todos');
+    var lab = document.getElementById('m2-cat-label'); if (lab) lab.textContent = _m2RotuloCat(_m2Cat||'Todos') + (_m2Sub ? ' › ' + _m2Sub : '');
   }
   function m2ToggleCategorias(e){
     if(e) e.stopPropagation();
@@ -7094,15 +7133,24 @@ document.addEventListener('click', function(e){
         var r = btn.getBoundingClientRect();
         menu.style.position = 'fixed';
         menu.style.top = (r.bottom + 6) + 'px';
-        menu.style.left = 'auto';
-        menu.style.right = (window.innerWidth - r.right) + 'px';
-        menu.style.minWidth = Math.max(r.width, 230) + 'px';
+        var larg = Math.max(r.width, 250);
+        menu.style.right = 'auto';
+        menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - larg - 8)) + 'px';
+        menu.style.minWidth = Math.min(larg, window.innerWidth - 16) + 'px';
         var disp = window.innerHeight - r.bottom - 18;
         menu.style.maxHeight = Math.max(160, Math.min(380, disp)) + 'px';
       }
     }
   }
-  function m2EscolherCat(c){ _m2Cat=c; var w=document.querySelector('.m2-cat-wrap'); if(w) w.classList.remove('aberto'); renderM2Chips(); renderM2Grid(); }
+  // Escolher categoria: se tiver subcategorias, o menu fica aberto e mostra-as logo por baixo
+  function m2EscolherCat(c){
+    var repetiu = (_m2Cat===c && !_m2Sub);
+    _m2Cat=c; _m2Sub=null;
+    var w=document.querySelector('.m2-cat-wrap'); if(w && (!_m2Subs(c).length || repetiu)) w.classList.remove('aberto');
+    renderM2Chips(); renderM2Grid();
+    try { var a=document.querySelector('#m2-cat-menu .m2-sub-lista'); if(a && a.scrollIntoView) a.scrollIntoView({block:'nearest'}); } catch(e){}
+  }
+  function m2EscolherSub(sb){ _m2Sub=sb||null; var w=document.querySelector('.m2-cat-wrap'); if(w) w.classList.remove('aberto'); renderM2Chips(); renderM2Grid(); }
   document.addEventListener('click', function(e){
     if(!document.body.classList.contains('modo2')) return;
     var w=document.querySelector('.m2-cat-wrap');
@@ -7117,6 +7165,7 @@ document.addEventListener('click', function(e){
       var c=(p.categoria&&String(p.categoria).trim())?p.categoria.trim():'Outros';
       if (_m2Cat==='__kg__'){ if (p.unidade!=='kg') return false; }
       else if (_m2Cat!=='Todos' && c!==_m2Cat) return false;
+      if (_m2Sub && !termo){ if (((p.subcategoria&&String(p.subcategoria).trim())||'').toLowerCase() !== String(_m2Sub).toLowerCase()) return false; }
       if (termo){ var n=(p.nome||'').toLowerCase(), cod=(p.codigo||'').toLowerCase(), cb=(p.codbarras||'').toLowerCase(); if(!(n.indexOf(termo)>=0||cod.indexOf(termo)>=0||cb.indexOf(termo)>=0)) return false; }
       return true;
     });
@@ -7312,6 +7361,51 @@ document.addEventListener('click', function(e){
 <script src="spap-vidro.js?v=4"></script>
 <script src="spap-dourado.js?v=3"></script>
 <script src="spap-rolagem.js?v=1"></script>
+<style id="m2-topo-novo">
+/* Topo novo: uma só pesquisa (curta), categoria ao lado, banner da loja à direita; sem a faixa «Ponto de venda» */
+body.modo2 #m2-cabecalho, body.modo2 #m2-subrow { display:none !important; }
+#m2-topbar { gap:12px; }
+#m2-topbar .m2-busca { flex:1 1 180px; max-width:330px; min-width:0; }
+#m2-topbar .m2-esp { flex:1 1 0; min-width:0; }
+#m2-topbar .m2-cat-btn { height:46px; padding:0 14px; max-width:250px; border-radius:11px; font-family:inherit; }
+#m2-topbar #m2-cat-label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+#m2-topbar .m2-user span.m2-edit-nome { max-width:120px; }
+.m2-cat-item .m2-cat-item-txt { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.m2-cat-item .m2-cat-n { font-size:11px; font-weight:800; min-width:20px; height:20px; padding:0 6px; border-radius:99px; background:rgba(100,116,139,.16); display:inline-flex; align-items:center; justify-content:center; }
+.m2-cat-item.ativo .m2-cat-n { background:rgba(255,255,255,.25); }
+.m2-cat-item .m2-cat-sub-seta { display:flex; opacity:.75; transition:transform .2s; } .m2-cat-item .m2-cat-sub-seta svg { width:14px; height:14px; }
+.m2-cat-item .m2-cat-sub-seta.aberto { transform:rotate(180deg); }
+.m2-sub-lista { margin:4px 0 6px 20px; padding:4px 0 4px 10px; border-left:2px solid var(--m2-ac,#16a34a); display:flex; flex-direction:column; gap:2px; animation:m2-pop .18s ease; }
+.m2-sub-item { padding:9px 12px; border-radius:9px; cursor:pointer; font-size:13.5px; font-weight:600; color:#475569; }
+.m2-sub-item:hover { background:#f1f5f9; }
+.m2-sub-item.ativo { background:rgba(22,163,74,.12); color:#15803d; font-weight:800; }
+body.modo2.m2-ac-azul .m2-sub-lista { border-left-color:#2563eb; } body.modo2.m2-ac-azul .m2-sub-item.ativo { background:rgba(37,99,235,.12); color:#1d4ed8; }
+body.modo2.m2-escuro .m2-sub-item { color:#bbf7d0; } body.modo2.m2-escuro .m2-sub-item:hover { background:#0b2617; } body.modo2.m2-escuro .m2-sub-item.ativo { background:rgba(74,222,128,.16); color:#86efac; }
+body.modo2.gd .m2-sub-lista { border-left-color:var(--gd2); } body.modo2.gd .m2-sub-item { color:var(--gd-tx2); } body.modo2.gd .m2-sub-item:hover { background:var(--gd-sup3); } body.modo2.gd .m2-sub-item.ativo { background:rgba(212,167,60,.16); color:var(--gd1); }
+body.modo2.gd.gd-marfim .m2-sub-item.ativo { color:var(--gd3); }
+/* Banner da loja */
+#m2-topbar .m2-banner { height:46px; box-sizing:border-box; padding:0 14px 0 6px; gap:10px; max-width:250px; min-width:0; overflow:hidden; border-radius:12px; flex:0 1 auto; background:#fff; box-shadow:0 2px 8px rgba(15,23,42,.06); }
+#m2-topbar .m2-banner .m2-b-ico { width:34px; height:34px; border-radius:9px; background:var(--m2-ac,#16a34a); color:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+#m2-topbar .m2-banner .m2-b-ico svg { color:#fff; }
+#m2-topbar .m2-banner .m2-b-logo { width:34px; height:34px; border-radius:9px; object-fit:contain; background:#fff; flex-shrink:0; border:1px solid rgba(15,23,42,.08); }
+#m2-topbar .m2-banner.tem-logo .m2-b-ico { display:none; }
+#m2-topbar .m2-banner #m2-loja-nome { font-weight:800; font-size:14.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+#m2-topbar .m2-banner.tem-banner { padding:0 !important; border:0 !important; width:250px; flex:0 1 250px; background:transparent !important; box-shadow:0 4px 14px rgba(15,23,42,.18); }
+#m2-topbar .m2-banner.tem-banner .m2-b-img { width:100%; height:100%; object-fit:cover; display:block; }
+#m2-topbar .m2-banner.tem-banner .m2-b-ico, #m2-topbar .m2-banner.tem-banner #m2-loja-nome { display:none !important; }
+body.modo2.m2-ac-azul #m2-topbar .m2-banner .m2-b-ico { background:#2563eb; }
+body.modo2.gd #m2-topbar .m2-banner .m2-b-ico { background:var(--gd-grad); } body.modo2.gd #m2-topbar .m2-banner .m2-b-ico svg { color:var(--gd-escrita); }
+@media(max-width:1180px){ #m2-topbar .m2-user span.m2-edit-nome { display:none; } #m2-topbar .m2-banner.tem-banner { width:190px; flex-basis:190px; } #m2-topbar .m2-banner { max-width:190px; } }
+@media(max-width:900px){ #m2-topbar .m2-sos .m2-sos-txt { display:none; } }
+@media(max-width:760px){
+  #m2-topbar { flex-wrap:wrap; row-gap:8px !important; }
+  #m2-topbar .m2-busca { flex:1 1 120px !important; max-width:none; }
+  #m2-topbar .m2-esp { display:none; }
+  #m2-topbar .m2-cat-wrap { order:30; flex:1 1 55%; min-width:0; }
+  #m2-topbar .m2-cat-btn { width:100%; max-width:none; height:42px; justify-content:space-between; }
+  #m2-topbar .m2-banner { order:31; flex:1 1 35% !important; max-width:none !important; width:auto !important; height:42px; min-width:0 !important; }
+}
+</style>
 </body>
 </html>
 <script>
@@ -7377,8 +7471,8 @@ dotNet.innerHTML = '<i class="np-dot"></i><span class="np-txt">Online</span>';
 document.body.appendChild(dotNet);
 // Na interface nova, a pílula fica dentro da barra de topo (ao lado do nome da loja)
 function _colocarIndicadorNet(){
-  var loja = document.querySelector('#m2-topbar .m2-loja');
-  if (loja && dotNet.parentNode !== loja.parentNode) loja.parentNode.insertBefore(dotNet, loja.nextSibling);
+  var loja = document.querySelector('#m2-topbar .m2-sos');
+  if (loja && (dotNet.parentNode !== loja.parentNode || dotNet.nextSibling !== loja)) loja.parentNode.insertBefore(dotNet, loja);
 }
 _colocarIndicadorNet(); setInterval(_colocarIndicadorNet, 2000);
 let _netOscilar = null;
