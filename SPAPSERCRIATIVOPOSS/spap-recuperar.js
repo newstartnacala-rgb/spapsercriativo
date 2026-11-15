@@ -1,6 +1,6 @@
 /* SPAP — "Esqueci a senha" com duas abas (Loja, Monitor, Banca e Banca Monitor).
    Aba 1: email → código do balconista → nova senha (fica à vista).
-   Aba 2: recuperar por email (link para definir nova senha).
+   Aba 2: recuperar por email com código OTP de 6 dígitos (verifyOtp type=recovery) → nova senha confirmada 2 vezes.
    Uso: spapRecuperarSenha({ tipo: 'loja' | 'banca', email: '...', aoEntrar: function(email, senha){...} }) */
 (function () {
   var SQL = 'atualizacao-v2.9.247-gerente-cronometro-e-recuperar-senha.sql';
@@ -201,29 +201,79 @@
       $('#sr-entrar').onclick = function () { var e = st.email, s = st.senha; fechar(); if (op.aoEntrar) op.aoEntrar(e, s); };
     }
 
-    // ---------- ABA 2: por email ----------
+    // ---------- ABA 2: por email, com CÓDIGO (OTP) de 6 dígitos ----------
+    // 1) email → o Supabase envia um email com o código  2) a pessoa escreve o código  3) escolhe a nova senha (2 vezes)
+    var em2 = { passo: 1, email: st.email || '' };
     function abaEmail() {
-      corpo.innerHTML = '<p class="sr-txt">Enviamos para o teu email um link seguro. Abre o email, toca no link e escolhe a nova ' + palavra + '.</p>'
-        + '<label class="sr-lab" for="sr-em2">Email da conta</label>' + campo('sr-em2', 'email', 'nome@exemplo.com', st.email, 'autocomplete="email"')
-        + '<button type="button" class="sr-btn" id="sr-b4">Enviar link de recuperação</button><div class="sr-msg"></div>'
-        + '<p class="sr-txt" style="margin-top:12px;font-size:12px;color:#94a3b8;">Não recebeste? Vê a pasta de spam ou tenta de novo daqui a 1 minuto.</p>';
-      var b = $('#sr-b4'), i = $('#sr-em2');
-      setTimeout(function () { i.focus(); }, 60);
-      var ir = async function () {
-        var em = i.value.trim();
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return msg('Escreve um email válido.');
-        ocupado(b, true, 'A enviar…'); msg('');
+      if (em2.passo === 1) {
+        corpo.innerHTML = '<p class="sr-txt">Enviamos para o teu email um <b>código de 6 dígitos</b>. Escreve-o aqui e depois escolhe a nova ' + palavra + '.</p>'
+          + '<label class="sr-lab" for="sr-em2">Email da conta</label>' + campo('sr-em2', 'email', 'nome@exemplo.com', em2.email, 'autocomplete="email"')
+          + '<button type="button" class="sr-btn" id="sr-b4">Enviar código</button><div class="sr-msg"></div>'
+          + '<p class="sr-txt" style="margin-top:12px;font-size:12px;color:#94a3b8;">Não recebeste? Vê a pasta de spam ou tenta de novo daqui a 1 minuto.</p>';
+        var b = $('#sr-b4'), i = $('#sr-em2');
+        setTimeout(function () { i.focus(); }, 60);
+        var ir = async function () {
+          var em = i.value.trim().toLowerCase();
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return msg('Escreve um email válido.');
+          ocupado(b, true, 'A enviar…'); msg('');
+          try {
+            try { localStorage.setItem('spap_reset_tipo', tipo); } catch (e) {}
+            var r = await supabaseClient.auth.resetPasswordForEmail(em, { redirectTo: new URL('reset-senha.html', location.href).href });
+            ocupado(b, false, 'Enviar código');
+            if (r.error) return msg(/rate|limit|seconds/i.test(r.error.message) ? 'Já pediste há pouco. Espera 1 minuto e tenta de novo.' : r.error.message);
+            em2.email = em; em2.passo = 2; abaEmail();
+          } catch (e) { ocupado(b, false, 'Enviar código'); msg('Sem ligação. Verifica a internet e tenta de novo.'); }
+        };
+        b.onclick = ir; enter('sr-em2', ir);
+        return;
+      }
+      if (em2.passo === 2) {
+        corpo.innerHTML = '<div class="sr-conta">📧 Código enviado para <b>' + esc(em2.email) + '</b></div>'
+          + '<label class="sr-lab" for="sr-otp">Código de 6 dígitos (do email)</label>' + campo('sr-otp', 'text', '000000', '', 'inputmode="numeric" autocomplete="one-time-code" maxlength="8" style="letter-spacing:.35em;font-size:22px;font-weight:800;text-align:center"')
+          + '<button type="button" class="sr-btn" id="sr-b5">Confirmar código</button><div class="sr-msg"></div>'
+          + '<button type="button" class="sr-lnk" id="sr-reenviar">Não chegou? Enviar outra vez</button>'
+          + '<button type="button" class="sr-lnk" id="sr-voltar2">Mudar o email</button>';
+        var b2 = $('#sr-b5'), i2 = $('#sr-otp');
+        setTimeout(function () { i2.focus(); }, 60);
+        var ir2 = async function () {
+          var c = (i2.value || '').replace(/\D/g, '');
+          if (c.length < 6) return msg('Escreve os 6 dígitos que vieram no email.');
+          ocupado(b2, true, 'A confirmar…'); msg('');
+          try {
+            var r = await supabaseClient.auth.verifyOtp({ email: em2.email, token: c, type: 'recovery' });
+            if (r.error) { ocupado(b2, false, 'Confirmar código'); return msg(/expired|invalid|not found/i.test(r.error.message) ? 'Código errado ou já expirado. Confere o email ou pede um código novo.' : r.error.message); }
+            em2.passo = 3; abaEmail();
+          } catch (e) { ocupado(b2, false, 'Confirmar código'); msg('Sem ligação. Verifica a internet e tenta de novo.'); }
+        };
+        b2.onclick = ir2; enter('sr-otp', ir2);
+        $('#sr-reenviar').onclick = async function () {
+          msg('A enviar outra vez…', 'ok');
+          try { var r = await supabaseClient.auth.resetPasswordForEmail(em2.email, { redirectTo: new URL('reset-senha.html', location.href).href }); msg(r.error ? (/rate|limit|seconds/i.test(r.error.message) ? 'Espera 1 minuto antes de pedir outro código.' : r.error.message) : '✓ Novo código enviado.', r.error ? 'erro' : 'ok'); }
+          catch (e) { msg('Sem ligação.'); }
+        };
+        $('#sr-voltar2').onclick = function () { em2.passo = 1; abaEmail(); };
+        return;
+      }
+      // passo 3: nova senha + confirmar
+      corpo.innerHTML = '<div class="sr-conta">✓ Código confirmado · <b>' + esc(em2.email) + '</b></div>'
+        + '<label class="sr-lab" for="sr-n1">Nova ' + palavra + '</label>' + campo('sr-n1', 'password', 'Mínimo 6 caracteres', '', 'autocomplete="new-password"')
+        + '<label class="sr-lab" for="sr-n2" style="margin-top:10px;">Confirmar a nova ' + palavra + '</label>' + campo('sr-n2', 'password', 'Escreve outra vez', '', 'autocomplete="new-password"')
+        + '<button type="button" class="sr-btn verde" id="sr-b6">Guardar nova ' + palavra + '</button><div class="sr-msg"></div>';
+      ligarOlhos();
+      var b3 = $('#sr-b6'), n1 = $('#sr-n1'), n2 = $('#sr-n2');
+      setTimeout(function () { n1.focus(); }, 60);
+      var ir3 = async function () {
+        var v = n1.value, w = n2.value;
+        if (v.trim().length < 6) return msg('A ' + palavra + ' precisa de pelo menos 6 caracteres.');
+        if (v !== w) return msg('As duas ' + palavra + 's não são iguais. Escreve a mesma nas duas caixas.');
+        ocupado(b3, true, 'A guardar…'); msg('');
         try {
-          var url = new URL('reset-senha.html', location.href).href;
-          try { localStorage.setItem('spap_reset_tipo', tipo); } catch (e) {}
-          var r = await supabaseClient.auth.resetPasswordForEmail(em, { redirectTo: url });
-          ocupado(b, false, 'Enviar link de recuperação');
-          if (r.error) return msg(/rate|limit|seconds/i.test(r.error.message) ? 'Já pediste há pouco. Espera 1 minuto e tenta de novo.' : r.error.message);
-          st.email = em;
-          msg('✓ Email enviado para <b>' + esc(em) + '</b>. Abre-o e toca no link para escolher a nova ' + palavra + '.', 'ok');
-        } catch (e) { ocupado(b, false, 'Enviar link de recuperação'); msg('Sem ligação. Verifica a internet e tenta de novo.'); }
+          var r = await supabaseClient.auth.updateUser({ password: v });
+          if (r.error) { ocupado(b3, false, 'Guardar nova ' + palavra); return msg(/same password|different/i.test(r.error.message) ? 'Essa é a ' + palavra + ' antiga. Escolhe uma diferente.' : r.error.message); }
+          st.email = em2.email; st.senha = v; st.passo = 4; st.aba = 'codigo'; em2.passo = 1; desenhar();
+        } catch (e) { ocupado(b3, false, 'Guardar nova ' + palavra); msg('Sem ligação. Verifica a internet e tenta de novo.'); }
       };
-      b.onclick = ir; enter('sr-em2', ir);
+      b3.onclick = ir3; enter('sr-n2', ir3);
     }
 
     desenhar();
