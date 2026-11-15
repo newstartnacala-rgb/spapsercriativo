@@ -8,10 +8,10 @@
   'use strict';
   var CHAVE = 'pdv_m2_interface';
   var OPCOES = ['classica', 'noite', 'marfim'];
-  function ler() { var v = ''; try { v = localStorage.getItem(CHAVE) || ''; } catch (e) {} return OPCOES.indexOf(v) >= 0 ? v : 'classica'; }
+  function ler() { var v = ''; try { v = localStorage.getItem(CHAVE) || ''; } catch (e) {} return OPCOES.indexOf(v) >= 0 ? v : 'marfim'; }   // padrão: Dourada clara (Marfim); a Clássica é escolha
   function gravar(v) { try { localStorage.setItem(CHAVE, v); } catch (e) {} }
   var CHAVE_V = 'pdv_m2_vidro';
-  function lerVidro() { if (window.spapVidro) return window.spapVidro.ligado(); try { return localStorage.getItem(CHAVE_V) === '1'; } catch (e) { return false; } }
+  function lerVidro() { if (window.spapVidro) return window.spapVidro.ligado(); try { var v = localStorage.getItem(CHAVE_V); return v === null ? true : v === '1'; } catch (e) { return true; } }
   function gravarVidro(v) { try { localStorage.setItem(CHAVE_V, v ? '1' : '0'); } catch (e) {} }
   function aplicarVidro(v) { if (v === undefined) v = lerVidro(); estilos(); if (window.spapVidro) { window.spapVidro.definir(!!v); return; } gravarVidro(v); if (document.body) document.body.classList.toggle('gv', !!v); }
   window.spapVidroAplicar = aplicarVidro;

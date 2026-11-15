@@ -352,7 +352,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
   [tabindex]:focus-visible { outline: 2px solid #1a56a0; outline-offset: 1px; }
 </style>
-<script src="app-android.js?v=2.9.275" defer></script>
+<script src="app-android.js?v=2.9.276" defer></script>
 <style>/* a interface antiga nunca aparece: o ecrã antigo fica invisível até o novo abrir (sem piscar) */ body:not(.modo2) #tela-pdv { visibility:hidden !important; }</style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
@@ -5949,7 +5949,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.275';
+  const VERSAO_ATUAL = '2.9.276';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -6822,7 +6822,6 @@ body.modo2.m2-escuro #modal-pagamento #toggle-imprimir, body.modo2.m2-escuro #mo
         </div>
         <div class="m2-def-titulo">Opções</div>
         <div class="m2-nav m2-sub" onclick="m2AcaoMenu('escolherLingua')"><span class="ico" data-ico="globe"></span><span>Idiomas</span></div>
-        <div class="m2-nav m2-sub" onclick="m2AcaoMenu('verPlanos')"><span class="ico" data-ico="zap"></span><span>Ver planos</span></div>
         <div class="m2-nav m2-sub" onclick="m2AcaoMenu('abrirSuporte')"><span class="ico" data-ico="support"></span><span>Suporte</span></div>
         <div class="m2-nav m2-sub" onclick="m2AcaoMenu('sobreSistema')"><span class="ico" data-ico="info"></span><span>Sobre o Sistema</span></div>
         <div class="m2-nav m2-sub m2-app-op" id="m2-instalar-app" onclick="document.body.classList.remove('m2-menu-aberto'); if (window.spapInstalarApp) spapInstalarApp('android');"><span class="ico" data-ico="android"></span><span>App para Android</span></div>
@@ -7368,8 +7367,8 @@ document.addEventListener('click', function(e){
   }, 700);
 </script>
 
-<script src="spap-vidro.js?v=4"></script>
-<script src="spap-dourado.js?v=3"></script>
+<script src="spap-vidro.js?v=5"></script>
+<script src="spap-dourado.js?v=4"></script>
 <script src="spap-rolagem.js?v=1"></script>
 <style id="m2-topo-novo">
 /* Topo novo: uma só pesquisa (curta), categoria ao lado, banner da loja à direita; sem a faixa «Ponto de venda» */
@@ -7553,6 +7552,28 @@ body.modo2.m2-escuro:not(.gd) #m2-sidebar { background:linear-gradient(165deg, r
 body.modo2:not(.gd) #m2-sidebar .m2-nav .ico { background:rgba(255,255,255,.12) !important; border:1px solid rgba(255,255,255,.22) !important; color:#ffffff !important; border-radius:11px !important; width:38px !important; height:38px !important; }
 body.modo2:not(.gd) #m2-sidebar .m2-nav:hover { background:rgba(255,255,255,.12) !important; }
 
+</style>
+<style id="m2-gaveta-transparente">
+/* Barra de menu um pouco mais transparente (vidro), mantendo as letras legíveis */
+body.modo2.gd #m2-sidebar { background:linear-gradient(165deg, rgba(58,44,16,.80) 0%, rgba(24,20,13,.82) 40%, rgba(10,10,12,.86) 100%) !important; -webkit-backdrop-filter:blur(36px) saturate(1.6) !important; backdrop-filter:blur(36px) saturate(1.6) !important; }
+body.modo2.gd.gd-marfim #m2-sidebar { background:linear-gradient(165deg, rgba(255,240,205,.84) 0%, rgba(255,250,238,.86) 45%, rgba(252,246,232,.88) 100%) !important; }
+body.modo2:not(.gd) #m2-sidebar { background:linear-gradient(165deg, rgba(8,64,36,.80) 0%, rgba(5,40,24,.84) 55%, rgba(4,28,18,.88) 100%) !important; -webkit-backdrop-filter:blur(36px) saturate(1.5) !important; backdrop-filter:blur(36px) saturate(1.5) !important; }
+body.modo2.m2-ac-azul:not(.gd) #m2-sidebar { background:linear-gradient(165deg, rgba(23,47,110,.80) 0%, rgba(15,30,72,.84) 55%, rgba(10,20,48,.88) 100%) !important; }
+/* «Personalizar interface»: etiqueta pequena e arrumada, sem cortar */
+body.modo2 #m2-sidebar .m2-nav.gd-entrada { flex-wrap:wrap; row-gap:4px; }
+body.modo2 #m2-sidebar .m2-nav.gd-entrada > span:nth-child(2) { flex:1 1 calc(100% - 56px); min-width:0; font-size:14.5px !important; line-height:1.2; }
+body.modo2 #m2-sidebar .m2-nav.gd-entrada { padding-top:10px !important; padding-bottom:10px !important; }
+body.modo2 #m2-sidebar .m2-nav.gd-entrada .gd-atual { margin-left:51px !important; margin-top:-4px; }
+body.modo2 #m2-sidebar .m2-nav.gd-entrada .gd-atual { font-size:10.5px !important; font-weight:800 !important; padding:3px 8px !important; border-radius:99px !important; white-space:nowrap; text-shadow:none !important; margin-left:51px !important; margin-top:-4px; flex-basis:auto; }
+body.modo2.gd #m2-sidebar .m2-nav.gd-entrada .gd-atual { background:linear-gradient(145deg,#f7d46b,#c8901a) !important; color:#1a1405 !important; }
+body.modo2:not(.gd) #m2-sidebar .m2-nav.gd-entrada .gd-atual { background:rgba(255,255,255,.18) !important; color:#fff !important; }
+body.modo2.gd.gd-marfim #m2-sidebar .m2-nav.gd-entrada .gd-atual { color:#1a1405 !important; }
+body.modo2.gd.gd-marfim #m2-sidebar .m2-status b { color:#15803d !important; text-shadow:none !important; }
+body.modo2.gd #m2-sidebar .m2-status b { text-shadow:none !important; }
+/* Painel das Definições, arrumado como um cartão de vidro */
+body.modo2 #m2-sidebar .m2-def-painel { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius:16px; padding:10px 8px 6px; margin:4px 0 8px; }
+body.modo2.gd #m2-sidebar .m2-def-painel { background:rgba(232,195,106,.07); border-color:rgba(232,195,106,.2); }
+body.modo2.gd.gd-marfim #m2-sidebar .m2-def-painel { background:rgba(255,255,255,.6); border-color:rgba(176,132,44,.25); }
 </style>
 </body>
 </html>

@@ -10,7 +10,9 @@
   var APP = /admin/.test(P) ? 'admin' : /mobile-monitor/.test(P) ? 'banca' : /mobile\.html/.test(P) ? 'bancapdv' : /monitor/.test(P) ? 'loja' : 'pdv';
   var BANCA = APP === 'banca' || APP === 'bancapdv';
   var CHAVE = APP === 'pdv' ? 'pdv_m2_vidro' : 'spap_vidro_' + APP;
-  function ligado() { try { return localStorage.getItem(CHAVE) === '1'; } catch (e) { return false; } }
+  // Padrão: ligado no PDV da Loja e nos Monitores (quem desligar, fica desligado — guarda '0')
+  var PADRAO_ON = APP === 'pdv' || APP === 'loja' || APP === 'banca';
+  function ligado() { try { var v = localStorage.getItem(CHAVE); return v === null ? PADRAO_ON : v === '1'; } catch (e) { return PADRAO_ON; } }
 
   var CSS = ''
     /* cores do vidro (claro por defeito; escuro quando a interface é escura) */
