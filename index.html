@@ -352,7 +352,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
   [tabindex]:focus-visible { outline: 2px solid #1a56a0; outline-offset: 1px; }
 </style>
-<script src="app-android.js?v=2.9.278" defer></script>
+<script src="app-android.js?v=2.9.279" defer></script>
 <style>/* a interface antiga nunca aparece: o ecrã antigo fica invisível até o novo abrir (sem piscar) */ body:not(.modo2) #tela-pdv { visibility:hidden !important; }</style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
@@ -5949,7 +5949,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.278';
+  const VERSAO_ATUAL = '2.9.279';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -7575,6 +7575,147 @@ body.modo2 #m2-sidebar .m2-def-painel { background:rgba(255,255,255,.06); border
 body.modo2.gd #m2-sidebar .m2-def-painel { background:rgba(232,195,106,.07); border-color:rgba(232,195,106,.2); }
 body.modo2.gd.gd-marfim #m2-sidebar .m2-def-painel { background:rgba(255,255,255,.6); border-color:rgba(176,132,44,.25); }
 </style>
+<style id="pg-pro">
+/* ===== Confirmação de venda — profissional, legível e animada ===== */
+@keyframes pgSobe { from { opacity:0; transform:translateY(16px) scale(.985); } to { opacity:1; transform:none; } }
+@keyframes pgPop { 0% { transform:scale(1); } 40% { transform:scale(1.08); } 100% { transform:scale(1); } }
+@keyframes pgBrilho { 0% { left:-60%; } 60%,100% { left:130%; } }
+@keyframes pgPulsa { 0%,100% { box-shadow:0 10px 26px rgba(176,132,44,.35), 0 0 0 0 rgba(232,195,106,.45); } 50% { box-shadow:0 10px 26px rgba(176,132,44,.35), 0 0 0 10px rgba(232,195,106,0); } }
+body.modo2 #modal-pagamento.ativo .pg-topo, body.modo2 #modal-pagamento.ativo .pg-valores, body.modo2 #modal-pagamento.ativo .metodos-pagamento, body.modo2 #modal-pagamento.ativo .pg-corpo { animation:pgSobe .5s cubic-bezier(.22,1,.36,1) both; }
+body.modo2 #modal-pagamento.ativo .pg-valores { animation-delay:.05s; } body.modo2 #modal-pagamento.ativo .metodos-pagamento { animation-delay:.1s; } body.modo2 #modal-pagamento.ativo .pg-corpo { animation-delay:.15s; }
+body.modo2 #modal-pagamento .pg-ecra { -webkit-font-smoothing:antialiased; }
+/* topo */
+body.modo2 #modal-pagamento .pg-topo { padding:14px 20px !important; gap:14px; }
+body.modo2 #modal-pagamento .pg-topo::before { height:3px !important; }
+body.modo2 #modal-pagamento .pg-tit { display:flex; align-items:center; gap:12px; margin-right:auto; min-width:0; }
+body.modo2 #modal-pagamento .pg-tit-ic { width:46px; height:46px; border-radius:14px; display:flex; align-items:center; justify-content:center; background:var(--m2-ac,#16a34a); color:#fff; flex-shrink:0; box-shadow:0 6px 16px rgba(0,0,0,.15); }
+body.modo2 #modal-pagamento .pg-tit-ic svg { width:24px; height:24px; }
+body.modo2 #modal-pagamento .pg-tit b { display:block; font-size:19px; font-weight:900; color:#0f172a; letter-spacing:-.2px; }
+body.modo2 #modal-pagamento .pg-tit small { display:block; font-size:13px; font-weight:700; color:#64748b; margin-top:2px; }
+body.modo2 #modal-pagamento .pg-topo > div:first-of-type:not(.pg-tit) { display:none !important; }
+/* linha de valores: Total | Recebido | Troco */
+body.modo2 #modal-pagamento .pg-valores { display:grid !important; grid-template-columns:1fr 1fr 1fr; gap:12px !important; padding:14px 20px 4px !important; }
+body.modo2 #modal-pagamento .pg-valores > div { border:1px solid #e5e9ef !important; border-radius:18px !important; padding:12px 16px !important; background:#fff !important; box-shadow:0 4px 14px rgba(15,23,42,.06); position:relative; overflow:hidden; min-width:0; }
+body.modo2 #modal-pagamento .pg-valores > div > div:first-child { font-size:12.5px !important; font-weight:800 !important; letter-spacing:.06em; text-transform:uppercase; color:#64748b !important; }
+body.modo2 #modal-pagamento .pg-valores b#pag-metodo-txt { text-transform:none; letter-spacing:0; }
+body.modo2 #modal-pagamento .pg-valores > .pg-total-card #pag-total { display:block; font-size:34px !important; font-weight:900 !important; color:#0f172a !important; letter-spacing:-.5px; margin-top:2px; white-space:nowrap; }
+body.modo2 #modal-pagamento #pag-recebido { font-size:34px !important; font-weight:900 !important; color:#0f172a !important; margin-top:2px; }
+body.modo2 #modal-pagamento #pag-troco { font-size:34px !important; font-weight:900 !important; letter-spacing:-.5px; margin-top:2px; display:inline-block; }
+body.modo2 #modal-pagamento #pag-troco.pg-pop { animation:pgPop .35s ease; }
+body.modo2 #modal-pagamento .pg-valores > .pg-troco { background:linear-gradient(135deg,#f0fdf4,#dcfce7) !important; border-color:#bbf7d0 !important; }
+body.modo2 #modal-pagamento .pg-valores > .pg-troco.falta { background:linear-gradient(135deg,#fff1f2,#ffe4e6) !important; border-color:#fecdd3 !important; }
+body.modo2 #modal-pagamento #pag-troco { color:#15803d !important; }
+body.modo2 #modal-pagamento .pg-troco.falta #pag-troco { color:#dc2626 !important; }
+body.modo2.gd:not(.gd-marfim) #modal-pagamento #pag-troco { color:#86efac !important; }
+body.modo2.gd:not(.gd-marfim) #modal-pagamento .pg-troco.falta #pag-troco { color:#fca5a5 !important; }
+body.modo2 #modal-pagamento .pg-troco-sub { display:block; font-size:13px; font-weight:800; color:#b91c1c; margin-top:2px; min-height:16px; }
+body.modo2 #modal-pagamento .pg-troco:not(.falta) .pg-troco-sub { color:#15803d; }
+/* métodos */
+body.modo2 #modal-pagamento .metodos-pagamento { gap:10px !important; padding:12px 20px 6px !important; border:none !important; }
+body.modo2 #modal-pagamento .metodo-btn { min-height:52px; font-size:15px !important; font-weight:800 !important; border-radius:14px !important; transition:transform .15s, box-shadow .2s, background .2s !important; }
+body.modo2 #modal-pagamento .metodo-btn:active { transform:scale(.97); }
+/* teclado e notas */
+body.modo2 #modal-pagamento .pg-corpo { padding:10px 20px 18px; gap:12px; }
+body.modo2 #modal-pagamento #teclado-pag { gap:10px !important; background:transparent !important; padding:0 !important; }
+body.modo2 #modal-pagamento .pg-notas { gap:10px !important; background:transparent !important; padding:0 !important; min-width:200px !important; }
+body.modo2 #modal-pagamento .pag-tecla-full { font-size:36px !important; font-weight:800 !important; border-radius:18px !important; transition:transform .1s, box-shadow .15s, background .15s !important; }
+body.modo2 #modal-pagamento .pag-tecla-full:active, body.modo2 #modal-pagamento .nota-btn-full:active { transform:scale(.94); }
+body.modo2 #modal-pagamento .nota-btn-full { font-size:20px !important; font-weight:900 !important; border-radius:16px !important; transition:transform .1s, background .15s !important; }
+body.modo2 #modal-pagamento .nota-btn-full.pg-nota::before { content:'MT '; font-size:13px; font-weight:800; opacity:.7; margin-right:2px; }
+body.modo2 #modal-pagamento #btn-confirmar-venda { position:relative; overflow:hidden; border-radius:18px !important; font-size:21px !important; font-weight:900 !important; line-height:1.2; flex:2.2 !important; }
+body.modo2 #modal-pagamento #btn-confirmar-venda::after { content:''; position:absolute; top:0; left:-60%; width:40%; height:100%; background:linear-gradient(100deg,transparent,rgba(255,255,255,.45),transparent); transform:skewX(-20deg); animation:pgBrilho 3.2s ease-in-out infinite; pointer-events:none; }
+body.modo2 #modal-pagamento #btn-confirmar-venda:active { transform:scale(.97); }
+
+/* ---- Dourada (Marfim e Noite) ---- */
+body.modo2.gd #modal-pagamento .pg-ecra { background:radial-gradient(900px 420px at 85% -10%,rgba(232,195,106,.28),transparent 60%), linear-gradient(180deg,#fbf6ea,#f3ead6) !important; }
+body.modo2.gd #modal-pagamento .pg-topo { background:rgba(255,255,255,.75) !important; -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); border-bottom:1px solid rgba(176,132,44,.2) !important; }
+body.modo2.gd #modal-pagamento .pg-topo::before { background:linear-gradient(90deg,#f7d46b,#c8901a,#f7d46b) !important; }
+body.modo2.gd #modal-pagamento .pg-tit-ic { background:linear-gradient(145deg,#f7d46b,#c8901a); color:#1a1405; }
+body.modo2.gd #modal-pagamento .pg-tit b { color:#1f1a10; } body.modo2.gd #modal-pagamento .pg-tit small { color:#7a6a4c; }
+body.modo2.gd #modal-pagamento #toggle-imprimir { background:#fff !important; border-color:rgba(176,132,44,.3) !important; color:#5c4f36 !important; }
+body.modo2.gd #modal-pagamento .pg-topo button[onclick="fecharPagamento()"] { background:#fff !important; border:1px solid rgba(176,132,44,.25) !important; color:#5c4f36 !important; }
+body.modo2.gd #modal-pagamento .pg-valores > div { background:rgba(255,255,255,.85) !important; border-color:rgba(176,132,44,.22) !important; box-shadow:0 6px 18px rgba(120,90,30,.08); }
+body.modo2.gd #modal-pagamento .pg-valores > .pg-total-card { background:linear-gradient(135deg,#1f1a10,#3a2d12) !important; border-color:#1f1a10 !important; }
+body.modo2.gd #modal-pagamento .pg-valores > .pg-total-card > div:first-child { color:#f6dc8c !important; }
+body.modo2.gd #modal-pagamento .pg-valores > .pg-total-card #pag-total { color:#ffe28a !important; }
+body.modo2.gd #modal-pagamento .pg-receber > div:first-child { color:#9a6c14 !important; }
+body.modo2.gd #modal-pagamento .metodo-btn { background:rgba(255,255,255,.85) !important; border:1px solid rgba(176,132,44,.25) !important; color:#3a2f1a !important; }
+body.modo2.gd #modal-pagamento .metodo-btn.ativo { background:linear-gradient(145deg,#f7d46b,#c8901a) !important; color:#1a1405 !important; border-color:#c8901a !important; box-shadow:0 8px 20px rgba(176,132,44,.35) !important; }
+body.modo2.gd #modal-pagamento .pag-tecla-full { background:rgba(255,255,255,.92) !important; border:1px solid rgba(176,132,44,.18) !important; color:#1f1a10 !important; box-shadow:0 3px 0 rgba(176,132,44,.18), 0 6px 14px rgba(120,90,30,.06) !important; }
+body.modo2.gd #modal-pagamento .pag-tecla-full:hover { background:#fffaf0 !important; border-color:rgba(200,144,26,.45) !important; }
+body.modo2.gd #modal-pagamento .pag-tecla-full:active { background:#fdf0c8 !important; box-shadow:0 1px 0 rgba(176,132,44,.2) !important; }
+body.modo2.gd #modal-pagamento .nota-btn-full.pg-nota { background:linear-gradient(135deg,#fffdf6,#fbf1d6) !important; border:1px solid rgba(176,132,44,.3) !important; color:#5a3d06 !important; }
+body.modo2.gd #modal-pagamento .nota-btn-full.pg-nota:hover { border-color:#c8901a !important; }
+body.modo2.gd #modal-pagamento .nota-btn-full.pg-apagar { background:#fff !important; border:1px solid #fecaca !important; color:#b91c1c !important; }
+body.modo2.gd #modal-pagamento .nota-btn-full.pg-limpar { background:#fff1f2 !important; border:1px solid #fecdd3 !important; color:#b91c1c !important; }
+body.modo2.gd #modal-pagamento #btn-confirmar-venda { background:linear-gradient(145deg,#f7d46b 0%,#d9a640 55%,#b98322 100%) !important; color:#1a1405 !important; animation:pgPulsa 2.4s ease-in-out infinite; }
+body.modo2.gd.gd-marfim #modal-pagamento .pg-valores > .pg-troco { background:linear-gradient(135deg,#f0fdf4,#dcfce7) !important; border-color:#bbf7d0 !important; }
+body.modo2.gd.gd-marfim #modal-pagamento .pg-valores > .pg-troco.falta { background:linear-gradient(135deg,#fff1f2,#ffe4e6) !important; border-color:#fecdd3 !important; }
+/* Noite (escura) */
+body.modo2.gd:not(.gd-marfim) #modal-pagamento .pg-ecra { background:radial-gradient(900px 420px at 85% -10%,rgba(232,195,106,.18),transparent 60%), linear-gradient(180deg,#121215,#0a0a0c) !important; }
+body.modo2.gd:not(.gd-marfim) #modal-pagamento .pg-topo { background:rgba(23,23,27,.8) !important; }
+body.modo2.gd:not(.gd-marfim) #modal-pagamento .pg-tit b { color:#f3efe6; } body.modo2.gd:not(.gd-marfim) #modal-pagamento .pg-tit small { color:#a8a294; }
+body.modo2.gd:not(.gd-marfim) #modal-pagamento .pg-valores > div, body.modo2.gd:not(.gd-marfim) #modal-pagamento .metodo-btn, body.modo2.gd:not(.gd-marfim) #modal-pagamento .pag-tecla-full, body.modo2.gd:not(.gd-marfim) #modal-pagamento .nota-btn-full.pg-nota, body.modo2.gd:not(.gd-marfim) #modal-pagamento #toggle-imprimir, body.modo2.gd:not(.gd-marfim) #modal-pagamento .pg-topo button[onclick="fecharPagamento()"] { background:#1b1b20 !important; border-color:rgba(232,195,106,.2) !important; color:#f3efe6 !important; }
+body.modo2.gd:not(.gd-marfim) #modal-pagamento #pag-recebido { color:#f3efe6 !important; }
+body.modo2.gd:not(.gd-marfim) #modal-pagamento .pg-valores > .pg-total-card { background:linear-gradient(135deg,#2a2111,#3d2f12) !important; }
+body.modo2.gd:not(.gd-marfim) #modal-pagamento .pg-valores > .pg-troco { background:linear-gradient(135deg,#0b2a17,#0f3a20) !important; border-color:#14532d !important; }
+body.modo2.gd:not(.gd-marfim) #modal-pagamento .pg-valores > .pg-troco.falta { background:linear-gradient(135deg,#3a0f14,#4c1218) !important; border-color:#7f1d1d !important; }
+body.modo2.gd:not(.gd-marfim) #modal-pagamento .pg-troco-sub { color:#fca5a5; } body.modo2.gd:not(.gd-marfim) #modal-pagamento .pg-troco:not(.falta) .pg-troco-sub { color:#86efac; }
+body.modo2.gd:not(.gd-marfim) #modal-pagamento .metodo-btn.ativo { background:linear-gradient(145deg,#f7d46b,#c8901a) !important; color:#1a1405 !important; }
+body.modo2.gd:not(.gd-marfim) #modal-pagamento .nota-btn-full.pg-apagar, body.modo2.gd:not(.gd-marfim) #modal-pagamento .nota-btn-full.pg-limpar { background:#2a1214 !important; border-color:#7f1d1d !important; color:#fca5a5 !important; }
+@media (max-width:760px){
+  body.modo2 #modal-pagamento .pg-valores { grid-template-columns:1fr 1fr; padding:10px 12px 2px !important; gap:8px !important; }
+  body.modo2 #modal-pagamento .pg-valores > .pg-total-card { grid-column:1 / -1; }
+  body.modo2 #modal-pagamento .pg-valores > .pg-total-card #pag-total, body.modo2 #modal-pagamento #pag-recebido, body.modo2 #modal-pagamento #pag-troco { font-size:26px !important; }
+  body.modo2 #modal-pagamento .pg-tit small { display:none; }
+  body.modo2 #modal-pagamento .pg-corpo { padding:8px 12px 12px; gap:8px; }
+  body.modo2 #modal-pagamento .pg-notas { min-width:110px !important; }
+  body.modo2 #modal-pagamento .pag-tecla-full { font-size:28px !important; }
+  body.modo2 #modal-pagamento .metodos-pagamento { padding:8px 12px 4px !important; }
+}
+@media (prefers-reduced-motion:reduce){ body.modo2 #modal-pagamento *, body.modo2 #modal-pagamento *::after { animation:none !important; } }
+</style>
+<script>
+/* Confirmação de venda: cabeçalho com nº de artigos, cartão do total, estado do troco (Falta / Troco) com animação */
+(function(){
+  function fmtMT(v){ return 'MT ' + (Math.round(v*100)/100).toFixed(2); }
+  function preparar(){
+    var m=document.getElementById('modal-pagamento'); if(!m) return;
+    var topo=m.querySelector('.pg-topo'), val=m.querySelector('.pg-valores');
+    if (topo && !topo.querySelector('.pg-tit')) {
+      var t=document.createElement('div'); t.className='pg-tit';
+      t.innerHTML='<span class="pg-tit-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><div><b>Confirmar venda</b><small id="pg-artigos">—</small></div>';
+      topo.insertBefore(t, topo.firstChild);
+      // o total passa para um cartão próprio na linha dos valores
+      var tot=document.getElementById('pag-total');
+      if (val && tot) { var velho=tot.parentNode; var c=document.createElement('div'); c.className='pg-total-card'; c.innerHTML='<div>Total a pagar</div>'; c.appendChild(tot); val.insertBefore(c, val.firstChild); if (velho && velho!==c && !velho.querySelector('button')) velho.style.display='none'; }
+      var tr=m.querySelector('.pg-troco'); if (tr && !tr.querySelector('.pg-troco-sub')) { var sb=document.createElement('span'); sb.className='pg-troco-sub'; sb.id='pg-troco-sub'; tr.appendChild(sb); }
+      m.querySelectorAll('.nota-btn-full').forEach(function(b){ var oc=b.getAttribute('onclick')||''; if(/notaRapida/.test(oc)) b.classList.add('pg-nota'); else if(/Apagar/.test(oc)) b.classList.add('pg-apagar'); else if(/Limpar/.test(oc)) b.classList.add('pg-limpar'); });
+    }
+    try {
+      var n=(carrinho||[]).reduce(function(s,i){ return s+(parseFloat(i.qtd)||0); },0), linhas=(carrinho||[]).length;
+      var a=document.getElementById('pg-artigos'); if(a) a.textContent = linhas + (linhas===1?' produto':' produtos') + ' · ' + (Math.round(n*1000)/1000) + (n===1?' unidade':' unidades');
+    } catch(e){}
+    estado();
+  }
+  function estado(){
+    try {
+      var total=(carrinho||[]).reduce(function(s,i){ return s+i.preco*i.qtd; },0);
+      var rec=parseFloat((document.getElementById('pag-recebido')||{}).value)||0;
+      var tr=document.querySelector('#modal-pagamento .pg-troco'), sb=document.getElementById('pg-troco-sub'); if(!tr||!sb) return;
+      var falta = rec>0 && rec<total;
+      tr.classList.toggle('falta', falta);
+      sb.textContent = rec<=0 ? '' : (falta ? 'Falta ' + fmtMT(total-rec) : (Math.abs(rec-total)<0.005 ? 'Valor certo ✓' : 'Devolver ao cliente'));
+      var el=document.getElementById('pag-troco'); if(el){ el.classList.remove('pg-pop'); void el.offsetWidth; el.classList.add('pg-pop'); }
+    } catch(e){}
+  }
+  var orig = window.calcularTroco;
+  if (typeof orig === 'function') window.calcularTroco = function(){ var r=orig.apply(this, arguments); estado(); return r; };
+  var m=document.getElementById('modal-pagamento');
+  if (m) new MutationObserver(function(){ if (m.classList.contains('ativo')) preparar(); }).observe(m,{attributes:true,attributeFilter:['class']});
+  document.addEventListener('click', function(e){ if (e.target.closest && e.target.closest('#modal-pagamento .pag-tecla-full, #modal-pagamento .nota-btn-full')) setTimeout(estado, 0); }, true);
+})();
+</script>
 </body>
 </html>
 <script>
