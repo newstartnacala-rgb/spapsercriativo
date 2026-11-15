@@ -352,7 +352,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
   [tabindex]:focus-visible { outline: 2px solid #1a56a0; outline-offset: 1px; }
 </style>
-<script src="app-android.js?v=2.9.273" defer></script>
+<script src="app-android.js?v=2.9.274" defer></script>
 <style>/* a interface antiga nunca aparece: o ecrã antigo fica invisível até o novo abrir (sem piscar) */ body:not(.modo2) #tela-pdv { visibility:hidden !important; }</style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
@@ -5949,7 +5949,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.273';
+  const VERSAO_ATUAL = '2.9.274';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -6803,7 +6803,7 @@ body.modo2.m2-escuro #modal-pagamento #toggle-imprimir, body.modo2.m2-escuro #mo
       <div class="m2-logo-ico" id="m2-logo-ico"><img src="ssteam-logo.png" alt="SSTEAM"></div>
       <div><b id="m2-logo-nome">Loja</b><small>Vendas | Stock</small></div>
     </div>
-    <div class="m2-nav" id="m2-entrega-dia" onclick="document.body.classList.remove('m2-menu-aberto'); if(typeof abrirRelatorioEntregar==='function') abrirRelatorioEntregar();"><span class="ico" data-ico="box"></span><span class="m2-ed-txt"><b>Entrega total do dia</b><small>Fechar o caixa e entregar</small></span><span class="m2-ed-seta">›</span></div>
+    <div class="m2-nav" id="m2-entrega-dia" onclick="document.body.classList.remove('m2-menu-aberto'); if(typeof abrirRelatorioEntregar==='function') abrirRelatorioEntregar();"><span class="ico" data-ico="box"></span><span class="m2-ed-txt"><b>Entrega total do dia</b><small>Fechar o caixa e entregar</small><em class="m2-ed-chip" id="m2-ed-chip">0 vendas hoje</em></span><span class="m2-ed-seta">›</span></div>
     <!-- Todos os itens do menu aparecem aqui (preenchido por renderM2Nav) -->
     <div id="m2-nav-lista"></div>
     <div class="m2-flex"></div>
@@ -7451,6 +7451,72 @@ body.modo2.gv .m2-relogio { background:var(--gv-p2) !important; -webkit-backdrop
 @media(max-width:1000px){ .m2-relogio small { display:none; } .m2-relogio { padding-right:10px; } }
 @media(max-width:860px){ .m2-relogio { display:none; } }
 </style>
+<style id="m2-gaveta-pro">
+/* ===== Barra de menu (gaveta) — vidro dourado, animada e arrumada ===== */
+@keyframes m2GvEntra { from { opacity:0; transform:translateX(-18px); } to { opacity:1; transform:none; } }
+@keyframes m2GvBrilho { 0%,100% { opacity:.55; } 50% { opacity:1; } }
+body.modo2 #m2-sidebar { transition:left .42s cubic-bezier(.22,1,.36,1), box-shadow .3s !important; width:290px !important; left:-320px; padding:18px 14px 14px !important; }
+body.modo2.m2-menu-aberto #m2-sidebar { left:0 !important; }
+body.modo2.m2-menu-aberto #m2-backdrop { -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); background:rgba(0,0,0,.35) !important; }
+body.modo2.m2-menu-aberto #m2-sidebar .m2-logo, body.modo2.m2-menu-aberto #m2-sidebar #m2-entrega-dia, body.modo2.m2-menu-aberto #m2-sidebar #m2-nav-lista > .m2-nav, body.modo2.m2-menu-aberto #m2-sidebar .m2-rodape > .m2-nav, body.modo2.m2-menu-aberto #m2-sidebar .m2-status
+  { animation:m2GvEntra .45s cubic-bezier(.22,1,.36,1) both; animation-delay:calc(var(--i,0) * 38ms + 60ms); }
+/* Dourada (Noite): vidro dourado */
+body.modo2.gd #m2-sidebar { background:linear-gradient(165deg, rgba(58,44,16,.62) 0%, rgba(24,20,13,.70) 38%, rgba(10,10,12,.78) 100%) !important;
+  -webkit-backdrop-filter:blur(30px) saturate(1.5) !important; backdrop-filter:blur(30px) saturate(1.5) !important;
+  border-right:1px solid rgba(232,195,106,.28) !important; border-radius:0 24px 24px 0; box-shadow:12px 0 50px rgba(0,0,0,.55), inset -1px 0 0 rgba(249,226,154,.06) !important; }
+body.modo2.gd #m2-sidebar::before { content:''; position:absolute; top:-80px; left:-60px; width:260px; height:260px; border-radius:50%; background:radial-gradient(circle, rgba(232,195,106,.28), transparent 70%); pointer-events:none; animation:m2GvBrilho 5s ease-in-out infinite; }
+body.modo2.gd #m2-sidebar > * { position:relative; }
+body.modo2.gd #m2-sidebar .m2-logo { border-bottom:1px solid rgba(232,195,106,.18) !important; }
+body.modo2.gd #m2-sidebar .m2-logo b { color:#f9e29a !important; letter-spacing:.01em; }
+body.modo2.gd #m2-sidebar .m2-logo small { color:rgba(243,239,230,.6) !important; }
+body.modo2 #m2-sidebar #m2-nav-lista > .m2-nav, body.modo2 #m2-sidebar .m2-rodape > .m2-nav { min-height:52px; padding:8px 12px !important; border-radius:14px !important; margin-bottom:4px; border:1px solid transparent; }
+body.modo2.gd #m2-sidebar .m2-nav { color:#f3efe6 !important; }
+body.modo2.gd #m2-sidebar .m2-nav:hover { background:linear-gradient(90deg, rgba(232,195,106,.16), rgba(232,195,106,.04)) !important; border-color:rgba(232,195,106,.22) !important; transform:translateX(3px); }
+body.modo2.gd #m2-sidebar .m2-nav .ico { width:38px !important; height:38px !important; border-radius:11px !important; background:rgba(232,195,106,.1) !important; border:1px solid rgba(232,195,106,.22) !important; color:#f6dc8c !important; transition:transform .2s, background .2s; }
+body.modo2.gd #m2-sidebar .m2-nav:hover .ico { background:linear-gradient(145deg,#f7d46b,#c8901a) !important; color:#1a1405 !important; transform:scale(1.06); }
+body.modo2.gd #m2-sidebar .m2-rodape { border-top:1px solid rgba(232,195,106,.18) !important; }
+body.modo2.gd #m2-sidebar .m2-nav.m2-sair { color:#fca5a5 !important; }
+body.modo2.gd #m2-sidebar .m2-nav.m2-sair .ico { background:rgba(248,113,113,.1) !important; border-color:rgba(248,113,113,.25) !important; color:#fca5a5 !important; }
+body.modo2.gd #m2-sidebar .m2-nav.m2-sair:hover .ico { background:#dc2626 !important; color:#fff !important; }
+body.modo2.gd #m2-sidebar .m2-status { padding:10px 6px 2px !important; }
+/* Dourada (Marfim): vidro claro dourado */
+body.modo2.gd.gd-marfim #m2-sidebar { background:linear-gradient(165deg, rgba(255,240,200,.78) 0%, rgba(255,250,238,.82) 45%, rgba(250,244,230,.86) 100%) !important; border-right-color:rgba(176,132,44,.3) !important; box-shadow:12px 0 50px rgba(120,90,30,.25) !important; }
+body.modo2.gd.gd-marfim #m2-sidebar .m2-logo b { color:#7a5512 !important; text-shadow:none !important; }
+body.modo2.gd.gd-marfim #m2-sidebar .m2-logo small, body.modo2.gd.gd-marfim #m2-sidebar .m2-status { color:#8a7a5c !important; }
+body.modo2.gd.gd-marfim #m2-sidebar .m2-nav { color:#2a2214 !important; }
+body.modo2.gd.gd-marfim #m2-sidebar .m2-nav .ico { background:rgba(212,167,60,.14) !important; color:#9a6c14 !important; border-color:rgba(176,132,44,.28) !important; }
+body.modo2.gd.gd-marfim #m2-sidebar .m2-nav.m2-sair { color:#b91c1c !important; }
+/* Cartão «Entrega total do dia» */
+body.modo2 #m2-sidebar #m2-entrega-dia { min-height:78px; padding:12px 12px 12px 14px !important; margin:6px 0 14px !important; align-items:center; gap:12px !important; flex-shrink:0; }
+body.modo2 #m2-sidebar #m2-entrega-dia .ico { width:46px !important; height:46px !important; border-radius:14px !important; box-shadow:0 6px 16px rgba(200,144,26,.35); }
+body.modo2 #m2-sidebar #m2-entrega-dia .ico svg { width:24px; height:24px; }
+body.modo2 #m2-sidebar #m2-entrega-dia .m2-ed-txt b { font-size:15.5px !important; }
+body.modo2 #m2-sidebar #m2-entrega-dia .m2-ed-txt small { font-size:12px !important; margin-top:2px !important; }
+body.modo2 #m2-sidebar #m2-entrega-dia .m2-ed-chip { align-self:flex-start; margin-top:6px; font-style:normal; font-size:11px; font-weight:800; padding:3px 9px; border-radius:99px; background:rgba(0,0,0,.28); color:#ffe08a; border:1px solid rgba(255,224,138,.35); }
+body.modo2.gd #m2-sidebar #m2-entrega-dia { background:linear-gradient(135deg, rgba(247,212,107,.34) 0%, rgba(200,144,26,.22) 55%, rgba(255,255,255,.06) 100%) !important; border:1px solid rgba(249,226,154,.45) !important; box-shadow:0 10px 26px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,240,190,.25) !important; }
+body.modo2.gd.gd-marfim #m2-sidebar #m2-entrega-dia { background:linear-gradient(135deg,#f7d46b,#d6a440 60%,#c8901a) !important; border-color:rgba(176,132,44,.5) !important; box-shadow:0 10px 24px rgba(176,132,44,.35) !important; }
+body.modo2.gd.gd-marfim #m2-sidebar #m2-entrega-dia .m2-ed-txt b { color:#1a1405 !important; }
+body.modo2.gd.gd-marfim #m2-sidebar #m2-entrega-dia .m2-ed-txt small { color:rgba(26,20,5,.75) !important; }
+body.modo2.gd.gd-marfim #m2-sidebar #m2-entrega-dia .m2-ed-seta { color:#1a1405 !important; }
+body.modo2.gd.gd-marfim #m2-sidebar #m2-entrega-dia .m2-ed-chip { background:rgba(255,255,255,.55); color:#5a3d06; border-color:rgba(26,20,5,.15); }
+body.modo2.gd.gd-marfim #m2-sidebar #m2-entrega-dia .ico { background:#1a1405 !important; color:#f7d46b !important; }
+@media (prefers-reduced-motion:reduce) { body.modo2.m2-menu-aberto #m2-sidebar * { animation:none !important; } }
+</style>
+<script>
+/* Gaveta: ordem da animação + número de vendas de hoje no cartão (sem mostrar valores ao vendedor) */
+(function(){
+  function preparar(){
+    var sb=document.getElementById('m2-sidebar'); if(!sb) return;
+    var i=0; sb.querySelectorAll('.m2-logo, #m2-entrega-dia, #m2-nav-lista > .m2-nav, .m2-rodape > .m2-nav, .m2-status').forEach(function(el){ el.style.setProperty('--i', i++); });
+    try {
+      var h=new Date(), n=(window.vendas||(typeof vendas!=='undefined'?vendas:[])||[]).filter(function(v){ var d=new Date(v.dataISO||v.criado_em); return d.getFullYear()===h.getFullYear()&&d.getMonth()===h.getMonth()&&d.getDate()===h.getDate(); }).length;
+      var c=document.getElementById('m2-ed-chip'); if(c) c.textContent = n + (n===1?' venda hoje':' vendas hoje');
+    } catch(e){}
+  }
+  var era=false;
+  new MutationObserver(function(){ var ab=document.body.classList.contains('m2-menu-aberto'); if(ab&&!era) preparar(); era=ab; }).observe(document.body,{attributes:true,attributeFilter:['class']});
+})();
+</script>
 </body>
 </html>
 <script>
