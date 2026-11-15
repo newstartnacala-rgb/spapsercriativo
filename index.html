@@ -352,7 +352,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
   [tabindex]:focus-visible { outline: 2px solid #1a56a0; outline-offset: 1px; }
 </style>
-<script src="app-android.js?v=2.9.272" defer></script>
+<script src="app-android.js?v=2.9.273" defer></script>
 <style>/* a interface antiga nunca aparece: o ecrã antigo fica invisível até o novo abrir (sem piscar) */ body:not(.modo2) #tela-pdv { visibility:hidden !important; }</style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
@@ -5949,7 +5949,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.272';
+  const VERSAO_ATUAL = '2.9.273';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -6845,7 +6845,7 @@ body.modo2.m2-escuro #modal-pagamento #toggle-imprimir, body.modo2.m2-escuro #mo
         <button class="m2-cat-btn" onclick="m2ToggleCategorias(event)" title="Categorias e subcategorias"><span class="m2-cat-ico" data-ico="grid"></span><span id="m2-cat-label">Todas as categorias</span><span class="m2-cat-seta" data-ico="chevron"></span></button>
         <div class="m2-cat-menu" id="m2-cat-menu"></div>
       </div>
-      <div class="m2-esp"></div>
+      <div class="m2-esp"><div class="m2-relogio" id="m2-relogio" title="Data e hora"><span class="m2-rl-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><div><small id="m2-rl-data">—</small><b id="m2-rl-hora">--:--</b></div></div></div>
       <button class="m2-sos" onclick="acionarEmergencia()" title="Emergência (F9)"><span class="m2-sos-ico" data-ico="alert"></span><span class="m2-sos-txt">Emergência</span></button>
       <div class="m2-user"><button class="m2-atualizar" id="m2-atualizar" onclick="this.classList.add('m2-a-girar'); var b=this; try{atualizarLojaManual();}catch(e){} setTimeout(function(){b.classList.remove('m2-a-girar');},1600);" title="Atualizar dados"><span data-ico="refresh"></span></button><span id="m2-user-nome" class="m2-edit-nome" onclick="m2EditarNome()" title="Clica para editar o teu nome">—</span></div>
       <div class="m2-loja m2-banner" id="m2-banner" title="Banner da loja (muda-se no Monitor › Meu Perfil)"><img class="m2-b-img" id="m2-banner-img" alt="" style="display:none"><img class="m2-b-logo" id="m2-banner-logo" alt="" style="display:none"><span class="m2-b-ico" data-ico="store"></span><span id="m2-loja-nome">Loja</span></div>
@@ -7087,6 +7087,14 @@ document.addEventListener('click', function(e){
   }
   setInterval(function(){ _m2BannerLoja = null; try { if (document.body.classList.contains('modo2')) m2PintarBanner(); } catch(e){} }, 300000);
 
+  // Relógio do topo (data + hora)
+  function m2Relogio(){
+    var d=new Date(), dt=document.getElementById('m2-rl-data'), h=document.getElementById('m2-rl-hora'); if(!h) return;
+    h.textContent = String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+    var t = d.toLocaleDateString('pt-PT',{weekday:'short',day:'2-digit',month:'short'}).replace(/\./g,'');
+    if (dt) dt.textContent = t.charAt(0).toUpperCase()+t.slice(1);
+  }
+  m2Relogio(); setInterval(m2Relogio, 10000);
   var _m2Sub = null;
   // subcategorias de uma categoria: as definidas pelo dono no Monitor + as que já existem nos produtos
   function _m2Subs(c){
@@ -7137,8 +7145,10 @@ document.addEventListener('click', function(e){
         menu.style.right = 'auto';
         menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - larg - 8)) + 'px';
         menu.style.minWidth = Math.min(larg, window.innerWidth - 16) + 'px';
-        var disp = window.innerHeight - r.bottom - 18;
-        menu.style.maxHeight = Math.max(160, Math.min(380, disp)) + 'px';
+        var pn = document.getElementById('m2-painel'), fundo = window.innerHeight - 18;
+        try { if (pn) { var pr = pn.getBoundingClientRect(); if (pr.bottom > r.bottom + 200) fundo = Math.min(fundo, pr.bottom); } } catch(e){}
+        var disp = fundo - r.bottom - 6;   // acaba ao nível do fundo da área dos produtos
+        menu.style.maxHeight = Math.max(200, disp) + 'px';   // desce até ao fundo do ecrã, como a área dos produtos
       }
     }
   }
@@ -7405,6 +7415,41 @@ body.modo2.gd #m2-topbar .m2-banner .m2-b-ico { background:var(--gd-grad); } bod
   #m2-topbar .m2-cat-btn { width:100%; max-width:none; height:42px; justify-content:space-between; }
   #m2-topbar .m2-banner { order:31; flex:1 1 35% !important; max-width:none !important; width:auto !important; height:42px; min-width:0 !important; }
 }
+</style>
+<style id="m2-menu-relogio">
+/* Menu das categorias: sempre legível (também no modo vidro) e com a altura até ao fundo do ecrã */
+body.modo2 .m2-cat-wrap #m2-cat-menu { max-height:none; padding:8px; border-radius:16px !important; background:rgba(255,255,255,.97) !important; -webkit-backdrop-filter:blur(26px) saturate(1.5) !important; backdrop-filter:blur(26px) saturate(1.5) !important; border:1px solid #e2e8f0 !important; box-shadow:0 24px 60px rgba(15,23,42,.28) !important; z-index:2000 !important; scrollbar-width:thin; }
+body.modo2.m2-escuro .m2-cat-wrap #m2-cat-menu { background:rgba(6,20,13,.97) !important; border-color:#14432b !important; box-shadow:0 24px 60px rgba(0,0,0,.65) !important; }
+body.modo2.gd .m2-cat-wrap #m2-cat-menu { background:linear-gradient(180deg,rgba(26,24,20,.98),rgba(14,14,17,.98)) !important; border:1px solid rgba(232,195,106,.35) !important; box-shadow:0 26px 70px rgba(0,0,0,.7), inset 0 1px 0 rgba(249,226,154,.08) !important; }
+body.modo2.gd.gd-marfim .m2-cat-wrap #m2-cat-menu { background:rgba(255,252,245,.98) !important; border-color:rgba(176,132,44,.3) !important; box-shadow:0 24px 60px rgba(120,90,30,.22) !important; }
+body.modo2 #m2-cat-menu .m2-cat-item { min-height:46px; padding:0 12px; border-radius:11px; font-size:14.5px; font-weight:700; gap:10px; margin-bottom:2px; display:flex; align-items:center; }
+body.modo2.gd #m2-cat-menu .m2-cat-item { color:#f3efe6 !important; }
+body.modo2.gd.gd-marfim #m2-cat-menu .m2-cat-item { color:#1f1a10 !important; }
+body.modo2.gd #m2-cat-menu .m2-cat-item:hover { background:rgba(212,167,60,.12) !important; }
+body.modo2.gd #m2-cat-menu .m2-cat-n { background:rgba(232,195,106,.18); color:#f9e29a; }
+body.modo2.gd.gd-marfim #m2-cat-menu .m2-cat-n { color:#8a6216; }
+body.modo2 #m2-cat-menu .m2-sub-lista { margin:2px 0 8px 22px; padding:4px 0 4px 12px; }
+body.modo2 #m2-cat-menu .m2-sub-item { min-height:40px; display:flex; align-items:center; padding:0 12px; font-size:14px; }
+body.modo2.gd #m2-cat-menu .m2-sub-item { color:#d9d2c2 !important; }
+body.modo2.gd #m2-cat-menu .m2-sub-item:hover { background:rgba(255,255,255,.06) !important; color:#fff !important; }
+body.modo2.gd #m2-cat-menu .m2-sub-item.ativo { background:rgba(212,167,60,.18) !important; color:#f9e29a !important; }
+body.modo2.gd.gd-marfim #m2-cat-menu .m2-sub-item { color:#5b5140 !important; }
+body.modo2.gd.gd-marfim #m2-cat-menu .m2-sub-item.ativo { color:#8a6216 !important; }
+/* Relógio no topo (antes de «Online») */
+#m2-topbar .m2-esp { display:flex; justify-content:flex-end; align-items:center; }
+.m2-relogio { display:flex; align-items:center; gap:9px; height:46px; padding:0 14px 0 8px; border-radius:12px; background:#fff; border:1px solid #e5e9ef; box-shadow:0 2px 8px rgba(15,23,42,.05); white-space:nowrap; }
+.m2-relogio .m2-rl-ic { width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center; background:rgba(22,163,74,.12); color:#16a34a; flex-shrink:0; }
+.m2-relogio .m2-rl-ic svg { width:18px; height:18px; }
+.m2-relogio small { display:block; font-size:11px; font-weight:700; color:#64748b; line-height:1.1; }
+.m2-relogio b { display:block; font-size:17px; font-weight:900; color:#0f172a; line-height:1.15; letter-spacing:.02em; font-variant-numeric:tabular-nums; }
+body.modo2.m2-ac-azul .m2-relogio .m2-rl-ic { background:rgba(37,99,235,.12); color:#2563eb; }
+body.modo2.m2-escuro .m2-relogio { background:#0a1a12; border-color:#14432b; } body.modo2.m2-escuro .m2-relogio b { color:#ecfdf5; } body.modo2.m2-escuro .m2-relogio small { color:#86efac; }
+body.modo2.gd .m2-relogio { background:var(--gd-sup2) !important; border:1px solid var(--gd-borda) !important; }
+body.modo2.gd .m2-relogio .m2-rl-ic { background:var(--gd-grad); color:var(--gd-escrita); }
+body.modo2.gd .m2-relogio b { color:var(--gd-tx); } body.modo2.gd .m2-relogio small { color:var(--gd-tx2); }
+body.modo2.gv .m2-relogio { background:var(--gv-p2) !important; -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); border-color:var(--gv-bd) !important; }
+@media(max-width:1000px){ .m2-relogio small { display:none; } .m2-relogio { padding-right:10px; } }
+@media(max-width:860px){ .m2-relogio { display:none; } }
 </style>
 </body>
 </html>
