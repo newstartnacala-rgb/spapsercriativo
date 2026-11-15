@@ -19,7 +19,7 @@
     { k: 'bronze', n: 'Bronze', a: '#eeb27a', c: '#b0703a', e: '#7f4d24' }, { k: 'platina', n: 'Ouro branco', a: '#f4f3ee', c: '#b9b6aa', e: '#8a877d' } ];
   var JOIAS = [ { k: 'onix', n: 'Ouro & Ónix', a: '#e0b84a', b: '#1f2937' }, { k: 'esmeralda', n: 'Ouro & Esmeralda', a: '#e0b84a', b: '#047857' }, { k: 'rubi', n: 'Ouro & Rubi', a: '#e0b84a', b: '#b91c1c' },
     { k: 'safira', n: 'Ouro & Safira', a: '#e0b84a', b: '#1d4ed8' }, { k: 'ametista', n: 'Ouro & Ametista', a: '#e0b84a', b: '#7c3aed' }, { k: 'perola', n: 'Ouro & Pérola', a: '#c9962f', b: '#f1e6cf' } ];
-  var PADRAO = { gCor: 'classico', gMixA: '#e0b84a', gMixB: '#047857', gMixModo: 'degrade', gMixPeso: 50, interface: 'marfim', cor: CORES[0].k, mixA: '#1d6ff2', mixB: '#db2777', mixModo: 'degrade', mixPeso: 50, fundo: 'normal', transp: 35, letra: 'normal', cantos: 'redondos', ondas: true, animacoes: true, sino: true, nome: '' };
+  var PADRAO = { gCor: 'classico', gMixA: '#e0b84a', gMixB: '#047857', gMixModo: 'degrade', gMixPeso: 50, interface: 'classica', cor: CORES[0].k, mixA: '#1d6ff2', mixB: '#db2777', mixModo: 'degrade', mixPeso: 50, fundo: 'normal', transp: 35, letra: 'normal', cantos: 'redondos', ondas: true, animacoes: true, sino: true, nome: '' };
   function ler() { var o = {}; try { o = JSON.parse(localStorage.getItem(CHAVE) || '{}') || {}; } catch (e) {} var r = {}; for (var k in PADRAO) r[k] = (k in o) ? o[k] : PADRAO[k]; return r; }
   function gravar(o) { try { localStorage.setItem(CHAVE, JSON.stringify(o)); } catch (e) {} }
 
