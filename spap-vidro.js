@@ -11,7 +11,7 @@
   var BANCA = APP === 'banca' || APP === 'bancapdv';
   var CHAVE = APP === 'pdv' ? 'pdv_m2_vidro' : 'spap_vidro_' + APP;
   // Padrão: ligado no PDV da Loja e nos Monitores (quem desligar, fica desligado — guarda '0')
-  var PADRAO_ON = APP === 'pdv';   // só a Loja principal; monitores e banca ficam no modo antigo
+  var PADRAO_ON = APP !== 'admin';   // vidro ligado por padrão na Loja, Monitores e Banca (desliga-se nas Definições)
   function ligado() { try { var v = localStorage.getItem(CHAVE); return v === null ? PADRAO_ON : v === '1'; } catch (e) { return PADRAO_ON; } }
 
   var CSS = ''
