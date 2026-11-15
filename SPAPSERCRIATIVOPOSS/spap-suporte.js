@@ -1,6 +1,7 @@
 /* SPAP — Suporte técnico (Loja, Banca, Monitores e site).
-   Todos os botões/links de suporte abrem o grupo oficial do WhatsApp, depois de uma confirmação.
-   spapAbrirSuporte()  → mostra a janela e, ao confirmar, abre o grupo.
+   Todos os botões/links de suporte abrem uma janela onde a pessoa escolhe: ligar por telefone ou falar no WhatsApp
+   (número 861667843). O grupo oficial fica como opção secundária.
+   spapAbrirSuporte()  → mostra a janela de escolha.
    Links <a> para o grupo (ou o antigo wa.me do suporte) são apanhados automaticamente. */
 (function () {
   var LINK = 'https://chat.whatsapp.com/I8lB2zT6hxfFNJ3xcqJ8Sh?s=cl&p=a&iam=2';
@@ -51,23 +52,49 @@
       } catch (e) { fim(''); }
     });
   }
+  // Número oficial do suporte (chamada e WhatsApp)
+  var NUM = '861667843', NUM_INT = '258' + NUM;
+  window.SPAP_SUPORTE_TEL = NUM;
+  function infoApp() {
+    var P = location.pathname;
+    var app = /admin/.test(P) ? 'Administração' : /mobile-monitor/.test(P) ? 'Monitor da Banca' : /mobile\.html/.test(P) ? 'Banca' : /monitor/.test(P) ? 'Monitor da Loja' : /login|registo|planos/.test(P) ? 'Entrada' : 'Loja';
+    var v = (window.APP_VERSAO || window.MONITOR_VERSAO || window.BANCA_VERSAO || '').toString();
+    var loja = '';
+    try { var w = window; loja = (w.sessaoAtual && (w.sessaoAtual.nomeEmpresa || w.sessaoAtual.nomeLoja)) || (w.sessao && w.sessao.nomeLoja) || (typeof w.nomeLoja === 'string' ? w.nomeLoja : '') || ''; } catch (e) {}
+    return { app: app, versao: v, loja: loja };
+  }
+  function msgWhats() {
+    var i = infoApp();
+    return 'Olá, suporte SSTEAM. Preciso de ajuda com a app *' + i.app + '*' + (i.loja ? ' (' + i.loja + ')' : '') + (i.versao ? ' — versão ' + i.versao : '') + '.\nProblema: ';
+  }
+  var TEL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>';
+  var css2 = ''
+    + '.ssp-op{display:flex;align-items:center;gap:14px;width:100%;padding:14px 16px;border-radius:18px;border:1.5px solid #e2e8f0;background:#fff;cursor:pointer;text-align:left;font-family:inherit;transition:transform .12s, box-shadow .2s, border-color .2s;margin-bottom:10px;}'
+    + '.ssp-op:active{transform:scale(.98);} .ssp-op:hover{border-color:#86efac;box-shadow:0 8px 22px rgba(22,163,74,.12);}'
+    + '.ssp-op .ssp-op-ic{width:50px;height:50px;border-radius:15px;display:grid;place-items:center;flex-shrink:0;color:#fff;box-shadow:0 8px 18px rgba(0,0,0,.14);}'
+    + '.ssp-op .ssp-op-ic svg{width:26px;height:26px;}'
+    + '.ssp-op.tel .ssp-op-ic{background:linear-gradient(135deg,#3b82f6,#1d4ed8);} .ssp-op.wa .ssp-op-ic{background:linear-gradient(135deg,#22c55e,#15803d);}'
+    + '.ssp-op b{display:block;font-size:16px;font-weight:800;color:#0f172a;} .ssp-op small{display:block;font-size:12.5px;color:#64748b;margin-top:2px;line-height:1.35;}'
+    + '.ssp-op .ssp-op-seta{margin-left:auto;color:#94a3b8;font-size:22px;line-height:1;}'
+    + '.ssp-num{display:inline-flex;align-items:center;gap:8px;margin:0 auto 14px;padding:8px 14px;border-radius:99px;background:#f1f5f9;color:#0f172a;font-weight:900;font-size:18px;letter-spacing:.06em;font-variant-numeric:tabular-nums;}'
+    + '.ssp-num i{font-style:normal;font-size:11px;font-weight:800;color:#64748b;letter-spacing:.08em;}'
+    + '.ssp-grupo{display:block;width:100%;margin-top:4px;background:none;border:0;color:#16a34a;font-weight:800;font-size:13px;font-family:inherit;cursor:pointer;padding:8px;}'
+    + '@media(max-width:380px){.ssp-op b{font-size:15px;} .ssp-op small{font-size:12px;}}';
   window.spapAbrirSuporte = function (linkPedido) {
     estilo();
+    if (!document.getElementById('ssp-css2')) { var s2 = document.createElement('style'); s2.id = 'ssp-css2'; s2.textContent = css2; document.head.appendChild(s2); }
     if (document.getElementById('ssp')) return;
     var d = document.createElement('div'); d.id = 'ssp';
     d.innerHTML = '<div class="ssp-c" role="dialog" aria-modal="true" aria-labelledby="ssp-t">'
-      + '<div class="ssp-topo"><div class="ssp-ico">' + WA + '<i>' + GRUPO + '</i></div>'
-      + '<div class="ssp-tit" id="ssp-t">Suporte técnico SSTEAM</div><div class="ssp-sub">Grupo oficial no WhatsApp</div></div>'
-      + '<div class="ssp-corpo">'
-      + '<p class="ssp-txt">Vais entrar no <b>grupo oficial de suporte</b> da Spap-Sercriativo no WhatsApp. Confirmas?</p>'
-      + '<div class="ssp-lista">'
-      + '<div class="ssp-it"><span>' + CHAT + '</span>Tira dúvidas e reporta problemas diretamente à equipa</div>'
-      + '<div class="ssp-it"><span>' + APP + '</span>Ajuda com a Loja, a Banca e os Monitores</div>'
-      + '<div class="ssp-it"><span>' + ESC + '</span>Nunca partilhes a tua senha no grupo</div>'
-      + '</div>'
-      + '<button type="button" class="ssp-ok">' + WA + 'Entrar no grupo de suporte</button>'
+      + '<div class="ssp-topo"><div class="ssp-ico">' + CHAT + '<i>' + ESC + '</i></div>'
+      + '<div class="ssp-tit" id="ssp-t">Suporte técnico SSTEAM</div><div class="ssp-sub">Como preferes falar connosco?</div></div>'
+      + '<div class="ssp-corpo" style="text-align:center;">'
+      + '<div class="ssp-num"><i>SUPORTE</i>' + NUM.replace(/(\d{2})(\d{3})(\d{4})/, '$1 $2 $3') + '</div>'
+      + '<button type="button" class="ssp-op tel"><span class="ssp-op-ic">' + TEL + '</span><span><b>Ligar por telefone</b><small>Chamada directa para o suporte</small></span><span class="ssp-op-seta">›</span></button>'
+      + '<button type="button" class="ssp-op wa"><span class="ssp-op-ic">' + WA + '</span><span><b>Falar no WhatsApp</b><small>Fica registado por escrito — serve de prova</small></span><span class="ssp-op-seta">›</span></button>'
       + '<button type="button" class="ssp-nao">Agora não</button>'
-      + '<div class="ssp-nota">Abre o WhatsApp no teu telemóvel ou computador</div>'
+      + '<button type="button" class="ssp-grupo">Entrar no grupo oficial de suporte</button>'
+      + '<div class="ssp-nota">Nunca partilhes a tua senha com ninguém</div>'
       + '</div></div>';
     document.body.appendChild(d);
     requestAnimationFrame(function () { d.classList.add('on'); });
@@ -77,13 +104,16 @@
     document.addEventListener('keydown', tecla);
     d.addEventListener('click', function (e) { if (e.target === d) fechar(); });
     d.querySelector('.ssp-nao').onclick = fechar;
-    d.querySelector('.ssp-ok').onclick = function () {
-      // abre já (dentro do toque) para o telemóvel não bloquear a janela
+    d.querySelector('.ssp-op.tel').onclick = function () { location.href = 'tel:+' + NUM_INT; fechar(); };
+    d.querySelector('.ssp-op.wa').onclick = function () {
+      var l = 'https://wa.me/' + NUM_INT + '?text=' + encodeURIComponent(msgWhats());
+      var w = null; try { w = window.open(l, '_blank'); } catch (e) {}
+      if (!w) location.href = l;
+      fechar();
+    };
+    d.querySelector('.ssp-grupo').onclick = function () {
       var w = null; try { w = window.open('about:blank', '_blank'); } catch (e) {}
-      pLink.then(function (l) {
-        if (w && !w.closed) { try { w.location.href = l; } catch (e) { location.href = l; } } else location.href = l;
-        fechar();
-      });
+      pLink.then(function (l) { if (w && !w.closed) { try { w.location.href = l; } catch (e) { location.href = l; } } else location.href = l; fechar(); });
     };
   };
   // Apanha qualquer link de suporte (o grupo novo ou o antigo número de suporte)

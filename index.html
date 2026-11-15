@@ -334,6 +334,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   #area-recibo .rec-tabela td.c-num { text-align:right; white-space:nowrap; padding-left:4px; }
   #area-recibo .rec-tot { display:flex; justify-content:space-between; font-size:13px; margin:3px 0; }
   #area-recibo .rec-total-grande { font-size:19px; font-weight:bold; }
+  #area-recibo #recibo-troco-linha { font-size:19px; font-weight:bold; margin-top:4px; }
   #area-recibo .rec-rodape { text-align:center; font-size:13px; margin-top:8px; line-height:1.45; }
   @media print {
     /* Esconde TUDO menos o recibo (display:none colapsa a altura — evita páginas em branco) */
@@ -352,7 +353,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
   [tabindex]:focus-visible { outline: 2px solid #1a56a0; outline-offset: 1px; }
 </style>
-<script src="app-android.js?v=2.9.279" defer></script>
+<script src="app-android.js?v=2.9.280" defer></script>
 <style>/* a interface antiga nunca aparece: o ecrã antigo fica invisível até o novo abrir (sem piscar) */ body:not(.modo2) #tela-pdv { visibility:hidden !important; }</style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
@@ -1074,9 +1075,11 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     <div id="vendedor-erro" style="display:none;">❌ Código inválido!</div>
     <button type="button" class="tv-entrar" onclick="confirmarCodigoVendedor()">ENTRAR</button>
     <div class="tv-nota">🔒 O código é dado pelo dono da loja.</div>
+    <button type="button" class="tv-trocar" onclick="trocarContaLoja()">Entrar com outra conta (e-mail)</button>
   </div>
 </div>
 <style>
+  #tela-vendedor .tv-trocar { margin-top:14px; background:none; border:0; color:#64748b; font-size:12.5px; font-weight:700; font-family:inherit; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
   #tela-vendedor { position:fixed; inset:0; z-index:99995; align-items:center; justify-content:center; padding:16px; overflow:auto;
     background:#eef3fb; font-family:'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; }
   #tela-vendedor::before { content:""; position:fixed; inset:-20%; pointer-events:none;
@@ -1348,7 +1351,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   <div class="rec-tot rec-total-grande"><span>TOTAL</span><span id="recibo-total"></span></div>
   <div class="rec-tot"><span>Pagamento</span><span id="recibo-metodo"></span></div>
   <div class="rec-tot" id="recibo-recebido-linha" style="display:none"><span>Recebido</span><span id="recibo-recebido"></span></div>
-  <div class="rec-tot" id="recibo-troco-linha" style="display:none"><span>Troco</span><span id="recibo-troco"></span></div>
+  <div class="rec-tot rec-total-grande" id="recibo-troco-linha" style="display:none"><span>TROCO</span><span id="recibo-troco"></span></div>
   <div class="rec-sep"></div>
   <div class="rec-rodape" id="recibo-rodape-txt">Este não é factura, apenas um controlo interno.<br>Obrigado pela preferência!</div>
 </div>
@@ -1366,9 +1369,9 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 </script>
 <script src="spap-erros.js?v=2"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="spap-avisos.js?v=5"></script>
+<script src="spap-avisos.js?v=6"></script>
 <script src="spap-expirou.js?v=2"></script>
-<script src="spap-suporte.js?v=1"></script>
+<script src="spap-suporte.js?v=3"></script>
 <script>
   // Estado global da sessão atual (preenchido após verificar login com o Supabase)
   let sessaoAtual = null;   // { user, lojaId, nomeLoja, papel, nomeExibicao }
@@ -1908,9 +1911,47 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
       + '<div style="min-width:0;"><b style="display:block;font-size:14.5px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (loja || 'Loja').replace(/</g,'&lt;') + '</b>'
       + (quem ? '<small style="display:block;font-size:12.5px;color:#64748b;font-weight:600;">' + quem.replace(/</g,'&lt;') + '</small>' : '') + '</div></div>'
       + (pend ? '<div style="margin-top:10px;background:#fffbeb;border:1px solid #fcd34d;color:#92400e;border-radius:12px;padding:10px 12px;font-size:13px;font-weight:600;text-align:left;">⏳ Ainda há ' + pend + ' venda(s) por enviar. Ficam guardadas neste aparelho e são enviadas quando voltares a entrar com internet.</div>' : '');
+    // Com balconistas configurados, «Sair» só fecha o balcão: a conta (e-mail) fica neste aparelho
+    // e, para voltar, basta o código. Trocar de conta faz-se no ecrã do código.
+    const temBalconistas = !!(sessaoAtual && (sessaoAtual.vendedores || []).length);
+    if (temBalconistas) {
+      const ok2 = await spapConfirmar('Sair do balcão?', 'Para voltar a vender basta escrever o código do balconista. Não é preciso e-mail nem senha.', { icone:'👋', ok:'Sair', cancelar:'Ficar', extraHtml: extra });
+      if (!ok2) return;
+      sairDoBalcao();
+      return;
+    }
     const ok = await spapConfirmar('Sair da Loja?', 'Vais terminar a sessão neste aparelho. Para voltar a vender, entra de novo com o e-mail e a senha.', { icone:'👋', ok:'Sair', cancelar:'Ficar', perigo:true, extraHtml: extra });
     if (!ok) return;
     supabaseClient.auth.signOut().then(() => { window.location.href = 'login.html'; });
+  }
+  // Mostra ao balconista a hora a que entrou hoje (junto ao nome, no topo)
+  function mostrarHoraEntrada() {
+    try {
+      if (!sessaoAtual || !sessaoAtual.vendedorCodigo || !window.spapHoraEntradaHoje) return;
+      var hr = spapHoraEntradaHoje(sessaoAtual.lojaId, sessaoAtual.vendedorCodigo); if (!hr) return;
+      var u = document.getElementById('nome-usuario'); if (u && u.textContent.indexOf('entrou') < 0) u.textContent += ' · entrou ' + hr;
+      var m2 = document.querySelector('#m2-topbar .m2-user span.m2-edit-nome'); if (m2 && m2.textContent.indexOf('entrou') < 0) m2.title = 'Entraste às ' + hr;
+      if (typeof mostrarNotif === 'function' && !window._horaEntradaAvisada) { window._horaEntradaAvisada = true; mostrarNotif('👤 Balconista ' + sessaoAtual.vendedorCodigo + ' · entraste às ' + hr); }
+    } catch (e) {}
+  }
+  // Fecha o balcão (sem terminar a conta): volta ao ecrã do código
+  function sairDoBalcao() {
+    try { if (typeof fecharMenu === 'function') fecharMenu(); } catch (e) {}
+    try { document.body.classList.remove('m2-menu-aberto'); } catch (e) {}
+    if (sessaoAtual) sessaoAtual.vendedorCodigo = null;
+    try { sessionStorage.removeItem('pdv_vendedor_codigo'); } catch (e) {}
+    const u = document.getElementById('nome-usuario'); if (u) u.textContent = (sessaoAtual && sessaoAtual.nomeExibicao) || '';
+    const i = document.getElementById('campo-vendedor-codigo'); if (i) i.value = '';
+    const er = document.getElementById('vendedor-erro'); if (er) er.style.display = 'none';
+    pedirCodigoVendedor();
+  }
+  // Trocar de conta (e-mail): só a partir do ecrã do código
+  async function trocarContaLoja() {
+    const ok = await spapConfirmar('Trocar de conta?', 'Vais sair da conta desta loja neste aparelho. Para voltar, será preciso o e-mail e a senha do dono.', { icone:'🔁', ok:'Trocar de conta', cancelar:'Ficar', perigo:true });
+    if (!ok) return;
+    try { localStorage.removeItem('pdv_cache_sessao'); } catch (e) {}
+    try { await supabaseClient.auth.signOut(); } catch (e) {}
+    window.location.href = 'login.html';
   }
 
   document.querySelectorAll('.modal-fundo').forEach(modalFundo => {
@@ -3117,6 +3158,8 @@ async function scannerFechar() {
         gastos_nota: gastosNota || null
       });
     } catch(e) {}
+    // Turnos (Monitor): hora a que este balconista entregou o dia
+    try { if (window.spapRegistarEntrega) spapRegistarEntrega({ lojaId: sessaoAtual.lojaId, codigo: sessaoAtual.vendedorCodigo, tipo: 'loja', dinheiro: dinheiro, gastos: gastos, numVendas: vendasHoje.length }); } catch(e) {}
 
     // SOBRA AUTOMÁTICA: se entregou mais do que as vendas registadas (menos gastos), guarda a sobra sozinho.
     const sobra = Math.round((dinheiro - (totalHoje - gastos)) * 100) / 100;
@@ -3730,10 +3773,12 @@ async function scannerFechar() {
     t += linha + '\n';
     const pecas = venda.itens.reduce((s,i)=>s+(parseInt(i.qtd)||0),0);
     t += _col('Total de pecas:', String(pecas), W) + '\n';
-    t += _col('TOTAL:', 'MT ' + fmtN(venda.total), W) + '\n';
+    // TOTAL e TROCO em letra grande (dupla altura e largura) + negrito, para se verem bem
+    const GRANDE = GS + '!' + '\x11', NORMAL = GS + '!' + '\x00', NEG = ESC + 'E\x01', NEGOFF = ESC + 'E\x00';
+    t += NEG + GRANDE + _col('TOTAL:', 'MT ' + fmtN(venda.total), W / 2) + NORMAL + NEGOFF + '\n';
     t += _col('Pagamento:', _semAcentos(venda.metodo), W) + '\n';
     if (venda.recebido != null) t += _col('Recebido:', 'MT ' + fmtN(venda.recebido), W) + '\n';
-    if (venda.troco != null) t += _col('Troco:', 'MT ' + fmtN(venda.troco), W) + '\n';
+    if (venda.troco != null) t += NEG + GRANDE + _col('TROCO:', 'MT ' + fmtN(venda.troco), W / 2) + NORMAL + NEGOFF + '\n';
     t += linha + '\n';
     t += ESC + 'a\x01';
     const _rod = (sessaoAtual && sessaoAtual.reciboRodape && sessaoAtual.reciboRodape.trim());
@@ -4722,7 +4767,9 @@ async function scannerFechar() {
     document.getElementById('vendedor-erro').style.display = 'none';
     sessaoAtual.vendedorCodigo = cod;
     sessionStorage.setItem('pdv_vendedor_codigo', cod);
+    try { if (window.spapRegistarEntrada) spapRegistarEntrada({ lojaId: sessaoAtual.lojaId, codigo: cod, tipo: 'loja' }); } catch (e) {}
     setTimeout(_verAbertura, 400);
+    setTimeout(mostrarHoraEntrada, 600);
     document.getElementById('tela-vendedor').style.display = 'none';
     const u = document.getElementById('nome-usuario');
     if (u) u.textContent = (sessaoAtual.nomeExibicao||'') + ' · 👤' + cod;
@@ -4838,7 +4885,9 @@ async function scannerFechar() {
       if (lote.startsWith('u-')) q = q.eq('id', lote.slice(2)); else q = q.eq('lote', lote);
       const { data: pend } = await q;
       let n = 0;
-      for (const p of (pend || [])) { try { const ok = await _confirmarPerdaInterna(p.id, p.quantidade, p.produto_id); if (ok) n++; } catch(e) {} }
+      let erroPerm = null;
+      for (const p of (pend || [])) { try { const ok = await _confirmarPerdaInterna(p.id, p.quantidade, p.produto_id); if (ok) n++; } catch(e) { erroPerm = e; } }
+      if (erroPerm && !n) throw erroPerm;
       mostrarNotif('✅ ' + n + ' perda(s) confirmada(s). Stock descontado.');
       renderProdutos();
       abrirVerPerdas();
@@ -4853,7 +4902,12 @@ async function scannerFechar() {
       .update({ estado: 'confirmado', confirmado_por: (sessaoAtual && sessaoAtual.vendedorCodigo) || 'balconista', confirmado_em: new Date().toISOString() })
       .eq('id', id).eq('estado', 'pendente').select('id, produto_id, quantidade');
     if (error) throw error;
-    if (!rows || rows.length === 0) return false; // já tratada
+    if (!rows || rows.length === 0) {
+      // Nada mudou: ou já estava tratada, ou o banco de dados não deixou alterar (falta a permissão do SQL v2.9.280)
+      const { data: ainda } = await supabaseClient.from('perdas').select('estado').eq('id', id).maybeSingle();
+      if (ainda && ainda.estado === 'pendente') throw new Error('O banco de dados não deixou confirmar. O dono precisa de correr no Supabase o SQL atualizacao-v2.9.280-perdas-confirmar.sql.');
+      return false; // já tratada noutro aparelho
+    }
     const pid = produtoId || (rows[0] && rows[0].produto_id);
     const q = parseInt(qtd) || (rows[0] && parseInt(rows[0].quantidade)) || 0;
     if (pid && q > 0) {
@@ -5949,7 +6003,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.279';
+  const VERSAO_ATUAL = '2.9.280';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -7368,8 +7422,9 @@ document.addEventListener('click', function(e){
 </script>
 
 <script src="spap-vidro.js?v=7"></script>
-<script src="spap-dourado.js?v=4"></script>
-<script src="spap-rolagem.js?v=1"></script>
+<script src="spap-dourado.js?v=5"></script>
+<script src="spap-rolagem.js?v=2"></script>
+<script src="spap-teclado.js?v=1"></script>
 <style id="m2-topo-novo">
 /* Topo novo: uma só pesquisa (curta), categoria ao lado, banner da loja à direita; sem a faixa «Ponto de venda» */
 body.modo2 #m2-cabecalho, body.modo2 #m2-subrow { display:none !important; }
@@ -7648,7 +7703,7 @@ body.modo2.gd #modal-pagamento .nota-btn-full.pg-nota { background:linear-gradie
 body.modo2.gd #modal-pagamento .nota-btn-full.pg-nota:hover { border-color:#c8901a !important; }
 body.modo2.gd #modal-pagamento .nota-btn-full.pg-apagar { background:#fff !important; border:1px solid #fecaca !important; color:#b91c1c !important; }
 body.modo2.gd #modal-pagamento .nota-btn-full.pg-limpar { background:#fff1f2 !important; border:1px solid #fecdd3 !important; color:#b91c1c !important; }
-body.modo2.gd #modal-pagamento #btn-confirmar-venda { background:linear-gradient(145deg,#f7d46b 0%,#d9a640 55%,#b98322 100%) !important; color:#1a1405 !important; animation:pgPulsa 2.4s ease-in-out infinite; }
+body.modo2.gd #modal-pagamento #btn-confirmar-venda { background:linear-gradient(145deg,#f7d46b 0%,#d9a640 55%,#b98322 100%) !important; color:#1a1405 !important; box-shadow:0 10px 26px rgba(176,132,44,.35); }
 body.modo2.gd.gd-marfim #modal-pagamento .pg-valores > .pg-troco { background:linear-gradient(135deg,#f0fdf4,#dcfce7) !important; border-color:#bbf7d0 !important; }
 body.modo2.gd.gd-marfim #modal-pagamento .pg-valores > .pg-troco.falta { background:linear-gradient(135deg,#fff1f2,#ffe4e6) !important; border-color:#fecdd3 !important; }
 /* Noite (escura) */
@@ -7706,14 +7761,15 @@ body.modo2.gd:not(.gd-marfim) #modal-pagamento .nota-btn-full.pg-apagar, body.mo
       var falta = rec>0 && rec<total;
       tr.classList.toggle('falta', falta);
       sb.textContent = rec<=0 ? '' : (falta ? 'Falta ' + fmtMT(total-rec) : (Math.abs(rec-total)<0.005 ? 'Valor certo ✓' : 'Devolver ao cliente'));
-      var el=document.getElementById('pag-troco'); if(el){ el.classList.remove('pg-pop'); void el.offsetWidth; el.classList.add('pg-pop'); }
+      var el=document.getElementById('pag-troco'); if(el){ var v=el.textContent; if (v!==el.dataset.ultimo){ el.dataset.ultimo=v; el.classList.remove('pg-pop'); void el.offsetWidth; el.classList.add('pg-pop'); } }
     } catch(e){}
   }
   var orig = window.calcularTroco;
   if (typeof orig === 'function') window.calcularTroco = function(){ var r=orig.apply(this, arguments); estado(); return r; };
   var m=document.getElementById('modal-pagamento');
-  if (m) new MutationObserver(function(){ if (m.classList.contains('ativo')) preparar(); }).observe(m,{attributes:true,attributeFilter:['class']});
-  document.addEventListener('click', function(e){ if (e.target.closest && e.target.closest('#modal-pagamento .pag-tecla-full, #modal-pagamento .nota-btn-full')) setTimeout(estado, 0); }, true);
+  var estavaAberto=false;
+  if (m) new MutationObserver(function(){ var ab=m.classList.contains('ativo'); if (ab && !estavaAberto) preparar(); estavaAberto=ab; }).observe(m,{attributes:true,attributeFilter:['class']});
+  // (o estado é actualizado pelo calcularTroco; não é preciso ouvir os cliques — evitava-se assim a animação a disparar duas vezes)
 })();
 </script>
 </body>

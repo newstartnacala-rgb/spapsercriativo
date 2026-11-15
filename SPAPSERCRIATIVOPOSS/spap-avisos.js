@@ -48,6 +48,82 @@
     } finally { _abrindo = false; }
   };
 
+  // ===== Balcão: cada entrada com código (registo de turnos: hora de entrada e hora de entrega) =====
+  // Guarda também neste aparelho a hora a que este balconista entrou hoje (para mostrar no balcão).
+  window.spapRegistarEntrada = async function (o) {
+    // o = { lojaId, codigo, tipo:'loja'|'banca', userId?, fila? }
+    if (!o || !o.lojaId) return;
+    if (window.spapEuSuper && spapEuSuper()) return;
+    var agora = new Date(), tipo = o.tipo === 'banca' ? 'banca' : 'loja';
+    try { localStorage.setItem('spap_entrada_' + o.lojaId + '_' + (o.codigo || '-'), JSON.stringify({ dia: dia(agora), hora: agora.toISOString() })); } catch (e) {}
+    await inserir({ loja_id: o.lojaId, user_id: o.userId || await uid(), quem: nomeBalc(o.codigo), por_gerente: false, acao: 'entrada',
+      detalhe: (tipo === 'banca' ? 'Entrou na banca' : 'Entrou na loja') + ' às ' + hora(agora),
+      extra: { codigo: o.codigo || null, tipo: tipo, hora: agora.toISOString() }, criado_em: agora.toISOString() }, o.fila);
+  };
+  // Hora a que este balconista entrou hoje (neste aparelho), ou '' se ainda não entrou hoje
+  window.spapHoraEntradaHoje = function (lojaId, codigo) {
+    try { var v = JSON.parse(localStorage.getItem('spap_entrada_' + lojaId + '_' + (codigo || '-')) || 'null'); if (v && v.dia === dia()) return hora(v.hora); } catch (e) {}
+    return '';
+  };
+  // ===== Monitores: turnos dos últimos N dias (entradas, aberturas e entregas, por dia e por balconista) =====
+  window.spapLerTurnos = async function (lojaId, dias) {
+    dias = dias || 7;
+    var ini = new Date(); ini.setDate(ini.getDate() - (dias - 1)); ini.setHours(0, 0, 0, 0);
+    var r = await supabaseClient.from('atividade_log').select('quem, acao, detalhe, extra, criado_em').eq('loja_id', lojaId)
+      .in('acao', ['entrada', 'abertura', 'entrega_dia']).gte('criado_em', ini.toISOString()).order('criado_em', { ascending: true }).limit(2000);
+    if (r.error) throw r.error;
+    var porDia = {};
+    (r.data || []).forEach(function (l) {
+      var d = dia(new Date(l.criado_em)), q = l.quem || 'Balconista';
+      var D = porDia[d] = porDia[d] || {}; var T = D[q] = D[q] || { quem: q, entradas: [], entrega: null };
+      if (l.acao === 'entrega_dia') { if (!T.entrega || new Date(l.criado_em) > new Date(T.entrega.hora)) T.entrega = { hora: l.criado_em, dinheiro: (l.extra && l.extra.dinheiro) || 0, gastos: (l.extra && l.extra.gastos) || 0, num_vendas: (l.extra && l.extra.num_vendas) || 0 }; }
+      else { if (T.entradas.indexOf(l.criado_em) < 0) T.entradas.push(l.criado_em); }
+    });
+    // ordena por dia (mais recente primeiro)
+    return Object.keys(porDia).sort().reverse().map(function (d) {
+      var ts = Object.keys(porDia[d]).sort().map(function (q) { var t = porDia[d][q]; t.entradas.sort(); return t; });
+      return { dia: d, turnos: ts };
+    });
+  };
+  // HTML pronto a usar nos dois monitores (mesma apresentação)
+  window.spapTurnosHtml = function (lista, opts) {
+    opts = opts || {};
+    function h(d) { return hora(d); }
+    function dur(a, b) { var m = Math.round((new Date(b) - new Date(a)) / 60000); if (m < 0) return ''; return (Math.floor(m / 60)) + 'h' + ('0' + (m % 60)).slice(-2); }
+    var hoje = dia();
+    if (!lista.length) return '<div class="tn-vazio">Ainda não há registos de turnos nos últimos 7 dias.<br><small>Cada vez que um balconista entra com o código ou entrega o dia, fica aqui a hora.</small></div>';
+    return lista.map(function (g) {
+      var dt = new Date(g.dia + 'T12:00:00'), rot = dt.toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'short' }).replace(/\./g, '');
+      rot = rot.charAt(0).toUpperCase() + rot.slice(1);
+      var linhas = g.turnos.map(function (t) {
+        var e1 = t.entradas[0], ult = t.entradas[t.entradas.length - 1], ent = t.entrega;
+        var estado = ent ? '<span class="tn-est ok">✓ Entregou ' + h(ent.hora) + '</span>' : (g.dia === hoje ? '<span class="tn-est aberto">● Em turno</span>' : '<span class="tn-est falta">✕ Não entregou</span>');
+        return '<div class="tn-turno' + (ent ? ' ok' : g.dia === hoje ? ' aberto' : ' falta') + '">'
+          + '<div class="tn-quem"><b>' + esc(t.quem) + '</b>' + estado + '</div>'
+          + '<div class="tn-grid">'
+          + '<div><small>Entrou</small><b>' + (e1 ? h(e1) : '—') + '</b></div>'
+          + '<div><small>Entregou</small><b>' + (ent ? h(ent.hora) : '—') + '</b></div>'
+          + '<div><small>Tempo</small><b>' + (e1 && ent ? dur(e1, ent.hora) : (e1 && g.dia === hoje ? dur(e1, new Date()) : '—')) + '</b></div>'
+          + (opts.semValores ? '' : '<div><small>Entregue</small><b>' + (ent ? fmt(ent.dinheiro) : '—') + '</b></div>')
+          + '</div>'
+          + (t.entradas.length > 1 ? '<div class="tn-ent">Entradas: ' + t.entradas.map(h).join(' · ') + '</div>' : '')
+          + '</div>';
+      }).join('');
+      return '<div class="tn-dia"><div class="tn-dia-tit">' + esc(rot) + (g.dia === hoje ? ' <i>hoje</i>' : '') + '</div>' + linhas + '</div>';
+    }).join('');
+  };
+  window.SPAP_TURNOS_CSS = ''
+    + '.tn-vazio{text-align:center;color:#64748b;padding:26px 14px;font-size:14px;line-height:1.5;} .tn-vazio small{color:#94a3b8;}'
+    + '.tn-dia{margin-bottom:14px;} .tn-dia-tit{font-size:12.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#64748b;margin:0 0 8px 2px;} .tn-dia-tit i{font-style:normal;background:#2563eb;color:#fff;font-size:10.5px;padding:2px 8px;border-radius:99px;margin-left:6px;text-transform:none;letter-spacing:0;}'
+    + '.tn-turno{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:12px;margin-bottom:8px;position:relative;overflow:hidden;box-shadow:0 4px 12px rgba(15,23,42,.05);}'
+    + '.tn-turno::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:#94a3b8;} .tn-turno.ok::before{background:#22c55e;} .tn-turno.aberto::before{background:#3b82f6;} .tn-turno.falta::before{background:#ef4444;}'
+    + '.tn-quem{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 10px 6px;} .tn-quem>b{font-size:15px;color:#0f172a;}'
+    + '.tn-est{font-size:12px;font-weight:800;padding:4px 10px;border-radius:99px;white-space:nowrap;} .tn-est.ok{background:#dcfce7;color:#15803d;} .tn-est.aberto{background:#dbeafe;color:#1d4ed8;} .tn-est.falta{background:#fee2e2;color:#b91c1c;}'
+    + '.tn-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-left:6px;} .tn-grid>div{background:#f8fafc;border:1px solid #e2e8f0;border-radius:11px;padding:7px 8px;min-width:0;}'
+    + '.tn-grid small{display:block;font-size:10.5px;font-weight:700;color:#64748b;} .tn-grid b{display:block;font-size:15px;font-weight:800;color:#0f172a;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'
+    + '.tn-ent{margin:8px 0 0 6px;font-size:11.5px;color:#64748b;}'
+    + '@media(max-width:560px){.tn-grid{grid-template-columns:1fr 1fr;}}';
+
   // ===== Balcão: entrega do dia =====
   window.spapRegistarEntrega = async function (o) {
     // o = { lojaId, codigo, tipo, dinheiro, gastos, numVendas, userId?, fila? }

@@ -290,7 +290,7 @@
     if ((e = el('gd-online'))) { var on = navigator.onLine !== false; e.classList.toggle('off', !on); e.querySelector('b').textContent = on ? 'Online' : 'Sem internet'; }
   }
 
-  // Põe no cartão: stock, código e quantos já estão no carrinho
+  // Põe no cartão: código e quantos já estão no carrinho (sem quantidades de stock)
   function decorarGrelha() {
     if (!document.body.classList.contains('gd')) return;
     var ps = prods(), cs = carro();
@@ -299,11 +299,11 @@
       var nome = nomeEl.textContent, p = null;
       for (var k = 0; k < ps.length; k++) { if ((ps[k].nome || '') === nome) { p = ps[k]; break; } }
       if (!p) return;
+      // O balconista NÃO vê quantidades de stock (só o dono, no Monitor). Mostra apenas «Esgotado» quando está a zero.
       var s = stockDe(p), st = c.querySelector('.gd-st');
-      if (s !== null && p.unidade !== 'kg') {
+      if (s !== null && p.unidade !== 'kg' && s <= 0) {
         if (!st) { st = document.createElement('span'); c.insertBefore(st, c.firstChild); }
-        st.className = 'gd-st ' + (s <= 0 ? 'zero' : s <= 5 ? 'bx' : 'ok');
-        st.textContent = s <= 0 ? 'Esgotado' : s <= 5 ? 'Restam ' + s : s + ' em stock';
+        st.className = 'gd-st zero'; st.textContent = 'Esgotado';
       } else if (st) st.remove();
       var cod = p.codbarras || p.codigo || '';
       if (cod && !c.querySelector('.gd-cod')) { var cd = document.createElement('span'); cd.className = 'gd-cod'; cd.textContent = cod; nomeEl.parentNode.insertBefore(cd, nomeEl.nextSibling); }

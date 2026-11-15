@@ -112,9 +112,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="Banca e Vendas">
-<link rel="stylesheet" href="banca-tema.css?v=3.7.56">
-<script src="banca-tema.js?v=3.7.56" defer></script>
-<script src="app-android.js?v=3.7.56" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.57">
+<script src="banca-tema.js?v=3.7.57" defer></script>
+<script src="app-android.js?v=3.7.57" defer></script>
 </head>
 <body>
 
@@ -147,6 +147,7 @@
   <div id="cb-erro" style="display:none;background:rgba(0,0,0,.2);border-radius:10px;padding:8px 14px;margin-top:12px;font-size:13px;">Código errado. Pede ao dono.</div>
   <button onclick="confirmarCodigoBalconista()" style="margin-top:18px;background:#fff;color:var(--verde);border:none;border-radius:14px;padding:15px 40px;font-size:17px;font-weight:800;">Entrar</button>
   <div style="font-size:11px;opacity:.8;margin-top:22px;">Código inicial: 0000 · o dono muda no Monitor da Banca → Definições → Código do balconista</div>
+  <button type="button" onclick="trocarContaBanca()" style="margin-top:16px;background:none;border:0;color:#fff;opacity:.8;font-size:12.5px;font-weight:700;font-family:inherit;text-decoration:underline;text-underline-offset:3px;">Entrar com outra conta (e-mail)</button>
 </div>
 
 <!-- ======== TELA VENDER ======== -->
@@ -397,10 +398,10 @@
 
 <script src="spap-erros.js?v=2"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="spap-suporte.js?v=1"></script>
-<script src="spap-avisos.js?v=5"></script>
+<script src="spap-suporte.js?v=3"></script>
+<script src="spap-avisos.js?v=6"></script>
 <script src="spap-imagem.js?v=1"></script>
-<script src="banca-offline.js?v=3.7.56"></script>
+<script src="banca-offline.js?v=3.7.57"></script>
 <script>
 // ===================== ESTADO =====================
 let sessao = null;        // { lojaId, nomeLoja, userId, vendedor }
@@ -472,7 +473,8 @@ function pedirCodigoBalconista(){
 }
 function _codBalcAtivo(cod){
   sessao.vendedor = 'Balconista ' + cod;
-  const sub = document.querySelector('#tela-vender .topo .sub'); if (sub) sub.textContent = 'Balconista ' + cod;
+  var hr = ''; try { hr = window.spapHoraEntradaHoje ? spapHoraEntradaHoje(sessao.lojaId, cod) : ''; } catch(e){}
+  const sub = document.querySelector('#tela-vender .topo .sub'); if (sub) sub.textContent = 'Balconista ' + cod + (hr ? ' · entrou ' + hr : '');
 }
 // lê da base de dados os códigos em vigor (o dono pode tê-los mudado agora mesmo)
 async function codigosAtuais(){
@@ -502,6 +504,8 @@ async function confirmarCodigoBalconista(){
   try { sessionStorage.setItem('banca_vend_ok','1'); sessionStorage.setItem('banca_vend', cod); } catch(e){}
   _codBalcAtivo(cod);
   document.getElementById('tela-codigo').style.display='none';
+  try { if (window.spapRegistarEntrada) spapRegistarEntrada({ lojaId: sessao.lojaId, codigo: cod, tipo: 'banca', userId: sessao.userId, fila: true }); } catch(e){}
+  setTimeout(function(){ try { var hr = window.spapHoraEntradaHoje ? spapHoraEntradaHoje(sessao.lojaId, cod) : ''; if (hr) { var sub = document.querySelector('#tela-vender .topo .sub'); if (sub) sub.textContent = 'Balconista ' + cod + ' · entrou ' + hr; toast('👤 Balconista ' + cod + ' · entraste às ' + hr, 'ok'); } } catch(e){} }, 500);
 }
 
 async function carregarProdutos(){
@@ -1164,7 +1168,26 @@ async function sairBanca(){
     const n = bancaFila().length;
     if (n && !(await bancaConfirmar('Ainda há '+n+' registo'+(n===1?'':'s')+' por enviar','Estão guardados neste telemóvel e são enviados quando voltares a entrar com internet. Sair mesmo assim?',{icone:'📵',ok:'Sair'}))) return;
   }
-  try{ sessionStorage.removeItem('banca_vend_ok'); }catch(e){} try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='login-banca.html'; }
+  // «Sair» só fecha o balcão: a conta fica neste telemóvel e, para voltar, basta o código do balconista
+  if (!(await bancaConfirmar('Sair do balcão?','Para voltar a vender basta o código do balconista. Não é preciso e-mail nem senha.',{icone:'👋',ok:'Sair'}))) return;
+  try{ sessionStorage.removeItem('banca_vend_ok'); sessionStorage.removeItem('banca_vend'); }catch(e){}
+  try{ fecharFolha('folha-menu'); }catch(e){}
+  pedirCodigoBalconista();
+}
+// Fim do turno (depois de entregar): a conta fica no telemóvel; volta ao ecrã do código
+function fecharTurnoBanca(){
+  try{ sessionStorage.removeItem('banca_vend_ok'); sessionStorage.removeItem('banca_vend'); }catch(e){}
+  try{ sessao.vendedor = null; }catch(e){}
+  try{ fecharFolha('folha-entregar'); fecharFolha('folha-menu'); }catch(e){}
+  pedirCodigoBalconista();
+}
+// Trocar de conta (e-mail): só a partir do ecrã do código
+async function trocarContaBanca(){
+  if (!(await bancaConfirmar('Trocar de conta?','Vais sair da conta desta banca neste telemóvel. Para voltar, será preciso o e-mail e a senha do dono.',{perigo:true,ok:'Trocar de conta'}))) return;
+  try{ localStorage.removeItem('banca_sessao_cache'); }catch(e){}
+  try{ await supabaseClient.auth.signOut(); }catch(e){}
+  location.href='login-banca.html';
+}
 
 // ===== PERDA =====
 function abrirPerda(){ fecharFolha('folha-menu'); const b=document.getElementById('pd-busca'); if(b)b.value=''; const r=document.getElementById('pd-result'); if(r)r.innerHTML=''; abrirFolha('folha-perda'); }
@@ -1349,12 +1372,12 @@ async function confirmarEntrega(){
   fecharFolha('folha-entregar');
   if (bancaFila().length) {
     toast('📵 Entrega guardada no telemóvel. Fica aberta até haver internet para enviar tudo.', 'erro');
-    const sair = () => { if (!bancaFila().length) { document.removeEventListener('banca-fila-vazia', sair); toast('✅ Tudo enviado. A sair…','ok'); setTimeout(async()=>{ try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='login-banca.html'; }, 1500); } };
+    const sair = () => { if (!bancaFila().length) { document.removeEventListener('banca-fila-vazia', sair); toast('✅ Tudo enviado. Turno terminado.','ok'); setTimeout(()=>{ fecharTurnoBanca(); }, 1500); } };
     document.addEventListener('banca-fila-vazia', sair);
     return;
   }
   toast('✅ Entrega registada. Obrigado!', 'ok');
-  setTimeout(async()=>{ try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='login-banca.html'; }, 1500);
+  setTimeout(()=>{ fecharTurnoBanca(); }, 1500);
 }
 
 // ===================== FOLHAS / TOAST =====================
@@ -1431,6 +1454,7 @@ bancaVidroPintar();
 html.escuro #toast-prod{filter:invert(1) hue-rotate(180deg);}
 html.escuro #toast-prod .tp-foto img{filter:invert(1) hue-rotate(180deg);}
 </style>
-<script src="spap-rolagem.js?v=1"></script>
+<script src="spap-rolagem.js?v=2"></script>
+<script src="spap-teclado.js?v=1"></script>
 </body>
 </html>

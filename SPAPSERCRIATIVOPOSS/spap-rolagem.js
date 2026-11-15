@@ -16,6 +16,8 @@
   var st = document.createElement('style'); st.textContent = css; (document.head || document.documentElement).appendChild(st);
 
   function raiz() { return document.scrollingElement || document.documentElement; }
+  // Enquanto a pessoa está a escrever num campo (teclado aberto), não há efeitos: evita o teclado fechar-se sozinho no telemóvel
+  function aEscrever() { var a = document.activeElement; return !!(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.isContentEditable) && a.type !== 'button' && a.type !== 'checkbox' && a.type !== 'radio'); }
   function rolavel(el) {
     if (!el || el.nodeType !== 1) return false;
     if (el === raiz()) return el.scrollHeight > el.clientHeight + 2;
@@ -49,6 +51,7 @@
     setTimeout(function () { b.classList.remove('on'); setTimeout(function () { b.remove(); }, 400); }, 450);
   }
   function salto(el) {
+    if (aEscrever()) return;
     if (el._sprAnim) return; el._sprAnim = true;
     var ps = pecas(el);
     ps.forEach(function (c) { try { c.animate([{ translate: '0 0' }, { translate: '0 -12px', offset: .35 }, { translate: '0 3px', offset: .7 }, { translate: '0 0' }], { duration: 520, easing: 'cubic-bezier(.2,.8,.3,1)' }); } catch (e) {} });
@@ -77,7 +80,7 @@
   /* --- toque: efeito elástico ao puxar para lá do fim --- */
   var t = null;
   document.addEventListener('touchstart', function (e) {
-    if (e.touches.length !== 1) { t = null; return; }
+    if (e.touches.length !== 1 || aEscrever()) { t = null; return; }
     var el = contentorDe(e.target); if (!el) { t = null; return; }
     t = { el: el, y: e.touches[0].clientY, ativo: false, d: 0, ps: null };
   }, { passive: true, capture: true });

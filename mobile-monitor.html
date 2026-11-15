@@ -88,9 +88,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.56">
-<script src="banca-tema.js?v=3.7.56" defer></script>
-<script src="app-android.js?v=3.7.56" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.57">
+<script src="banca-tema.js?v=3.7.57" defer></script>
+<script src="app-android.js?v=3.7.57" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -228,6 +228,7 @@
         <div class="mi" onclick="mVendedores()"><div class="e">👤</div><div class="t">Vendedores / Código</div></div>
         <div class="mi" onclick="mDiagnostico()"><div class="e">🔧</div><div class="t">Diagnóstico de Stock</div></div>
         <div class="mi" onclick="mAuditoria()"><div class="e">🔍</div><div class="t">Auditoria de Caixa</div></div>
+        <div class="mi" onclick="mTurnos()"><div class="e">⏱</div><div class="t">Turnos</div></div>
         <div class="mi" onclick="sairBanca()" style="background:#fef2f2;"><div class="e">🚪</div><div class="t">Sair</div></div>
       </div>
     </div>
@@ -416,7 +417,7 @@
 
 <script src="spap-erros.js?v=2"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="spap-suporte.js?v=1"></script>
+<script src="spap-suporte.js?v=3"></script>
 <script src="spap-contador.js?v=1"></script>
 <script src="spap-alertas.js?v=2"></script>
 <script src="spap-vidro.js?v=7"></script>
@@ -439,7 +440,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
   }catch(e){ console.warn('alertas', e); }
 }, 1200); });
 </script>
-<script src="spap-avisos.js?v=5"></script>
+<script src="spap-avisos.js?v=6"></script>
 <script src="spap-backup.js?v=7"></script>
 <script src="spap-imagem.js?v=1"></script>
 <script>
@@ -1555,6 +1556,17 @@ async function vendEditar(i){ const cods=(window._vendedores||['0000']).slice();
 async function vendApagar(i){ const cods=(window._vendedores||['0000']).slice(); if(cods.length<=1){ toast('Tem de existir pelo menos 1 código','erro'); return; } if(!(await bancaConfirmar('Apagar código?','O código '+cods[i]+' deixa de abrir a caixa.',{perigo:true,ok:'Apagar'})))return; cods.splice(i,1); _guardarVendedores(cods); }
 async function vendAdicionar(){ const cods=(window._vendedores||['0000']).slice(); const n=await bancaPedir('Novo código','Código do novo balconista.','',{icone:'🔐',placeholder:'Ex: 1234',ok:'Adicionar'}); if(n===null||!n.trim())return; cods.push(n.trim()); _guardarVendedores(cods); }
 
+// ===== TURNOS (hora de entrada e de entrega de cada balconista, últimos 7 dias) =====
+async function mTurnos(){
+  if (!document.getElementById('tn-css') && window.SPAP_TURNOS_CSS) { const st = document.createElement('style'); st.id = 'tn-css'; st.textContent = SPAP_TURNOS_CSS; document.head.appendChild(st); }
+  mostrarInfo('⏱ Turnos','<div class="vazio">A carregar…</div>');
+  try {
+    const lista = await spapLerTurnos(sessao.lojaId, 7);
+    document.getElementById('info-conteudo').innerHTML = '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:12.5px;color:#1e3a8a;line-height:1.5;">Hora a que cada balconista <b>entrou</b> (com o código) e a que <b>entregou o dia</b>, nos últimos 7 dias.</div>' + spapTurnosHtml(lista);
+  } catch(e) {
+    document.getElementById('info-conteudo').innerHTML='<div class="vazio">Não foi possível carregar os turnos.<br><small>'+esc(e.message||e)+'</small><br><br><button class="btn" type="button" onclick="mTurnos()" style="max-width:220px;margin:0 auto;">↻ Tentar de novo</button></div>';
+  }
+}
 // ===== AUDITORIA DE CAIXA (relatório do dinheiro entregue) =====
 function _auDia(d){ const x=new Date(d); return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0'); }
 async function mAuditoria(){
@@ -1738,7 +1750,8 @@ let toastT=null;
 function toast(msg,tipo){ const t=document.getElementById('toast'); t.textContent=msg; t.className='toast '+(tipo||''); t.style.display='block'; clearTimeout(toastT); toastT=setTimeout(()=>t.style.display='none',2200); }
 document.querySelectorAll('.folha-fundo').forEach(f=>{ f.addEventListener('click', e=>{ if(e.target===f) f.classList.remove('ativa'); }); });
 </script>
-<script src="spap-rolagem.js?v=1"></script>
+<script src="spap-rolagem.js?v=2"></script>
+<script src="spap-teclado.js?v=1"></script>
 <style>
 .au2-res{background:linear-gradient(135deg,#0f172a,#1e3a8a);color:#fff;border-radius:20px;padding:14px;margin-bottom:12px;box-shadow:0 10px 24px rgba(15,23,42,.25);}
 .au2-res-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;}

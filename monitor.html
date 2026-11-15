@@ -21,7 +21,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.279"></script>
+<script src="spap-leitor.js?v=2.9.280"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -1125,7 +1125,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.279" defer></script>
+<script src="app-android.js?v=2.9.280" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -1340,6 +1340,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
       <div class="card-gestao" onclick="abrirDiagnosticoStock()"><div class="card-gestao-icon" style="--glow:#fbdcef"><img src="icons3d/lupa-l.png" alt=""></div><div class="card-gestao-nome">Diagnóstico de Stock</div></div>
       <div class="card-gestao" onclick="abrirPerda()"><div class="card-gestao-icon" style="--glow:#dbe7ff"><img src="icons3d/chartdown.png" alt=""></div><div class="card-gestao-nome">Registar Perda</div></div>
       <div class="card-gestao" onclick="abrirEntregas()"><div class="card-gestao-icon" style="--glow:#fff0bf"><img src="icons3d/moneybag.png" alt=""></div><div class="card-gestao-nome">Entregas</div></div>
+      <div class="card-gestao" onclick="abrirTurnos()"><div class="card-gestao-icon" style="--glow:#dbeafe"><img src="icons3d/calendario2.png" alt=""></div><div class="card-gestao-nome">Turnos</div></div>
       <div class="card-gestao" onclick="abrirAuditoria()"><div class="card-gestao-icon" style="--glow:#fff0bf"><img src="icons3d/lupa-r.png" alt=""></div><div class="card-gestao-nome">Auditoria de Caixa</div></div>
       <div class="card-gestao" onclick="abrirSubPainel('painel-funcionarios')"><div class="card-gestao-icon" style="--glow:#d6e6ff"><img src="icons3d/people.png" alt=""></div><div class="card-gestao-nome">Gerentes</div></div>
       <div class="card-gestao" onclick="abrirRastreioGerente()"><div class="card-gestao-icon" style="--glow:#e6defd"><img src="icons3d/clipboard.png" alt=""></div><div class="card-gestao-nome">Rastreio do Gerente</div></div>
@@ -1588,6 +1589,18 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
 </div>
 
 <!-- ENTREGAS POR VENDEDOR -->
+<div class="sub-painel" id="painel-turnos">
+  <div class="sub-topbar">
+    <button class="btn-voltar" onclick="fecharSubPainel('painel-turnos')">←</button>
+    <div class="sub-titulo">⏱ Turnos dos Balconistas</div>
+  </div>
+  <div style="padding:16px;">
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px;margin-bottom:16px;font-size:13px;color:#1e3a8a;line-height:1.5;">
+      Hora a que cada balconista <b>entrou</b> (com o código) e a que <b>entregou o dia</b>, nos <b>últimos 7 dias</b>. Os dias mais antigos saem sozinhos.
+    </div>
+    <div id="lista-turnos"></div>
+  </div>
+</div>
 <div class="sub-painel" id="painel-entregas">
   <div class="sub-topbar">
     <button class="btn-voltar" onclick="fecharSubPainel('painel-entregas')">←</button>
@@ -1778,11 +1791,11 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
 
 <script src="spap-erros.js?v=2"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="spap-avisos.js?v=5"></script>
+<script src="spap-avisos.js?v=6"></script>
 <script src="spap-backup.js?v=7"></script>
 <script src="spap-imagem.js?v=1"></script>
 <script src="spap-expirou.js?v=2"></script>
-<script src="spap-suporte.js?v=1"></script>
+<script src="spap-suporte.js?v=3"></script>
 <script src="spap-contador.js?v=1"></script>
 <script src="spap-alertas.js?v=2"></script>
 <script src="spap-vidro.js?v=7"></script>
@@ -4773,6 +4786,18 @@ function _msgErroLista(txt, err, repetir) {
     + (repetir ? '<button onclick="' + repetir + '" style="margin-top:12px;height:40px;padding:0 18px;border:0;border-radius:12px;background:#2563eb;color:#fff;font-weight:800;font-family:inherit;cursor:pointer;">↻ Tentar de novo</button>' : '') + '</div>';
 }
 // ===== ENTREGAS DOS VENDEDORES =====
+async function abrirTurnos() {
+  if (modoGeral) { alert('Escolhe uma loja específica no seletor do topo.'); return; }
+  document.getElementById('painel-turnos').classList.add('aberto'); try{history.pushState({subpainel:'painel-turnos'},'');}catch(e){}
+  const div = document.getElementById('lista-turnos');
+  if (!document.getElementById('tn-css') && window.SPAP_TURNOS_CSS) { const st = document.createElement('style'); st.id = 'tn-css'; st.textContent = SPAP_TURNOS_CSS; document.head.appendChild(st); }
+  div.innerHTML = '<div style="text-align:center;color:#888;padding:20px;">A carregar...</div>';
+  if (!lojaId) { div.innerHTML = _msgErroLista('Escolhe primeiro uma loja no seletor do topo.', null); return; }
+  try {
+    const lista = await spapLerTurnos(lojaId, 7);
+    div.innerHTML = spapTurnosHtml(lista);
+  } catch (e) { div.innerHTML = _msgErroLista('Não foi possível carregar os turnos agora.', e, 'abrirTurnos()'); }
+}
 async function abrirEntregas() {
   if (modoGeral) { alert('Escolhe uma loja específica no seletor do topo.'); return; }
   document.getElementById('painel-entregas').classList.add('aberto'); try{history.pushState({subpainel:'painel-entregas'},'');}catch(e){}
@@ -6303,7 +6328,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.279';
+const MONITOR_VERSAO = '2.9.280';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -8455,6 +8480,7 @@ html.escuro #nb-lista img { filter:invert(1) hue-rotate(180deg); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', preparar); else preparar();
 })();
 </script>
-<script src="spap-rolagem.js?v=1"></script>
+<script src="spap-rolagem.js?v=2"></script>
+<script src="spap-teclado.js?v=1"></script>
 </body>
 </html>
