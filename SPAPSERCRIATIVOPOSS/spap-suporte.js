@@ -91,9 +91,8 @@
       + '<div class="ssp-corpo" style="text-align:center;">'
       + '<div class="ssp-num"><i>SUPORTE</i>' + NUM.replace(/(\d{2})(\d{3})(\d{4})/, '$1 $2 $3') + '</div>'
       + '<button type="button" class="ssp-op tel"><span class="ssp-op-ic">' + TEL + '</span><span><b>Ligar por telefone</b><small>Chamada directa para o suporte</small></span><span class="ssp-op-seta">›</span></button>'
-      + '<button type="button" class="ssp-op wa"><span class="ssp-op-ic">' + WA + '</span><span><b>Falar no WhatsApp</b><small>Fica registado por escrito — serve de prova</small></span><span class="ssp-op-seta">›</span></button>'
+      + '<button type="button" class="ssp-op wa"><span class="ssp-op-ic">' + WA + '</span><span><b>Falar no WhatsApp</b><small>Grupo oficial de suporte — fica registado por escrito</small></span><span class="ssp-op-seta">›</span></button>'
       + '<button type="button" class="ssp-nao">Agora não</button>'
-      + '<button type="button" class="ssp-grupo">Entrar no grupo oficial de suporte</button>'
       + '<div class="ssp-nota">Nunca partilhes a tua senha com ninguém</div>'
       + '</div></div>';
     document.body.appendChild(d);
@@ -105,13 +104,8 @@
     d.addEventListener('click', function (e) { if (e.target === d) fechar(); });
     d.querySelector('.ssp-nao').onclick = fechar;
     d.querySelector('.ssp-op.tel').onclick = function () { location.href = 'tel:+' + NUM_INT; fechar(); };
+    // WhatsApp = o grupo oficial de suporte (o link antigo), não um número privado
     d.querySelector('.ssp-op.wa').onclick = function () {
-      var l = 'https://wa.me/' + NUM_INT + '?text=' + encodeURIComponent(msgWhats());
-      var w = null; try { w = window.open(l, '_blank'); } catch (e) {}
-      if (!w) location.href = l;
-      fechar();
-    };
-    d.querySelector('.ssp-grupo').onclick = function () {
       var w = null; try { w = window.open('about:blank', '_blank'); } catch (e) {}
       pLink.then(function (l) { if (w && !w.closed) { try { w.location.href = l; } catch (e) { location.href = l; } } else location.href = l; fechar(); });
     };
