@@ -118,8 +118,59 @@ function _spapHash(t) {
   try { return crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)).then(function (b) { return Array.from(new Uint8Array(b)).map(function (x) { return x.toString(16).padStart(2, '0'); }).join(''); }); }
   catch (e) { return Promise.resolve(null); }
 }
+// ===== Este aparelho fica com a conta da loja =====
+// O dono entra UMA vez com o e-mail neste aparelho. A partir daí, a Loja/Banca abre SEMPRE no ecrã do código
+// do balconista: se a sessão do servidor caducar ou se perder, a app volta a entrar sozinha com a conta guardada.
+// (Guardada só neste aparelho, baralhada. «Trocar de conta» apaga-a.)
+function _spapChaveAparelho() { return (typeof SPAP_PAGINA_BANCA !== 'undefined' && SPAP_PAGINA_BANCA) ? 'spap_aparelho_banca' : 'spap_aparelho_loja'; }
+function _spapBaralhar(txt, k) { var o = ''; for (var i = 0; i < txt.length; i++) o += String.fromCharCode(txt.charCodeAt(i) ^ k.charCodeAt(i % k.length)); return o; }
+function spapLembrarAparelho(email, senha) {
+  try {
+    if (!email || !senha) return;
+    var k = localStorage.getItem('spap_aparelho_k');
+    if (!k) { k = ''; for (var i = 0; i < 32; i++) k += String.fromCharCode(33 + Math.floor(Math.random() * 90)); localStorage.setItem('spap_aparelho_k', k); }
+    var t = JSON.stringify({ e: String(email).trim().toLowerCase(), s: String(senha), t: Date.now() });
+    localStorage.setItem(_spapChaveAparelho(), btoa(unescape(encodeURIComponent(_spapBaralhar(t, k)))));
+  } catch (e) {}
+}
+function _spapLerAparelho() {
+  try {
+    var v = localStorage.getItem(_spapChaveAparelho()), k = localStorage.getItem('spap_aparelho_k'); if (!v || !k) return null;
+    return JSON.parse(_spapBaralhar(decodeURIComponent(escape(atob(v))), k));
+  } catch (e) { return null; }
+}
+function spapEsquecerAparelho() { try { localStorage.removeItem(_spapChaveAparelho()); } catch (e) {} }
+var _spapAReentrar = null;
+// Volta a entrar com a conta guardada. Devolve a sessão, ou null (sem conta guardada / sem internet / senha mudada).
+function spapReentrarAparelho() {
+  if (_spapAReentrar) return _spapAReentrar;
+  _spapAReentrar = (async function () {
+    try {
+      var c = _spapLerAparelho(); if (!c || !c.e || !c.s) return null;
+      if (navigator.onLine === false) return null;
+      var r = await supabaseClient.auth.signInWithPassword({ email: c.e, password: c.s });
+      if (r && r.data && r.data.session) return r.data.session;
+      var m = String((r && r.error && r.error.message) || '');
+      if (/invalid|credenc|password|senha/i.test(m)) spapEsquecerAparelho();   // a senha mudou: deixa de tentar
+      return null;
+    } catch (e) { return null; } finally { setTimeout(function () { _spapAReentrar = null; }, 2000); }
+  })();
+  return _spapAReentrar;
+}
+window.spapLembrarAparelho = spapLembrarAparelho; window.spapEsquecerAparelho = spapEsquecerAparelho; window.spapReentrarAparelho = spapReentrarAparelho;
+// Na Loja e na Banca de venda: se a app esteve sem sessão (offline) e a internet voltou, volta a entrar sozinha
+// para as vendas guardadas poderem ser enviadas.
+if (/(^|\/)(index|mobile)(\.html)?$|\/$/i.test(location.pathname)) {
+  window.addEventListener('online', function () {
+    setTimeout(async function () {
+      try { var s = (await supabaseClient.auth.getSession()).data.session; if (!s) await spapReentrarAparelho(); } catch (e) {}
+    }, 1500);
+  });
+}
+
 function spapGuardarAcessoOffline(email, senha, extra) {
   var em = String(email || '').trim().toLowerCase(); if (!em || !senha) return Promise.resolve();
+  try { spapLembrarAparelho(email, senha); } catch (e) {}
   var sal = Math.random().toString(36).slice(2) + Date.now().toString(36);
   return _spapHash(sal + '|' + em + '|' + senha).then(function (h) {
     if (!h) return; try { localStorage.setItem('spap_acesso_off_' + em, JSON.stringify({ s: sal, h: h, t: Date.now(), x: extra || null })); } catch (e) {}

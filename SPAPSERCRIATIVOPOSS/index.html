@@ -352,7 +352,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
   [tabindex]:focus-visible { outline: 2px solid #1a56a0; outline-offset: 1px; }
 </style>
-<script src="app-android.js?v=2.9.284" defer></script>
+<script src="app-android.js?v=2.9.285" defer></script>
 <style>/* a interface antiga nunca aparece: o ecrã antigo fica invisível até o novo abrir (sem piscar) */ body:not(.modo2) #tela-pdv { visibility:hidden !important; }</style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
@@ -1074,7 +1074,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     <div id="vendedor-erro" style="display:none;">❌ Código inválido!</div>
     <button type="button" class="tv-entrar" onclick="confirmarCodigoVendedor()">ENTRAR</button>
     <div class="tv-nota">🔒 O código é dado pelo dono da loja.</div>
-    <button type="button" class="tv-trocar" onclick="trocarContaLoja()">Entrar com outra conta (e-mail)</button>
+    <button type="button" class="tv-trocar" onclick="trocarContaLoja()" style="display:none">Entrar com outra conta (e-mail)</button>
   </div>
 </div>
 <style>
@@ -1367,7 +1367,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   window.addEventListener('orientationchange', () => setTimeout(fixarAlturaReal, 300));
 </script>
 <script src="spap-erros.js?v=2"></script>
-<script src="supabase-config.js?v=4"></script>
+<script src="supabase-config.js?v=5"></script>
 <script src="spap-avisos.js?v=6"></script>
 <script src="spap-expirou.js?v=2"></script>
 <script src="spap-suporte.js?v=4"></script>
@@ -1490,7 +1490,8 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     document.getElementById('tela-pdv').style.display = 'flex';
 
     // Pede o código do vendedor (offline funciona — os códigos estão na sessão guardada)
-    if ((sessaoAtual.vendedores || []).length > 0 && !sessaoAtual.vendedorCodigo) {
+    sessaoAtual.vendedores = _codsLoja(sessaoAtual.vendedores);
+    if (sessaoAtual.vendedores.length > 0 && !sessaoAtual.vendedorCodigo) {
       const guardado = sessionStorage.getItem('pdv_vendedor_codigo');
       if (guardado && sessaoAtual.vendedores.indexOf(guardado) >= 0) sessaoAtual.vendedorCodigo = guardado;
       else await pedirCodigoVendedor();
@@ -1516,6 +1517,9 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     let sessionData = { session: null };
     try { const r = await supabaseClient.auth.getSession(); sessionData = r.data || { session: null }; } catch(e) {}
 
+    if (!sessionData.session && window.spapReentrarAparelho) {
+      try { const ns = await spapReentrarAparelho(); if (ns) sessionData = { session: ns }; } catch(e) {}
+    }
     if (!sessionData.session) {
       // Sem sessão do SDK: se estamos offline e já usámos o PDV antes, entra em modo offline
       const cacheSessao = localStorage.getItem('pdv_cache_sessao');
@@ -1568,6 +1572,15 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
         setTimeout(() => location.reload(), 15000);
         return;
       }
+      // Sessão do servidor inválida (caducou/foi anulada): volta a entrar sozinho com a conta deste aparelho
+      try {
+        const ult = Number(sessionStorage.getItem('spap_reentrou') || 0);
+        if (window.spapReentrarAparelho && Date.now() - ult > 60000) {
+          sessionStorage.setItem('spap_reentrou', String(Date.now()));
+          const ns = await spapReentrarAparelho();
+          if (ns) { location.reload(); return; }
+        }
+      } catch(e) {}
       await supabaseClient.auth.signOut();
       window.location.href = 'login.html';
       return;
@@ -1607,7 +1620,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
       logo: (membro.lojas && membro.lojas.logo) || null,
       reciboRodape: (membro.lojas && membro.lojas.recibo_rodape) || null,
       codigoDesconto: (membro.lojas && membro.lojas.codigo_desconto) || null,
-      vendedores: (membro.lojas && membro.lojas.vendedores) || []
+      vendedores: _codsLoja(membro.lojas && membro.lojas.vendedores)
     };
 
     // ===== Código de vendedor (1001, 1002...) =====
@@ -1666,7 +1679,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   function carregarDoCacheLocal() {
     const cache = localStorage.getItem('pdv_cache_produtos_' + sessaoAtual.lojaId);
     if (cache) {
-      try { produtos = JSON.parse(cache); } catch(e) { produtos = []; }
+      try { produtos = (JSON.parse(cache) || []).filter(Boolean).map(normalizarProduto); } catch(e) { produtos = []; }
       const cacheV = localStorage.getItem('pdv_cache_vendas_' + sessaoAtual.lojaId);
       try { vendas = cacheV ? JSON.parse(cacheV) : []; } catch(e) { vendas = []; }
       return true;
@@ -1906,8 +1919,24 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
   // O Supabase usa nomes de coluna (id, loja_id...); o resto do código já está
   // escrito à volta do formato antigo do localStorage. Esta função traduz.
+  // Produto sempre com os tipos certos (texto/número), venha de onde vier (servidor, cache antiga, importação):
+  // um nome vazio, uma categoria com números ou um preço em texto nunca podem partir a grelha nem a venda.
+  function _txt(v) { return (v === null || v === undefined) ? '' : String(v); }
+  function _num(v) { const n = parseFloat(v); return isFinite(n) ? n : 0; }
+  function normalizarProduto(p) {
+    p = p || {};
+    const nome = _txt(p.nome).trim() || ('Produto ' + _txt(p.codigo || p.codbarras || String(p.id || '').slice(0, 6)).trim());
+    return Object.assign({}, p, {
+      id: p.id, nome: nome, codigo: _txt(p.codigo), codbarras: _txt(p.codbarras),
+      categoria: _txt(p.categoria).trim(), subcategoria: _txt(p.subcategoria).trim(),
+      preco: _num(p.preco), stock: (p.stock === null || p.stock === undefined || p.stock === '') ? 0 : _num(p.stock),
+      imagem: p.imagem || null, unidade: (_txt(p.unidade).toLowerCase() === 'kg') ? 'kg' : 'un'
+    });
+  }
+  window.normalizarProduto = normalizarProduto;
   function mapearProdutoDoSupabase(p) {
-    return { id: p.id, nome: p.nome, codigo: p.codigo, codbarras: p.codbarras, categoria: p.categoria, subcategoria: p.subcategoria, preco: parseFloat(p.preco), stock: p.stock, imagem: p.imagem, unidade: p.unidade || 'un' };
+    const n = normalizarProduto(p);
+    return { id: n.id, nome: n.nome, codigo: n.codigo, codbarras: n.codbarras, categoria: n.categoria, subcategoria: n.subcategoria, preco: n.preco, stock: n.stock, imagem: n.imagem, unidade: n.unidade };
   }
 
   async function fazerLogout() {
@@ -1919,18 +1948,12 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
       + '<div style="min-width:0;"><b style="display:block;font-size:14.5px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (loja || 'Loja').replace(/</g,'&lt;') + '</b>'
       + (quem ? '<small style="display:block;font-size:12.5px;color:#64748b;font-weight:600;">' + quem.replace(/</g,'&lt;') + '</small>' : '') + '</div></div>'
       + (pend ? '<div style="margin-top:10px;background:#fffbeb;border:1px solid #fcd34d;color:#92400e;border-radius:12px;padding:10px 12px;font-size:13px;font-weight:600;text-align:left;">⏳ Ainda há ' + pend + ' venda(s) por enviar. Ficam guardadas neste aparelho e são enviadas quando voltares a entrar com internet.</div>' : '');
-    // Com balconistas configurados, «Sair» só fecha o balcão: a conta (e-mail) fica neste aparelho
-    // e, para voltar, basta o código. Trocar de conta faz-se no ecrã do código.
-    const temBalconistas = !!(sessaoAtual && (sessaoAtual.vendedores || []).length);
-    if (temBalconistas) {
+    // «Sair» só fecha o balcão: a conta (e-mail) fica neste aparelho e, para voltar, basta o código.
+    {
       const ok2 = await spapConfirmar('Sair do balcão?', 'Para voltar a vender basta escrever o código do balconista. Não é preciso e-mail nem senha.', { icone:'👋', ok:'Sair', cancelar:'Ficar', extraHtml: extra });
       if (!ok2) return;
       sairDoBalcao();
-      return;
     }
-    const ok = await spapConfirmar('Sair da Loja?', 'Vais terminar a sessão neste aparelho. Para voltar a vender, entra de novo com o e-mail e a senha.', { icone:'👋', ok:'Sair', cancelar:'Ficar', perigo:true, extraHtml: extra });
-    if (!ok) return;
-    supabaseClient.auth.signOut().then(() => { window.location.href = 'login.html'; });
   }
   // Mostra ao balconista a hora a que entrou hoje (junto ao nome, no topo)
   function mostrarHoraEntrada() {
@@ -1954,10 +1977,13 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     pedirCodigoVendedor();
   }
   // Trocar de conta (e-mail): só a partir do ecrã do código
+  // Escondido para o balconista: o dono toca 5 vezes seguidas no logótipo do ecrã do código para trocar de conta
+  (function(){ let n = 0, t = 0; document.addEventListener('click', function(e){ const tv = document.getElementById('tela-vendedor'); if (!tv || tv.style.display === 'none' || !e.target.closest || !e.target.closest('#tela-vendedor img, #tela-vendedor .tv-logo, #tela-vendedor h1, #tela-vendedor .tv-marca')) return; const ag = Date.now(); n = (ag - t < 1500) ? n + 1 : 1; t = ag; if (n >= 5) { n = 0; trocarContaLoja(); } }, true); })();
   async function trocarContaLoja() {
     const ok = await spapConfirmar('Trocar de conta?', 'Vais sair da conta desta loja neste aparelho. Para voltar, será preciso o e-mail e a senha do dono.', { icone:'🔁', ok:'Trocar de conta', cancelar:'Ficar', perigo:true });
     if (!ok) return;
     try { localStorage.removeItem('pdv_cache_sessao'); } catch (e) {}
+    try { window.spapEsquecerAparelho && spapEsquecerAparelho(); } catch (e) {}
     try { await supabaseClient.auth.signOut(); } catch (e) {}
     window.location.href = 'login.html';
   }
@@ -2171,8 +2197,23 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     return item ? item.qtd : 0;
   }
 
+  // Grelha do modo simples à prova de falhas (igual à dourada)
   function renderProdutos() {
+    try { return _renderProdutosReal(); }
+    catch (e) {
+      try { window.spapErro && spapErro('Lista de produtos (modo simples) falhou: ' + e.message, String(e.stack || '').slice(0, 400)); } catch(_) {}
+      try {
+        const g = document.getElementById('produtos-grelha'); if (!g) return;
+        g.innerHTML = (produtos || []).filter(Boolean).map(p => {
+          try { const pid = String(p.id||'').replace(/[^A-Za-z0-9_-]/g,''), nm = String(p.nome == null ? '' : p.nome).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+            return '<div class="produto-card" onclick="m2AddPorId(\'' + pid + '\')"><div class="produto-nome">' + nm + '</div><div class="produto-preco">MT ' + (parseFloat(p.preco)||0).toFixed(2) + '</div></div>'; } catch(_) { return ''; }
+        }).join('');
+      } catch(_) {}
+    }
+  }
+  function _renderProdutosReal() {
     const grelha = document.getElementById('produtos-grelha');
+    if (!grelha) return;
     grelha.innerHTML = '';
 
     // Categoria especial "Mais Vendidos"
@@ -3191,12 +3232,8 @@ async function scannerFechar() {
 
     try { await spapRegistarEntrega({ lojaId: sessaoAtual.lojaId, codigo: sessaoAtual.vendedorCodigo, tipo: 'loja', dinheiro: dinheiro, gastos: gastos, numVendas: vendasHoje.length }); } catch(e) {}
     fecharModalEntregar();
-    mostrarNotif('✅ Entrega registada.' + msgSobra + ' A terminar sessão...');
-    setTimeout(async () => {
-      sessionStorage.removeItem('pdv_vendedor_codigo');
-      await supabaseClient.auth.signOut();
-      window.location.href = 'login.html';
-    }, 1500);
+    mostrarNotif('✅ Entrega registada.' + msgSobra + ' Turno terminado.');
+    setTimeout(() => { try { sessionStorage.removeItem('pdv_vendedor_codigo'); } catch(e) {} sairDoBalcao(); }, 1500);
   }
 
   let ultimaVendaCarrinho = [];
@@ -4749,6 +4786,9 @@ async function scannerFechar() {
 
   /* ===== Código de vendedor ===== */
   let _resolverVendedor = null;
+  // Códigos dos balconistas desta loja. Se o dono ainda não criou nenhum, vale o 0000 (muda-se no Monitor).
+  function _codsLoja(v) { const l = (Array.isArray(v) ? v : []).map(x => String(x == null ? '' : x).trim()).filter(Boolean); return l.length ? l : ['0000']; }
+  window._codsLoja = _codsLoja;
   function pedirCodigoVendedor() {
     return new Promise(res => {
       _resolverVendedor = res;
@@ -4763,10 +4803,10 @@ async function scannerFechar() {
     try {
       if (navigator.onLine !== false && sessaoAtual && sessaoAtual.lojaId) {
         const { data } = await supabaseClient.from('lojas').select('vendedores').eq('id', sessaoAtual.lojaId).maybeSingle();
-        if (data && Array.isArray(data.vendedores)) sessaoAtual.vendedores = data.vendedores.map(x => String(x).trim());
+        if (data && Array.isArray(data.vendedores)) sessaoAtual.vendedores = _codsLoja(data.vendedores);
       }
     } catch (e) {}
-    return ((sessaoAtual && sessaoAtual.vendedores) || []).map(x => String(x).trim());
+    return _codsLoja(sessaoAtual && sessaoAtual.vendedores);
   }
   function tvVerCodigo() {
     const i = document.getElementById('campo-vendedor-codigo'), o = document.getElementById('tv-olho');
@@ -6018,7 +6058,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.284';
+  const VERSAO_ATUAL = '2.9.285';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -7235,7 +7275,37 @@ document.addEventListener('click', function(e){
     if(w && w.classList.contains('aberto') && !e.target.closest('.m2-cat-wrap')) w.classList.remove('aberto');
   });
 
+  // ===== Grelha à prova de falhas =====
+  // Um produto com dados estranhos nunca pode esconder os outros: se a grelha normal falhar, desenha uma grelha simples.
   function renderM2Grid(){
+    try { return _renderM2GridReal(); }
+    catch (e) {
+      try { window.spapErro && spapErro('Grelha de produtos falhou: ' + e.message, String(e.stack || '').slice(0, 400)); } catch(_) {}
+      try {
+        var el = document.getElementById('m2-grid'); if (!el) return;
+        var lista = (produtos || []).filter(Boolean);
+        el.innerHTML = lista.map(function(p){
+          try {
+            var pid = String(p.id||'').replace(/[^A-Za-z0-9_-]/g,''), nm = String(p.nome == null ? '' : p.nome).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+            return '<div class="m2-card" data-pid="'+pid+'" onclick="m2AddPorId(\''+pid+'\')"><div class="m2-img">🛒</div><div class="m2-nome">'+nm+'</div><div class="m2-linha"><span class="m2-preco">MT '+(parseFloat(p.preco)||0).toFixed(2)+'</span><button class="m2-add" onclick="event.stopPropagation(); m2AddPorId(\''+pid+'\')">+</button></div></div>';
+          } catch(_) { return ''; }
+        }).join('') || '<div style="color:#94a3b8;padding:30px;grid-column:1/-1;text-align:center;">Nenhum produto.</div>';
+      } catch(_) {}
+    }
+  }
+  window.renderM2Grid = renderM2Grid;
+  // Vigia: se há produtos e nenhum filtro, mas a grelha está vazia, redesenha (e repõe «Todas» se preciso)
+  setInterval(function(){
+    try {
+      if (!document.body.classList.contains('modo2') || !(produtos||[]).length) return;
+      var g = document.getElementById('m2-grid'); if (!g || g.offsetParent === null) return;
+      if (g.querySelector('.m2-card')) return;
+      if ((_m2Busca||'').trim()) return;
+      if (_m2Cat !== 'Todos' || _m2Sub) { _m2Cat = 'Todos'; _m2Sub = null; try { renderM2Chips(); } catch(e){} }
+      window.renderM2Grid();
+    } catch(e) {}
+  }, 3000);
+  function _renderM2GridReal(){
     try { setTimeout(function(){ if (typeof carregarImagensDe === 'function') carregarImagensDe((typeof _m2ListaVisivel === 'function' ? _m2ListaVisivel() : produtos).slice(0, 60)); }, 0); } catch(e){}
     var el = document.getElementById('m2-grid'); if (!el) return;
     var termo = (_m2Busca||'').toLowerCase();

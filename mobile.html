@@ -112,9 +112,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="Banca e Vendas">
-<link rel="stylesheet" href="banca-tema.css?v=3.7.61">
-<script src="banca-tema.js?v=3.7.61" defer></script>
-<script src="app-android.js?v=3.7.61" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.62">
+<script src="banca-tema.js?v=3.7.62" defer></script>
+<script src="app-android.js?v=3.7.62" defer></script>
 </head>
 <body>
 
@@ -139,7 +139,7 @@
 
 <!-- ======== ECRÃ: CÓDIGO DO BALCONISTA ======== -->
 <div id="tela-codigo" style="display:none;position:fixed;inset:0;z-index:2500;background:var(--verde);color:#fff;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
-  <div style="font-size:52px;margin-bottom:8px;">🔐</div>
+  <div id="cb-cadeado" style="font-size:52px;margin-bottom:8px;cursor:default;user-select:none;">🔐</div>
   <div style="font-size:20px;font-weight:800;">Acesso do balconista</div>
   <div style="font-size:13px;opacity:.9;margin:6px 0 20px;">Escreve o código para abrir a caixa</div>
   <input id="cb-input" type="password" inputmode="numeric" placeholder="••••" maxlength="12" onkeydown="if(event.key==='Enter')confirmarCodigoBalconista()"
@@ -147,7 +147,7 @@
   <div id="cb-erro" style="display:none;background:rgba(0,0,0,.2);border-radius:10px;padding:8px 14px;margin-top:12px;font-size:13px;">Código errado. Pede ao dono.</div>
   <button onclick="confirmarCodigoBalconista()" style="margin-top:18px;background:#fff;color:var(--verde);border:none;border-radius:14px;padding:15px 40px;font-size:17px;font-weight:800;">Entrar</button>
   <div style="font-size:11px;opacity:.8;margin-top:22px;">Código inicial: 0000 · o dono muda no Monitor da Banca → Definições → Código do balconista</div>
-  <button type="button" onclick="trocarContaBanca()" style="margin-top:16px;background:none;border:0;color:#fff;opacity:.8;font-size:12.5px;font-weight:700;font-family:inherit;text-decoration:underline;text-underline-offset:3px;">Entrar com outra conta (e-mail)</button>
+  <button type="button" onclick="trocarContaBanca()" style="display:none">Entrar com outra conta (e-mail)</button>
 </div>
 
 <!-- ======== TELA VENDER ======== -->
@@ -397,7 +397,7 @@
 <div id="toast" class="toast"></div>
 
 <script src="spap-erros.js?v=2"></script>
-<script src="supabase-config.js?v=4"></script>
+<script src="supabase-config.js?v=5"></script>
 <script src="spap-suporte.js?v=4"></script>
 <script src="spap-avisos.js?v=6"></script>
 <script src="spap-imagem.js?v=1"></script>
@@ -417,6 +417,7 @@ document.addEventListener('visibilitychange', function(){ if (!document.hidden) 
 (async function init(){
   let ses = null;
   try { ses = (await supabaseClient.auth.getSession()).data.session; } catch(e){}
+  if (!ses && window.spapReentrarAparelho) { try { ses = await spapReentrarAparelho(); } catch(e){} }
   const guardada = bancaSessaoGuardada();
   // Sem internet: abre com a sessão guardada neste telemóvel (vende na mesma; envia depois)
   // Sem sessão mas com dados guardados: o telemóvel pode dizer «ligado» (Wi-Fi/dados sem saldo) e não haver internet.
@@ -542,7 +543,13 @@ async function carregarProdutos(){
     todos.forEach(p => { if (pend[p.id]) p.stock = (parseInt(p.stock)||0) + pend[p.id]; });
     bancaGuardarProdutos(sessao.lojaId, todos);
   }
-  produtos = todos;
+  // tipos sempre certos (um código de barras em número, um nome vazio ou um preço em texto nunca partem a lista)
+  const _t = v => (v === null || v === undefined) ? '' : String(v), _n = v => { const x = parseFloat(v); return isFinite(x) ? x : 0; };
+  produtos = (todos || []).filter(Boolean).map(p => Object.assign({}, p, {
+    nome: _t(p.nome).trim() || ('Produto ' + _t(p.codigo || p.codbarras || String(p.id || '').slice(0, 6))),
+    codigo: _t(p.codigo), codbarras: _t(p.codbarras), categoria: _t(p.categoria), subcategoria: _t(p.subcategoria),
+    preco: _n(p.preco), stock: (p.stock === null || p.stock === undefined || p.stock === '') ? 0 : _n(p.stock)
+  }));
   renderProdutos();
   renderListaProdutos();
 }
@@ -1195,9 +1202,12 @@ function fecharTurnoBanca(){
   pedirCodigoBalconista();
 }
 // Trocar de conta (e-mail): só a partir do ecrã do código
+// Escondido para o balconista: o dono toca 5 vezes seguidas no cadeado 🔐 para trocar de conta (e-mail)
+(function(){ let n=0, t=0; document.addEventListener('click', function(e){ if(!e.target.closest || !e.target.closest('#cb-cadeado')) return; const ag=Date.now(); n=(ag-t<1500)?n+1:1; t=ag; if(n>=5){ n=0; trocarContaBanca(); } }, true); })();
 async function trocarContaBanca(){
   if (!(await bancaConfirmar('Trocar de conta?','Vais sair da conta desta banca neste telemóvel. Para voltar, será preciso o e-mail e a senha do dono.',{perigo:true,ok:'Trocar de conta'}))) return;
   try{ localStorage.removeItem('banca_sessao_cache'); }catch(e){}
+  try{ window.spapEsquecerAparelho && spapEsquecerAparelho(); }catch(e){}
   try{ await supabaseClient.auth.signOut(); }catch(e){}
   location.href='login-banca.html';
 }
