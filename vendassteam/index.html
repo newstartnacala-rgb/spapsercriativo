@@ -81,6 +81,9 @@ h1,h2,h3{font-family:"Bricolage Grotesque",Figtree,sans-serif;line-height:1.08;l
 .bt-linha{background:transparent;color:var(--tinta);border-color:#c9d4ea}
 .bt-linha:hover{border-color:var(--tinta)}
 .bt-zap{background:#1fa855;color:#fff}
+.bt-canal{background:linear-gradient(135deg,#14b8a6,#0f766e);color:#fff;box-shadow:0 10px 24px rgba(15,118,110,.3)}
+.bt-canal svg{width:20px;height:20px;flex-shrink:0}
+.canal-nota{margin-top:12px;font-size:14px;opacity:.85}
 .bt-peq{padding:9px 16px;font-size:14.5px}
 
 /* ---------- Topo (hero) ---------- */
@@ -325,7 +328,7 @@ section{padding:88px 0}
       <div class="leque" aria-hidden="true">
         <div class="tel t1"><img src="img/banca.webp" alt=""></div>
         <div class="tel t2"><img src="img/monitor.webp" alt=""></div>
-        <div class="tel t3"><img src="img/loja.webp" alt=""></div>
+        <div class="tel t3"><img src="img/loja-dourada.webp" alt=""></div>
       </div>
     </div>
     <div class="capulana" role="presentation"></div>
@@ -339,7 +342,7 @@ section{padding:88px 0}
       <div class="grupo loja" id="loja">
         <div class="tablet-cena" aria-hidden="true">
           <div class="aura"></div>
-          <div class="tablet"><img src="img/loja-tablet.webp" alt="" loading="lazy"></div>
+          <div class="tablet"><img src="img/loja-dourada-tablet.webp" alt="" loading="lazy"></div>
           <div class="tel"><img src="img/monitor.webp" alt="" loading="lazy"></div>
         </div>
         <div class="info">
@@ -515,10 +518,12 @@ section{padding:88px 0}
       <div>
         <h2>Tem dúvidas? Fale com a equipa SSTEAM.</h2>
         <p>Ligue para o suporte ou fale connosco pelo WhatsApp — ajudamos a instalar e a usar as apps.</p>
+        <p class="canal-nota">📢 Siga o canal «Atualizações» no WhatsApp para saber as novidades de cada versão.</p>
       </div>
       <div class="acoes">
         <a class="bt bt-zap" id="lk-zap" data-suporte href="https://chat.whatsapp.com/I8lB2zT6hxfFNJ3xcqJ8Sh?s=cl&amp;p=a&amp;iam=2" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.1-5.6A8.4 8.4 0 1 1 21 11.5z"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01" stroke-width="3"/></svg>Grupo de suporte no WhatsApp</a>
         <a class="bt bt-linha" href="tel:+258861667843">Ligar +258 86 166 7843</a>
+        <a class="bt bt-canal" href="https://whatsapp.com/channel/0029VbEMaws84OmAnGWr0m3c" target="_blank" rel="noopener" title="Siga o canal «Atualizações» no WhatsApp"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>Info. de atualização</a>
       </div>
     </div>
   </section>
@@ -665,6 +670,6 @@ section{padding:88px 0}
     }).catch(function () {});
 })();
 </script>
-<script src="../spap-suporte.js?v=5"></script>
+<script src="../spap-suporte.js?v=6"></script>
 </body>
 </html>

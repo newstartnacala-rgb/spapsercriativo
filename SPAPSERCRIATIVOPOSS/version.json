@@ -1,13 +1,13 @@
 {
-  "versao": "2.9.290",
+  "versao": "2.9.291",
   "data": "2026-11-09",
   "novidades": [
+    "Suporte: nova opção «Info. de atualização» (canal Atualizações no WhatsApp)",
     "Suporte: WhatsApp e chamada a funcionar em todos os ecrãs (número 86 166 7843)",
     "N",
     "a",
     " ",
-    "a",
-    "p"
+    "a"
   ],
   "melhorias": [
     "Definições do Monitor: nova opção «Visitar o website»",

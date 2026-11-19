@@ -6,6 +6,9 @@
 (function () {
   var LINK = 'https://chat.whatsapp.com/I8lB2zT6hxfFNJ3xcqJ8Sh?s=cl&p=a&iam=2';
   window.SPAP_SUPORTE = LINK;
+  // Canal oficial «Atualizações» no WhatsApp (novidades das apps)
+  var CANAL = 'https://whatsapp.com/channel/0029VbEMaws84OmAnGWr0m3c';
+  window.SPAP_CANAL_ATUALIZACOES = CANAL;
   // o link guardado no painel só substitui se também for um grupo do WhatsApp
   window.spapLinkSuporte = function (cfg) {
     var v = typeof cfg === 'string' ? cfg.trim() : '';
@@ -68,12 +71,13 @@
     return 'Olá, suporte SSTEAM. Preciso de ajuda com a app *' + i.app + '*' + (i.loja ? ' (' + i.loja + ')' : '') + (i.versao ? ' — versão ' + i.versao : '') + '.\nProblema: ';
   }
   var TEL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>';
+  var MEGA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
   var css2 = ''
     + '.ssp-op{display:flex;align-items:center;gap:14px;width:100%;padding:14px 16px;border-radius:18px;border:1.5px solid #e2e8f0;background:#fff;cursor:pointer;text-align:left;font-family:inherit;transition:transform .12s, box-shadow .2s, border-color .2s;margin-bottom:10px;}'
     + '.ssp-op:active{transform:scale(.98);} .ssp-op:hover{border-color:#86efac;box-shadow:0 8px 22px rgba(22,163,74,.12);}'
     + '.ssp-op .ssp-op-ic{width:50px;height:50px;border-radius:15px;display:grid;place-items:center;flex-shrink:0;color:#fff;box-shadow:0 8px 18px rgba(0,0,0,.14);}'
     + '.ssp-op .ssp-op-ic svg{width:26px;height:26px;}'
-    + '.ssp-op.ssp-tel .ssp-op-ic{background:linear-gradient(135deg,#3b82f6,#1d4ed8);} .ssp-op.ssp-wa .ssp-op-ic{background:linear-gradient(135deg,#22c55e,#15803d);}'
+    + '.ssp-op.ssp-canal .ssp-op-ic{background:linear-gradient(135deg,#14b8a6,#0f766e);} .ssp-op.ssp-tel .ssp-op-ic{background:linear-gradient(135deg,#3b82f6,#1d4ed8);} .ssp-op.ssp-wa .ssp-op-ic{background:linear-gradient(135deg,#22c55e,#15803d);}'
     + '.ssp-op b{display:block;font-size:16px;font-weight:800;color:#0f172a;} .ssp-op small{display:block;font-size:12.5px;color:#64748b;margin-top:2px;line-height:1.35;}'
     + '.ssp-op .ssp-op-seta{margin-left:auto;color:#94a3b8;font-size:22px;line-height:1;}'
     + '.ssp-num{display:inline-flex;align-items:center;gap:8px;margin:0 auto 14px;padding:8px 14px;border-radius:99px;background:#f1f5f9;color:#0f172a;font-weight:900;font-size:18px;letter-spacing:.06em;font-variant-numeric:tabular-nums;}'
@@ -98,6 +102,7 @@
     if (!w) location.href = l;
   }
   window.spapAbrirWhatsSuporte = function () { abrirWhats(linkJa('')); };
+  window.spapAbrirCanalAtualizacoes = function () { abrirWhats(CANAL); };
   window.spapAbrirSuporte = function (linkPedido) {
     estilo();
     if (!document.getElementById('ssp-css2')) { var s2 = document.createElement('style'); s2.id = 'ssp-css2'; s2.textContent = css2; document.head.appendChild(s2); }
@@ -110,6 +115,7 @@
       + '<div class="ssp-num"><i>SUPORTE</i>' + NUM.replace(/(\d{2})(\d{3})(\d{4})/, '$1 $2 $3') + '</div>'
       + '<button type="button" class="ssp-op ssp-tel"><span class="ssp-op-ic">' + TEL + '</span><span><b>Ligar por telefone</b><small>Chamada directa para o suporte</small></span><span class="ssp-op-seta">›</span></button>'
       + '<button type="button" class="ssp-op ssp-wa"><span class="ssp-op-ic">' + WA + '</span><span><b>Falar no WhatsApp</b><small>Grupo oficial de suporte — fica registado por escrito</small></span><span class="ssp-op-seta">›</span></button>'
+      + '<button type="button" class="ssp-op ssp-canal"><span class="ssp-op-ic">' + MEGA + '</span><span><b>Info. de atualização</b><small>Siga o canal «Atualizações» no WhatsApp</small></span><span class="ssp-op-seta">›</span></button>'
       + '<button type="button" class="ssp-nao">Agora não</button>'
       + '<div class="ssp-nota">Nunca partilhes a tua senha com ninguém</div>'
       + '</div></div>';
@@ -126,6 +132,7 @@
     // tanto no navegador como dentro das apps Android/iPhone.
     d.querySelector('.ssp-op.ssp-wa').onclick = function () { abrirWhats(linkJa(linkPedido)); fechar(); };
     pLink.then(function (l) { guardarLink(l); }, function () {});
+    d.querySelector('.ssp-op.ssp-canal').onclick = function () { abrirWhats(CANAL); fechar(); };
   };
   // Apanha qualquer link de suporte (o grupo novo ou o antigo número de suporte)
   document.addEventListener('click', function (e) {

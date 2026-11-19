@@ -1,13 +1,13 @@
 {
-  "versao": "3.7.66",
+  "versao": "3.7.67",
   "data": "2026-11-09",
   "novidades": [
+    "Suporte: nova opção «Info. de atualização» (canal Atualizações no WhatsApp)",
     "Monitor da Banca: ecrã do código de acesso com letras bem visíveis; suporte por WhatsApp corrigido",
     "A",
     "p",
     "p",
-    "s",
-    " "
+    "s"
   ],
   "melhorias": [
     "Definições do Monitor da Banca: nova opção «Visitar o website»",
