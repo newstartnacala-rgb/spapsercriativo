@@ -1,1 +1,9 @@
-{"versao": "3.7.64", "data": "2026-11-09", "novidades": "Apps antigas bloqueadas.", "melhorias": ["As apps da Banca antigas (anteriores à 3.7.14) já não abrem a Banca: aparece só o ecrã para baixar a versão nova, sem desinstalar."]}
+{
+  "versao": "3.7.65",
+  "data": "2026-11-09",
+  "novidades": "Apps antigas bloqueadas.",
+  "melhorias": [
+    "Definições do Monitor da Banca: nova opção «Visitar o website»",
+    "As apps da Banca antigas (anteriores à 3.7.14) já não abrem a Banca: aparece só o ecrã para baixar a versão nova, sem desinstalar."
+  ]
+}

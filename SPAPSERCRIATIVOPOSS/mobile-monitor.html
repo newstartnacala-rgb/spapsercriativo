@@ -90,9 +90,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.64">
-<script src="banca-tema.js?v=3.7.64" defer></script>
-<script src="app-android.js?v=3.7.64" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.65">
+<script src="banca-tema.js?v=3.7.65" defer></script>
+<script src="app-android.js?v=3.7.65" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -249,6 +249,7 @@
         <div class="mi" onclick="fecharFolha('folha-definicoes');mBackup()"><div class="e">💾</div><div class="t">Backup · Recuperar · Migrar</div></div>
         <div class="mi" onclick="fecharFolha('folha-definicoes');window.spapInstalarApp?spapInstalarApp('android'):mInstalar()"><div class="e">📲</div><div class="t">App para Android</div></div>
         <div class="mi" onclick="fecharFolha('folha-definicoes');window.spapInstalarApp?spapInstalarApp('ios'):mInstalar()"><div class="e">📱</div><div class="t">App para iPhone</div></div>
+        <div class="mi" onclick="fecharFolha('folha-definicoes');spapVisitarSite()"><div class="e"><img src="ssteam-logo.png" alt="" style="width:1.2em;height:1.2em;border-radius:50%;vertical-align:-.2em"></div><div class="t">Visitar o website</div></div>
         <div class="mi" onclick="fecharFolha('folha-definicoes');suporte()"><div class="e">💬</div><div class="t">Suporte</div></div>
         <div class="mi" onclick="location.href='planos-banca.html?ver=1'"><div class="e">⭐</div><div class="t">O meu plano</div></div>
         <div class="mi" onclick="fecharFolha('folha-definicoes');window.bancaVerificarAtualizacao&&bancaVerificarAtualizacao(true)"><div class="e">🔄</div><div class="t">Verificar atualizações</div></div>
@@ -1513,6 +1514,8 @@ function mVendedores(){
     +'<button class="btn" style="margin-top:12px;" onclick="vendAdicionar()">➕ Adicionar código</button>';
   mostrarInfo('👤 Vendedores / Código', html);
 }
+// ===== VISITAR O WEBSITE (Definições) =====
+function spapVisitarSite(){var u='https://newstartnacala-rgb.github.io/spapsercriativo/vendassteam/?v='+Date.now();var w=null;try{w=window.open(u,'_blank');}catch(e){}if(!w){location.href=u;}}
 // ===== CÓDIGO DO BALCONISTA (Definições) =====
 let _codVisivel=false;
 async function abrirCodigoBalconista(){

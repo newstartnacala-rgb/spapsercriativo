@@ -23,7 +23,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 <script src="supabase-js-2.84.0.js"></script>
 <script>if (typeof supabase === "undefined") document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.84.0/dist/umd/supabase.js"><\/script>');</script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.288"></script>
+<script src="spap-leitor.js?v=2.9.289"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -1127,7 +1127,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.288" defer></script>
+<script src="app-android.js?v=2.9.289" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -1411,6 +1411,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
       <button class="def-item" onclick="fecharDefinicoes();abrirModalLinguaMonitor()"><img src="icons3d/globe.png" alt=""><span>Idioma</span><i class="def-seta"></i></button>
       <button class="def-item" id="def-att" onclick="fecharDefinicoes();abrirAtualizacoes()"><img src="icons3d/refresh.png" alt=""><span>Verificar atualizações</span><b class="def-novo" id="def-att-novo" style="display:none">Nova</b><i class="def-seta"></i></button>
       <button class="def-item def-dono" onclick="fecharDefinicoes();abrirBackup()"><img src="icons3d/floppy.png" alt=""><span>Backup · Recuperar · Migrar</span><i class="def-seta"></i></button>
+      <button class="def-item" onclick="fecharDefinicoes();spapVisitarSite()"><img src="ssteam-logo.png" alt="" style="border-radius:50%"><span>Visitar o website</span><i class="def-seta"></i></button>
       <button class="def-item def-dono" onclick="fecharDefinicoes();abrirSuporte()"><img src="icons3d/chat.png" alt=""><span>Suporte</span><i class="def-seta"></i></button>
       <button class="def-item" onclick="fecharDefinicoes();instalarAppMonitor('android')"><span class="def-plat def-android"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85a.637.637 0 0 0-.83.22l-1.88 3.24a11.43 11.43 0 0 0-8.94 0L5.65 5.67a.643.643 0 0 0-.87-.2c-.28.18-.37.54-.22.83L6.4 9.48A10.78 10.78 0 0 0 1 18h22a10.78 10.78 0 0 0-5.4-8.52M7 15.25a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5m10 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5"/></svg></span><span>App para Android</span><i class="def-seta"></i></button>
       <button class="def-item" onclick="fecharDefinicoes();instalarAppMonitor('ios')"><span class="def-plat def-ios"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg></span><span>App para iPhone</span><i class="def-seta"></i></button>
@@ -6176,6 +6177,8 @@ async function instalarAppMonitor(plataforma) {
 }
 
 
+// ===== VISITAR O WEBSITE (Definições) =====
+function spapVisitarSite(){var u='https://newstartnacala-rgb.github.io/spapsercriativo/vendassteam/?v='+Date.now();var w=null;try{w=window.open(u,'_blank');}catch(e){}if(!w){location.href=u;}}
 // ===== VERIFICAR ATUALIZAÇÕES (Definições) =====
 // Compara versões "2.9.161" número a número: >0 se a for mais recente que b
 function _cmpVersao(a, b) {
@@ -6330,7 +6333,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.288';
+const MONITOR_VERSAO = '2.9.289';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });

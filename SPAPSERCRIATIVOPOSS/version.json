@@ -1,1 +1,11 @@
-{"versao": "2.9.288", "data": "2026-11-09", "novidades": "Na app: só o código do balconista. Na web: e-mail e senha, e depois o código.", "melhorias": ["Na aplicação (Android/iPhone), a Loja e a Banca pedem só o código do balconista; o e-mail só na primeira vez.", "No navegador (web), volta a ser como antes: e-mail e senha, e depois o código do balconista.", "Funciona em computadores e navegadores mais antigos."]}
+{
+  "versao": "2.9.289",
+  "data": "2026-11-09",
+  "novidades": "Na app: só o código do balconista. Na web: e-mail e senha, e depois o código.",
+  "melhorias": [
+    "Definições do Monitor: nova opção «Visitar o website»",
+    "Na aplicação (Android/iPhone), a Loja e a Banca pedem só o código do balconista; o e-mail só na primeira vez.",
+    "No navegador (web), volta a ser como antes: e-mail e senha, e depois o código do balconista.",
+    "Funciona em computadores e navegadores mais antigos."
+  ]
+}
