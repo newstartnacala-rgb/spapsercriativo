@@ -31,7 +31,7 @@
     if (typeof f !== 'function' || f.__protegida) return;
     var g = function () {
       if (aEscrever()) {
-        var a = document.activeElement, dentro = !zonas || !zonas.length;
+        var a = document.activeElement, dentro = false;
         if (!dentro) { for (var i = 0; i < zonas.length; i++) { var z = document.getElementById(zonas[i]); if (z && z.contains(a)) { dentro = true; break; } } }
         if (dentro) {
           // guarda só a última chamada de cada função
@@ -47,17 +47,15 @@
   }
   window.spapProtegerRedesenho = proteger;
   function arrancar() {
+    // Só adia quando o campo activo está DENTRO da zona que vai ser redesenhada (nunca a pesquisa do topo,
+    // senão, com o leitor de código de barras sempre no campo, a lista nunca se actualizava).
     // Loja (PDV)
-    proteger('renderProdutos', ['lista-produtos', 'tela-pdv']);
-    proteger('renderCarrinho', ['carrinho', 'carrinho-itens', 'tela-pdv']);
-    proteger('renderCategorias', ['categorias', 'tela-pdv']);
+    proteger('renderProdutos', ['produtos-grelha']);
+    proteger('renderCarrinho', ['carrinho-itens']);
     proteger('renderM2Grid', ['m2-grid']);
-    proteger('renderM2Cart', ['m2-cart']);
-    proteger('renderM2Chips', ['m2-chips']);
+    proteger('renderM2Cart', ['m2-cart-itens']);
     // Banca (PDV)
-    proteger('renderProdutos', ['tela-venda']);
-    proteger('renderCarrinho', ['tela-venda']);
-    proteger('atualizarBarraCarrinho', []);
+    proteger('atualizarBarraCarrinho', ['cart-itens']);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(arrancar, 0); });
   else setTimeout(arrancar, 0);

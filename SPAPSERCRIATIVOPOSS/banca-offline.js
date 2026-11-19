@@ -70,6 +70,9 @@
   }
   function executar(p) {
     if (p.t === 'insert') return comTempo(supabaseClient.from(p.tabela).insert(p.linhas), 15000);
+    // stock: desconto/reposição à prova de falhas (usa a reserva directa se a função do banco falhar)
+    if (p.t === 'rpc' && (p.fn === 'baixar_stock' || p.fn === 'repor_stock') && window.spapMexerStock && p.args)
+      return comTempo(spapMexerStock(p.args.p_id, p.args.p_qtd, p.fn === 'repor_stock'), 20000);
     if (p.t === 'rpc') return comTempo(supabaseClient.rpc(p.fn, p.args), 15000);
     if (p.t === 'update') return comTempo(supabaseClient.from(p.tabela).update(p.dados).eq('id', p.idAlvo), 15000);
     return Promise.resolve({});

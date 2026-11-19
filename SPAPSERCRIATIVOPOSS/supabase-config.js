@@ -133,6 +133,36 @@ function spapVerificarAcessoOffline(email, senha) {
 }
 function spapEhErroDeRede(msg) { return (typeof navigator !== 'undefined' && navigator.onLine === false) || /fetch|network|internet|abort|timeout|failed/i.test(String(msg || '')); }
 // Dados guardados no telemóvel para abrir sem internet (último resultado bom de cada pedido)
+// ===== STOCK: desconto/reposição à prova de falhas (Loja, Banca, Monitores) =====
+// 1º tenta a função do banco (atómica). Se ela falhar por QUALQUER motivo que não seja falta de internet
+// (função em falta, duas versões em conflito, quantidade decimal num kg, permissão…), faz o desconto
+// directamente no produto. Assim o stock baixa SEMPRE, mesmo que um SQL antigo/novo esteja diferente.
+// Devolve { error } só quando não há internet (para tentar de novo mais tarde).
+function _spapErroRede(e) { var m = String((e && (e.message || e.details || e)) || ''); return (typeof navigator !== 'undefined' && navigator.onLine === false) || /Failed to fetch|NetworkError|Load failed|network|timeout|AbortError|ERR_INTERNET|ECONN/i.test(m); }
+async function spapMexerStock(produtoId, qtd, repor) {
+  var q = Number(qtd); if (!produtoId || !isFinite(q) || q === 0) return { error: null };
+  var fn = repor ? 'repor_stock' : 'baixar_stock', r;
+  try { r = await supabaseClient.rpc(fn, { p_id: produtoId, p_qtd: q }); } catch (e) { r = { error: e }; }
+  if (!r || !r.error) return { error: null, via: 'rpc' };
+  if (_spapErroRede(r.error)) return { error: r.error };
+  // reserva: lê o stock actual e grava o novo valor
+  var s; try { s = await supabaseClient.from('produtos').select('stock').eq('id', produtoId).maybeSingle(); } catch (e) { s = { error: e }; }
+  if (s.error) return _spapErroRede(s.error) ? { error: s.error } : { error: null, falhou: s.error };
+  if (!s.data) return { error: null, via: 'sem-produto' };          // produto apagado: nada a fazer
+  var atual = Number(s.data.stock) || 0, novo = Math.round((atual + (repor ? q : -q)) * 1000) / 1000;
+  var u; try { u = await supabaseClient.from('produtos').update({ stock: novo }).eq('id', produtoId); } catch (e) { u = { error: e }; }
+  if (u.error && !_spapErroRede(u.error) && novo !== Math.round(novo)) {     // coluna de inteiros: arredonda
+    try { u = await supabaseClient.from('produtos').update({ stock: Math.round(novo) }).eq('id', produtoId); } catch (e) { u = { error: e }; }
+  }
+  if (u.error) {
+    if (_spapErroRede(u.error)) return { error: u.error };
+    try { if (window.spapErro) spapErro('Stock não actualizado: ' + (u.error.message || u.error), 'produto ' + produtoId + ' qtd ' + q, 'bd'); } catch (e) {}
+    return { error: null, falhou: u.error };
+  }
+  return { error: null, via: 'directo' };
+}
+window.spapMexerStock = spapMexerStock;
+
 function spapGuardarLocal(chave, valor) { try { localStorage.setItem('spap_cache_' + chave, JSON.stringify({ t: Date.now(), v: valor })); } catch (e) {} }
 function spapLerLocal(chave) { try { var x = JSON.parse(localStorage.getItem('spap_cache_' + chave) || 'null'); return x ? x : null; } catch (e) { return null; } }
 // tipo da conta: 'banca' ou 'loja'

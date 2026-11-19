@@ -112,9 +112,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="Banca e Vendas">
-<link rel="stylesheet" href="banca-tema.css?v=3.7.59">
-<script src="banca-tema.js?v=3.7.59" defer></script>
-<script src="app-android.js?v=3.7.59" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.60">
+<script src="banca-tema.js?v=3.7.60" defer></script>
+<script src="app-android.js?v=3.7.60" defer></script>
 </head>
 <body>
 
@@ -397,11 +397,11 @@
 <div id="toast" class="toast"></div>
 
 <script src="spap-erros.js?v=2"></script>
-<script src="supabase-config.js?v=2"></script>
+<script src="supabase-config.js?v=3"></script>
 <script src="spap-suporte.js?v=4"></script>
 <script src="spap-avisos.js?v=6"></script>
 <script src="spap-imagem.js?v=1"></script>
-<script src="banca-offline.js?v=3.7.59"></script>
+<script src="banca-offline.js?v=4.7.59"></script>
 <script>
 // ===================== ESTADO =====================
 let sessao = null;        // { lojaId, nomeLoja, userId, vendedor }
@@ -1147,9 +1147,9 @@ async function confirmarDespacho(i){
   try{
     for(const it of (d.itens||[])){
       const q=parseInt(it.enviado)||0; if(!q) continue;
-      if(it.produto_id){ try{ await supabaseClient.rpc('repor_stock',{p_id:it.produto_id,p_qtd:q}); }catch(e){}
+      if(it.produto_id){ try{ await spapMexerStock(it.produto_id,q,true); }catch(e){}
         const p=produtos.find(x=>x.id===it.produto_id); if(p) p.stock=(parseInt(p.stock)||0)+q; }
-      else { const p=produtos.find(x=>(x.nome||'').toLowerCase()===(it.nome||'').toLowerCase()); if(p){ try{ await supabaseClient.rpc('repor_stock',{p_id:p.id,p_qtd:q}); }catch(e){} p.stock=(parseInt(p.stock)||0)+q; } }
+      else { const p=produtos.find(x=>(x.nome||'').toLowerCase()===(it.nome||'').toLowerCase()); if(p){ try{ await spapMexerStock(p.id,q,true); }catch(e){} p.stock=(parseInt(p.stock)||0)+q; } }
     }
     await supabaseClient.from('despachos').update({estado:'confirmado'}).eq('id',d.id);
     renderProdutos(); toast('✅ Despacho confirmado. Stock atualizado.','ok'); avisoDespacho();
@@ -1455,6 +1455,6 @@ html.escuro #toast-prod{filter:invert(1) hue-rotate(180deg);}
 html.escuro #toast-prod .tp-foto img{filter:invert(1) hue-rotate(180deg);}
 </style>
 <script src="spap-rolagem.js?v=2"></script>
-<script src="spap-teclado.js?v=1"></script>
+<script src="spap-teclado.js?v=2"></script>
 </body>
 </html>

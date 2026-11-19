@@ -353,7 +353,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
   [tabindex]:focus-visible { outline: 2px solid #1a56a0; outline-offset: 1px; }
 </style>
-<script src="app-android.js?v=2.9.282" defer></script>
+<script src="app-android.js?v=2.9.283" defer></script>
 <style>/* a interface antiga nunca aparece: o ecrã antigo fica invisível até o novo abrir (sem piscar) */ body:not(.modo2) #tela-pdv { visibility:hidden !important; }</style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
@@ -1368,7 +1368,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   window.addEventListener('orientationchange', () => setTimeout(fixarAlturaReal, 300));
 </script>
 <script src="spap-erros.js?v=2"></script>
-<script src="supabase-config.js?v=2"></script>
+<script src="supabase-config.js?v=3"></script>
 <script src="spap-avisos.js?v=6"></script>
 <script src="spap-expirou.js?v=2"></script>
 <script src="spap-suporte.js?v=4"></script>
@@ -1807,7 +1807,6 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   let _assinProdutos = null, _aAtualizarProd = false, _canalProdutos = null, _esperaProd = null;
   async function atualizarProdutosAoVivo() {
     if (!navigator.onLine || !sessaoAtual || _aAtualizarProd) return;
-    if ((filaVendas || []).length) return;   // espera as vendas pendentes subirem (não mexe no stock local)
     _aAtualizarProd = true;
     try {
       const cols = 'id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em,unidade';
@@ -1824,8 +1823,12 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
       if (assin === _assinProdutos) return;
       _assinProdutos = assin;
       const velhos = new Map((produtos || []).map(p => [p.id, p]));
+      // vendas ainda por enviar: o servidor ainda não as descontou, por isso descontamos aqui (o balconista vê o stock certo)
+      const pendStock = {};
+      (filaVendas || []).forEach(v => { if (v && !v.sincStock) (v.baixas || []).forEach(b => { if (!b.feito) pendStock[b.produto_id] = (pendStock[b.produto_id] || 0) + (Number(b.qtd) || 0); }); });
       produtos = todos.map(r => {
         const n = mapearProdutoDoSupabase(r), v = velhos.get(n.id);
+        if (pendStock[n.id]) n.stock = Math.round(((Number(n.stock) || 0) - pendStock[n.id]) * 1000) / 1000;
         if (v) { const img = v.imagem; Object.assign(v, n); if (!v.imagem && img) v.imagem = img; return v; }
         return n;
       });
@@ -3381,9 +3384,12 @@ async function scannerFechar() {
         // 2. STOCK — desconto ATÓMICO no servidor (stock = stock - qtd), imune a corridas.
         if (!v.sincStock) {
           if (v.baixas && v.baixas.length) {
+            // desconta produto a produto; os já feitos ficam marcados (não descontam duas vezes ao tentar de novo)
             for (const b of v.baixas) {
-              const { error } = await supabaseClient.rpc('baixar_stock', { p_id: b.produto_id, p_qtd: parseInt(b.qtd)||0 });
-              if (error) throw error;
+              if (b.feito) continue;
+              const { error } = await spapMexerStock(b.produto_id, Number(b.qtd) || 0, false);
+              if (error) throw error;          // só falta de internet chega aqui: tenta mais tarde
+              b.feito = true; guardarFila();
             }
           } else {
             // fila antiga (sem baixas) — mecanismo anterior por segurança
@@ -4903,20 +4909,16 @@ async function scannerFechar() {
       .eq('id', id).eq('estado', 'pendente').select('id, produto_id, quantidade');
     if (error) throw error;
     if (!rows || rows.length === 0) {
-      // Nada mudou: ou já estava tratada, ou o banco de dados não deixou alterar (falta a permissão do SQL v2.9.282)
+      // Nada mudou: ou já estava tratada, ou o banco de dados não deixou alterar (falta a permissão do SQL das perdas)
       const { data: ainda } = await supabaseClient.from('perdas').select('estado').eq('id', id).maybeSingle();
-      if (ainda && ainda.estado === 'pendente') throw new Error('O banco de dados não deixou confirmar. O dono precisa de correr no Supabase o SQL atualizacao-v2.9.282-perdas-confirmar.sql.');
+      if (ainda && ainda.estado === 'pendente') throw new Error('O banco de dados não deixou confirmar. O dono precisa de correr no Supabase o SQL ' + ('atualizacao-v2.9.' + '283-stock-e-perdas.sql') + '.');
       return false; // já tratada noutro aparelho
     }
     const pid = produtoId || (rows[0] && rows[0].produto_id);
     const q = parseInt(qtd) || (rows[0] && parseInt(rows[0].quantidade)) || 0;
     if (pid && q > 0) {
       // baixar_stock devolve {error} (não atira). Se falhar, descontamos à mão.
-      const { error: eRpc } = await supabaseClient.rpc('baixar_stock', { p_id: pid, p_qtd: q });
-      if (eRpc) {
-        const { data: prod } = await supabaseClient.from('produtos').select('stock').eq('id', pid).maybeSingle();
-        if (prod) await supabaseClient.from('produtos').update({ stock: Math.max(0, (parseInt(prod.stock)||0) - q) }).eq('id', pid);
-      }
+      await spapMexerStock(pid, q, false);   // à prova de falhas (função do banco ou desconto directo)
       // atualiza o stock local (para o balconista ver logo)
       const pl = (typeof produtos !== 'undefined') ? produtos.find(x => x.id === pid) : null;
       if (pl) pl.stock = Math.max(0, (parseInt(pl.stock)||0) - q);
@@ -5083,7 +5085,7 @@ async function scannerFechar() {
         if (!it.produto_id) continue;
         const q = parseInt(it.enviado) || 0;
         if (q <= 0) continue;
-        try { await supabaseClient.rpc('repor_stock', { p_id: it.produto_id, p_qtd: q }); }
+        try { const _r = await spapMexerStock(it.produto_id, q, true); if (_r.error) throw _r.error; }
         catch(e) {
           const { data: prod } = await supabaseClient.from('produtos').select('stock').eq('id', it.produto_id).maybeSingle();
           if (prod) await supabaseClient.from('produtos').update({ stock: (parseInt(prod.stock)||0) + q }).eq('id', it.produto_id);
@@ -6003,7 +6005,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.282';
+  const VERSAO_ATUAL = '2.9.283';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -7224,6 +7226,11 @@ document.addEventListener('click', function(e){
     try { setTimeout(function(){ if (typeof carregarImagensDe === 'function') carregarImagensDe((typeof _m2ListaVisivel === 'function' ? _m2ListaVisivel() : produtos).slice(0, 60)); }, 0); } catch(e){}
     var el = document.getElementById('m2-grid'); if (!el) return;
     var termo = (_m2Busca||'').toLowerCase();
+    // categoria/subcategoria escolhida que já não existe nesta loja (apagada, renomeada, outra loja): volta a «Todas»
+    try {
+      if (_m2Cat && _m2Cat!=='Todos' && _m2Cat!=='__kg__' && !(produtos||[]).some(function(p){ return ((p.categoria&&String(p.categoria).trim())?p.categoria.trim():'Outros')===_m2Cat; })) { _m2Cat='Todos'; _m2Sub=null; try{ renderM2Chips(); }catch(e){} }
+      if (_m2Sub && !(produtos||[]).some(function(p){ return ((p.subcategoria&&String(p.subcategoria).trim())||'').toLowerCase()===String(_m2Sub).toLowerCase(); })) { _m2Sub=null; try{ renderM2Chips(); }catch(e){} }
+    } catch(e){}
     var lista = (produtos||[]).filter(function(p){
       var c=(p.categoria&&String(p.categoria).trim())?p.categoria.trim():'Outros';
       if (_m2Cat==='__kg__'){ if (p.unidade!=='kg') return false; }
@@ -7234,15 +7241,19 @@ document.addEventListener('click', function(e){
     });
     if (!lista.length){ el.innerHTML = '<div style="color:#94a3b8;padding:30px;grid-column:1/-1;text-align:center;">Nenhum produto.</div>'; return; }
     el.innerHTML = lista.map(function(p){
-      var img = p.imagem ? '<img class="m2-img" src="'+p.imagem+'" onerror="this.outerHTML=\'<div class=m2-img>🛒</div>\'">' : '<div class="m2-img">🛒</div>';
+      var img = p.imagem ? '<img class="m2-img" src="'+String(p.imagem).replace(/"/g,'%22')+'" loading="lazy" onerror="this.outerHTML=\'<div class=m2-img>🛒</div>\'">' : '<div class="m2-img">🛒</div>';
       var kg = (p.unidade==='kg') ? ' <small>/kg</small>' : '';
-      var nomeJS = (p.nome||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');
-      return '<div class="m2-card" onclick="m2AddProduto(\''+nomeJS+'\')" title="Clica para adicionar">'+img+
-        '<div class="m2-nome">'+(p.nome||'')+'</div>'+
+      // pelo id (seguro para qualquer nome: aspas, barras, acentos, símbolos) — nunca parte a grelha
+      var pid = String(p.id||'').replace(/[^A-Za-z0-9_-]/g,'');
+      var nomeH = String(p.nome||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return '<div class="m2-card" data-pid="'+pid+'" onclick="m2AddPorId(\''+pid+'\')" title="Clica para adicionar">'+img+
+        '<div class="m2-nome">'+nomeH+'</div>'+
         '<div class="m2-linha"><span class="m2-preco">'+_m2Money(p.preco)+kg+'</span>'+
-        '<button class="m2-add" onclick="event.stopPropagation(); m2AddProduto(\''+nomeJS+'\')">'+m2Svg('plus')+'</button></div></div>';
+        '<button class="m2-add" onclick="event.stopPropagation(); m2AddPorId(\''+pid+'\')">'+m2Svg('plus')+'</button></div></div>';
     }).join('');
   }
+  function m2AddPorId(id){ var p=(produtos||[]).find(function(x){ return String(x.id)===String(id); }); if (p) m2AddProduto(p.nome); }
+  window.m2AddPorId = m2AddPorId;
   function m2AddProduto(nome){
     var p = (produtos||[]).find(function(x){ return x.nome===nome; });
     var ev = window.event, card = ev && ev.target && ev.target.closest ? ev.target.closest('.m2-card') : null;
@@ -7424,7 +7435,7 @@ document.addEventListener('click', function(e){
 <script src="spap-vidro.js?v=7"></script>
 <script src="spap-dourado.js?v=5"></script>
 <script src="spap-rolagem.js?v=2"></script>
-<script src="spap-teclado.js?v=1"></script>
+<script src="spap-teclado.js?v=2"></script>
 <style id="m2-topo-novo">
 /* Topo novo: uma só pesquisa (curta), categoria ao lado, banner da loja à direita; sem a faixa «Ponto de venda» */
 body.modo2 #m2-cabecalho, body.modo2 #m2-subrow { display:none !important; }
