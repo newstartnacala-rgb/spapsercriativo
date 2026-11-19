@@ -352,7 +352,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
   [tabindex]:focus-visible { outline: 2px solid #1a56a0; outline-offset: 1px; }
 </style>
-<script src="app-android.js?v=2.9.285" defer></script>
+<script src="app-android.js?v=2.9.286" defer></script>
 <style>/* a interface antiga nunca aparece: o ecrã antigo fica invisível até o novo abrir (sem piscar) */ body:not(.modo2) #tela-pdv { visibility:hidden !important; }</style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
@@ -1758,7 +1758,8 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
       mostrarNotif('❌ Erro ao carregar produtos: ' + produtosError.message, true);
     }
 
-    const ehContaDemo = (sessaoAtual.user.email || '').toLowerCase() === 'joaomassuvir@gmail.com';
+    window._spapErroProdutos = produtosError ? (produtosError.message || String(produtosError)) : null;
+    const ehContaDemo = ((sessaoAtual.user && sessaoAtual.user.email) || '').toLowerCase() === 'joaomassuvir@gmail.com';
     if (!produtosError && produtosData.length === 0 && ehContaDemo) {
       // SÓ a conta demonstrativa recebe produtos de exemplo; as outras começam vazias
       const paraInserir = produtosSeed.map(p => ({ ...p, loja_id: sessaoAtual.lojaId }));
@@ -1771,14 +1772,28 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     } else {
       produtos = (produtosData || []).map(mapearProdutoDoSupabase);
     }
+    // Mostra os produtos JÁ (não espera pelo histórico de vendas, que nas lojas com muito movimento demora)
+    try { guardarCacheLeve(); } catch(e) {}
+    try { garantirCategoriaComProdutos(); } catch(e) {}
+    try { renderCategorias(); } catch(e) {}
+    try { renderProdutos(); } catch(e) {}
+    try { if (document.body.classList.contains('modo2')) { renderM2Chips(); renderM2Grid(); } } catch(e) {}
 
-    const { data: vendasData, error: vendasError } = await supabaseClient
-      .from('vendas')
-      .select('*, venda_itens(*)')
-      .eq('loja_id', sessaoAtual.lojaId)
-      .order('criado_em', { ascending: false });
+    // Histórico de vendas: só os últimos 60 dias (o resto está no Monitor) e nunca pode impedir a Loja de abrir
+    let vendasData = null, vendasError = null;
+    try {
+      const desde = new Date(Date.now() - 60 * 864e5).toISOString();
+      const rv = await supabaseClient
+        .from('vendas')
+        .select('*, venda_itens(*)')
+        .eq('loja_id', sessaoAtual.lojaId)
+        .gte('criado_em', desde)
+        .order('criado_em', { ascending: false })
+        .limit(1500);
+      vendasData = rv.data || []; vendasError = rv.error;
+    } catch(e) { vendasError = e; }
 
-    if (vendasError) { mostrarNotif('❌ Erro ao carregar vendas: ' + vendasError.message, true); vendas = []; }
+    if (vendasError) { try { const c = localStorage.getItem('pdv_cache_vendas_' + sessaoAtual.lojaId); vendas = c ? JSON.parse(c) : []; } catch(e) { vendas = []; } }
     else {
       const doServidor = vendasData.map(v => ({
         id: v.id,
@@ -1788,7 +1803,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
         total: parseFloat(v.total),
         recebido: v.recebido != null ? parseFloat(v.recebido) : null,
         troco: v.troco != null ? parseFloat(v.troco) : null,
-        itens: v.venda_itens.map(it => ({ nome: it.produto_nome, qtd: it.qtd, preco: parseFloat(it.preco_unitario) })),
+        itens: (v.venda_itens || []).map(it => ({ nome: it.produto_nome, qtd: it.qtd, preco: parseFloat(it.preco_unitario) })),
         pendente: false
       }));
 
@@ -6058,7 +6073,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.285';
+  const VERSAO_ATUAL = '2.9.286';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -7305,6 +7320,28 @@ document.addEventListener('click', function(e){
       window.renderM2Grid();
     } catch(e) {}
   }, 3000);
+  // Loja sem produtos no ecrã: mostra a razão (conta, loja, erro do servidor, versão) e um botão para recarregar
+  function _m2DiagnosticoVazio(){
+    function h(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+    var S = (typeof sessaoAtual!=='undefined' && sessaoAtual) || {}, em = (S.user && S.user.email) || (window.spapEmailSessao ? spapEmailSessao() : '') || '—';
+    var err = window._spapErroProdutos, off = navigator.onLine === false;
+    var razao = err ? ('O servidor respondeu com erro: <b>' + h(err) + '</b>') : off ? 'Sem internet e sem produtos guardados neste aparelho.' : 'O servidor diz que <b>esta loja não tem produtos</b>. Confirma no Monitor se os produtos estão nesta loja (e não noutra conta/loja).';
+    return '<div style="grid-column:1/-1;max-width:560px;margin:30px auto;background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px 22px;color:#0f172a;box-shadow:0 10px 30px rgba(15,23,42,.08);font-size:14px;line-height:1.55;">'
+      + '<div style="font-size:18px;font-weight:900;margin-bottom:6px;">📦 Nenhum produto carregado</div>'
+      + '<div style="margin-bottom:10px;">' + razao + '</div>'
+      + '<div style="background:#f8fafc;border-radius:12px;padding:10px 12px;font:12.5px/1.6 ui-monospace,Consolas,monospace;color:#334155;">'
+      + 'Loja: ' + h(S.nomeEmpresa || S.nomeLoja || '—') + '<br>Conta: ' + h(em) + '<br>Versão: ' + h((typeof VERSAO_ATUAL !== 'undefined' ? VERSAO_ATUAL : '')) + '<br>Endereço: ' + h(location.host) + '</div>'
+      + '<button onclick="location.reload()" style="margin-top:12px;height:44px;padding:0 18px;border:0;border-radius:12px;background:#2563eb;color:#fff;font-weight:800;font-family:inherit;cursor:pointer;">↻ Recarregar produtos</button>'
+      + '</div>';
+  }
+  var _m2VazioAvisado = false;
+  function _m2AvisarVazio(){
+    if (_m2VazioAvisado || !window.spapErro) return; _m2VazioAvisado = true;
+    var S = (typeof sessaoAtual!=='undefined' && sessaoAtual) || {};
+    setTimeout(function(){ if ((produtos||[]).length) return;
+      spapErro('Loja sem produtos no ecrã', 'loja=' + (S.lojaId||'') + ' nome=' + (S.nomeEmpresa||S.nomeLoja||'') + ' erro=' + (window._spapErroProdutos||'nenhum') + ' online=' + navigator.onLine + ' host=' + location.host, 'bd');
+    }, 8000);
+  }
   function _renderM2GridReal(){
     try { setTimeout(function(){ if (typeof carregarImagensDe === 'function') carregarImagensDe((typeof _m2ListaVisivel === 'function' ? _m2ListaVisivel() : produtos).slice(0, 60)); }, 0); } catch(e){}
     var el = document.getElementById('m2-grid'); if (!el) return;
@@ -7322,7 +7359,10 @@ document.addEventListener('click', function(e){
       if (termo){ var n=(p.nome||'').toLowerCase(), cod=(p.codigo||'').toLowerCase(), cb=(p.codbarras||'').toLowerCase(); if(!(n.indexOf(termo)>=0||cod.indexOf(termo)>=0||cb.indexOf(termo)>=0)) return false; }
       return true;
     });
-    if (!lista.length){ el.innerHTML = '<div style="color:#94a3b8;padding:30px;grid-column:1/-1;text-align:center;">Nenhum produto.</div>'; return; }
+    if (!lista.length){
+      if ((produtos||[]).length) { el.innerHTML = '<div style="color:#94a3b8;padding:30px;grid-column:1/-1;text-align:center;">Nenhum produto nesta pesquisa/categoria.</div>'; return; }
+      el.innerHTML = _m2DiagnosticoVazio(); try { _m2AvisarVazio(); } catch(e){} return;
+    }
     el.innerHTML = lista.map(function(p){
       var img = p.imagem ? '<img class="m2-img" src="'+String(p.imagem).replace(/"/g,'%22')+'" loading="lazy" onerror="this.outerHTML=\'<div class=m2-img>🛒</div>\'">' : '<div class="m2-img">🛒</div>';
       var kg = (p.unidade==='kg') ? ' <small>/kg</small>' : '';
