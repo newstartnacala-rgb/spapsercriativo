@@ -262,19 +262,40 @@ section{padding:88px 0}
 .heroi .h-titulo{animation:hSobe .8s cubic-bezier(.22,1,.36,1) both}
 @keyframes hSobe{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
 
-/* carrossel da Loja: modo claro ↔ modo escuro */
-.tab-carrossel .tc-slides{position:relative;aspect-ratio:16/10;border-radius:22px;overflow:hidden}
-.tab-carrossel .tc-slide{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top left;border-radius:0;opacity:0;transition:opacity .8s ease,transform 1.2s ease;transform:scale(1.015)}
-.tab-carrossel .tc-slide.on{opacity:1;transform:none}
+/* ===== Grupos das apps: informação em cima → painel → apps logo por baixo ===== */
+.grupo.g2{display:flex;flex-direction:column;align-items:stretch;gap:0;padding:64px 0 72px;grid-template-columns:none}
+.g-cab{text-align:center;max-width:760px;margin:0 auto}
+.g-cab .desc{margin:14px auto 0;max-width:40em}
+.g-cab .novidades{margin:20px auto 0;text-align:left}
+.g-chip{display:inline-flex;align-items:center;gap:8px;padding:7px 16px;border-radius:99px;font-weight:800;font-size:13px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px;background:#fff;border:1px solid var(--linha);box-shadow:0 6px 16px rgba(11,27,77,.06)}
+.g-chip i{width:9px;height:9px;border-radius:50%}
+.grupo.loja .g-chip{color:var(--loja)} .grupo.loja .g-chip i{background:var(--loja)}
+.grupo.banca .g-chip{color:var(--banca)} .grupo.banca .g-chip i{background:var(--banca)}
+.g-palco{position:relative;margin-top:36px;display:flex;flex-direction:column;align-items:center}
+.g-palco .tablet-cena{margin:0 auto;padding-bottom:0}
+.grupo.banca .duo{width:520px;max-width:100%;margin:0 auto;height:560px}
+.g-apps{margin-top:22px;background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,.35));border:1px solid var(--linha);border-radius:28px;padding:22px;max-width:980px;width:100%;margin-left:auto;margin-right:auto;box-shadow:0 18px 40px rgba(11,27,77,.06)}
+.g-apps-tit{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 16px;margin:0 4px 16px}
+.g-apps-tit b{font-family:"Bricolage Grotesque",sans-serif;font-size:22px;font-weight:800}
+.g-apps-tit span{color:var(--tinta2);font-size:14.5px;font-weight:600}
+.grupo.loja .g-apps{border-top:4px solid var(--loja)} .grupo.banca .g-apps{border-top:4px solid var(--banca)}
+/* carrossel claro ↔ escuro (todas as molduras mudam juntas) */
+.car-f{position:relative;width:100%;height:100%;overflow:hidden;border-radius:inherit}
+.tel .car-f{border-radius:28px}
+.car-f .car-s{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top;opacity:0;transition:opacity .8s ease}
+.car-f .car-s.on{opacity:1}
+.tablet .tc-slides{aspect-ratio:16/10;height:auto;border-radius:22px}
+.tablet .tc-slides .car-s{object-position:top left;border-radius:0}
 .tc-seta{width:40px;height:40px;border-radius:50%;border:0;background:#0b1b4d;color:#fff;display:grid;place-items:center;cursor:pointer;box-shadow:0 6px 14px rgba(11,27,77,.25);transition:transform .15s,background .2s;flex-shrink:0}
 .tc-seta:hover{background:#16307a;transform:scale(1.06)} .tc-seta:active{transform:scale(.92)}
 .tc-seta svg{width:20px;height:20px}
-.tc-rodape{position:absolute;left:0;top:100%;margin-top:22px;display:flex;align-items:center;gap:12px;padding:6px;border-radius:99px;background:#fff;box-shadow:0 10px 24px rgba(11,27,77,.14);font-weight:800;font-size:14px;color:#0b1b4d;white-space:nowrap;z-index:3}
-.tc-rot{min-width:96px;text-align:center}
+.tc-rodape{position:relative;margin-top:26px;display:inline-flex;align-items:center;gap:12px;padding:6px;border-radius:99px;background:#fff;box-shadow:0 10px 24px rgba(11,27,77,.14);font-weight:800;font-size:14px;color:#0b1b4d;white-space:nowrap;z-index:3}
+.grupo.banca .tc-seta{background:#c2410c} .grupo.banca .tc-seta:hover{background:#ea580c}
+.tc-rot{min-width:104px;text-align:center}
 .tc-pontos{display:flex;gap:6px;padding-right:2px} .tc-pontos i{width:8px;height:8px;border-radius:50%;background:#cbd5e1;cursor:pointer;transition:width .3s,background .3s} .tc-pontos i.on{width:22px;border-radius:9px;background:linear-gradient(90deg,#d4a73c,#b8862b)}
-.tablet-cena{margin-bottom:60px}
-@media (max-width:980px){.tab-carrossel .tc-slides{border-radius:16px}.tc-rodape{margin-top:16px;font-size:13px}.tc-seta{width:36px;height:36px}.tablet-cena{margin-bottom:40px}}
-@media (prefers-reduced-motion:reduce){.tab-carrossel .tc-slide{transition:none}}
+@media (max-width:980px){.tablet .tc-slides{border-radius:16px}.tel .car-f{border-radius:22px}.tc-rodape{margin-top:18px;font-size:13px}.tc-seta{width:36px;height:36px}.g-palco .tablet-cena{padding-bottom:40px}}
+@media (max-width:560px){.grupo.g2{padding:48px 0 56px}.grupo.banca .duo{height:380px;width:340px}.g-apps{padding:16px;border-radius:22px}.g-apps-tit b{font-size:19px}}
+@media (prefers-reduced-motion:reduce){.car-f .car-s{transition:none}}
 </style>
 </head>
 <body>
@@ -340,8 +361,8 @@ section{padding:88px 0}
         </div>
       </div>
       <div class="leque" aria-hidden="true">
-        <div class="tel t1"><img src="img/banca.webp" alt=""></div>
-        <div class="tel t2"><img src="img/monitor.webp" alt=""></div>
+        <div class="tel t1"><img src="img/banca-claro.webp" alt=""></div>
+        <div class="tel t2"><img src="img/monitor-claro.webp" alt=""></div>
         <div class="tel t3"><img src="img/loja-clara.webp" alt=""></div>
       </div>
     </div>
@@ -353,25 +374,28 @@ section{padding:88px 0}
       <h2 class="tit-sec">Escolha as apps do seu negócio</h2>
       <p class="sub-sec">Cada negócio tem duas apps separadas: uma para vender e outra para o dono acompanhar tudo. Instale as duas com a mesma conta.</p>
 
-      <div class="grupo loja" id="loja">
-        <div class="tablet-cena">
-          <div class="aura" aria-hidden="true"></div>
-          <div class="tablet tab-carrossel" id="tab-car" aria-roledescription="carrossel" aria-label="Interface da Loja">
-            <div class="tc-slides">
-              <img class="tc-slide on" src="img/loja-clara-tablet.webp" alt="Loja — interface dourada em modo claro" loading="lazy" data-rot="Modo claro">
-              <img class="tc-slide" src="img/loja-dourada-tablet.webp" alt="Loja — interface dourada em modo escuro" loading="lazy" data-rot="Modo escuro">
-            </div>
-            <div class="tc-rodape"><button type="button" class="tc-seta tc-ant" aria-label="Painel anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button><span class="tc-rot" id="tc-rot">Modo claro</span><span class="tc-pontos"><i class="on"></i><i></i></span><button type="button" class="tc-seta tc-seg" aria-label="Painel seguinte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button></div>
-          </div>
-          <div class="tel"><img src="img/monitor.webp" alt="" loading="lazy"></div>
+      <div class="grupo g2 loja" id="loja">
+        <div class="g-cab">
+          <span class="g-chip"><i></i>Lojas grandes</span>
+          <h3>Loja</h3>
+          <div class="para">Para lojas, mercearias e supermercados</div>
+          <p class="desc">O ponto de venda fica no balcão, no tablet ou no computador, e o Monitor fica com o dono. Cada venda feita na Loja aparece no Monitor no mesmo momento.</p>
+          <div class="novidades" data-nov="loja" hidden><b></b><ul></ul></div>
         </div>
-        <div class="info">
-          <div>
-            <h3>Loja</h3>
-            <div class="para">Para lojas, mercearias e supermercados</div>
-            <p class="desc">O ponto de venda fica no balcão, no tablet ou no computador, e o Monitor fica com o dono. Cada venda feita na Loja aparece no Monitor no mesmo momento.</p>
-            <div class="novidades" data-nov="loja" hidden><b></b><ul></ul></div>
+        <div class="g-palco carrossel" aria-roledescription="carrossel" aria-label="Interface da Loja e do Monitor">
+          <div class="tablet-cena">
+            <div class="aura" aria-hidden="true"></div>
+            <div class="tablet"><div class="car-f tc-slides"><img class="car-s on" src="img/loja-clara-tablet.webp" alt="Loja — interface dourada em modo claro" loading="lazy"><img class="car-s" src="img/loja-dourada-tablet.webp" alt="Loja — interface dourada em modo escuro" loading="lazy"></div></div>
+            <div class="tel"><div class="car-f"><img class="car-s on" src="img/monitor-claro.webp" alt="Monitor da Loja — modo claro" loading="lazy"><img class="car-s" src="img/monitor-escuro.webp" alt="Monitor da Loja — modo escuro" loading="lazy"></div></div>
           </div>
+          <div class="tc-rodape" role="group" aria-label="Trocar painel da Loja">
+            <button type="button" class="tc-seta tc-ant" aria-label="Painel anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+            <span class="tc-rot">Modo claro</span><span class="tc-pontos"><i class="on"></i><i></i></span>
+            <button type="button" class="tc-seta tc-seg" aria-label="Painel seguinte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+          </div>
+        </div>
+        <div class="g-apps">
+          <div class="g-apps-tit"><b>Instale as apps da Loja</b><span>Android, iPhone ou navegador · a mesma conta nas duas</span></div>
           <div class="baixar">
         <div class="cartao-app" data-app="Loja">
           <div class="topo-app"><img src="img/icon-loja.png" alt="Ícone da app Loja"><div><b>Loja</b><span class="funcao">Ponto de venda</span></div></div>
@@ -393,12 +417,28 @@ section{padding:88px 0}
         </div>
       </div>
 
-      <div class="grupo banca" id="banca">
-        <div>
+      <div class="grupo g2 banca" id="banca">
+        <div class="g-cab">
+          <span class="g-chip"><i></i>Lojas pequenas e bancas</span>
           <h3>Banca</h3>
           <div class="para">Para bancas e vendedores pequenos</div>
           <p class="desc">Os balconistas vendem só com o telemóvel e o dono acompanha a banca na sua própria app, separada da de vender.</p>
           <div class="novidades" data-nov="banca" hidden><b></b><ul></ul></div>
+        </div>
+        <div class="g-palco carrossel" aria-roledescription="carrossel" aria-label="Interface da Banca e do Monitor da Banca">
+          <div class="duo">
+            <div class="aura" aria-hidden="true"></div>
+            <div class="tel"><div class="car-f"><img class="car-s on" src="img/banca-claro.webp" alt="Banca e Vendas — modo claro" loading="lazy"><img class="car-s" src="img/banca-escuro.webp" alt="Banca e Vendas — modo escuro" loading="lazy"></div></div>
+            <div class="tel"><div class="car-f"><img class="car-s on" src="img/bancamonitor-claro.webp" alt="Monitor e Banca — modo claro" loading="lazy"><img class="car-s" src="img/bancamonitor-escuro.webp" alt="Monitor e Banca — modo escuro" loading="lazy"></div></div>
+          </div>
+          <div class="tc-rodape" role="group" aria-label="Trocar painel da Banca">
+            <button type="button" class="tc-seta tc-ant" aria-label="Painel anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+            <span class="tc-rot">Modo claro</span><span class="tc-pontos"><i class="on"></i><i></i></span>
+            <button type="button" class="tc-seta tc-seg" aria-label="Painel seguinte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+          </div>
+        </div>
+        <div class="g-apps">
+          <div class="g-apps-tit"><b>Instale as apps da Banca</b><span>Android, iPhone ou navegador · a mesma conta nas duas</span></div>
           <div class="baixar">
         <div class="cartao-app" data-app="Banca">
           <div class="topo-app"><img src="img/icon-banca.png" alt="Ícone da app Banca e Vendas"><div><b>Banca e Vendas</b><span class="funcao">Para vender</span></div></div>
@@ -418,7 +458,6 @@ section{padding:88px 0}
         </div>
           </div>
         </div>
-        <div class="duo" aria-hidden="true"><div class="aura"></div><div class="tel"><img src="img/banca.webp" alt="" loading="lazy"></div><div class="tel"><img src="img/bancamonitor.webp" alt="" loading="lazy"></div></div>
       </div>
     </div>
   </section>
@@ -689,18 +728,20 @@ section{padding:88px 0}
 })();
 </script>
 <script>
-(function(){ var c=document.getElementById('tab-car'); if(!c) return;
-  var sl=c.querySelectorAll('.tc-slide'), pt=c.querySelectorAll('.tc-pontos i'), rot=document.getElementById('tc-rot'), i=0, t=null, parado=false;
-  function ir(n){ i=(n+sl.length)%sl.length; for(var k=0;k<sl.length;k++){ sl[k].classList.toggle('on',k===i); if(pt[k]) pt[k].classList.toggle('on',k===i); } if(rot) rot.textContent=sl[i].getAttribute('data-rot'); }
-  function auto(){ clearInterval(t); t=setInterval(function(){ if(!parado && !document.hidden) ir(i+1); },4500); }
-  c.querySelector('.tc-ant').onclick=function(){ ir(i-1); auto(); };
-  c.querySelector('.tc-seg').onclick=function(){ ir(i+1); auto(); };
-  for(var k=0;k<pt.length;k++){ (function(n){ pt[n].onclick=function(){ ir(n); auto(); }; })(k); }
-  c.addEventListener('mouseenter',function(){ parado=true; }); c.addEventListener('mouseleave',function(){ parado=false; });
-  var x0=null; c.addEventListener('touchstart',function(e){ x0=e.touches[0].clientX; },{passive:true});
-  c.addEventListener('touchend',function(e){ if(x0===null) return; var dx=e.changedTouches[0].clientX-x0; if(Math.abs(dx)>40){ ir(i+(dx<0?1:-1)); auto(); } x0=null; },{passive:true});
-  try{ new Image().src=sl[1].src; }catch(e){}
-  auto();
+/* Carrosséis claro ↔ escuro: troca sozinho, setas, pontos e deslizar o dedo */
+(function(){ var cs=document.querySelectorAll('.carrossel'); var ROT=['Modo claro','Modo escuro'];
+  Array.prototype.forEach.call(cs,function(c){
+    var fr=c.querySelectorAll('.car-f'), pt=c.querySelectorAll('.tc-pontos i'), rot=c.querySelector('.tc-rot'), i=0, t=null, parado=false, n=2;
+    function ir(k){ i=(k+n)%n; Array.prototype.forEach.call(fr,function(f){ var s=f.querySelectorAll('.car-s'); for(var x=0;x<s.length;x++) s[x].classList.toggle('on',x===i); });
+      for(var x=0;x<pt.length;x++) pt[x].classList.toggle('on',x===i); if(rot) rot.textContent=ROT[i]; }
+    function auto(){ clearInterval(t); t=setInterval(function(){ if(!parado && !document.hidden) ir(i+1); },4500); }
+    c.querySelector('.tc-ant').onclick=function(){ ir(i-1); auto(); };
+    c.querySelector('.tc-seg').onclick=function(){ ir(i+1); auto(); };
+    Array.prototype.forEach.call(pt,function(p,k){ p.onclick=function(){ ir(k); auto(); }; });
+    c.addEventListener('mouseenter',function(){ parado=true; }); c.addEventListener('mouseleave',function(){ parado=false; });
+    var x0=null; c.addEventListener('touchstart',function(e){ x0=e.touches[0].clientX; },{passive:true});
+    c.addEventListener('touchend',function(e){ if(x0===null) return; var dx=e.changedTouches[0].clientX-x0; if(Math.abs(dx)>40){ ir(i+(dx<0?1:-1)); auto(); } x0=null; },{passive:true});
+    auto(); });
 })();
 </script>
 <script src="../spap-suporte.js?v=6"></script>
