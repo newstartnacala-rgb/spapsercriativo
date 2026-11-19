@@ -163,6 +163,30 @@ async function spapMexerStock(produtoId, qtd, repor) {
 }
 window.spapMexerStock = spapMexerStock;
 
+// ===== Gravar no aparelho SEM falhar (vendas por enviar nunca se perdem por falta de espaço) =====
+// Se a memória (localStorage) estiver cheia, liberta espaço por ordem (caches que se recuperam da internet) e tenta de novo.
+function spapLibertarEspaco(nivel) {
+  try {
+    var ks = []; for (var i = 0; i < localStorage.length; i++) ks.push(localStorage.key(i));
+    var apagar = function (re) { ks.forEach(function (k) { if (re.test(k)) { try { localStorage.removeItem(k); } catch (e) {} } }); };
+    apagar(/^spap_erros_fila$|^spap_banner_|^spap_cache_|^pdv_vendas_offline$/);           // 1) registos de erros, banners, caches gerais
+    apagar(/^pdv_cache_vendas_/);                                                           // 2) histórico de vendas (vem do servidor)
+    // 3) produtos guardados com fotos: guarda-os sem as fotos
+    ks.forEach(function (k) {
+      if (!/^banca_produtos_|^pdv_cache_produtos_/.test(k)) return;
+      try { var l = JSON.parse(localStorage.getItem(k) || '[]'); if (Array.isArray(l)) localStorage.setItem(k, JSON.stringify(l.map(function (p) { var c = Object.assign({}, p); delete c.imagem; return c; }))); } catch (e) { try { localStorage.removeItem(k); } catch (e2) {} }
+    });
+    if (nivel > 1) apagar(/^banca_produtos_|^pdv_cache_produtos_/);                          // 4) último recurso: produtos (voltam da internet)
+  } catch (e) {}
+}
+function spapGravarSeguro(chave, texto) {
+  try { localStorage.setItem(chave, texto); return true; } catch (e) {}
+  spapLibertarEspaco(1); try { localStorage.setItem(chave, texto); return true; } catch (e) {}
+  spapLibertarEspaco(2); try { localStorage.setItem(chave, texto); return true; } catch (e) {}
+  return false;
+}
+window.spapGravarSeguro = spapGravarSeguro; window.spapLibertarEspaco = spapLibertarEspaco;
+
 function spapGuardarLocal(chave, valor) { try { localStorage.setItem('spap_cache_' + chave, JSON.stringify({ t: Date.now(), v: valor })); } catch (e) {} }
 function spapLerLocal(chave) { try { var x = JSON.parse(localStorage.getItem('spap_cache_' + chave) || 'null'); return x ? x : null; } catch (e) { return null; } }
 // tipo da conta: 'banca' ou 'loja'

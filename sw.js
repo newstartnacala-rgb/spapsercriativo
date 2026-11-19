@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spap-pdv-v359';
+const CACHE_NAME = 'spap-pdv-v360';
 const FICHEIROS = [
   './',
   './index.html',
@@ -46,8 +46,18 @@ const FICHEIROS = [
   './icon-192.png',
   './icon-512.png',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
-  'https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js'
+  'https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js',
+  'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js',
+  './banca-tema.css',
+  './spap-carrinho.css',
+  './spap-teclado.js',
+  './spap-personalizar.js'
 ];
+// Ao actualizar, copia da cache antiga tudo o que já lá estava (fotos, ficheiros com ?v=…):
+// assim a app continua a abrir SEM internet logo a seguir a uma actualização.
 
 // Instala e guarda ficheiros em cache (tolerante a falhas)
 self.addEventListener('install', e => {
@@ -61,15 +71,33 @@ self.addEventListener('install', e => {
   self.skipWaiting();
 });
 
-// Activa e limpa caches antigas
+// Activa: passa para a cache nova o que a antiga tinha e ainda falta, e só depois apaga as antigas
 self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
-  );
+  e.waitUntil((async () => {
+    try {
+      const nova = await caches.open(CACHE_NAME);
+      const velhas = (await caches.keys()).filter(k => k !== CACHE_NAME);
+      for (const k of velhas) {
+        try {
+          const c = await caches.open(k);
+          for (const req of await c.keys()) {
+            if (!(await nova.match(req))) { const r = await c.match(req); if (r) await nova.put(req, r); }
+          }
+        } catch (er) {}
+        await caches.delete(k);
+      }
+    } catch (er) {}
+  })());
   self.clients.claim();
 });
+// Sem internet: procura na cache também sem o «?v=…» (a versão antiga do ficheiro é melhor que nenhuma)
+function daCache(req) {
+  return caches.match(req).then(r => r || caches.match(req, { ignoreSearch: true }));
+}
+function vazio(req) {
+  const ehJS = /\.js(\?|$)/.test(req.url) || req.destination === 'script';
+  return new Response(ehJS ? '/* sem internet */' : '', { status: 200, headers: { 'Content-Type': ehJS ? 'application/javascript' : 'text/plain' } });
+}
 
 // Intercepta pedidos
 self.addEventListener('fetch', e => {
@@ -83,10 +111,9 @@ self.addEventListener('fetch', e => {
   if (url.hostname.includes('jsdelivr') || url.hostname.includes('cdn')) {
     e.respondWith(
       caches.match(e.request).then(cached => cached || fetch(e.request).then(r => {
-        const clone = r.clone();
-        caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+        if (r && (r.ok || r.type === 'opaque')) { const clone = r.clone(); caches.open(CACHE_NAME).then(c => c.put(e.request, clone)); }
         return r;
-      }))
+      }).catch(() => daCache(e.request).then(c => c || vazio(e.request))))
     );
     return;
   }
@@ -139,7 +166,7 @@ self.addEventListener('fetch', e => {
           caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
         }
         return response;
-      }).catch(() => caches.match(e.request, { ignoreSearch: true }));
+      }).catch(() => daCache(e.request).then(c => c || vazio(e.request)));
     })
   );
 });

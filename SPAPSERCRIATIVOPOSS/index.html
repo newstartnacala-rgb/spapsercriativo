@@ -19,7 +19,6 @@ if (!Element.prototype.closest) {
 if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.msMatchesSelector || Element.prototype.webkitMatchesSelector; }
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.7/babel.min.js"></script>
 <script>
   // crypto.randomUUID para navegadores antigos que não têm
   if (!window.crypto) window.crypto = {};
@@ -353,7 +352,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
   [tabindex]:focus-visible { outline: 2px solid #1a56a0; outline-offset: 1px; }
 </style>
-<script src="app-android.js?v=2.9.283" defer></script>
+<script src="app-android.js?v=2.9.284" defer></script>
 <style>/* a interface antiga nunca aparece: o ecrã antigo fica invisível até o novo abrir (sem piscar) */ body:not(.modo2) #tela-pdv { visibility:hidden !important; }</style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
@@ -1368,7 +1367,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   window.addEventListener('orientationchange', () => setTimeout(fixarAlturaReal, 300));
 </script>
 <script src="spap-erros.js?v=2"></script>
-<script src="supabase-config.js?v=3"></script>
+<script src="supabase-config.js?v=4"></script>
 <script src="spap-avisos.js?v=6"></script>
 <script src="spap-expirou.js?v=2"></script>
 <script src="spap-suporte.js?v=4"></script>
@@ -1563,6 +1562,12 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
       // Falha de REDE: entra em modo offline com a sessão guardada
       const cacheSessao = localStorage.getItem('pdv_cache_sessao');
       if (cacheSessao) { entrarModoOffline(JSON.parse(cacheSessao)); return; }
+      // Falha de internet sem dados guardados: NÃO apaga a sessão (senão o dono tinha de escrever o e-mail outra vez)
+      if (membroError && spapEhErroDeRede(membroError.message || '')) {
+        mostrarNotif('📵 Sem internet. Liga a internet uma vez neste aparelho para descarregar os produtos.', true);
+        setTimeout(() => location.reload(), 15000);
+        return;
+      }
       await supabaseClient.auth.signOut();
       window.location.href = 'login.html';
       return;
@@ -2158,8 +2163,11 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     if (prod) cliqueNoProduto(prod);
   }
 
+  // Mesmo produto? Pelo id (dois produtos com o mesmo nome são produtos diferentes); sem id, pelo nome.
+  function _mesmoProd(a, b) { if (!a || !b) return false; if (a.id != null && b.id != null) return String(a.id) === String(b.id); return (a.nome || '') === (b.nome || ''); }
+  window._mesmoProd = _mesmoProd;
   function qtdNoCarrinho(nome) {
-    const item = carrinho.find(i => i.nome === nome);
+    const item = (nome && typeof nome === 'object') ? carrinho.find(i => _mesmoProd(i, nome)) : carrinho.find(i => i.nome === nome);
     return item ? item.qtd : 0;
   }
 
@@ -2225,7 +2233,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   // de "vendas recentes" que aparece antes de escolher uma categoria).
   function criarCardProduto(prod) {
       const stock = parseInt(prod.stock) || 0;
-      const noCarrinho = qtdNoCarrinho(prod.nome);
+      const noCarrinho = qtdNoCarrinho(prod);
       // O produto continua sempre vendável, mesmo com stock 0 ou negativo — a loja
       // pode ter mercadoria física que ainda não foi lançada no sistema. O stock
       // negativo é mantido de propósito como sinal de "verificar / atualizar stock".
@@ -2619,7 +2627,7 @@ async function scannerFechar() {
       return;
     }
     // 1º clique: adiciona +1. 2º clique (já no carrinho): abre o teclado para digitar a quantidade.
-    const jaNoCarrinho = carrinho.find(i => i.nome === prod.nome);
+    const jaNoCarrinho = carrinho.find(i => _mesmoProd(i, prod));
     if (jaNoCarrinho) { abrirTecladoQuantidade(prod); return; }
     adicionarAoCarrinho(prod);
   }
@@ -2635,7 +2643,7 @@ async function scannerFechar() {
   }
   function editarPesoCarrinho(i) {
     const item = carrinho[i]; if (!item) return;
-    const prod = (produtos.find(p => p.nome === item.nome)) || item;
+    const prod = (produtos.find(p => _mesmoProd(p, item))) || item;
     pedirPesoKg(prod);
   }
 
@@ -2694,7 +2702,7 @@ async function scannerFechar() {
     if (_kgModo === 'preco') { peso = precoKg > 0 ? (val / precoKg) : 0; }
     else { peso = val; }
     if (peso <= 0) { mostrarNotif('Valor inválido.', true); return; }
-    const ex = carrinho.find(i => i.nome === _kgProd.nome);
+    const ex = carrinho.find(i => _mesmoProd(i, _kgProd));
     if (ex) ex.qtd = peso; else carrinho.push({..._kgProd, qtd: peso});
     renderCarrinho(); renderProdutos();
     document.getElementById('modal-kg').classList.remove('ativo');
@@ -2704,7 +2712,7 @@ async function scannerFechar() {
 
   function adicionarAoCarrinho(prod) {
     const stock = parseInt(prod.stock) || 0;
-    const ex = carrinho.find(i => i.nome === prod.nome);
+    const ex = carrinho.find(i => _mesmoProd(i, prod));
     const qtdAtual = ex ? ex.qtd : 0;
     if (qtdAtual + 1 > stock) {
       mostrarNotif('⚠ "' + prod.nome + '" sem stock suficiente registado — venda continua, mas verifica o stock!', true);
@@ -2712,7 +2720,9 @@ async function scannerFechar() {
       mostrarNotif('🛒 ' + prod.nome + ' adicionado!');
     }
     if (ex) ex.qtd++; else carrinho.push({...prod, qtd:1});
-    renderCarrinho(); renderProdutos();
+    try { renderCarrinho(); } catch(e) { try { window.spapErro && spapErro('renderCarrinho: ' + e.message); } catch(_){} }
+    try { renderProdutos(); } catch(e) { try { window.spapErro && spapErro('renderProdutos: ' + e.message); } catch(_){} }
+    try { if (document.body.classList.contains('modo2')) { renderM2Cart(); } } catch(e) {}
   }
 
   /* ===== Teclado numérico de quantidade (2º clique num produto já no carrinho) ===== */
@@ -2721,7 +2731,7 @@ async function scannerFechar() {
 
   function abrirTecladoQuantidade(prod) {
     produtoQtdSelecionado = prod;
-    const item = carrinho.find(i => i.nome === prod.nome);
+    const item = carrinho.find(i => _mesmoProd(i, prod));
     qtdDigitada = String(item ? item.qtd : 1);
     document.getElementById('qtd-titulo-produto').textContent = prod.nome;
     document.getElementById('qtd-display').textContent = qtdDigitada;
@@ -2781,7 +2791,7 @@ async function scannerFechar() {
   function confirmarQuantidade() {
     if (!produtoQtdSelecionado) return;
     const novaQtd = parseInt(qtdDigitada) || 0;
-    const idx = carrinho.findIndex(i => i.nome === produtoQtdSelecionado.nome);
+    const idx = carrinho.findIndex(i => _mesmoProd(i, produtoQtdSelecionado));
     if (novaQtd <= 0) {
       if (idx >= 0) carrinho.splice(idx, 1);
     } else if (idx >= 0) {
@@ -2829,7 +2839,7 @@ async function scannerFechar() {
     if (carrinho.length === 0) { const tt = (typeof TRADUCOES !== 'undefined' && TRADUCOES[linguaActual]) ? TRADUCOES[linguaActual] : null; div.innerHTML = '<div class="carrinho-vazio">' + (tt ? tt.carrinhoVazio.replace('\n','<br>') : 'Nenhum produto adicionado.<br>Clica num produto para adicionar.') + '</div>'; }
     else {
       div.innerHTML = carrinho.map((item,i) => {
-        const pReal = produtos.find(p => p.nome === item.nome);
+        const pReal = produtos.find(p => _mesmoProd(p, item));
         const thumb = (pReal && pReal.imagem)
           ? `<img src="${pReal.imagem}" style="width:52px;height:52px;object-fit:cover;border-radius:8px;border:1px solid #eee;flex-shrink:0;" onerror="this.style.display='none'">`
           : `<div style="width:52px;height:52px;border-radius:8px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">${'🛒'}</div>`;
@@ -3093,7 +3103,7 @@ async function scannerFechar() {
   // além do registado, em vez de bloquear a venda.
   async function descontarStock() {
     for (const itemCarrinho of carrinho) {
-      const produtoReal = produtos.find(p => p.nome === itemCarrinho.nome);
+      const produtoReal = produtos.find(p => _mesmoProd(p, itemCarrinho));
       if (!produtoReal) continue;
       const stockAtual = parseInt(produtoReal.stock) || 0;
       const novoStock = stockAtual - itemCarrinho.qtd;
@@ -3267,7 +3277,7 @@ async function scannerFechar() {
       total: total,
       recebido: recebido,
       troco: troco,
-      vendedor_user_id: sessaoAtual.user.id,
+      vendedor_user_id: (sessaoAtual.user && sessaoAtual.user.id) || sessaoAtual.userId || null,
       vendedor_codigo: sessaoAtual.vendedorCodigo || null,
       criado_em: novaVenda.dataISO,
       itens: novaVenda.itens.map(i => ({ produto_nome: i.nome, qtd: i.qtd, preco_unitario: i.preco })),
@@ -3304,8 +3314,11 @@ async function scannerFechar() {
   let aSincronizar = false;
 
   function guardarFila() {
-    localStorage.setItem('pdv_fila_vendas', JSON.stringify(filaVendas));
-    atualizarBadgeSync();
+    // A fila de vendas é o mais importante: se a memória estiver cheia, apaga caches (fotos, histórico) e tenta outra vez.
+    if (!spapGravarSeguro('pdv_fila_vendas', JSON.stringify(filaVendas))) {
+      try { mostrarNotif('⚠️ Memória do aparelho cheia — a venda fica guardada enquanto a app estiver aberta. Liga a internet para enviar.', true); } catch(e) {}
+    }
+    try { atualizarBadgeSync(); } catch(e) {}
   }
 
   function guardarCacheLocal() {
@@ -5593,7 +5606,7 @@ async function scannerFechar() {
       metodo: 'Retorno',
       total: -totalDevolvido,
       recebido: null, troco: null,
-      vendedor_user_id: sessaoAtual.user.id,
+      vendedor_user_id: (sessaoAtual.user && sessaoAtual.user.id) || sessaoAtual.userId || null,
       vendedor_codigo: sessaoAtual.vendedorCodigo || null,
       criado_em: novaVenda.dataISO,
       itens: devDevolve.map(i => ({ produto_nome: i.nome, qtd: -i.qtd, preco_unitario: i.preco })),
@@ -6005,7 +6018,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.283';
+  const VERSAO_ATUAL = '2.9.284';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -7252,10 +7265,10 @@ document.addEventListener('click', function(e){
         '<button class="m2-add" onclick="event.stopPropagation(); m2AddPorId(\''+pid+'\')">'+m2Svg('plus')+'</button></div></div>';
     }).join('');
   }
-  function m2AddPorId(id){ var p=(produtos||[]).find(function(x){ return String(x.id)===String(id); }); if (p) m2AddProduto(p.nome); }
+  function m2AddPorId(id){ var p=(produtos||[]).find(function(x){ return String(x.id)===String(id); }); if (p) m2AddProduto(p); }
   window.m2AddPorId = m2AddPorId;
   function m2AddProduto(nome){
-    var p = (produtos||[]).find(function(x){ return x.nome===nome; });
+    var p = (nome && typeof nome === 'object') ? nome : (produtos||[]).find(function(x){ return x.nome===nome; });
     var ev = window.event, card = ev && ev.target && ev.target.closest ? ev.target.closest('.m2-card') : null;
     if (!p) return;
     var grelha = card && card.parentNode, idx = grelha ? Array.prototype.indexOf.call(grelha.children, card) : -1;
@@ -7292,7 +7305,7 @@ document.addEventListener('click', function(e){
     if (!carrinho || !carrinho.length){ itensEl.innerHTML = '<div class="m2-vazio">Nenhum produto. Clica num produto para adicionar.</div>'; }
     else {
       itensEl.innerHTML = carrinho.map(function(item,i){
-        var pReal = (produtos||[]).find(function(p){ return p.nome===item.nome; });
+        var pReal = (produtos||[]).find(function(p){ return _mesmoProd(p, item); });
         var thumb = (pReal&&pReal.imagem) ? '<img class="m2-it-img" src="'+pReal.imagem+'" onerror="this.outerHTML=\'<div class=m2-it-img>🛒</div>\'">' : '<div class="m2-it-img">🛒</div>';
         var step = (item.unidade==='kg')
           ? '<button class="m2-peso" onclick="editarPesoCarrinho('+i+')">⚖️ '+(item.qtd<1?(Math.round(item.qtd*1000)+'g'):(item.qtd+'kg'))+' ✏️</button>'
@@ -7433,7 +7446,7 @@ document.addEventListener('click', function(e){
 </script>
 
 <script src="spap-vidro.js?v=7"></script>
-<script src="spap-dourado.js?v=5"></script>
+<script src="spap-dourado.js?v=6"></script>
 <script src="spap-rolagem.js?v=2"></script>
 <script src="spap-teclado.js?v=2"></script>
 <style id="m2-topo-novo">

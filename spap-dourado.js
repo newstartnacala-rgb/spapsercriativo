@@ -296,8 +296,8 @@
     var ps = prods(), cs = carro();
     document.querySelectorAll('#m2-grid .m2-card').forEach(function (c) {
       var nomeEl = c.querySelector('.m2-nome'); if (!nomeEl) return;
-      var nome = nomeEl.textContent, p = null;
-      for (var k = 0; k < ps.length; k++) { if ((ps[k].nome || '') === nome) { p = ps[k]; break; } }
+      var nome = nomeEl.textContent, p = null, pid = c.getAttribute('data-pid');
+      for (var k = 0; k < ps.length; k++) { if (pid ? String(ps[k].id) === pid : (ps[k].nome || '') === nome) { p = ps[k]; break; } }
       if (!p) return;
       // O balconista NÃO vê quantidades de stock (só o dono, no Monitor). Mostra apenas «Esgotado» quando está a zero.
       var s = stockDe(p), st = c.querySelector('.gd-st');
@@ -307,7 +307,7 @@
       } else if (st) st.remove();
       var cod = p.codbarras || p.codigo || '';
       if (cod && !c.querySelector('.gd-cod')) { var cd = document.createElement('span'); cd.className = 'gd-cod'; cd.textContent = cod; nomeEl.parentNode.insertBefore(cd, nomeEl.nextSibling); }
-      var q = cs.filter(function (i) { return i.nome === nome; }).reduce(function (a, i) { return a + (i.unidade === 'kg' ? 1 : (Number(i.qtd) || 0)); }, 0);
+      var q = cs.filter(function (i) { return (p && i.id != null && p.id != null) ? String(i.id) === String(p.id) : i.nome === nome; }).reduce(function (a, i) { return a + (i.unidade === 'kg' ? 1 : (Number(i.qtd) || 0)); }, 0);
       var nc = c.querySelector('.gd-noc');
       if (q > 0) { if (!nc) { nc = document.createElement('span'); nc.className = 'gd-noc'; c.insertBefore(nc, c.firstChild); } nc.textContent = q; }
       else if (nc) nc.remove();

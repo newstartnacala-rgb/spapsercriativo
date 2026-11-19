@@ -112,9 +112,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="Banca e Vendas">
-<link rel="stylesheet" href="banca-tema.css?v=3.7.60">
-<script src="banca-tema.js?v=3.7.60" defer></script>
-<script src="app-android.js?v=3.7.60" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.61">
+<script src="banca-tema.js?v=3.7.61" defer></script>
+<script src="app-android.js?v=3.7.61" defer></script>
 </head>
 <body>
 
@@ -397,11 +397,11 @@
 <div id="toast" class="toast"></div>
 
 <script src="spap-erros.js?v=2"></script>
-<script src="supabase-config.js?v=3"></script>
+<script src="supabase-config.js?v=4"></script>
 <script src="spap-suporte.js?v=4"></script>
 <script src="spap-avisos.js?v=6"></script>
 <script src="spap-imagem.js?v=1"></script>
-<script src="banca-offline.js?v=4.7.59"></script>
+<script src="banca-offline.js?v=5"></script>
 <script>
 // ===================== ESTADO =====================
 let sessao = null;        // { lojaId, nomeLoja, userId, vendedor }
@@ -419,7 +419,20 @@ document.addEventListener('visibilitychange', function(){ if (!document.hidden) 
   try { ses = (await supabaseClient.auth.getSession()).data.session; } catch(e){}
   const guardada = bancaSessaoGuardada();
   // Sem internet: abre com a sessão guardada neste telemóvel (vende na mesma; envia depois)
-  if (!ses && !(guardada && navigator.onLine === false)) { location.href = 'login-banca.html'; return; }
+  // Sem sessão mas com dados guardados: o telemóvel pode dizer «ligado» (Wi-Fi/dados sem saldo) e não haver internet.
+  // Só manda para o login se o servidor responder de verdade; senão abre offline e vende na mesma.
+  if (!ses && guardada) {
+    let haNet = false;
+    if (navigator.onLine !== false) {
+      try {
+        const ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+        const to = setTimeout(() => { try { ctl && ctl.abort(); } catch(e){} }, 5000);
+        const r = await fetch(SUPABASE_URL + '/auth/v1/health', { headers: { apikey: SUPABASE_ANON_KEY }, cache: 'no-store', signal: ctl ? ctl.signal : undefined });
+        clearTimeout(to); haNet = !!(r && r.ok);
+      } catch(e) { haNet = false; }
+    }
+    if (haNet) { location.href = 'login-banca.html'; return; }
+  } else if (!ses) { location.href = 'login-banca.html'; return; }
   try {
     let m = null;
     if (ses) {

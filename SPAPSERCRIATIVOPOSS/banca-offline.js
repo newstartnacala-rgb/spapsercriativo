@@ -7,7 +7,13 @@
 (function () {
   var FILA = 'banca_fila_v1';
   function ler(k, def) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch (e) { return def; } }
-  function gravar(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+  // grava sem falhar: se a memória estiver cheia, liberta espaço (fotos, caches) e tenta de novo
+  function gravar(k, v) {
+    var t; try { t = JSON.stringify(v); } catch (e) { return false; }
+    try { localStorage.setItem(k, t); return true; } catch (e) {}
+    if (window.spapGravarSeguro) return spapGravarSeguro(k, t);
+    return false;
+  }
 
   // id único em formato uuid (as tabelas usam uuid)
   window.bancaUUID = function () {
