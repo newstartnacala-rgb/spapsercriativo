@@ -1,7 +1,14 @@
 {
-  "versao": "2.9.289",
+  "versao": "2.9.290",
   "data": "2026-11-09",
-  "novidades": "Na app: só o código do balconista. Na web: e-mail e senha, e depois o código.",
+  "novidades": [
+    "Suporte: WhatsApp e chamada a funcionar em todos os ecrãs (número 86 166 7843)",
+    "N",
+    "a",
+    " ",
+    "a",
+    "p"
+  ],
   "melhorias": [
     "Definições do Monitor: nova opção «Visitar o website»",
     "Na aplicação (Android/iPhone), a Loja e a Banca pedem só o código do balconista; o e-mail só na primeira vez.",

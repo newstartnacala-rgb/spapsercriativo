@@ -50,7 +50,7 @@
   }
 
   /* ---- deteção dos painéis ---- */
-  var NAO = '#m2-sidebar,#m2-backdrop,#sal-sino,#sal-sino *,.m2-voar,#gd-pers,#gd-pers *,[data-sv-nao]';
+  var NAO = '#bm-pin,#bm-pin *,#m2-sidebar,#m2-backdrop,#sal-sino,#sal-sino *,.m2-voar,#gd-pers,#gd-pers *,[data-sv-nao]';
   var SUSPEITOS = '.modal-fundo,.menu-overlay,[class*="overlay"],[class*="fundo"],[id*="fundo"],[id*="modal"],[class*="modal"],[class*="sheet"],[class*="folha"],[class*="painel"],[role="dialog"],[aria-modal="true"]';
   function opaco(cs) {
     if (cs.backgroundImage && cs.backgroundImage !== 'none') return true;

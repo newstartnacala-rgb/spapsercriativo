@@ -1,6 +1,6 @@
 /* SPAP — Suporte técnico (Loja, Banca, Monitores e site).
    Todos os botões/links de suporte abrem uma janela onde a pessoa escolhe: ligar por telefone ou falar no WhatsApp
-   (número 861667843). O grupo oficial fica como opção secundária.
+   (número 86 166 7843). O grupo oficial fica como opção secundária.
    spapAbrirSuporte()  → mostra a janela de escolha.
    Links <a> para o grupo (ou o antigo wa.me do suporte) são apanhados automaticamente. */
 (function () {
@@ -73,13 +73,31 @@
     + '.ssp-op:active{transform:scale(.98);} .ssp-op:hover{border-color:#86efac;box-shadow:0 8px 22px rgba(22,163,74,.12);}'
     + '.ssp-op .ssp-op-ic{width:50px;height:50px;border-radius:15px;display:grid;place-items:center;flex-shrink:0;color:#fff;box-shadow:0 8px 18px rgba(0,0,0,.14);}'
     + '.ssp-op .ssp-op-ic svg{width:26px;height:26px;}'
-    + '.ssp-op.tel .ssp-op-ic{background:linear-gradient(135deg,#3b82f6,#1d4ed8);} .ssp-op.wa .ssp-op-ic{background:linear-gradient(135deg,#22c55e,#15803d);}'
+    + '.ssp-op.ssp-tel .ssp-op-ic{background:linear-gradient(135deg,#3b82f6,#1d4ed8);} .ssp-op.ssp-wa .ssp-op-ic{background:linear-gradient(135deg,#22c55e,#15803d);}'
     + '.ssp-op b{display:block;font-size:16px;font-weight:800;color:#0f172a;} .ssp-op small{display:block;font-size:12.5px;color:#64748b;margin-top:2px;line-height:1.35;}'
     + '.ssp-op .ssp-op-seta{margin-left:auto;color:#94a3b8;font-size:22px;line-height:1;}'
     + '.ssp-num{display:inline-flex;align-items:center;gap:8px;margin:0 auto 14px;padding:8px 14px;border-radius:99px;background:#f1f5f9;color:#0f172a;font-weight:900;font-size:18px;letter-spacing:.06em;font-variant-numeric:tabular-nums;}'
     + '.ssp-num i{font-style:normal;font-size:11px;font-weight:800;color:#64748b;letter-spacing:.08em;}'
     + '.ssp-grupo{display:block;width:100%;margin-top:4px;background:none;border:0;color:#16a34a;font-weight:800;font-size:13px;font-family:inherit;cursor:pointer;padding:8px;}'
     + '@media(max-width:380px){.ssp-op b{font-size:15px;} .ssp-op small{font-size:12px;}}';
+  // ---- abrir o WhatsApp de forma robusta ----
+  function guardarLink(l) { try { if (/^https:\/\/chat\.whatsapp\.com\//i.test(l || '')) localStorage.setItem('spap_link_suporte', l); } catch (e) {} }
+  function linkJa(pedido) {
+    if (pedido && /chat\.whatsapp\.com/i.test(pedido)) return pedido;
+    var l = ''; try { l = localStorage.getItem('spap_link_suporte') || ''; } catch (e) {}
+    return spapLinkSuporte(l);
+  }
+  function ehApp() {
+    try { if (typeof spapEhApp === 'function' && spapEhApp()) return true; } catch (e) {}
+    return /SPAPApp|; wv\)/.test(navigator.userAgent || '') || !!window.SPAPNative || window.navigator.standalone === true;
+  }
+  function abrirWhats(l) {
+    // Dentro da app: a própria app entrega o link ao WhatsApp e a página fica onde está
+    if (ehApp()) { location.href = l; return; }
+    var w = null; try { w = window.open(l, '_blank'); } catch (e) {}
+    if (!w) location.href = l;
+  }
+  window.spapAbrirWhatsSuporte = function () { abrirWhats(linkJa('')); };
   window.spapAbrirSuporte = function (linkPedido) {
     estilo();
     if (!document.getElementById('ssp-css2')) { var s2 = document.createElement('style'); s2.id = 'ssp-css2'; s2.textContent = css2; document.head.appendChild(s2); }
@@ -90,8 +108,8 @@
       + '<div class="ssp-tit" id="ssp-t">Suporte técnico SSTEAM</div><div class="ssp-sub">Como preferes falar connosco?</div></div>'
       + '<div class="ssp-corpo" style="text-align:center;">'
       + '<div class="ssp-num"><i>SUPORTE</i>' + NUM.replace(/(\d{2})(\d{3})(\d{4})/, '$1 $2 $3') + '</div>'
-      + '<button type="button" class="ssp-op tel"><span class="ssp-op-ic">' + TEL + '</span><span><b>Ligar por telefone</b><small>Chamada directa para o suporte</small></span><span class="ssp-op-seta">›</span></button>'
-      + '<button type="button" class="ssp-op wa"><span class="ssp-op-ic">' + WA + '</span><span><b>Falar no WhatsApp</b><small>Grupo oficial de suporte — fica registado por escrito</small></span><span class="ssp-op-seta">›</span></button>'
+      + '<button type="button" class="ssp-op ssp-tel"><span class="ssp-op-ic">' + TEL + '</span><span><b>Ligar por telefone</b><small>Chamada directa para o suporte</small></span><span class="ssp-op-seta">›</span></button>'
+      + '<button type="button" class="ssp-op ssp-wa"><span class="ssp-op-ic">' + WA + '</span><span><b>Falar no WhatsApp</b><small>Grupo oficial de suporte — fica registado por escrito</small></span><span class="ssp-op-seta">›</span></button>'
       + '<button type="button" class="ssp-nao">Agora não</button>'
       + '<div class="ssp-nota">Nunca partilhes a tua senha com ninguém</div>'
       + '</div></div>';
@@ -103,12 +121,11 @@
     document.addEventListener('keydown', tecla);
     d.addEventListener('click', function (e) { if (e.target === d) fechar(); });
     d.querySelector('.ssp-nao').onclick = fechar;
-    d.querySelector('.ssp-op.tel').onclick = function () { location.href = 'tel:+' + NUM_INT; fechar(); };
-    // WhatsApp = o grupo oficial de suporte (o link antigo), não um número privado
-    d.querySelector('.ssp-op.wa').onclick = function () {
-      var w = null; try { w = window.open('about:blank', '_blank'); } catch (e) {}
-      pLink.then(function (l) { if (w && !w.closed) { try { w.location.href = l; } catch (e) { location.href = l; } } else location.href = l; fechar(); });
-    };
+    d.querySelector('.ssp-op.ssp-tel').onclick = function () { location.href = 'tel:+' + NUM_INT; fechar(); };
+    // WhatsApp = o grupo oficial de suporte. Abre logo no toque (sem janelas em branco pelo meio),
+    // tanto no navegador como dentro das apps Android/iPhone.
+    d.querySelector('.ssp-op.ssp-wa').onclick = function () { abrirWhats(linkJa(linkPedido)); fechar(); };
+    pLink.then(function (l) { guardarLink(l); }, function () {});
   };
   // Apanha qualquer link de suporte (o grupo novo ou o antigo número de suporte)
   document.addEventListener('click', function (e) {
