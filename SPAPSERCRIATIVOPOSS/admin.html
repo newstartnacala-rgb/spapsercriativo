@@ -8,7 +8,7 @@
 <script>
   // Painel sempre na versão mais recente: se o aparelho mostrar uma cópia antiga, recarrega a nova
   (function () {
-    var VER = '2.9.286';
+    var VER = '2.9.287';
     try {
       fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
         var nova = j && j.versao; if (!nova || nova === VER) return;
@@ -21,7 +21,8 @@
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Administração — Spap-Sercriativo</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-js-2.84.0.js"></script>
+<script>if (typeof supabase === "undefined") document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.84.0/dist/umd/supabase.js"><\/script>');</script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family:-apple-system,Arial,sans-serif; background:#f1f5f9; min-height:100vh; }
@@ -1621,7 +1622,7 @@ async function bdVerificar(manual){
   else if (lento || D.c === 'aviso' || A.c === 'aviso') { c = 'aviso'; t = 'A funcionar, mas com avisos'; sub = lento ? 'Resposta lenta (' + dados.ms + ' ms).' : 'Algum serviço respondeu com aviso.'; }
   else { c = 'ok'; t = 'Tudo a funcionar'; sub = 'Dados e login a responder normalmente (' + dados.ms + ' ms).'; }
   est.className = 'bd-estado ' + c; est.querySelector('b').textContent = t; est.querySelector('small').textContent = sub;
-  // informação real do servidor (função spap_estado_bd do SQL v2.9.286)
+  // informação real do servidor (função spap_estado_bd do SQL v2.9.287)
   const sv = document.getElementById('bd-servidor');
   let srv = null; try { const r = await supabaseClient.rpc('spap_estado_bd'); srv = r.error ? { erro: r.error.message, cod: r.error.code } : r.data; } catch(e) { srv = { erro: String(e.message || e) }; }
   let sh = '<h4>🖥️ Servidor do banco de dados</h4>', sc = '';

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spap-pdv-v362';
+const CACHE_NAME = 'spap-pdv-v363';
 const FICHEIROS = [
   './',
   './index.html',
@@ -24,6 +24,7 @@ const FICHEIROS = [
   './spap-vidro.js',
   './spap-rolagem.js',
   './spap-teclado.js',
+  './spap-navegador.js',
   './spap-erros.js',
   './icons3d/personalizar.svg',
   './spap-alertas.js',
@@ -45,7 +46,7 @@ const FICHEIROS = [
   './ssteam-logo.png',
   './icon-192.png',
   './icon-512.png',
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
+  './supabase-js-2.84.0.js',
   'https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js',
   'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js',
@@ -54,6 +55,7 @@ const FICHEIROS = [
   './banca-tema.css',
   './spap-carrinho.css',
   './spap-teclado.js',
+  './spap-navegador.js',
   './spap-personalizar.js'
 ];
 // Ao actualizar, copia da cache antiga tudo o que já lá estava (fotos, ficheiros com ?v=…):

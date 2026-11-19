@@ -2,13 +2,15 @@
 <html lang="pt">
 <head>
 <meta charset="UTF-8">
+<script src="spap-navegador.js?v=1"></script>
 <script src="spap-migrar.js?v=1"></script>
 <script src="spap-bloqueio.js?v=2"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#15803d">
 <title>Banca — Monitor</title>
 <link rel="manifest" href="manifest-mobile.json">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-js-2.84.0.js"></script>
+<script>if (typeof supabase === "undefined") document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.84.0/dist/umd/supabase.js"><\/script>');</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <style>
@@ -88,9 +90,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.62">
-<script src="banca-tema.js?v=3.7.62" defer></script>
-<script src="app-android.js?v=3.7.62" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.63">
+<script src="banca-tema.js?v=3.7.63" defer></script>
+<script src="app-android.js?v=3.7.63" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -1272,7 +1274,7 @@ async function guardarAddProduto(){
   btn.disabled=true; btn.textContent='A guardar…';
   try{
     let { error }=await supabaseClient.from('produtos').insert(dados);
-    if(error && dados.imagem){ const r=await supabaseClient.from('produtos').insert({...dados,imagem:null}); if(r.error) throw r.error; }
+    if(error && dados.imagem){ const r=await supabaseClient.from('produtos').insert(Object.assign({}, dados, { imagem:null })); if(r.error) throw r.error; }
     else if(error) throw error;
     await carregarProdutos();
     fecharFolha('folha-add');

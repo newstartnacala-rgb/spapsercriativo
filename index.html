@@ -2,6 +2,7 @@
 <html lang="pt">
 <head>
 <meta charset="UTF-8">
+<script src="spap-navegador.js?v=1"></script>
 <script src="spap-migrar.js?v=1"></script>
 <script src="spap-bloqueio.js?v=2"></script>
 <script src="spap-dialogo.js?v=2"></script>
@@ -38,7 +39,8 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 <meta name="apple-mobile-web-app-title" content="Loja">
 <link rel="apple-touch-icon" href="ios-loja-180.png">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-js-2.84.0.js"></script>
+<script>if (typeof supabase === "undefined") document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.84.0/dist/umd/supabase.js"><\/script>');</script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
@@ -352,7 +354,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
   [tabindex]:focus-visible { outline: 2px solid #1a56a0; outline-offset: 1px; }
 </style>
-<script src="app-android.js?v=2.9.286" defer></script>
+<script src="app-android.js?v=2.9.287" defer></script>
 <style>/* a interface antiga nunca aparece: o ecrã antigo fica invisível até o novo abrir (sem piscar) */ body:not(.modo2) #tela-pdv { visibility:hidden !important; }</style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
@@ -1762,7 +1764,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
     const ehContaDemo = ((sessaoAtual.user && sessaoAtual.user.email) || '').toLowerCase() === 'joaomassuvir@gmail.com';
     if (!produtosError && produtosData.length === 0 && ehContaDemo) {
       // SÓ a conta demonstrativa recebe produtos de exemplo; as outras começam vazias
-      const paraInserir = produtosSeed.map(p => ({ ...p, loja_id: sessaoAtual.lojaId }));
+      const paraInserir = produtosSeed.map(p => (Object.assign({}, p, { loja_id: sessaoAtual.lojaId })));
       const { data: inseridos, error: seedError } = await supabaseClient
         .from('produtos')
         .insert(paraInserir)
@@ -1887,7 +1889,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
   function guardarCacheLeve() {
     try {
-      const produtosLeves = produtos.map(p => ({ ...p, imagem: null }));
+      const produtosLeves = produtos.map(p => (Object.assign({}, p, { imagem: null })));
       localStorage.setItem('pdv_cache_produtos_' + sessaoAtual.lojaId, JSON.stringify(produtosLeves));
       localStorage.setItem('pdv_cache_vendas_' + sessaoAtual.lojaId, JSON.stringify(vendas.slice(0, 200)));
     } catch(e) {}
@@ -2759,7 +2761,7 @@ async function scannerFechar() {
     else { peso = val; }
     if (peso <= 0) { mostrarNotif('Valor inválido.', true); return; }
     const ex = carrinho.find(i => _mesmoProd(i, _kgProd));
-    if (ex) ex.qtd = peso; else carrinho.push({..._kgProd, qtd: peso});
+    if (ex) ex.qtd = peso; else carrinho.push(Object.assign({}, _kgProd, { qtd: peso }));
     renderCarrinho(); renderProdutos();
     document.getElementById('modal-kg').classList.remove('ativo');
     const mostra = peso < 1 ? (Math.round(peso*1000) + ' g') : (peso.toFixed(3).replace(/\.?0+$/,'') + ' kg');
@@ -2775,7 +2777,7 @@ async function scannerFechar() {
     } else {
       mostrarNotif('🛒 ' + prod.nome + ' adicionado!');
     }
-    if (ex) ex.qtd++; else carrinho.push({...prod, qtd:1});
+    if (ex) ex.qtd++; else carrinho.push(Object.assign({}, prod, { qtd:1 }));
     try { renderCarrinho(); } catch(e) { try { window.spapErro && spapErro('renderCarrinho: ' + e.message); } catch(_){} }
     try { renderProdutos(); } catch(e) { try { window.spapErro && spapErro('renderProdutos: ' + e.message); } catch(_){} }
     try { if (document.body.classList.contains('modo2')) { renderM2Cart(); } } catch(e) {}
@@ -2853,7 +2855,7 @@ async function scannerFechar() {
     } else if (idx >= 0) {
       carrinho[idx].qtd = novaQtd;
     } else {
-      carrinho.push({...produtoQtdSelecionado, qtd: novaQtd});
+      carrinho.push(Object.assign({}, produtoQtdSelecionado, { qtd: novaQtd }));
     }
     const stock = parseInt(produtoQtdSelecionado.stock) || 0;
     if (novaQtd > stock) {
@@ -3376,7 +3378,7 @@ async function scannerFechar() {
   function guardarCacheLocal() {
     if (!sessaoAtual || !sessaoAtual.lojaId) return;
     try {
-      const produtosLeves = produtos.map(p => ({ ...p, imagem: null }));
+      const produtosLeves = produtos.map(p => (Object.assign({}, p, { imagem: null })));
       localStorage.setItem('pdv_cache_produtos_' + sessaoAtual.lojaId, JSON.stringify(produtosLeves));
       localStorage.setItem('pdv_cache_vendas_' + sessaoAtual.lojaId, JSON.stringify(vendas.slice(0, 200)));
     } catch(e) {}
@@ -3473,7 +3475,7 @@ async function scannerFechar() {
         //    Se isso acontecer, NÃO trava a venda: marca como enviado e segue em frente.
         if (!v.sincItens) {
           const { error } = await supabaseClient.from('venda_itens').insert(
-            v.itens.map(i => ({ venda_id: v.id, loja_id: v.loja_id, ...i })));
+            v.itens.map(i => Object.assign({ venda_id: v.id, loja_id: v.loja_id }, i)));
           if (error) {
             const m = (error.message || '').toLowerCase();
             const ehDuplicado = m.includes('duplicate') || m.includes('unique') || error.code === '23505';
@@ -6073,7 +6075,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.286';
+  const VERSAO_ATUAL = '2.9.287';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -6090,7 +6092,7 @@ async function scannerFechar() {
       const _cmpV = (a, b) => { const x = String(a).split('.').map(n => parseInt(n, 10) || 0), y = String(b).split('.').map(n => parseInt(n, 10) || 0); for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d; } return 0; };
       if (_cmpV(dados.versao, VERSAO_ATUAL) > 0) {
         const semVenda = (typeof carrinho === 'undefined') || carrinho.length === 0;
-        const semJanela = !document.querySelector('.modal-fundo.ativo') && !document.getElementById('menu-overlay')?.classList.contains('ativo');
+        const semJanela = !document.querySelector('.modal-fundo.ativo') && !((document.getElementById('menu-overlay') || { classList: { contains: function(){ return false; } } }).classList.contains('ativo'));
         if (semVenda && semJanela) {
           try { mostrarNotif('🔄 Nova versão. A atualizar automaticamente...'); } catch(e){}
           setTimeout(() => atualizarAgora(dados.versao), 2500);
@@ -8039,7 +8041,7 @@ async function sincronizarVendasOffline() {
       if (!error && data) {
         // Insere os itens
         await supabaseClient.from('venda_itens').insert(
-          venda.itens.map(i => ({ ...i, venda_id: data.id }))
+          venda.itens.map(i => (Object.assign({}, i, { venda_id: data.id })))
         );
         sincronizadas++;
       } else {

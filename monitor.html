@@ -2,6 +2,7 @@
 <html lang="pt">
 <head>
 <meta charset="UTF-8">
+<script src="spap-navegador.js?v=1"></script>
 <script src="spap-migrar.js?v=1"></script>
 <script src="spap-bloqueio.js?v=2"></script>
 <script src="spap-dialogo.js?v=2"></script>
@@ -19,9 +20,10 @@ if (!Element.prototype.closest) {
 if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.msMatchesSelector || Element.prototype.webkitMatchesSelector; }
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-js-2.84.0.js"></script>
+<script>if (typeof supabase === "undefined") document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.84.0/dist/umd/supabase.js"><\/script>');</script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.286"></script>
+<script src="spap-leitor.js?v=2.9.287"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -1125,7 +1127,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.286" defer></script>
+<script src="app-android.js?v=2.9.287" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -4223,7 +4225,7 @@ async function abrirRelatorioAvancado() {
         agg[nome].qtd += q; agg[nome].receita += pv * q; agg[nome].lucro += luc;
       });
     });
-    const arr = Object.entries(agg).map(([nome, v]) => ({ nome, ...v }));
+    const arr = Object.entries(agg).map(([nome, v]) => Object.assign({ nome: nome }, v));
     const topVend = [...arr].sort((a,b) => b.qtd - a.qtd).slice(0, 10);
     const topLucro = [...arr].sort((a,b) => b.lucro - a.lucro).slice(0, 10);
     const lista = (items, valor, cor) => items.length ? items.map((x,i) => `
@@ -6189,7 +6191,7 @@ function _marcarAtualizacao(d) {
 function _listaMelhorias(d) {
   if (d && Array.isArray(d.melhorias) && d.melhorias.length) return d.melhorias;
   const txt = String((d && d.novidades) || '').replace(/\s*Inclui tudo da [\d.]+\.?\s*$/i, '');
-  return txt.split(/(?<=[.!])\s+(?=[A-ZÁÉÍÓÚÂÊÔÃÕÇ])/).map(x => x.trim()).filter(Boolean);
+  return txt.replace(/([.!])\s+(?=[A-ZÁÉÍÓÚÂÊÔÃÕÇ])/g, '$1\n').split('\n').map(x => x.trim()).filter(Boolean);
 }
 function _dataPT(iso) {
   if (!iso) return '';
@@ -6328,7 +6330,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.286';
+const MONITOR_VERSAO = '2.9.287';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -6468,7 +6470,8 @@ function aplicarTraducaoMonitor(lang) {
   // (o título do topo é o nome da loja — não se traduz)
 
   // Abas de navegação
-  const _lim = x => String(x).replace(/^[^\p{L}\p{N}]+/u, '');
+  const _RE_LIM = (function(){ try { return new RegExp('^[^\\p{L}\\p{N}]+', 'u'); } catch(e) { return /^[^A-Za-z0-9À-ÿ]+/; } })();
+  const _lim = x => String(x).replace(_RE_LIM, '');
   const tabs = document.querySelectorAll('.nav-tab .nt-txt');
   if (tabs[0]) tabs[0].textContent = _lim(t.home);
   if (tabs[1]) tabs[1].textContent = _lim(t.loja);
@@ -7395,7 +7398,7 @@ async function abrirMetodosLoja() {
   let m = { mpesa:'', emola:'', banco_nome:'', banco_conta:'', banco_titular:'', ativo:'mpesa' };
   try {
     const { data } = await supabaseClient.from('lojas').select('metodos_pagamento').eq('id', lojaId).maybeSingle();
-    if (data && data.metodos_pagamento) m = { ...m, ...data.metodos_pagamento };
+    if (data && data.metodos_pagamento) m = Object.assign({}, m, data.metodos_pagamento);
   } catch(e) {}
   const esc = s => (s||'').toString().replace(/"/g,'&quot;');
   const old = document.getElementById('overlay-metodos-loja'); if (old) old.remove();
@@ -8317,7 +8320,7 @@ html.escuro #nb-lista img { filter:invert(1) hue-rotate(180deg); }
   };
   const chaves = Object.keys(MAPA).sort((a, b) => b.length - a.length).map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   const RE = new RegExp('(' + chaves.join('|') + ')\\uFE0F?', 'g');
-  const RE_INICIO_EMOJI = /^\s*(?:\p{Extended_Pictographic}️?‍?)+\s*/u;
+  var RE_INICIO_EMOJI; try { RE_INICIO_EMOJI = new RegExp('^\\s*(?:\\p{Extended_Pictographic}\uFE0F?\u200D?)+\\s*', 'u'); } catch(e) { RE_INICIO_EMOJI = /^\s*(?:[\uD83C-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF]\uFE0F?)+\s*/; }
   const SALTAR = { SCRIPT:1, STYLE:1, OPTION:1, SELECT:1, TEXTAREA:1, INPUT:1, svg:1, SVG:1 };
 
   function trocarEmojis(raiz) {
