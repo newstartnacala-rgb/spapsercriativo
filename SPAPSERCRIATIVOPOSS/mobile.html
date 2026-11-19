@@ -114,9 +114,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="Banca e Vendas">
-<link rel="stylesheet" href="banca-tema.css?v=3.7.63">
-<script src="banca-tema.js?v=3.7.63" defer></script>
-<script src="app-android.js?v=3.7.63" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.64">
+<script src="banca-tema.js?v=3.7.64" defer></script>
+<script src="app-android.js?v=3.7.64" defer></script>
 </head>
 <body>
 
@@ -149,7 +149,8 @@
   <div id="cb-erro" style="display:none;background:rgba(0,0,0,.2);border-radius:10px;padding:8px 14px;margin-top:12px;font-size:13px;">Código errado. Pede ao dono.</div>
   <button onclick="confirmarCodigoBalconista()" style="margin-top:18px;background:#fff;color:var(--verde);border:none;border-radius:14px;padding:15px 40px;font-size:17px;font-weight:800;">Entrar</button>
   <div style="font-size:11px;opacity:.8;margin-top:22px;">Código inicial: 0000 · o dono muda no Monitor da Banca → Definições → Código do balconista</div>
-  <button type="button" onclick="trocarContaBanca()" style="display:none">Entrar com outra conta (e-mail)</button>
+  <button type="button" id="cb-trocar" onclick="trocarContaBanca()" style="display:none;margin-top:16px;background:none;border:0;color:inherit;opacity:.8;font-size:12.5px;font-weight:700;font-family:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer;">Entrar com outra conta (e-mail)</button>
+  <script>(function(){ var ua = navigator.userAgent || ''; var app = /SPAPApp/i.test(ua) || window.navigator.standalone === true; if (!app) document.getElementById('cb-trocar').style.display = ''; })();</script>
 </div>
 
 <!-- ======== TELA VENDER ======== -->
@@ -399,7 +400,7 @@
 <div id="toast" class="toast"></div>
 
 <script src="spap-erros.js?v=2"></script>
-<script src="supabase-config.js?v=5"></script>
+<script src="supabase-config.js?v=6"></script>
 <script src="spap-suporte.js?v=4"></script>
 <script src="spap-avisos.js?v=6"></script>
 <script src="spap-imagem.js?v=1"></script>
@@ -1198,6 +1199,8 @@ async function sairBanca(){
 }
 // Fim do turno (depois de entregar): a conta fica no telemóvel; volta ao ecrã do código
 function fecharTurnoBanca(){
+  // Na web (como antes): termina a sessão e volta ao e-mail. Na app: a conta fica e volta ao código.
+  if (!(window.spapEhApp && spapEhApp())) { (async()=>{ try{ sessionStorage.removeItem('banca_vend_ok'); sessionStorage.removeItem('banca_vend'); }catch(e){} try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='login-banca.html'; })(); return; }
   try{ sessionStorage.removeItem('banca_vend_ok'); sessionStorage.removeItem('banca_vend'); }catch(e){}
   try{ sessao.vendedor = null; }catch(e){}
   try{ fecharFolha('folha-entregar'); fecharFolha('folha-menu'); }catch(e){}

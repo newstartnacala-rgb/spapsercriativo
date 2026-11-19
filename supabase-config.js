@@ -122,11 +122,23 @@ function _spapHash(t) {
 // O dono entra UMA vez com o e-mail neste aparelho. A partir daí, a Loja/Banca abre SEMPRE no ecrã do código
 // do balconista: se a sessão do servidor caducar ou se perder, a app volta a entrar sozinha com a conta guardada.
 // (Guardada só neste aparelho, baralhada. «Trocar de conta» apaga-a.)
+// Está a correr dentro da APLICAÇÃO (APK Android, ou atalho no ecrã principal do iPhone)? No navegador (web) é false.
+// Na app: o aparelho guarda a conta e só pede o código do balconista. Na web: e-mail e senha (como antes) e depois o código.
+function spapEhApp() {
+  try {
+    var ua = navigator.userAgent || '';
+    if (/SPAPApp/i.test(ua) || (window.SPAP_APP_NATIVA && window.SPAPNative)) return true;
+    var ios = /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && (navigator.maxTouchPoints || 0) > 1);
+    if (ios && window.navigator.standalone === true) return true;
+  } catch (e) {}
+  return false;
+}
+window.spapEhApp = spapEhApp;
 function _spapChaveAparelho() { return (typeof SPAP_PAGINA_BANCA !== 'undefined' && SPAP_PAGINA_BANCA) ? 'spap_aparelho_banca' : 'spap_aparelho_loja'; }
 function _spapBaralhar(txt, k) { var o = ''; for (var i = 0; i < txt.length; i++) o += String.fromCharCode(txt.charCodeAt(i) ^ k.charCodeAt(i % k.length)); return o; }
 function spapLembrarAparelho(email, senha) {
   try {
-    if (!email || !senha) return;
+    if (!email || !senha || !spapEhApp()) return;   // só na app; na web o navegador não guarda a senha
     var k = localStorage.getItem('spap_aparelho_k');
     if (!k) { k = ''; for (var i = 0; i < 32; i++) k += String.fromCharCode(33 + Math.floor(Math.random() * 90)); localStorage.setItem('spap_aparelho_k', k); }
     var t = JSON.stringify({ e: String(email).trim().toLowerCase(), s: String(senha), t: Date.now() });
@@ -146,6 +158,7 @@ function spapReentrarAparelho() {
   if (_spapAReentrar) return _spapAReentrar;
   _spapAReentrar = (async function () {
     try {
+      if (!spapEhApp()) return null;               // na web volta a pedir e-mail e senha (como antes)
       var c = _spapLerAparelho(); if (!c || !c.e || !c.s) return null;
       if (navigator.onLine === false) return null;
       var r = await supabaseClient.auth.signInWithPassword({ email: c.e, password: c.s });
