@@ -90,9 +90,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.67">
-<script src="banca-tema.js?v=3.7.67" defer></script>
-<script src="app-android.js?v=3.7.67" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.68">
+<script src="banca-tema.js?v=3.7.68" defer></script>
+<script src="app-android.js?v=3.7.68" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -829,6 +829,7 @@ async function carregarResumo(){
   try{ desenharGrafico(vendas, r); }catch(e){}
   const div=document.getElementById('lista-vendas');
   if(!vendas.length){ div.innerHTML='<div class="vazio">Sem vendas no período.</div>'; return; }
+  const _cmL=_custoPorNome();
   div.innerHTML = vendas.slice(0,50).map(v=>{
     const dt=new Date(v.criado_em).toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
     const nit=(v.venda_itens||[]).reduce((s,i)=>s+(parseFloat(i.qtd)||0),0);
@@ -841,7 +842,7 @@ async function carregarResumo(){
       <div class="in"><div class="nn">Venda nº ${v.numero_do_dia||'-'} ${d>0?`<span class="tag-desc">🏷️ desconto −${fmt(d).replace('MT ','')}</span>`:''}</div>
       <div class="bv-quais">${(v.venda_itens||[]).length?(v.venda_itens||[]).map(it=>(parseFloat(it.qtd)||0)+'× '+esc(it.produto_nome)).join(', '):'<i style="color:#b45309">sem produtos registados</i>'}</div>
       <div class="mt">${dt} · ${nit} unidade${nit==1?'':'s'}${v.vendedor_codigo?(' · '+esc(v.vendedor_codigo)):''}</div></div>
-      <div class="vv">${fmt(v.total)}</div></div>`;
+      <div class="vv">${fmt(v.total)}${(()=>{ const l=_lucroVenda(v,_cmL); return l===null?'':'<small class="vv-lucro'+(l<0?' neg':'')+'">'+(l<0?'prejuízo ':'lucro ')+fmt(Math.abs(l)).replace('MT ','')+'</small>'; })()}</div></div>`;
   }).join('');
 }
 
@@ -937,9 +938,15 @@ function marcarDescontos(vendas, desc){
       if(d && !it._ret && (parseFloat(d.preco_original)||0)>pr){ it._orig=parseFloat(d.preco_original); tot+=(it._orig-pr)*(parseFloat(it.qtd)||0); } });
     v._desc=Math.round(tot*100)/100; });
 }
+// ===== LUCRO POR PRODUTO (venda − preço de compra; null quando o produto não tem preço de compra) =====
+function _custoPorNome(){ const m={}; (produtos||[]).forEach(x=>{ const c=parseFloat(x.preco_compra); m[(x.nome||'').trim().toLowerCase()] = c>0 ? c : null; }); return m; }
+function _lucroItem(it, cm){ const k=(it.produto_nome||'').trim().toLowerCase(); if(!(k in cm) || cm[k]===null) return null;
+  return ((parseFloat(it.preco_unitario)||0) - cm[k]) * (parseFloat(it.qtd)||0); }
+function _lucroVenda(v, cm){ let t=0, ok=false; (v.venda_itens||[]).forEach(it=>{ const l=_lucroItem(it,cm); if(l!==null){ t+=l; ok=true; } }); return ok ? Math.round(t*100)/100 : null; }
+function _lucroTxt(l){ return l===null ? '<span class="lc-sem">sem preço de compra</span>' : '<span class="lc '+(l<0?'neg':'')+'">'+(l<0?'prejuízo ':'lucro ')+fmt(Math.abs(l))+'</span>'; }
 function verVendaMonitor(id){
   const v=(window._vendasResumo||[]).find(x=>String(x.id)===String(id)); if(!v) return;
-  const its=v.venda_itens||[], d=v._desc||0;
+  const its=v.venda_itens||[], d=v._desc||0, _cm=_custoPorNome(), _lv=_lucroVenda(v,_cm);
   const _cd={}; produtos.forEach(x=>{ _cd[(x.nome||'').toLowerCase()]=parseFloat(x.preco_compra)||0; });
   const _lucroRet = v._ret ? its.reduce((s,it)=>s+((parseFloat(it.preco_unitario)||0)-(_cd[(it.produto_nome||'').toLowerCase()]||0))*Math.abs(parseFloat(it.qtd)||0),0) : 0;
   mostrarInfo(v._ret ? '↩️ Retorno' : '🧾 Venda nº '+(v.numero_do_dia||'—'),
@@ -947,11 +954,12 @@ function verVendaMonitor(id){
     +(d>0?'<div class="aviso-desc">🏷️ Nesta venda o balconista deu <b>'+fmt(d)+'</b> de desconto.</div>':'')
     +'<table class="bv-tab"><thead><tr><th>Produto</th><th class="n">Qtd</th><th class="n">Preço</th><th class="n">Subtotal</th></tr></thead><tbody>'
     +its.map(it=>{ const pr=parseFloat(it.preco_unitario)||0, q=parseFloat(it.qtd)||0;
-      return '<tr class="'+(it._ret?'ret':(it._orig?'desc':''))+'"><td>'+esc(it.produto_nome)+(it._ret?'<small>↩️ RETORNO</small>':'')+(it._orig?'<small>'+fmt(it._orig)+' − '+fmt(it._orig-pr).replace('MT ','')+' = '+fmt(pr)+'</small>':'')+'</td><td class="n">'+q+'</td><td class="n">'+fmt(pr).replace('MT ','')+'</td><td class="n"><b>'+fmt(pr*q).replace('MT ','')+'</b></td></tr>'; }).join('')
+      return '<tr class="'+(it._ret?'ret':(it._orig?'desc':''))+'"><td>'+esc(it.produto_nome)+(it._ret?'<small>↩️ RETORNO</small>':'')+(it._orig?'<small>'+fmt(it._orig)+' − '+fmt(it._orig-pr).replace('MT ','')+' = '+fmt(pr)+'</small>':'')+(it._ret?'':'<div class="bv-lucro">'+_lucroTxt(_lucroItem(it,_cm))+(_cm[(it.produto_nome||'').trim().toLowerCase()]?'<i> · custo '+fmt(_cm[(it.produto_nome||'').trim().toLowerCase()])+'/un.</i>':'')+'</div>')+'</td><td class="n">'+q+'</td><td class="n">'+fmt(pr).replace('MT ','')+'</td><td class="n"><b>'+fmt(pr*q).replace('MT ','')+'</b></td></tr>'; }).join('')
     +'</tbody></table><div class="bv-info"><div><span>Data e hora</span><b>'+new Date(v.criado_em).toLocaleString('pt-PT')+'</b></div>'
     +(v.vendedor_codigo?'<div><span>Balconista</span><b>'+esc(v.vendedor_codigo)+'</b></div>':'')
     +(d>0?'<div><span>Sem desconto seria</span><b>'+fmt((parseFloat(v.total)||0)+d)+'</b></div><div><span>🏷️ Descontado</span><b style="color:#b45309">− '+fmt(d)+'</b></div>':'')
-    +'</div><div class="bv-total"><span>Valor total</span><b>'+fmt(v.total)+'</b></div>');
+    +'</div><div class="bv-total"><span>Valor total</span><b>'+fmt(v.total)+'</b></div>'
+    +(v._ret?'':'<div class="bv-lucro-tot'+(_lv!==null&&_lv<0?' neg':'')+'"><span>💰 Lucro desta venda</span><b>'+(_lv===null?'—':fmt(_lv))+'</b></div>'+(_lv===null?'<div class="bv-lucro-nota">Ponha o preço de compra nos produtos (Stock) para ver o lucro.</div>':'')));
 }
 
 // ===== DINHEIRO E LUCRO (como no Monitor principal) =====
@@ -1106,8 +1114,8 @@ async function carregarTop10(vendasHoje){
       const { data }=await supabaseClient.from('vendas').select('id,total,criado_em, venda_itens(produto_nome,qtd,preco_unitario)').eq('loja_id',sessao.lojaId).gte('criado_em',ini.toISOString()).limit(1000);
       vs=normVendas(data||[]); }catch(e){ vs=[]; } }
   window._t10vs=vs;
-  const c={};
-  vs.forEach(v=>(v.venda_itens||[]).forEach(it=>{ const n=it.produto_nome||'Produto', q=parseFloat(it.qtd)||0; if(q<=0) return; c[n]=c[n]||{qtd:0,total:0}; c[n].qtd+=q; c[n].total+=q*(parseFloat(it.preco_unitario)||0); }));
+  const c={}, _cmT=_custoPorNome();
+  vs.forEach(v=>(v.venda_itens||[]).forEach(it=>{ const n=it.produto_nome||'Produto', q=parseFloat(it.qtd)||0; if(q<=0) return; c[n]=c[n]||{qtd:0,total:0,lucro:0,semCusto:false}; c[n].qtd+=q; c[n].total+=q*(parseFloat(it.preco_unitario)||0); const l=_lucroItem(it,_cmT); if(l===null) c[n].semCusto=true; else c[n].lucro+=l; }));
   const top=Object.entries(c).sort((a,b)=>b[1].qtd-a[1].qtd).slice(0,10);
   document.getElementById('t10-n').textContent = top.length ? (top.length+' produto'+(top.length===1?'':'s')) : '';
   if(!top.length){ box.innerHTML='<div class="vazio">Ainda não houve vendas hoje.</div>'; return; }
@@ -1118,7 +1126,7 @@ async function carregarTop10(vendasHoje){
     return `<div class="t10-item"><div class="t10-foto">${img}<span class="t10-pos ${i<3?'p'+(i+1):''}">${i+1}</span></div>
       <div class="t10-in"><div class="nn">${esc(nome)}</div><div class="mt">${d.qtd} vendida${d.qtd===1?'':'s'}${st!==null?` · <span style="color:${st<=5?'#dc2626':'#16a34a'};font-weight:700">resta ${st}</span>`:''}</div>
       <div class="t10-barra"><i style="width:${Math.max(5,Math.round(d.qtd/max*100))}%"></i></div></div>
-      <div class="vv">${fmt(d.total)}</div></div>`; }).join('');
+      <div class="vv">${fmt(d.total)}${d.semCusto?'':'<small class="vv-lucro'+(d.lucro<0?' neg':'')+'">'+(d.lucro<0?'prejuízo ':'lucro ')+fmt(Math.abs(d.lucro)).replace('MT ','')+'</small>'}</div></div>`; }).join('');
 }
 // ===== SUPER ADMIN (igual ao Monitor da Loja): pastilha «👑 Super Admin ⌄» com a lista das bancas =====
 function superPintarPilula(){

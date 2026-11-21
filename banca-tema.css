@@ -869,3 +869,16 @@ html.escuro .cart-limpar{background:rgba(220,38,38,.15);border-color:rgba(248,11
 /* Barra do topo FIXA nos monitores da Banca (o resto da página é que faz scroll) */
 .tela > .topo{position:sticky !important;top:0 !important;z-index:600 !important;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);}
 html,body{overflow-x:clip;}
+
+/* Lucro por produto (Monitor da Banca) */
+.bv-tab .bv-lucro{margin-top:3px;font-size:11.5px;font-weight:600;color:#64748b;line-height:1.35}
+.bv-tab .bv-lucro i{font-style:normal;color:#94a3b8}
+.bv-tab .bv-lucro .lc{color:#15803d;font-weight:800} .bv-tab .bv-lucro .lc.neg{color:#dc2626}
+.bv-tab .bv-lucro .lc-sem{color:#94a3b8;font-style:italic}
+.bv-lucro-tot{display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #bbf7d0;border-radius:14px;padding:12px 14px;margin-bottom:10px}
+.bv-lucro-tot span{font-weight:700;color:#166534} .bv-lucro-tot b{font-size:19px;color:#15803d}
+.bv-lucro-tot.neg{background:linear-gradient(135deg,#fef2f2,#fee2e2);border-color:#fecaca} .bv-lucro-tot.neg span,.bv-lucro-tot.neg b{color:#b91c1c}
+.bv-lucro-nota{font-size:12px;color:#64748b;margin:-4px 2px 12px}
+.vv .vv-lucro{display:block;margin-top:3px;font-size:12px;font-weight:800;color:#15803d;text-align:right;white-space:nowrap} .vv .vv-lucro.neg{color:#dc2626}
+html.escuro .bv-lucro-tot{background:rgba(22,163,74,.14);border-color:rgba(74,222,128,.3)} html.escuro .bv-lucro-tot span,html.escuro .bv-lucro-tot b{color:#4ade80}
+html.escuro .bv-tab .bv-lucro .lc,html.escuro .vv .vv-lucro{color:#4ade80} html.escuro .bv-lucro-nota{color:#94a3b8}
