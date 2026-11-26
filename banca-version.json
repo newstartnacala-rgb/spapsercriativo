@@ -1,7 +1,8 @@
 {
-  "versao": "3.7.69",
+  "versao": "3.7.70",
   "data": "2026-11-09",
   "novidades": [
+    "Produtos sem foto mostram o carrinho 3D real em todos os aparelhos (Windows, tablets, telemóveis)",
     "Melhorias de desempenho no modo vidro",
     "Monitor da Banca: lucro de cada produto no detalhe da venda, no Top 10 e nas vendas recentes",
     "Suporte: nova opção «Info. de atualização» (canal Atualizações no WhatsApp)",

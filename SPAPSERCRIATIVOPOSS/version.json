@@ -1,14 +1,13 @@
 {
-  "versao": "2.9.292",
+  "versao": "2.9.293",
   "data": "2026-11-09",
   "novidades": [
+    "Produtos sem foto mostram o carrinho 3D real em todos os aparelhos (Windows, tablets, telemóveis)",
     "Leitor de código de barras só vende na barra de pesquisa do ecrã de vendas — no pagamento, quantidade, menus e outros ecrãs a leitura é ignorada",
     "Loja muito mais rápida com muitos produtos: sem piscar, produtos aparecem aos poucos ao descer, toque no produto instantâneo",
     "Modo leve automático em computadores fracos",
     "Suporte: nova opção «Info. de atualização» (canal Atualizações no WhatsApp)",
-    "Suporte: WhatsApp e chamada a funcionar em todos os ecrãs (número 86 166 7843)",
-    "N",
-    "a"
+    "Suporte: WhatsApp e chamada a funcionar em todos os ecrãs (número 86 166 7843)"
   ],
   "melhorias": [
     "Definições do Monitor: nova opção «Visitar o website»",

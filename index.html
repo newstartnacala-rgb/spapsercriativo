@@ -353,8 +353,14 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   .notif.erro-notif { background: #e74c3c; }
 
   [tabindex]:focus-visible { outline: 2px solid #1a56a0; outline-offset: 1px; }
+
+/* Carrinho 3D (imagem) no lugar do emoji 🛒 — igual em Windows, Android, iPhone e tablets */
+.spap-carro{display:block;width:58%;max-width:84px;height:auto;aspect-ratio:1;object-fit:contain;margin:auto;filter:drop-shadow(0 6px 10px rgba(15,23,42,.18));pointer-events:none;user-select:none;-webkit-user-drag:none}
+.m2-it-img .spap-carro,.busca-item-emoji .spap-carro,.linha-gestao-emoji .spap-carro{width:72%;max-width:40px;filter:drop-shadow(0 3px 5px rgba(15,23,42,.18))}
+.m2-voar .spap-carro{width:70%;max-width:none}
+.busca-item-emoji{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px}
 </style>
-<script src="app-android.js?v=2.9.292" defer></script>
+<script src="app-android.js?v=2.9.293" defer></script>
 <style>/* a interface antiga nunca aparece: o ecrã antigo fica invisível até o novo abrir (sem piscar) */ body:not(.modo2) #tela-pdv { visibility:hidden !important; }</style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
@@ -2347,7 +2353,7 @@ body.spap-leve #m2-grid .m2-card { animation: none !important; transition: none 
       // Mostra a IMAGEM real do produto (se já carregou). Tocar na imagem abre-a em grande.
       const visual = prod.imagem
         ? `<img src="${prod.imagem}" class="produto-foto" onclick="event.stopPropagation(); abrirImagemGrande('${String(prod.imagem).replace(/'/g,"\\'")}')" style="width:100%;height:92px;object-fit:contain;background:#f8fafc;border-radius:10px;cursor:zoom-in;" onerror="this.outerHTML='<div class=produto-emoji>🛒</div>'">`
-        : `<div class="produto-emoji">${'🛒'}</div>`;
+        : `<div class="produto-emoji"><img class="spap-carro" src="icons3d/cart.png" alt="" draggable="false"></div>`;
       card.innerHTML = `
         ${selo}
         ${visual}
@@ -2810,7 +2816,7 @@ async function scannerFechar() {
     if (produtos.length === 0) { div.innerHTML = '<div class="gestao-vazio">Nenhum produto cadastrado.</div>'; return; }
     div.innerHTML = produtos.map((p, i) => `
       <div class="linha-gestao">
-        <div class="linha-gestao-emoji">${p.imagem ? `<img src="${p.imagem}" style="width:28px;height:28px;border-radius:6px;object-fit:cover" onerror="this.style.display='none'">` : ('🛒')}</div>
+        <div class="linha-gestao-emoji">${p.imagem ? `<img src="${p.imagem}" style="width:28px;height:28px;border-radius:6px;object-fit:cover" onerror="this.style.display='none'">` : ('<img class="spap-carro" src="icons3d/cart.png" alt="" draggable="false">')}</div>
         <div class="linha-gestao-info">
           <div class="linha-gestao-nome">${p.nome}</div>
           <div class="linha-gestao-meta">${p.categoria} • MT ${parseFloat(p.preco).toFixed(2)}</div>
@@ -2957,9 +2963,9 @@ async function scannerFechar() {
     atualizarSubtotalQtd();
     const imgWrap = document.getElementById('qtd-produto-imagem-wrap');
     if (prod.imagem) {
-      imgWrap.innerHTML = `<img src="${prod.imagem}" alt="${prod.nome}" onclick="abrirImagemGrande('${prod.imagem}')" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in;" onerror="this.parentElement.textContent='${'🛒'}'">`;
+      imgWrap.innerHTML = `<img src="${prod.imagem}" alt="${prod.nome}" onclick="abrirImagemGrande('${prod.imagem}')" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in;" onerror="this.parentElement.innerHTML='<img class=spap-carro src=icons3d/cart.png alt=>'">`;
     } else {
-      imgWrap.textContent = '🛒';
+      imgWrap.innerHTML = '<img class="spap-carro" src="icons3d/cart.png" alt="" draggable="false">';
     }
     document.getElementById('modal-quantidade').classList.add('ativo');
   }
@@ -3059,7 +3065,7 @@ async function scannerFechar() {
         const pReal = produtos.find(p => _mesmoProd(p, item));
         const thumb = (pReal && pReal.imagem)
           ? `<img src="${pReal.imagem}" style="width:52px;height:52px;object-fit:cover;border-radius:8px;border:1px solid #eee;flex-shrink:0;" onerror="this.style.display='none'">`
-          : `<div style="width:52px;height:52px;border-radius:8px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">${'🛒'}</div>`;
+          : `<div style="width:52px;height:52px;border-radius:8px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;"><img class="spap-carro" src="icons3d/cart.png" alt="" draggable="false"></div>`;
         return `<div class="item-carrinho">
           ${thumb}
           <div class="item-carrinho-info">
@@ -3133,7 +3139,7 @@ async function scannerFechar() {
     }
     buscaResultadosDiv.innerHTML = buscaListaAtual.map((p, i) => `
       <div class="busca-item ${i === buscaSelecionado ? 'selecionado' : ''}" onclick='selecionarResultadoBuscaPorIndice(${i})'>
-        <span class="busca-item-emoji">${'🛒'}</span>
+        <span class="busca-item-emoji"><img class="spap-carro" src="icons3d/cart.png" alt="" draggable="false"></span>
         <div class="busca-item-info">
           <div class="busca-item-nome">${p.nome}</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:4px;">
@@ -6240,7 +6246,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.292';
+  const VERSAO_ATUAL = '2.9.293';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -7473,7 +7479,7 @@ document.addEventListener('click', function(e){
         el.innerHTML = lista.map(function(p){
           try {
             var pid = String(p.id||'').replace(/[^A-Za-z0-9_-]/g,''), nm = String(p.nome == null ? '' : p.nome).replace(/&/g,'&amp;').replace(/</g,'&lt;');
-            return '<div class="m2-card" data-pid="'+pid+'" onclick="m2AddPorId(\''+pid+'\')"><div class="m2-img">🛒</div><div class="m2-nome">'+nm+'</div><div class="m2-linha"><span class="m2-preco">MT '+(parseFloat(p.preco)||0).toFixed(2)+'</span><button class="m2-add" onclick="event.stopPropagation(); m2AddPorId(\''+pid+'\')">+</button></div></div>';
+            return '<div class="m2-card" data-pid="'+pid+'" onclick="m2AddPorId(\''+pid+'\')"><div class="m2-img"><img class="spap-carro" src="icons3d/cart.png" alt="" draggable="false"></div><div class="m2-nome">'+nm+'</div><div class="m2-linha"><span class="m2-preco">MT '+(parseFloat(p.preco)||0).toFixed(2)+'</span><button class="m2-add" onclick="event.stopPropagation(); m2AddPorId(\''+pid+'\')">+</button></div></div>';
           } catch(_) { return ''; }
         }).join('') || '<div style="color:#94a3b8;padding:30px;grid-column:1/-1;text-align:center;">Nenhum produto.</div>';
       } catch(_) {}
@@ -7518,7 +7524,7 @@ document.addEventListener('click', function(e){
   //  • reaproveita os cartões que não mudaram (não pisca, não recarrega fotos, não repete a animação).
   var _M2_PAG = 60, _m2Lim = { chave: null, n: 60 }, _m2Obs = null;
   function _m2CardHtml(p){
-    var img = p.imagem ? '<img class="m2-img" src="'+String(p.imagem).replace(/"/g,'%22')+'" loading="lazy" decoding="async" onerror="this.outerHTML=\'<div class=m2-img>🛒</div>\'">' : '<div class="m2-img">🛒</div>';
+    var img = p.imagem ? '<img class="m2-img" src="'+String(p.imagem).replace(/"/g,'%22')+'" loading="lazy" decoding="async" onerror="this.outerHTML=\'<div class=m2-img><img class=spap-carro src=icons3d/cart.png alt= draggable=false></div>\'">' : '<div class="m2-img"><img class="spap-carro" src="icons3d/cart.png" alt="" draggable="false"></div>';
     var kg = (p.unidade==='kg') ? ' <small>/kg</small>' : '';
     // pelo id (seguro para qualquer nome: aspas, barras, acentos, símbolos) — nunca parte a grelha
     var pid = String(p.id||'').replace(/[^A-Za-z0-9_-]/g,'');
@@ -7608,7 +7614,7 @@ document.addEventListener('click', function(e){
     var v = document.createElement('div'); v.className = 'm2-voar';
     v.style.width = v.style.height = tam + 'px';
     v.style.left = (r0.left + r0.width/2 - tam/2) + 'px'; v.style.top = (r0.top + (r0.height||tam)/2 - tam/2) + 'px';
-    v.innerHTML = p && p.imagem ? '<img src="' + String(p.imagem).replace(/"/g,'&quot;') + '" alt="">' : '<span>🛒</span>';
+    v.innerHTML = p && p.imagem ? '<img src="' + String(p.imagem).replace(/"/g,'&quot;') + '" alt="">' : '<img class="spap-carro" src="icons3d/cart.png" alt="" draggable="false">';
     document.body.appendChild(v);
     var r1 = alvo ? alvo.getBoundingClientRect() : { left: innerWidth - 60, top: innerHeight - 60, width: 30, height: 30 };
     var dx = (r1.left + r1.width/2) - (r0.left + r0.width/2), dy = (r1.top + r1.height/2) - (r0.top + (r0.height||tam)/2);
@@ -7626,7 +7632,7 @@ document.addEventListener('click', function(e){
     else {
       itensEl.innerHTML = carrinho.map(function(item,i){
         var pReal = (produtos||[]).find(function(p){ return _mesmoProd(p, item); });
-        var thumb = (pReal&&pReal.imagem) ? '<img class="m2-it-img" src="'+pReal.imagem+'" onerror="this.outerHTML=\'<div class=m2-it-img>🛒</div>\'">' : '<div class="m2-it-img">🛒</div>';
+        var thumb = (pReal&&pReal.imagem) ? '<img class="m2-it-img" src="'+pReal.imagem+'" onerror="this.outerHTML=\'<div class=m2-it-img><img class=spap-carro src=icons3d/cart.png alt= draggable=false></div>\'">' : '<div class="m2-it-img"><img class="spap-carro" src="icons3d/cart.png" alt="" draggable="false"></div>';
         var step = (item.unidade==='kg')
           ? '<button class="m2-peso" onclick="editarPesoCarrinho('+i+')">⚖️ '+(item.qtd<1?(Math.round(item.qtd*1000)+'g'):(item.qtd+'kg'))+' ✏️</button>'
           : '<button onclick="alterarQtd('+i+',-1)">−</button><span style="min-width:22px;text-align:center;font-weight:bold;">'+item.qtd+'</span><button onclick="alterarQtd('+i+',1)">+</button>';

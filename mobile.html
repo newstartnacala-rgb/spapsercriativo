@@ -114,9 +114,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="Banca e Vendas">
-<link rel="stylesheet" href="banca-tema.css?v=3.7.69">
-<script src="banca-tema.js?v=3.7.69" defer></script>
-<script src="app-android.js?v=3.7.69" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.70">
+<script src="banca-tema.js?v=3.7.70" defer></script>
+<script src="app-android.js?v=3.7.70" defer></script>
 </head>
 <body>
 
@@ -578,7 +578,7 @@ function renderProdutos(){
   const g = document.getElementById('grelha');
   document.getElementById('sem-produtos').style.display = produtos.length ? 'none' : 'block';
   g.innerHTML = lista.map(p => {
-    const img = p.imagem ? `<img class="img" src="${p.imagem}" onerror="this.style.display='none'">` : `<div class="img">🛒</div>`;
+    const img = p.imagem ? `<img class="img" src="${p.imagem}" onerror="this.style.display='none'">` : `<div class="img"><img class="spap-carro" src="icons3d/cart.png" alt="" draggable="false"></div>`;
     return `<div class="card" onclick="addCarrinho('${p.id}')">
       ${img}
       <div class="n">${esc(p.nome)}</div>
@@ -945,7 +945,7 @@ function renderListaProdutos(){
   if(!produtos.length){ div.innerHTML='<div class="vazio">Sem produtos. Toca em <b>➕ Novo</b>.</div>'; return; }
   div.innerHTML = lista.map(p=>{
     const st=parseInt(p.stock)||0;
-    const img = p.imagem ? `<img src="${p.imagem}" style="width:48px;height:48px;border-radius:10px;object-fit:cover;">` : `<div style="width:48px;height:48px;border-radius:10px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:22px;">🛒</div>`;
+    const img = p.imagem ? `<img src="${p.imagem}" style="width:48px;height:48px;border-radius:10px;object-fit:cover;">` : `<div style="width:48px;height:48px;border-radius:10px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:22px;"><img class="spap-carro" src="icons3d/cart.png" alt="" draggable="false"></div>`;
     return `<div class="item" onclick="abrirFormProduto('${p.id}')">
       ${img}
       <div class="in"><div class="nn">${esc(p.nome)}</div><div class="pp"><b>${fmt(p.preco)}</b></div></div>

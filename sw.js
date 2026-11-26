@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spap-pdv-v369';
+const CACHE_NAME = 'spap-pdv-v370';
 const FICHEIROS = [
   './',
   './index.html',
@@ -27,6 +27,7 @@ const FICHEIROS = [
   './spap-navegador.js',
   './spap-erros.js',
   './icons3d/personalizar.svg',
+  './icons3d/cart.png',
   './spap-alertas.js',
   './spap-personalizar.js',
   './spap-leitor.js',
