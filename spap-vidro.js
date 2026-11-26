@@ -154,7 +154,10 @@
 
   function iniciar() {
     aplicar();
-    new MutationObserver(function () { if (document.body.classList.contains('sv')) { agendar(); if (APP !== 'pdv') { clearTimeout(iniciar._m); iniciar._m = setTimeout(marcarMonitor, 120); } } })
+    // mudanças dentro da grelha de produtos, do carrinho ou do relógio não abrem janelas: não vale a pena reexaminar a página
+    var ZONAS = APP === 'pdv' ? '#m2-grid,#m2-cart-itens,#produtos-grelha,#carrinho-itens,#gd-cab-extra' : '#sv-nada';
+    function soZonas(rs) { for (var i = 0; i < rs.length; i++) { var t = rs[i].target; if (!(t && t.nodeType === 1 && t.closest && t.closest(ZONAS))) return false; } return true; }
+    new MutationObserver(function (rs) { if (soZonas(rs)) return; if (document.body.classList.contains('sv')) { agendar(); if (APP !== 'pdv') { clearTimeout(iniciar._m); iniciar._m = setTimeout(marcarMonitor, 120); } } })
       .observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'open', 'hidden'] });
     // a interface pode mudar de clara para escura: acerta a cor do vidro
     new MutationObserver(function () { var b = document.body; if (b.classList.contains('sv')) { var e = APP === 'pdv' && (b.classList.contains('m2-escuro') || (b.classList.contains('gd') && !b.classList.contains('gd-marfim'))); if (b.classList.contains('sv-escuro') !== e) b.classList.toggle('sv-escuro', e); } })

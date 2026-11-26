@@ -286,7 +286,7 @@
     var ps = prods(), cs = carro(), e;
     var un = cs.reduce(function (a, i) { return a + (i.unidade === 'kg' ? 1 : (Number(i.qtd) || 0)); }, 0);
     if ((e = el('gd-cart-resumo'))) e.textContent = cs.length ? (cs.length + (cs.length === 1 ? ' produto' : ' produtos') + ' · ' + un + (un === 1 ? ' unidade' : ' unidades')) : 'Sem produtos — toca num produto para começar';
-    if ((e = el('gd-n-lista'))) { var n = document.querySelectorAll('#m2-grid .m2-card').length; e.textContent = n + (n === 1 ? ' produto' : ' produtos') + ' nesta lista'; }
+    if ((e = el('gd-n-lista'))) { var g = el('m2-grid'), n = g && g.getAttribute('data-total') ? (+g.getAttribute('data-total') || 0) : document.querySelectorAll('#m2-grid .m2-card').length; e.textContent = n + (n === 1 ? ' produto' : ' produtos') + ' nesta lista'; }
     if ((e = el('gd-online'))) { var on = navigator.onLine !== false; e.classList.toggle('off', !on); e.querySelector('b').textContent = on ? 'Online' : 'Sem internet'; }
   }
 
@@ -294,10 +294,14 @@
   function decorarGrelha() {
     if (!document.body.classList.contains('gd')) return;
     var ps = prods(), cs = carro();
+    // índices feitos uma só vez (antes: cada cartão percorria todos os produtos e todo o carrinho → lento com muitos produtos)
+    var porId = {}, porNome = {}, noCarro = {}, noCarroNome = {};
+    for (var k = 0; k < ps.length; k++) { porId[String(ps[k].id).replace(/[^A-Za-z0-9_-]/g, '')] = ps[k]; if (!(ps[k].nome in porNome)) porNome[ps[k].nome || ''] = ps[k]; }
+    for (var j = 0; j < cs.length; j++) { var it = cs[j], qq = it.unidade === 'kg' ? 1 : (Number(it.qtd) || 0); if (it.id != null) noCarro[String(it.id)] = (noCarro[String(it.id)] || 0) + qq; else noCarroNome[it.nome] = (noCarroNome[it.nome] || 0) + qq; }
     document.querySelectorAll('#m2-grid .m2-card').forEach(function (c) {
       var nomeEl = c.querySelector('.m2-nome'); if (!nomeEl) return;
-      var nome = nomeEl.textContent, p = null, pid = c.getAttribute('data-pid');
-      for (var k = 0; k < ps.length; k++) { if (pid ? String(ps[k].id) === pid : (ps[k].nome || '') === nome) { p = ps[k]; break; } }
+      var nome = nomeEl.textContent, pid = c.getAttribute('data-pid');
+      var p = pid ? porId[pid] : porNome[nome];
       if (!p) return;
       // O balconista NÃO vê quantidades de stock (só o dono, no Monitor). Mostra apenas «Esgotado» quando está a zero.
       var s = stockDe(p), st = c.querySelector('.gd-st');
@@ -307,7 +311,7 @@
       } else if (st) st.remove();
       var cod = p.codbarras || p.codigo || '';
       if (cod && !c.querySelector('.gd-cod')) { var cd = document.createElement('span'); cd.className = 'gd-cod'; cd.textContent = cod; nomeEl.parentNode.insertBefore(cd, nomeEl.nextSibling); }
-      var q = cs.filter(function (i) { return (p && i.id != null && p.id != null) ? String(i.id) === String(p.id) : i.nome === nome; }).reduce(function (a, i) { return a + (i.unidade === 'kg' ? 1 : (Number(i.qtd) || 0)); }, 0);
+      var q = (p.id != null ? (noCarro[String(p.id)] || 0) : 0) + (noCarroNome[nome] || 0);
       var nc = c.querySelector('.gd-noc');
       if (q > 0) { if (!nc) { nc = document.createElement('span'); nc.className = 'gd-noc'; c.insertBefore(nc, c.firstChild); } nc.textContent = q; }
       else if (nc) nc.remove();

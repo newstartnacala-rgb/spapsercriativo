@@ -1,12 +1,13 @@
 {
-  "versao": "2.9.291",
+  "versao": "2.9.292",
   "data": "2026-11-09",
   "novidades": [
+    "Leitor de código de barras só vende na barra de pesquisa do ecrã de vendas — no pagamento, quantidade, menus e outros ecrãs a leitura é ignorada",
+    "Loja muito mais rápida com muitos produtos: sem piscar, produtos aparecem aos poucos ao descer, toque no produto instantâneo",
+    "Modo leve automático em computadores fracos",
     "Suporte: nova opção «Info. de atualização» (canal Atualizações no WhatsApp)",
     "Suporte: WhatsApp e chamada a funcionar em todos os ecrãs (número 86 166 7843)",
     "N",
-    "a",
-    " ",
     "a"
   ],
   "melhorias": [

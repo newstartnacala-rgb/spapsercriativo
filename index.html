@@ -354,12 +354,27 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
   [tabindex]:focus-visible { outline: 2px solid #1a56a0; outline-offset: 1px; }
 </style>
-<script src="app-android.js?v=2.9.291" defer></script>
+<script src="app-android.js?v=2.9.292" defer></script>
 <style>/* a interface antiga nunca aparece: o ecrã antigo fica invisível até o novo abrir (sem piscar) */ body:not(.modo2) #tela-pdv { visibility:hidden !important; }</style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
 </head>
 <body>
+<script>
+/* Modo leve automático em computadores fracos (pouca memória ou 2 núcleos): sem desfoque de vidro e sem animações
+   de entrada nos cartões — o aspecto fica igual, mas o ecrã não engasga. (Forçar: localStorage spap_leve = '1' ou '0') */
+(function(){ try {
+  var f = localStorage.getItem('spap_leve'), m = navigator.deviceMemory, c = navigator.hardwareConcurrency;
+  var leve = f === '1' || (f !== '0' && ((m && m <= 4) || (c && c <= 2)));
+  if (leve) document.body.classList.add('spap-leve');
+} catch (e) {} })();
+</script>
+<style>
+body.spap-leve *, body.spap-leve *::before, body.spap-leve *::after { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+body.spap-leve.modo2.gv:not(.m2-escuro):not(.gd), body.spap-leve.modo2.gv.gd.gd-marfim { --gv-p: rgba(255,255,255,.84) !important; --gv-p2: rgba(255,255,255,.88) !important; }
+body.spap-leve.modo2.gv.m2-escuro, body.spap-leve.modo2.gv.gd:not(.gd-marfim) { --gv-p: rgba(20,20,24,.88) !important; --gv-p2: rgba(30,30,36,.9) !important; }
+body.spap-leve #m2-grid .m2-card { animation: none !important; transition: none !important; }
+</style>
 
 <style>
   #tela-carregando { position:fixed !important; inset:0; z-index:99990; height:auto !important; gap:0 !important; padding:24px;
@@ -1840,10 +1855,10 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
 
   // ===== PRODUTOS AO VIVO: o que o dono cadastra/altera no Monitor aparece logo na Venda =====
-  let _assinProdutos = null, _aAtualizarProd = false, _canalProdutos = null, _esperaProd = null;
+  let _assinProdutos = null, _aAtualizarProd = false, _canalProdutos = null, _esperaProd = null, _rtProdOk = false, _ultProdAtual = 0;
   async function atualizarProdutosAoVivo() {
     if (!navigator.onLine || !sessaoAtual || _aAtualizarProd) return;
-    _aAtualizarProd = true;
+    _aAtualizarProd = true; _ultProdAtual = Date.now();
     try {
       const cols = 'id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em,unidade';
       let todos = [], pg = 0;
@@ -1868,26 +1883,30 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
         if (v) { const img = v.imagem; Object.assign(v, n); if (!v.imagem && img) v.imagem = img; return v; }
         return n;
       });
-      guardarCacheLeve();
+      guardarCacheLeveDepois();
       try { renderCategorias(); } catch(e) {}
       try { renderProdutos(); } catch(e) {}
       try { if (document.body.classList.contains('modo2')) renderM2Grid(); } catch(e) {}
-      try { carregarImagensEmSegundoPlano(); } catch(e) {}
+      try { const sem = produtos.some(p => !p.imagem && !_imgTentadas.has(p.id)); if (sem) carregarImagensEmSegundoPlano(); } catch(e) {}
     } catch(e) {} finally { _aAtualizarProd = false; }
   }
   function ligarProdutosAoVivo() {
-    setInterval(atualizarProdutosAoVivo, 10000);              // reserva, se o tempo real não estiver ligado
+    // reserva: de 10 em 10 s só quando o tempo real NÃO está ligado; com tempo real, só uma conferência por minuto
+    setInterval(function () { if (!_rtProdOk || Date.now() - _ultProdAtual > 60000) atualizarProdutosAoVivo(); }, 10000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) atualizarProdutosAoVivo(); });
     try {
       if (_canalProdutos || !supabaseClient.channel || !sessaoAtual) return;
       _canalProdutos = supabaseClient.channel('loja-produtos-' + sessaoAtual.lojaId)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'produtos', filter: 'loja_id=eq.' + sessaoAtual.lojaId }, () => {
-          clearTimeout(_esperaProd); _esperaProd = setTimeout(atualizarProdutosAoVivo, 300);
+          // várias vendas seguidas (vários aparelhos) → uma só actualização
+          clearTimeout(_esperaProd); _esperaProd = setTimeout(atualizarProdutosAoVivo, 1500);
         })
-        .subscribe();
+        .subscribe(function (st) { _rtProdOk = (st === 'SUBSCRIBED'); });
     } catch(e) {}
   }
 
+  let _cacheLeveT = null;
+  function guardarCacheLeveDepois() { clearTimeout(_cacheLeveT); _cacheLeveT = setTimeout(guardarCacheLeve, 2500); }
   function guardarCacheLeve() {
     try {
       const produtosLeves = produtos.map(p => (Object.assign({}, p, { imagem: null })));
@@ -1901,6 +1920,17 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 
   // Vai buscar as imagens de uma LISTA de produtos (os que aparecem no ecrã têm prioridade).
   // É robusto: se um lote falhar, CONTINUA para o próximo (não pára tudo). Lotes pequenos.
+  // Fotos que chegam em segundo plano: um só redesenho por cada ~0,8 s, e só dos cartões que mudaram.
+  let _fotosT = null;
+  function _agendarRedesenhoFotos() {
+    if (_fotosT) return;
+    _fotosT = setTimeout(function () {
+      _fotosT = null;
+      try { if (document.body.classList.contains('modo2')) { renderM2Grid(); renderM2Cart(); } } catch(e){}
+      try { renderProdutos(); } catch(e){} try { renderCarrinho(); } catch(e){}
+      try { if (buscaResultadosDiv && buscaResultadosDiv.classList.contains('ativo')) renderBuscaResultados(); } catch(e){}
+    }, 800);
+  }
   async function carregarImagensDe(lista) {
     if (!navigator.onLine) return;
     const faltam = (lista || []).filter(p => p && p.id && !p.imagem && !_imgTentadas.has(p.id));
@@ -1922,7 +1952,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
             const p = produtos.find(x => x.id === row.id);
             if (p && row.imagem) { p.imagem = row.imagem; mudou = true; }
           });
-          if (mudou) { try { if (document.body.classList.contains('modo2')) { renderM2Grid(); renderM2Cart(); } } catch(e){} try { renderProdutos(); } catch(e){} try { renderCarrinho(); } catch(e){} try { if (buscaResultadosDiv && buscaResultadosDiv.classList.contains('ativo')) renderBuscaResultados(); } catch(e){} }
+          if (mudou) _agendarRedesenhoFotos();   // junta várias fotos num só redesenho (antes: a grelha toda de 8 em 8 fotos → piscava)
         }
       } catch(e) { /* um lote falhou — CONTINUA para o próximo */ }
       await new Promise(r => setTimeout(r, 120));
@@ -1930,9 +1960,11 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
 
   // Carga geral em 2º plano (todos os produtos), também robusta.
-  async function carregarImagensEmSegundoPlano() {
+  let _fotosFundoT = null;
+  function carregarImagensEmSegundoPlano() {
     if (!navigator.onLine || !produtos.length) return;
-    await carregarImagensDe(produtos);
+    clearTimeout(_fotosFundoT);
+    _fotosFundoT = setTimeout(function () { carregarImagensDe(produtos); }, 4000);   // primeiro a loja abre; as fotos vêm depois
   }
 
   // O Supabase usa nomes de coluna (id, loja_id...); o resto do código já está
@@ -2216,7 +2248,12 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
   }
 
   // Grelha do modo simples à prova de falhas (igual à dourada)
+  // A grelha do modo clássico fica escondida na interface nova: não se gasta tempo a desenhá-la
+  // (fica marcada e desenha-se quando o modo clássico voltar a aparecer).
+  let _classicoPorDesenhar = false;
+  (function vigiar() { if (!document.body) { document.addEventListener('DOMContentLoaded', vigiar); return; } try { new MutationObserver(function () { if (_classicoPorDesenhar && !document.body.classList.contains('modo2')) { _classicoPorDesenhar = false; try { renderProdutos(); } catch(e){} } }).observe(document.body, { attributes: true, attributeFilter: ['class'] }); } catch(e) {} })();
   function renderProdutos() {
+    if (document.body.classList.contains('modo2')) { _classicoPorDesenhar = true; return; }
     try { return _renderProdutosReal(); }
     catch (e) {
       try { window.spapErro && spapErro('Lista de produtos (modo simples) falhou: ' + e.message, String(e.stack || '').slice(0, 400)); } catch(_) {}
@@ -2515,26 +2552,147 @@ async function scannerFechar() {
     try { mostrarNotif('⛔ Código ' + code + ' não existe na loja.', true); } catch (e) {}
     setTimeout(function () { const e = document.getElementById('aviso-cod-inexistente'); if (e) e.remove(); }, 6000);
   }
-  let _scanBuf = '', _scanLast = 0, _scanRapidos = 0;
-  document.addEventListener('keydown', function(e) {
-    const ae = document.activeElement;
-    if (_ehCampoDados(ae)) return;            // a escrever noutro campo (nome, preço…) => não mexe
-    const agora = Date.now();
-    const dt = agora - _scanLast;
-    _scanLast = agora;
-    if (e.key === 'Enter') {
-      const code = _scanBuf, rapidos = _scanRapidos;
-      _scanBuf = ''; _scanRapidos = 0;
-      // É um scanner se tem >=3 caracteres e a maioria chegou muito depressa.
-      if (code.length >= 3 && rapidos >= Math.max(2, code.length - 2)) {
-        e.preventDefault(); e.stopPropagation();
-        _processarScan(code);
+  // ===== LEITOR USB DE CÓDIGO DE BARRAS — SÓ ACTUA NAS BARRAS DE PESQUISA =====
+  // O leitor «escreve» o código muito depressa e termina com Enter (ou Tab).
+  //  • Barra de pesquisa de produtos (ecrã de vendas à frente, sem nada por cima) → adiciona ao carrinho.
+  //  • Outras barras de pesquisa (vendas, devoluções, transferências…) → o código fica escrito para pesquisar.
+  //  • Qualquer outro sítio (pagamento, quantidade, menus, janelas, campos de preço/nome…) → a leitura é
+  //    IGNORADA: não mexe em vendas, carrinho, valores nem noutros ecrãs.
+  const _SCAN_PROD = ['campo-busca', 'm2-busca-input'];
+  const _SCAN_PESQ = ['vendas-pesquisa', 'bc-produto-busca', 'dev-busca-devolve', 'dev-busca-leva', 'tr-busca'];
+  const _SCAN_RAPIDO = 50;     // ms entre teclas do leitor (uma pessoa escreve bem mais devagar)
+  // hora em que a tecla foi carregada (não a hora a que o código a trata: num computador ocupado são diferentes)
+  function _scanHora(e) { const t = e && e.timeStamp; return (t && t > 1e3 && t < 1e11) ? t : performance.now(); }
+  function _scanEhCampo(el) {   // campo onde se escreve texto (o «recebido» do pagamento é só de leitura → não conta)
+    if (!el) return false;
+    if (el.tagName === 'TEXTAREA' || el.isContentEditable) return !el.readOnly;
+    if (el.tagName !== 'INPUT') return false;
+    if (el.readOnly || el.disabled) return false;
+    return !/button|checkbox|radio|submit|reset|range|file|color|hidden|image/i.test(el.type || 'text');
+  }
+  function _scanEhPesquisa(el) {
+    if (!el || el.tagName !== 'INPUT') return false;
+    if (_SCAN_PROD.indexOf(el.id) >= 0 || _SCAN_PESQ.indexOf(el.id) >= 0) return true;
+    return (el.type === 'search') || /pesq|busca|procur/i.test((el.id || '') + ' ' + (el.className || '') + ' ' + (el.placeholder || ''));
+  }
+  // Este campo está visível e À FRENTE (nenhuma janela, menu ou outro ecrã por cima)?
+  function _scanAFrente(el) {
+    if (!el || !el.isConnected) return false;
+    const vw = window.innerWidth, vh = window.innerHeight, r = el.getBoundingClientRect();
+    if (r.width < 8 || r.height < 8 || r.bottom <= 0 || r.top >= vh || r.right <= 0 || r.left >= vw) return false;
+    const y = Math.min(vh - 1, Math.max(0, r.top + r.height / 2));
+    let pequeno = true;
+    for (const fx of [0.15, 0.5, 0.85]) {
+      const x = Math.min(vw - 1, Math.max(0, r.left + r.width * fx));
+      const t = document.elementFromPoint(x, y);
+      if (!t || t === el || el.contains(t) || t.contains(el)) return true;
+      // por cima só pode estar um aviso pequeno (notificação); uma janela/ecrã/fundo grande bloqueia
+      let n = t, achou = false;
+      while (n && n !== document.body) {
+        const cs = getComputedStyle(n);
+        if (cs.position === 'fixed') { achou = true; const rr = n.getBoundingClientRect(); if (rr.width * rr.height > vw * vh * 0.2) pequeno = false; break; }
+        n = n.parentElement;
       }
-      return;
+      if (!achou) pequeno = false;
     }
-    if (e.key && e.key.length === 1) {
-      if (dt < 60) { _scanBuf += e.key; _scanRapidos++; }   // teclas rápidas = scanner
-      else { _scanBuf = e.key; _scanRapidos = 0; }          // pausa = recomeça (digitação humana)
+    return pequeno;
+  }
+  // A barra de pesquisa de produtos (ecrã de vendas) está à frente?
+  function _scanBuscaAFrente() {
+    for (let i = 0; i < _SCAN_PROD.length; i++) { const el = document.getElementById(_SCAN_PROD[i]); if (_scanAFrente(el)) return el; }
+    return null;
+  }
+  let _scanAvisoEm = 0;
+  function _scanAvisoIgnorado() {
+    if (Date.now() - _scanAvisoEm < 3000) return; _scanAvisoEm = Date.now();
+    try {
+      let t = document.getElementById('spap-scan-aviso');
+      if (!t) { t = document.createElement('div'); t.id = 'spap-scan-aviso'; t.setAttribute('role', 'status');
+        t.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:2147483000;max-width:92vw;background:#1e293b;color:#fff;padding:12px 18px;border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.35);font:600 14px/1.35 Inter,system-ui,sans-serif;display:flex;gap:10px;align-items:center;pointer-events:none;transition:opacity .2s';
+        document.body.appendChild(t); }
+      t.innerHTML = '<span style="font-size:20px">🔒</span><span><b>Leitura do código ignorada.</b><br>O leitor só vende na barra de pesquisa do ecrã de vendas.</span>';
+      t.style.opacity = '1'; t.style.display = 'flex';
+      clearTimeout(t._t); t._t = setTimeout(function () { t.style.opacity = '0'; setTimeout(function () { t.style.display = 'none'; }, 220); }, 2800);
+    } catch (e) {}
+  }
+  // Mantém o foco na pesquisa no ecrã de vendas (só em computador — num tablet abriria o teclado do ecrã).
+  const _scanPC = (function () { try { return window.matchMedia('(pointer:fine)').matches && window.matchMedia('(hover:hover)').matches; } catch (e) { return false; } })();
+  function _scanFocarPesquisa() {
+    if (!_scanPC) return;
+    const ae = document.activeElement;
+    if (ae && ae !== document.body && _scanEhCampo(ae)) return;           // a pessoa está a escrever noutro campo
+    try { const sel = window.getSelection && window.getSelection(); if (sel && String(sel).length) return; } catch (e) {}
+    const el = _scanBuscaAFrente(); if (el && ae !== el) { try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); } }
+  }
+  window.spapFocarPesquisa = _scanFocarPesquisa; window.spapScanBuscaAFrente = _scanBuscaAFrente;
+  document.addEventListener('click', function () { setTimeout(_scanFocarPesquisa, 0); }, false);
+  document.addEventListener('keyup', function (e) { if (e.key === 'Escape') setTimeout(_scanFocarPesquisa, 60); });
+  window.addEventListener('load', function () { setTimeout(_scanFocarPesquisa, 800); });
+
+  let _scan = { buf: '', ult: 0, rapidos: 0, campo: null, foto: null, pend: [], tm: null };
+  function _scanRepor() { if (_scan.tm) clearTimeout(_scan.tm); _scan = { buf: '', ult: 0, rapidos: 0, campo: null, foto: null, pend: [], tm: null }; }
+  // Teclas retidas por instantes (fora de campos de texto) voltam a ser entregues se afinal era uma pessoa.
+  function _scanSoltar() {
+    const p = _scan.pend; _scan.pend = []; if (_scan.tm) { clearTimeout(_scan.tm); _scan.tm = null; }
+    p.forEach(function (k) {
+      try { const ev = new KeyboardEvent('keydown', { key: k.key, code: k.code, shiftKey: k.shift, bubbles: true, cancelable: true }); ev._spapReplay = true; (k.alvo && k.alvo.isConnected ? k.alvo : document.body).dispatchEvent(ev); } catch (e) {}
+    });
+  }
+  function _scanPareceLeitor() { return _scan.buf.length >= 3 && _scan.rapidos >= Math.max(2, _scan.buf.length - 2); }
+
+  document.addEventListener('keydown', function (e) {
+    if (e._spapReplay) return;
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    const ae = document.activeElement, agora = _scanHora(e), dt = agora - _scan.ult;
+    const fim = (e.key === 'Enter' || e.key === 'Tab');
+    if (fim) {
+      const leitor = _scanPareceLeitor() && dt < 250;
+      if (!leitor) { if (_scan.pend.length) _scanSoltar(); _scanRepor(); return; }
+      const code = _scan.buf.trim(), campo = _scan.campo, foto = _scan.foto;
+      _scan.pend = []; _scanRepor();
+      // 1) Barra de pesquisa de produtos, à frente → vende
+      if (campo && _SCAN_PROD.indexOf(campo.id) >= 0 && _scanBuscaAFrente() === campo) {
+        e.preventDefault(); e.stopImmediatePropagation();
+        campo.value = ''; try { campo.dispatchEvent(new Event('input', { bubbles: true })); } catch (er) {}
+        _processarScan(code); return;
+      }
+      // 2) Outra barra de pesquisa (vendas, devoluções…), à frente → deixa o código escrito; o Enter segue normal
+      if (campo && _SCAN_PROD.indexOf(campo.id) < 0 && _scanEhPesquisa(campo) && _scanAFrente(campo)) return;
+      // 3) Sem campo activo e o ecrã de vendas à frente → vende e põe o foco na pesquisa
+      if (!campo && _scanBuscaAFrente()) {
+        e.preventDefault(); e.stopImmediatePropagation();
+        _processarScan(code); _scanFocarPesquisa(); return;
+      }
+      // 4) Qualquer outro sítio → ignora e desfaz o que o leitor escreveu
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (campo && foto && campo.isConnected) { try { campo.value = foto.v; if (foto.s != null) campo.setSelectionRange(foto.s, foto.e); } catch (er) {} try { campo.dispatchEvent(new Event('input', { bubbles: true })); } catch (er) {} }
+      _scanAvisoIgnorado(); return;
+    }
+    if (!e.key || e.key.length !== 1) return;
+    const rapido = _scan.ult && dt < _SCAN_RAPIDO;
+    _scan.ult = agora;
+    if (rapido) { _scan.buf += e.key; _scan.rapidos++; }
+    else {
+      if (_scan.pend.length) _scanSoltar();
+      _scan.buf = e.key; _scan.rapidos = 0;
+      // um campo escondido atrás de uma janela (ex.: a pesquisa atrás do pagamento) não conta como campo activo
+      _scan.campo = (_scanEhCampo(ae) && _scanAFrente(ae)) ? ae : null;
+      _scan.foto = null;
+      if (_scan.campo && 'value' in ae) { let s0 = null, e0 = null; try { s0 = ae.selectionStart; e0 = ae.selectionEnd; } catch (er) {} _scan.foto = { v: ae.value, s: s0, e: e0 }; }
+    }
+    // Fora de campos de texto: retém a tecla por instantes. Se vier outra logo a seguir é o leitor
+    // (e nada chega ao pagamento, à quantidade, aos menus…); se não vier, a tecla é entregue normalmente.
+    if (!_scan.campo && e.key !== ' ') {
+      e.preventDefault(); e.stopImmediatePropagation();
+      _scan.pend.push({ key: e.key, code: e.code, shift: e.shiftKey, alvo: e.target });
+      if (_scan.tm) clearTimeout(_scan.tm);
+      const decidir = function () {
+        // o computador pode ter estado ocupado: se a última tecla foi há pouco, espera mais um pouco
+        if (performance.now() - _scan.ult < _SCAN_RAPIDO + 5) { _scan.tm = setTimeout(decidir, 20); return; }
+        if (_scan.pend.length === 1 || !_scanPareceLeitor()) _scanSoltar();
+        else _scan.tm = setTimeout(function () { _scanSoltar(); _scanRepor(); }, 300);   // rajada sem Enter: devolve as teclas
+      };
+      _scan.tm = setTimeout(decidir, _SCAN_RAPIDO + 10);
     }
   }, true);
 
@@ -6082,7 +6240,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.291';
+  const VERSAO_ATUAL = '2.9.292';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -6564,6 +6722,10 @@ body.modo2.m2-escuro #m2-sidebar { background:rgba(255,255,255,.07); }
 /* Entrada dos cartões de produto */
 @keyframes m2cardin { from { opacity:0; transform:translateY(12px); } }
 #m2-grid .m2-card { animation:m2cardin .28s ease backwards; }
+#m2-grid .m2-card.m2-sem-anim { animation:none; }
+#m2-grid .m2-mais { grid-column:1/-1; display:flex; align-items:center; justify-content:center; gap:14px; padding:14px; color:#64748b; font-size:13px; font-weight:600; }
+#m2-grid .m2-mais button { border:1px solid #e2e8f0; background:#fff; border-radius:999px; padding:8px 18px; font-weight:700; cursor:pointer; color:#0f172a; }
+body.spap-leve #m2-grid .m2-card { animation:none !important; }
 
 /* Transição suave de abertura dos modais (abas) */
 .modal-fundo.ativo { animation:m2-fade .18s ease; }
@@ -6970,7 +7132,7 @@ body.modo2.m2-escuro #modal-pagamento #toggle-imprimir, body.modo2.m2-escuro #mo
       <button class="m2-menu-btn" style="cursor:pointer;background:#16a34a;color:#fff;border:none;border-radius:11px;width:46px;height:46px;flex-shrink:0;display:flex;align-items:center;justify-content:center;" onclick="document.body.classList.toggle('m2-menu-aberto')" title="Menu (todas as opções)" data-ico="menu"></button>
       <div class="m2-busca">
         <span class="lupa" data-ico="search"></span>
-        <input type="text" id="m2-busca-input" placeholder="Pesquisar produto ou código de barras..." oninput="_m2Busca=this.value; renderM2Grid();">
+        <input type="text" id="m2-busca-input" placeholder="Pesquisar produto ou código de barras..." oninput="m2BuscaDigitar(this.value)" autocomplete="off">
         <span class="barra" title="Ler com câmara" onclick="abrirScannerLoja()" data-ico="camera"></span>
       </div>
       <div class="m2-cat-wrap">
@@ -7307,7 +7469,7 @@ document.addEventListener('click', function(e){
       try { window.spapErro && spapErro('Grelha de produtos falhou: ' + e.message, String(e.stack || '').slice(0, 400)); } catch(_) {}
       try {
         var el = document.getElementById('m2-grid'); if (!el) return;
-        var lista = (produtos || []).filter(Boolean);
+        var lista = (produtos || []).filter(Boolean).slice(0, 120);
         el.innerHTML = lista.map(function(p){
           try {
             var pid = String(p.id||'').replace(/[^A-Za-z0-9_-]/g,''), nm = String(p.nome == null ? '' : p.nome).replace(/&/g,'&amp;').replace(/</g,'&lt;');
@@ -7351,10 +7513,26 @@ document.addEventListener('click', function(e){
       spapErro('Loja sem produtos no ecrã', 'loja=' + (S.lojaId||'') + ' nome=' + (S.nomeEmpresa||S.nomeLoja||'') + ' erro=' + (window._spapErroProdutos||'nenhum') + ' online=' + navigator.onLine + ' host=' + location.host, 'bd');
     }, 8000);
   }
+  // Grelha da Loja (interface nova) — rápida mesmo com milhares de produtos:
+  //  • mostra os produtos aos poucos (60 de cada vez; mais quando se desce) em vez de todos de uma vez;
+  //  • reaproveita os cartões que não mudaram (não pisca, não recarrega fotos, não repete a animação).
+  var _M2_PAG = 60, _m2Lim = { chave: null, n: 60 }, _m2Obs = null;
+  function _m2CardHtml(p){
+    var img = p.imagem ? '<img class="m2-img" src="'+String(p.imagem).replace(/"/g,'%22')+'" loading="lazy" decoding="async" onerror="this.outerHTML=\'<div class=m2-img>🛒</div>\'">' : '<div class="m2-img">🛒</div>';
+    var kg = (p.unidade==='kg') ? ' <small>/kg</small>' : '';
+    // pelo id (seguro para qualquer nome: aspas, barras, acentos, símbolos) — nunca parte a grelha
+    var pid = String(p.id||'').replace(/[^A-Za-z0-9_-]/g,'');
+    var nomeH = String(p.nome||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return '<div class="m2-card" data-pid="'+pid+'" onclick="m2AddPorId(\''+pid+'\')" title="Clica para adicionar">'+img+
+      '<div class="m2-nome">'+nomeH+'</div>'+
+      '<div class="m2-linha"><span class="m2-preco">'+_m2Money(p.preco)+kg+'</span>'+
+      '<button class="m2-add" onclick="event.stopPropagation(); m2AddPorId(\''+pid+'\')">'+m2Svg('plus')+'</button></div></div>';
+  }
+  function _m2MaisProdutos(){ _m2Lim.n += _M2_PAG; window.renderM2Grid(); }
+  window._m2MaisProdutos = _m2MaisProdutos;
   function _renderM2GridReal(){
-    try { setTimeout(function(){ if (typeof carregarImagensDe === 'function') carregarImagensDe((typeof _m2ListaVisivel === 'function' ? _m2ListaVisivel() : produtos).slice(0, 60)); }, 0); } catch(e){}
     var el = document.getElementById('m2-grid'); if (!el) return;
-    var termo = (_m2Busca||'').toLowerCase();
+    var termo = (_m2Busca||'').toLowerCase().trim();
     // categoria/subcategoria escolhida que já não existe nesta loja (apagada, renomeada, outra loja): volta a «Todas»
     try {
       if (_m2Cat && _m2Cat!=='Todos' && _m2Cat!=='__kg__' && !(produtos||[]).some(function(p){ return ((p.categoria&&String(p.categoria).trim())?p.categoria.trim():'Outros')===_m2Cat; })) { _m2Cat='Todos'; _m2Sub=null; try{ renderM2Chips(); }catch(e){} }
@@ -7368,22 +7546,45 @@ document.addEventListener('click', function(e){
       if (termo){ var n=(p.nome||'').toLowerCase(), cod=(p.codigo||'').toLowerCase(), cb=(p.codbarras||'').toLowerCase(); if(!(n.indexOf(termo)>=0||cod.indexOf(termo)>=0||cb.indexOf(termo)>=0)) return false; }
       return true;
     });
+    el.setAttribute('data-total', String(lista.length));
     if (!lista.length){
       if ((produtos||[]).length) { el.innerHTML = '<div style="color:#94a3b8;padding:30px;grid-column:1/-1;text-align:center;">Nenhum produto nesta pesquisa/categoria.</div>'; return; }
       el.innerHTML = _m2DiagnosticoVazio(); try { _m2AvisarVazio(); } catch(e){} return;
     }
-    el.innerHTML = lista.map(function(p){
-      var img = p.imagem ? '<img class="m2-img" src="'+String(p.imagem).replace(/"/g,'%22')+'" loading="lazy" onerror="this.outerHTML=\'<div class=m2-img>🛒</div>\'">' : '<div class="m2-img">🛒</div>';
-      var kg = (p.unidade==='kg') ? ' <small>/kg</small>' : '';
-      // pelo id (seguro para qualquer nome: aspas, barras, acentos, símbolos) — nunca parte a grelha
-      var pid = String(p.id||'').replace(/[^A-Za-z0-9_-]/g,'');
-      var nomeH = String(p.nome||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      return '<div class="m2-card" data-pid="'+pid+'" onclick="m2AddPorId(\''+pid+'\')" title="Clica para adicionar">'+img+
-        '<div class="m2-nome">'+nomeH+'</div>'+
-        '<div class="m2-linha"><span class="m2-preco">'+_m2Money(p.preco)+kg+'</span>'+
-        '<button class="m2-add" onclick="event.stopPropagation(); m2AddPorId(\''+pid+'\')">'+m2Svg('plus')+'</button></div></div>';
-    }).join('');
+    // nova pesquisa/categoria → recomeça nas primeiras páginas
+    var chave = _m2Cat + '|' + (_m2Sub||'') + '|' + termo;
+    if (_m2Lim.chave !== chave) { _m2Lim = { chave: chave, n: _M2_PAG }; }
+    var vis = lista.slice(0, Math.max(_M2_PAG, _m2Lim.n));
+    // fotos só dos produtos que estão no ecrã
+    try { setTimeout(function(){ if (typeof carregarImagensDe === 'function') carregarImagensDe(vis); }, 0); } catch(e){}
+    // tira o que não é cartão (aviso de vazio, «mostrar mais»)
+    Array.prototype.slice.call(el.children).forEach(function(c){ if (!c.classList || !c.classList.contains('m2-card')) el.removeChild(c); });
+    var velhos = {}; Array.prototype.forEach.call(el.children, function(c){ velhos[c.getAttribute('data-pid')] = c; });
+    var tmp = document.createElement('div');
+    var nos = vis.map(function(p){
+      var h = _m2CardHtml(p), pid = String(p.id||'').replace(/[^A-Za-z0-9_-]/g,''), n = velhos[pid];
+      if (n && n._m2h === h) { delete velhos[pid]; return n; }            // igual → fica o mesmo cartão
+      tmp.innerHTML = h; var novo = tmp.firstChild; novo._m2h = h;
+      if (n) { novo.classList.add('m2-sem-anim'); delete velhos[pid]; }   // só mudou (foto/preço): troca sem animação
+      return novo;
+    });
+    for (var i = 0; i < nos.length; i++) { var at = el.children[i]; if (at !== nos[i]) el.insertBefore(nos[i], at || null); }
+    while (el.children.length > nos.length) el.removeChild(el.lastElementChild);
+    // há mais produtos: carrega quando se aproxima do fim (ou ao tocar no botão)
+    if (lista.length > vis.length) {
+      var m = document.createElement('div'); m.className = 'm2-mais';
+      m.innerHTML = '<span>A mostrar ' + vis.length + ' de ' + lista.length + ' produtos</span><button type="button" onclick="_m2MaisProdutos()">Mostrar mais</button>';
+      el.appendChild(m);
+      try {
+        if (!_m2Obs && window.IntersectionObserver) _m2Obs = new IntersectionObserver(function(es){ es.forEach(function(e){ if (e.isIntersecting) { _m2Obs.unobserve(e.target); setTimeout(_m2MaisProdutos, 30); } }); }, { rootMargin: '600px 0px' });
+        if (_m2Obs) _m2Obs.observe(m);
+      } catch(e){}
+    }
   }
+  // Pesquisa: espera a pessoa (ou o leitor) parar de escrever um instante antes de filtrar
+  var _m2BuscaT = null;
+  function m2BuscaDigitar(v){ _m2Busca = v; clearTimeout(_m2BuscaT); _m2BuscaT = setTimeout(function(){ window.renderM2Grid(); }, 160); }
+  window.m2BuscaDigitar = m2BuscaDigitar;
   function m2AddPorId(id){ var p=(produtos||[]).find(function(x){ return String(x.id)===String(id); }); if (p) m2AddProduto(p); }
   window.m2AddPorId = m2AddPorId;
   function m2AddProduto(nome){
@@ -7564,8 +7765,8 @@ document.addEventListener('click', function(e){
   }, 700);
 </script>
 
-<script src="spap-vidro.js?v=8"></script>
-<script src="spap-dourado.js?v=6"></script>
+<script src="spap-vidro.js?v=9"></script>
+<script src="spap-dourado.js?v=7"></script>
 <script src="spap-rolagem.js?v=2"></script>
 <script src="spap-teclado.js?v=2"></script>
 <style id="m2-topo-novo">
