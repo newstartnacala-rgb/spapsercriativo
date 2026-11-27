@@ -1,0 +1,51 @@
+{
+  "name": "spap-sercriativo-pc",
+  "productName": "SPAP Sercriativo",
+  "version": "1.0.0",
+  "description": "SPAP Sercriativo para Windows — Loja, Monitor, Banca e Vendas, Monitor e Banca",
+  "author": "SSTEAM — Tecnologia varejista de ponta",
+  "license": "UNLICENSED",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis --x64 --ia32 --publish never"
+  },
+  "dependencies": {
+    "electron-updater": "5.3.0"
+  },
+  "devDependencies": {
+    "electron": "22.3.27",
+    "electron-builder": "24.13.3"
+  },
+  "build": {
+    "appId": "com.spapsercriativo.pc",
+    "productName": "SPAP Sercriativo",
+    "copyright": "SSTEAM",
+    "directories": { "output": "dist", "buildResources": "build" },
+    "files": ["main.js", "preload.js", "paginas/**/*", "package.json"],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [{ "target": "nsis", "arch": ["x64", "ia32"] }]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowElevation": false,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "SPAP Sercriativo",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "artifactName": "SPAP-Sercriativo-Setup.${ext}"
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://github.com/newstartnacala-rgb/spapsercriativo/releases/download/pc-latest",
+        "channel": "latest"
+      }
+    ]
+  }
+}

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+<title>SPAP Sercriativo</title>
+<style>
+  :root { --ouro1:#f3d27a; --ouro2:#c99a3b; --ouro3:#8a6420; --fundo:#121218; --cartao:rgba(255,255,255,.055); --linha:rgba(243,210,122,.22); --texto:#f8f5ee; --suave:#b9b2a3; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; }
+  body { background:radial-gradient(1200px 600px at 15% -10%, rgba(201,154,59,.28), transparent 60%), radial-gradient(900px 500px at 110% 110%, rgba(201,154,59,.18), transparent 60%), var(--fundo);
+         color:var(--texto); font:15px/1.45 "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif; display:flex; align-items:center; justify-content:center; padding:32px; user-select:none; }
+  .caixa { width:100%; max-width:1040px; }
+  .topo { display:flex; align-items:center; gap:18px; margin-bottom:10px; }
+  .topo img { width:64px; height:64px; border-radius:18px; box-shadow:0 10px 30px rgba(0,0,0,.45); }
+  .selo { display:inline-block; font-size:12px; letter-spacing:.14em; text-transform:uppercase; font-weight:700; color:var(--ouro1); border:1px solid var(--linha); padding:5px 12px; border-radius:99px; }
+  h1 { margin:6px 0 0; font-size:34px; font-weight:800; letter-spacing:-.01em; }
+  h1 b { background:linear-gradient(90deg,var(--ouro1),var(--ouro2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .sub { color:var(--suave); margin:8px 0 30px; font-size:16px; }
+  .grupo { margin-bottom:22px; }
+  .grupo h2 { font-size:13px; letter-spacing:.12em; text-transform:uppercase; color:var(--ouro1); margin:0 0 12px; font-weight:700; }
+  .linha { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  button.app { all:unset; cursor:pointer; display:flex; align-items:center; gap:18px; padding:20px 22px; border-radius:22px; background:var(--cartao); border:1px solid var(--linha);
+               transition:transform .12s ease, border-color .15s, background .15s; position:relative; }
+  button.app:hover, button.app:focus-visible { background:rgba(243,210,122,.09); border-color:rgba(243,210,122,.55); transform:translateY(-2px); }
+  button.app:active { transform:scale(.985); }
+  button.app.atual::after { content:"Última usada"; position:absolute; top:12px; right:14px; font-size:11px; font-weight:700; color:#15151d; background:linear-gradient(90deg,var(--ouro1),var(--ouro2)); padding:3px 9px; border-radius:99px; }
+  .ico { width:72px; height:72px; border-radius:18px; flex-shrink:0; display:grid; place-items:center; background:#fff; overflow:hidden; box-shadow:0 8px 22px rgba(0,0,0,.35); }
+  .ico.laranja { background:linear-gradient(135deg,#fb923c,#ea580c); }
+  .ico img { width:86%; height:86%; object-fit:contain; }
+  .nome { font-size:20px; font-weight:800; }
+  .desc { color:var(--suave); font-size:14px; margin-top:2px; }
+  .tecla { margin-left:auto; color:var(--suave); font-size:12px; border:1px solid var(--linha); border-radius:8px; padding:3px 8px; }
+  .rodape { margin-top:26px; display:flex; justify-content:space-between; color:var(--suave); font-size:13px; flex-wrap:wrap; gap:8px; }
+  @media (max-width:760px) { .linha { grid-template-columns:1fr; } h1 { font-size:28px; } }
+</style>
+</head>
+<body>
+<div class="caixa">
+  <div class="topo">
+    <img src="app.png" alt="">
+    <div>
+      <span class="selo">SSTEAM · Tecnologia varejista de ponta</span>
+      <h1>Bem-vindo ao <b>SPAP Sercriativo</b></h1>
+    </div>
+  </div>
+  <p class="sub">Escolha a app que vai usar neste computador. Pode trocar a qualquer momento (botão direito do rato → «Abrir»).</p>
+
+  <div class="grupo">
+    <h2>Lojas grandes</h2>
+    <div class="linha">
+      <button class="app" data-app="loja"><span class="ico"><img src="icon-loja.png" alt=""></span><span><div class="nome">Loja</div><div class="desc">Ponto de venda do balcão</div></span><span class="tecla">1</span></button>
+      <button class="app" data-app="monitor"><span class="ico"><img src="icon-monitor.png" alt=""></span><span><div class="nome">Monitor</div><div class="desc">O dono acompanha vendas, stock e lucro</div></span><span class="tecla">2</span></button>
+    </div>
+  </div>
+  <div class="grupo">
+    <h2>Lojas pequenas e bancas</h2>
+    <div class="linha">
+      <button class="app" data-app="banca"><span class="ico laranja"><img src="icon-banca.png" alt=""></span><span><div class="nome">Banca e Vendas</div><div class="desc">Vender na banca</div></span><span class="tecla">3</span></button>
+      <button class="app" data-app="bancamonitor"><span class="ico laranja"><img src="icon-bancamonitor.png" alt=""></span><span><div class="nome">Monitor e Banca</div><div class="desc">O dono acompanha a banca</div></span><span class="tecla">4</span></button>
+    </div>
+  </div>
+  <div class="rodape"><span id="ver">SPAP Sercriativo para Windows</span><span>Actualiza-se sozinho · funciona sem internet depois da primeira entrada</span></div>
+</div>
+<script>
+  var B = document.querySelectorAll('button.app');
+  for (var i = 0; i < B.length; i++) B[i].onclick = function () { window.SPAPDesktop && SPAPDesktop.escolher(this.getAttribute('data-app')); };
+  document.addEventListener('keydown', function (e) { var n = parseInt(e.key, 10); if (n >= 1 && n <= 4) B[n - 1].click(); });
+  if (window.SPAPDesktop) SPAPDesktop.info().then(function (i) {
+    document.getElementById('ver').textContent = 'SPAP Sercriativo para Windows · versão ' + i.versao;
+    var a = document.querySelector('button.app[data-app="' + i.app + '"]'); if (a) { a.classList.add('atual'); a.focus(); }
+  });
+</script>
+</body>
+</html>

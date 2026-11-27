@@ -1,0 +1,63 @@
+name: SPAP para Windows (instalador + actualização automática)
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'spap-desktop/**', '.github/workflows/spap-pc.yml' ]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: spap-pc
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Instalar dependências
+        working-directory: spap-desktop
+        shell: bash
+        run: |
+          for i in 1 2 3; do npm install --no-audit --no-fund && break; echo "Falhou (tentativa $i), a repetir…"; sleep 15; done
+      - name: Versão (sobe a cada compilação, para a app instalada se actualizar sozinha)
+        working-directory: spap-desktop
+        shell: bash
+        run: |
+          V="1.0.${{ github.run_number }}"
+          npm version "$V" --no-git-tag-version --allow-same-version
+          echo "VPC=$V" >> $GITHUB_ENV
+      - name: Compilar o instalador (Windows 7, 8, 10 e 11 · 32 e 64 bits)
+        working-directory: spap-desktop
+        shell: bash
+        run: |
+          for i in 1 2 3; do npx electron-builder --win nsis --x64 --ia32 --publish never && break; echo "Falhou (tentativa $i), a repetir…"; sleep 20; done
+          ls -la dist
+          test -f dist/SPAP-Sercriativo-Setup.exe && test -f dist/latest.yml
+          cat dist/latest.yml
+      - name: Publicar em Releases (link fixo + canal de actualização)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd spap-desktop/dist
+          gh release delete pc-latest --yes --cleanup-tag 2>/dev/null || true
+          gh release create pc-latest SPAP-Sercriativo-Setup.exe SPAP-Sercriativo-Setup.exe.blockmap latest.yml \
+            --title "SPAP Sercriativo para Windows $VPC" --notes "versao=$VPC" --latest=false
+      - name: Publicar a versão no site
+        shell: bash
+        run: |
+          mkdir -p apps SPAPSERCRIATIVOPOSS/apps
+          URL="https://github.com/${{ github.repository }}/releases/download/pc-latest/SPAP-Sercriativo-Setup.exe"
+          printf '{"versao":"%s","data":"%s","windows":"%s"}\n' "$VPC" "$(date -u +%Y-%m-%d)" "$URL" > apps/app-pc-version.json
+          cp apps/app-pc-version.json SPAPSERCRIATIVOPOSS/apps/app-pc-version.json
+          cat apps/app-pc-version.json
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f apps/app-pc-version.json SPAPSERCRIATIVOPOSS/apps/app-pc-version.json
+          git commit -m "SPAP para Windows $VPC publicado" || echo "sem mudanças"
+          for i in 1 2 3; do git pull --rebase --autostash && git push && break; sleep 5; done
