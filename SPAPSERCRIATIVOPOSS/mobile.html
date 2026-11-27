@@ -114,9 +114,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="Banca e Vendas">
-<link rel="stylesheet" href="banca-tema.css?v=3.7.71">
-<script src="banca-tema.js?v=3.7.71" defer></script>
-<script src="app-android.js?v=3.7.71" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.72">
+<script src="banca-tema.js?v=3.7.72" defer></script>
+<script src="app-android.js?v=3.7.72" defer></script>
 </head>
 <body>
 
@@ -400,7 +400,7 @@
 <div id="toast" class="toast"></div>
 
 <script src="spap-erros.js?v=2"></script>
-<script src="supabase-config.js?v=6"></script>
+<script src="supabase-config.js?v=7"></script>
 <script src="spap-suporte.js?v=6"></script>
 <script src="spap-pc.js?v=1" defer></script>
 <script src="spap-avisos.js?v=6"></script>
@@ -539,8 +539,16 @@ async function carregarProdutos(){
     if (!r.data || r.data.length < 1000) break;
     pag++;
   }
-  if (falhou && !todos.length) {
-    todos = bancaProdutosGuardados(sessao.lojaId);          // sem internet: produtos guardados no telemóvel
+  // O servidor disse «0 produtos» mas o telemóvel tinha produtos: só é verdade se houver conta válida.
+  // Sem conta (terminou noutro aparelho), uma lista vazia apagava tudo — fica com os produtos guardados.
+  let _semConta = false;
+  if (!falhou && !todos.length) {
+    const guardados = bancaProdutosGuardados(sessao.lojaId) || [];
+    if (guardados.length && window.spapTemSessao && !(await spapTemSessao())) { _semConta = true; todos = guardados; }
+  }
+  if ((falhou && !todos.length) || _semConta) {
+    if (!_semConta) todos = bancaProdutosGuardados(sessao.lojaId);          // sem internet: produtos guardados no telemóvel
+    if (_semConta) { try { toast('🔐 A conta desta banca terminou neste aparelho. Vendes com os produtos guardados; o dono deve entrar com o e-mail uma vez.', 'erro'); } catch(e){} }
   } else {
     // o stock das vendas ainda por enviar já está descontado localmente
     const pend = {}; bancaFila().forEach(op => (op.passos||[]).forEach(p => { if (!p.feito && p.t==='rpc' && p.args && p.args.p_id) pend[p.args.p_id] = (pend[p.args.p_id]||0) + (p.fn==='baixar_stock' ? -1 : 1) * (p.args.p_qtd||0); }));
@@ -1200,8 +1208,7 @@ async function sairBanca(){
 }
 // Fim do turno (depois de entregar): a conta fica no telemóvel; volta ao ecrã do código
 function fecharTurnoBanca(){
-  // Na web (como antes): termina a sessão e volta ao e-mail. Na app: a conta fica e volta ao código.
-  if (!(window.spapEhApp && spapEhApp())) { (async()=>{ try{ sessionStorage.removeItem('banca_vend_ok'); sessionStorage.removeItem('banca_vend'); }catch(e){} try{ await supabaseClient.auth.signOut(); }catch(e){} location.href='login-banca.html'; })(); return; }
+  // A conta (e-mail) fica SEMPRE neste aparelho — na app e no navegador. Para o próximo turno basta o código.
   try{ sessionStorage.removeItem('banca_vend_ok'); sessionStorage.removeItem('banca_vend'); }catch(e){}
   try{ sessao.vendedor = null; }catch(e){}
   try{ fecharFolha('folha-entregar'); fecharFolha('folha-menu'); }catch(e){}

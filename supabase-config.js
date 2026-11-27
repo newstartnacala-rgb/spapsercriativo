@@ -112,6 +112,33 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY,
   : (SPAP_PAGINA_BANCA && !SPAP_SUPER_UNIFICADO) ? _spapOpcoes({ storageKey: SPAP_CHAVE_BANCA, persistSession: true, autoRefreshToken: true })
   : _spapOpcoes(null)
 );
+// «Sair» desliga SÓ este aparelho. (O padrão do Supabase é «global»: terminava a conta em TODOS os aparelhos
+// da loja — outros balcões, tablets, o Monitor — que depois pediam o código e ficavam sem produtos.)
+(function () {
+  try {
+    var a = supabaseClient.auth, orig = a.signOut.bind(a);
+    a.signOut = function (o) {
+      o = o || {};
+      if (o.scope !== 'global' && o.scope !== 'others') o = Object.assign({}, o, { scope: 'local' });
+      return orig(o);
+    };
+  } catch (e) {}
+})();
+// O servidor responde? (para distinguir «sem internet» de «a sessão terminou»)
+function spapServidorResponde(ms) {
+  return new Promise(function (res) {
+    var feito = false, fim = function (v) { if (!feito) { feito = true; res(v); } };
+    setTimeout(function () { fim(false); }, ms || 5000);
+    try { fetch(SUPABASE_URL + '/auth/v1/health', { headers: { apikey: SUPABASE_ANON_KEY }, cache: 'no-store' }).then(function (r) { fim(!!r && r.status < 500); }, function () { fim(false); }); } catch (e) { fim(false); }
+  });
+}
+window.spapServidorResponde = spapServidorResponde;
+// Há sessão (conta) válida neste aparelho agora?
+function spapTemSessao() {
+  try { return supabaseClient.auth.getSession().then(function (r) { return !!(r && r.data && r.data.session); }, function () { return false; }); }
+  catch (e) { return Promise.resolve(false); }
+}
+window.spapTemSessao = spapTemSessao;
 // Entrar SEM internet: guarda neste aparelho uma impressão da senha (nunca a senha em si) depois de um login com internet;
 // sem rede, compara o que a pessoa escreve com essa impressão.
 function _spapHash(t) {

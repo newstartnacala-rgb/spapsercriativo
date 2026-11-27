@@ -357,7 +357,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 /* Carrinho 3D (imagem) no lugar do emoji 🛒 — do MESMO tamanho do emoji (1,2 em), igual em Windows, Android, iPhone e tablets */
 .spap-carro{display:inline-block;width:1.2em;height:1.2em;object-fit:contain;vertical-align:-.2em;margin:0;pointer-events:none;user-select:none;-webkit-user-drag:none}
 </style>
-<script src="app-android.js?v=2.9.294" defer></script>
+<script src="app-android.js?v=2.9.295" defer></script>
 <style>/* a interface antiga nunca aparece: o ecrã antigo fica invisível até o novo abrir (sem piscar) */ body:not(.modo2) #tela-pdv { visibility:hidden !important; }</style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
@@ -779,7 +779,7 @@ body.spap-leve #m2-grid .m2-card { animation: none !important; transition: none 
     <div style="font-size:11px;color:#64748b;margin:0 0 16px;">⚠️ O que conta na auditoria é o <b>valor de cima</b>. A nota é só para descrever.</div>
 
     <div style="background:#fff7ed;border:1px solid #fdba74;border-radius:10px;padding:12px;font-size:12.5px;color:#9a3412;margin-bottom:16px;text-align:center;">
-      Estes valores vão para a Auditoria de Caixa no Monitor do dono. A sessão será terminada.
+      Estes valores vão para a Auditoria de Caixa no Monitor do dono. O turno termina e, para o próximo, basta o código do balconista.
     </div>
     <div class="modal-botoes">
       <button class="btn-modal-cancelar" style="flex:1" onclick="fecharModalEntregar()">Cancelar</button>
@@ -1383,7 +1383,7 @@ body.spap-leve #m2-grid .m2-card { animation: none !important; transition: none 
   window.addEventListener('orientationchange', () => setTimeout(fixarAlturaReal, 300));
 </script>
 <script src="spap-erros.js?v=2"></script>
-<script src="supabase-config.js?v=6"></script>
+<script src="supabase-config.js?v=7"></script>
 <script src="spap-avisos.js?v=6"></script>
 <script src="spap-expirou.js?v=2"></script>
 <script src="spap-suporte.js?v=6"></script>
@@ -1497,7 +1497,9 @@ body.spap-leve #m2-grid .m2-card { animation: none !important; transition: none 
   // O login propriamente dito acontece em login.html. Aqui, ao carregar o
   // PDV, só confirmamos que existe uma sessão válida e carregamos os dados
   // da loja a que esse utilizador pertence. Sem sessão válida -> login.html.
+  let _lojaSemSessao = false;   // aberta com a cópia guardada, sem conta válida no servidor
   async function entrarModoOffline(sessao) {
+    _lojaSemSessao = true;
     if (window.fecharTelaCarregando) fecharTelaCarregando(); else { const tc = document.getElementById('tela-carregando'); if (tc) tc.style.display = 'none'; }
     sessaoAtual = sessao;
     const nomeEl = document.getElementById('nome-usuario');
@@ -1538,13 +1540,15 @@ body.spap-leve #m2-grid .m2-card { animation: none !important; transition: none 
       try { const ns = await spapReentrarAparelho(); if (ns) sessionData = { session: ns }; } catch(e) {}
     }
     if (!sessionData.session) {
-      // Sem sessão do SDK: se estamos offline e já usámos o PDV antes, entra em modo offline
+      // Sem sessão (conta) neste aparelho:
+      //  • SEM internet e já usada antes → abre com a cópia guardada (vender offline);
+      //  • COM internet → a conta terminou: pede o e-mail uma vez (nunca abre uma Loja vazia, que era o que acontecia).
       const cacheSessao = localStorage.getItem('pdv_cache_sessao');
       if (cacheSessao) {
-        entrarModoOffline(JSON.parse(cacheSessao));
-        return;
+        const responde = (navigator.onLine === false) ? false : (window.spapServidorResponde ? await spapServidorResponde(5000) : false);
+        if (!responde) { entrarModoOffline(JSON.parse(cacheSessao)); return; }
       }
-      window.location.href = 'login.html';
+      window.location.href = 'login.html?sessao=terminou';
       return;
     }
 
@@ -1717,6 +1721,8 @@ body.spap-leve #m2-grid .m2-card { animation: none !important; transition: none 
   }
 
   async function carregarDadosDaLoja() {
+    // Sem conta válida (aberta em modo offline): só a cópia guardada — o servidor responderia «0 produtos»
+    if (_lojaSemSessao) { if (carregarDoCacheLocal()) return; }
     // Se estamos OFFLINE, usa já a cópia local — não espera o servidor falhar
     if (!navigator.onLine) {
       if (carregarDoCacheLocal()) {
@@ -1786,6 +1792,11 @@ body.spap-leve #m2-grid .m2-card { animation: none !important; transition: none 
         .select();
       produtos = seedError ? [] : inseridos.map(mapearProdutoDoSupabase);
       if (seedError) mostrarNotif('⚠ Não foi possível criar os produtos de exemplo.', true);
+    } else if (!produtosError && (!produtosData || !produtosData.length) && !(await _podeAceitarListaVazia())) {
+      // O servidor devolveu 0 produtos mas este aparelho tinha produtos e não há conta válida:
+      // não apaga nada — fica com a cópia guardada (e pede para entrar com o e-mail se for preciso).
+      if (!produtos || !produtos.length) carregarDoCacheLocal();
+      _avisarSessaoTerminou();
     } else {
       produtos = (produtosData || []).map(mapearProdutoDoSupabase);
     }
@@ -1855,8 +1866,22 @@ body.spap-leve #m2-grid .m2-card { animation: none !important; transition: none 
 
   // ===== PRODUTOS AO VIVO: o que o dono cadastra/altera no Monitor aparece logo na Venda =====
   let _assinProdutos = null, _aAtualizarProd = false, _canalProdutos = null, _esperaProd = null, _rtProdOk = false, _ultProdAtual = 0;
+  // A loja tinha produtos e o servidor diz «0»: só é verdade se houver conta válida neste aparelho.
+  async function _podeAceitarListaVazia() {
+    let temCopia = false;
+    try { temCopia = ((produtos || []).length > 0) || ((JSON.parse(localStorage.getItem('pdv_cache_produtos_' + sessaoAtual.lojaId) || '[]') || []).length > 0); } catch (e) {}
+    if (!temCopia) return true;                    // loja nova / sem produtos: nada a proteger
+    try { return window.spapTemSessao ? await spapTemSessao() : true; } catch (e) { return false; }
+  }
+  let _avisoSessaoEm = 0;
+  async function _avisarSessaoTerminou() {
+    if (Date.now() - _avisoSessaoEm < 60000) return; _avisoSessaoEm = Date.now();
+    // Na app tenta voltar a entrar sozinha com a conta deste aparelho
+    try { if (window.spapReentrarAparelho) { const ns = await spapReentrarAparelho(); if (ns) { _lojaSemSessao = false; setTimeout(() => { try { atualizarProdutosAoVivo(); } catch(e){} }, 500); return; } } } catch (e) {}
+    try { mostrarNotif('🔐 A conta desta loja terminou neste aparelho. Continuas a vender com os produtos guardados; o dono deve entrar com o e-mail uma vez para voltar a sincronizar.', true); } catch (e) {}
+  }
   async function atualizarProdutosAoVivo() {
-    if (!navigator.onLine || !sessaoAtual || _aAtualizarProd) return;
+    if (!navigator.onLine || !sessaoAtual || _aAtualizarProd || _lojaSemSessao) return;
     _aAtualizarProd = true; _ultProdAtual = Date.now();
     try {
       const cols = 'id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em,unidade';
@@ -1869,6 +1894,8 @@ body.spap-leve #m2-grid .m2-card { animation: none !important; transition: none 
         if (!data || data.length < 1000) break;
         if (++pg > 50) break;
       }
+      // Lista vazia vinda do servidor: só se aceita se houver conta válida (senão é a sessão que terminou)
+      if (!todos.length && (produtos || []).length && !(await _podeAceitarListaVazia())) { _avisarSessaoTerminou(); return; }
       const assin = todos.map(p => [p.id, p.nome, p.preco, p.preco_compra, p.stock, p.codigo, p.codbarras, p.categoria, p.subcategoria, p.unidade].join('|')).join('\n');
       if (assin === _assinProdutos) return;
       _assinProdutos = assin;
@@ -3410,10 +3437,9 @@ async function scannerFechar() {
     mostrarNotif('✅ Entrega registada.' + msgSobra + ' Turno terminado.');
     setTimeout(async () => {
       try { sessionStorage.removeItem('pdv_vendedor_codigo'); } catch(e) {}
-      // Na app: a conta fica no aparelho e volta ao código. Na web (como antes): termina a sessão e volta ao e-mail.
-      if (window.spapEhApp && spapEhApp()) { sairDoBalcao(); return; }
-      try { await supabaseClient.auth.signOut(); } catch(e) {}
-      window.location.href = 'login.html';
+      // O turno termina mas a conta da loja (e-mail) fica SEMPRE neste aparelho — na app e no navegador.
+      // Para o próximo turno basta o código do balconista. (Antes, no navegador, terminava a sessão.)
+      sairDoBalcao();
     }, 1500);
   }
 
@@ -5014,6 +5040,20 @@ async function scannerFechar() {
     const u = document.getElementById('nome-usuario');
     if (u) u.textContent = (sessaoAtual.nomeExibicao||'') + ' · 👤' + cod;
     if (_resolverVendedor) { _resolverVendedor(); _resolverVendedor = null; }
+    setTimeout(_garantirProdutosAposCodigo, 5000);
+  }
+  // Depois do código: os produtos TÊM de aparecer. Se a grelha ainda estiver vazia, volta a carregá-los
+  // (do servidor ou da cópia do aparelho); se já estão, actualiza o stock para o novo turno.
+  async function _garantirProdutosAposCodigo() {
+    try {
+      if (!sessaoAtual) return;
+      if ((produtos || []).length) { if (!_lojaSemSessao) { try { atualizarProdutosAoVivo(); } catch(e){} } return; }
+      await carregarDadosDaLoja();
+      if (!(produtos || []).length) carregarDoCacheLocal();
+      try { garantirCategoriaComProdutos(); } catch(e){}
+      try { renderCategorias(); renderProdutos(); renderMaisVendidos(); } catch(e){}
+      try { if (document.body.classList.contains('modo2')) { renderM2Chips(); renderM2Grid(); } } catch(e){}
+    } catch (e) {}
   }
   // Se o dono mudou o código no Monitor, a Loja volta a pedir o código novo
   async function verificarCodigoVendedorEmUso() {
@@ -6239,7 +6279,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.294';
+  const VERSAO_ATUAL = '2.9.295';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.

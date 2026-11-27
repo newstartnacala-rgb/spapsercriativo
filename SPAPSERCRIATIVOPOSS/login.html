@@ -6,7 +6,7 @@
 <script src="spap-migrar.js?v=1"></script>
 <script src="spap-bloqueio.js?v=2"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
-<script src="spap-semzoom.js?v=2.9.294"></script>
+<script src="spap-semzoom.js?v=2.9.295"></script>
 <title>Entrar — Spap-Sercriativo</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="ios-loja-180.png">
@@ -96,7 +96,7 @@
   @media (max-width:767px) and (max-height:660px) { .lg-marca { width:60px; height:60px; } .campo { height:44px; } .btn-principal { height:46px; } .btn-google { height:42px; } .lg-sub { margin-top:4px; } }
   @media (max-width:767px) and (max-height:600px) { .lg-marca { width:50px; height:50px; } .langs { margin-bottom:8px; } .lg-topo { margin-bottom:8px; } .ou { margin:7px 0; } .rodape { margin:8px 0 6px; } }
 </style>
-<script src="app-android.js?v=2.9.294" defer></script>
+<script src="app-android.js?v=2.9.295" defer></script>
 <link rel="stylesheet" href="spap-carrinho.css?v=1">
 </head>
 <body>
@@ -142,7 +142,7 @@
 </main>
 
 <script src="spap-erros.js?v=2"></script>
-<script src="supabase-config.js?v=6"></script>
+<script src="supabase-config.js?v=7"></script>
 <script src="spap-recuperar.js?v=2"></script>
 <script>
   const btn = document.getElementById('btn-entrar');
@@ -157,6 +157,12 @@
     sucessoDiv.style.display = 'none';
   }
   try { if (new URLSearchParams(location.search).get('conta') === 'banca') setTimeout(function(){ mostrarContaBanca(); }, 60); } catch(e) {}
+  // A conta desta loja terminou neste aparelho: explica porque se pede o e-mail (é só uma vez)
+  try { if (new URLSearchParams(location.search).get('sessao') === 'terminou') setTimeout(function(){
+    var c = document.getElementById('erro-msg'); if (!c) return;
+    c.innerHTML = '🔐 A sessão desta loja terminou neste aparelho. Entra <b>uma vez</b> com o e-mail e a senha do dono — depois, cada turno abre só com o código do balconista.';
+    c.style.display = 'block'; c.style.background = '#eff6ff'; c.style.color = '#1e3a8a'; c.style.borderColor = '#bfdbfe';
+  }, 80); } catch(e) {}
   function mostrarErro(msg) {
     erroDiv.textContent = '❌ ' + msg;
     erroDiv.style.display = 'block';

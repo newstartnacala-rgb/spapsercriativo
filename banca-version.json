@@ -1,13 +1,13 @@
 {
-  "versao": "3.7.71",
+  "versao": "3.7.72",
   "data": "2026-11-09",
   "novidades": [
+    "Fim do turno: a conta fica sempre no aparelho e o próximo turno abre só com o código; os produtos nunca desaparecem",
     "Nova app para Windows (PC): instala, funciona sem internet e actualiza-se sozinha — nas Definições (engrenagem) ao usar o navegador do computador",
     "Interface dourada igual à de antes",
     "Produtos sem foto mostram o carrinho 3D real em todos os aparelhos (Windows, tablets, telemóveis)",
     "Melhorias de desempenho no modo vidro",
-    "Monitor da Banca: lucro de cada produto no detalhe da venda, no Top 10 e nas vendas recentes",
-    "Suporte: nova opção «Info. de atualização» (canal Atualizações no WhatsApp)"
+    "Monitor da Banca: lucro de cada produto no detalhe da venda, no Top 10 e nas vendas recentes"
   ],
   "melhorias": [
     "Definições do Monitor da Banca: nova opção «Visitar o website»",
