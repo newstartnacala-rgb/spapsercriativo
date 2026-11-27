@@ -1,13 +1,13 @@
 {
-  "versao": "3.7.70",
+  "versao": "3.7.71",
   "data": "2026-11-09",
   "novidades": [
+    "Nova app para Windows (PC): instala, funciona sem internet e actualiza-se sozinha — nas Definições (engrenagem) ao usar o navegador do computador",
+    "Interface dourada igual à de antes",
     "Produtos sem foto mostram o carrinho 3D real em todos os aparelhos (Windows, tablets, telemóveis)",
     "Melhorias de desempenho no modo vidro",
     "Monitor da Banca: lucro de cada produto no detalhe da venda, no Top 10 e nas vendas recentes",
-    "Suporte: nova opção «Info. de atualização» (canal Atualizações no WhatsApp)",
-    "Monitor da Banca: ecrã do código de acesso com letras bem visíveis; suporte por WhatsApp corrigido",
-    "A"
+    "Suporte: nova opção «Info. de atualização» (canal Atualizações no WhatsApp)"
   ],
   "melhorias": [
     "Definições do Monitor da Banca: nova opção «Visitar o website»",

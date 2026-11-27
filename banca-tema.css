@@ -884,5 +884,4 @@ html.escuro .bv-lucro-tot{background:rgba(22,163,74,.14);border-color:rgba(74,22
 html.escuro .bv-tab .bv-lucro .lc,html.escuro .vv .vv-lucro{color:#4ade80} html.escuro .bv-lucro-nota{color:#94a3b8}
 
 /* Carrinho 3D (imagem) no lugar do emoji 🛒 nos produtos sem foto — igual em todos os aparelhos */
-.spap-carro{display:block;width:58%;max-width:84px;height:auto;aspect-ratio:1;object-fit:contain;margin:auto;filter:drop-shadow(0 6px 10px rgba(15,23,42,.18));pointer-events:none;user-select:none;-webkit-user-drag:none}
-.item .spap-carro,.ph .spap-carro{width:70%;max-width:44px}
+.spap-carro{display:inline-block;width:1.2em;height:1.2em;object-fit:contain;vertical-align:-.2em;margin:0;pointer-events:none;user-select:none;-webkit-user-drag:none}
