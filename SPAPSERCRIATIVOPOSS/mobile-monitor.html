@@ -90,9 +90,9 @@
   .seg-atual b{display:block;font-size:14.5px;color:var(--nv);word-break:break-all;}
   .seg-nota{font-size:12px;color:#94a3b8;text-align:center;margin-top:10px;}
 </style>
-<link rel="stylesheet" href="banca-tema.css?v=3.7.72">
-<script src="banca-tema.js?v=3.7.72" defer></script>
-<script src="app-android.js?v=3.7.72" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.73">
+<script src="banca-tema.js?v=3.7.73" defer></script>
+<script src="app-android.js?v=3.7.73" defer></script>
 </head>
 <body>
 <div id="carregando" class="carregar tc-banca">
@@ -447,6 +447,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
 <script src="spap-avisos.js?v=6"></script>
 <script src="spap-backup.js?v=7"></script>
 <script src="spap-imagem.js?v=1"></script>
+<script src="spap-fotos.js?v=1"></script>
 <script>
 let sessao=null, produtos=[], periodo='hoje', periodoDesc='hoje';
 
@@ -498,6 +499,7 @@ setTimeout(function(){ const c=document.getElementById('carregando'); if(c && c.
     await carregarProdutos();
     await Promise.all([carregarResumo(), carregarDescontos()]);
     ligarTempoRealBanca();
+    try{ if(window.spapFotos) spapFotos.migrarDepois(sessao.lojaId); }catch(e){}
   }catch(e){ toast('Erro: '+(e.message||e),'erro'); }
   document.getElementById('carregando').style.display='none';
 })();
@@ -525,7 +527,11 @@ function inicioPeriodo(p){ return rangePeriodo(p).ini; }
 // ===== PRODUTOS =====
 async function carregarProdutos(){
   let todos=[],pag=0;
-  while(true){
+  // Tráfego mínimo (SQL v2.9.296): só texto + URL da foto e, depois da 1.ª vez, só o que mudou. Sem o SQL: modo antigo.
+  let _leve=null;
+  try{ if(window.spapFotos && navigator.onLine!==false){ const c0=spapLerLocal('produtos_bm_'+sessao.lojaId); _leve=await spapFotos.sincronizarProdutos({ lojaId:sessao.lojaId, cols:'id,nome,preco,preco_compra,stock,codbarras,codigo,criado_em', base:(c0&&c0.v)||[], chave:'bm_cursor_'+sessao.lojaId, ordem:'nome' }); } }catch(e){ _leve={erro:e}; }
+  if(_leve){ todos = _leve.erro ? null : _leve.lista; }
+  else while(true){
     const { data,error } = await supabaseClient.from('produtos')
       .select('id,nome,preco,preco_compra,stock,imagem,codbarras,codigo')
       .eq('loja_id',sessao.lojaId).order('nome',{ascending:true}).range(pag*1000,pag*1000+999);
@@ -714,6 +720,8 @@ async function gpGuardar(){
   if(nome!==_gp.nome) dados.nome=nome;
   if(_gpImg!==undefined) dados.imagem=_gpImg;
   const b=document.getElementById('gp-guardar'); b.disabled=true; b.textContent='A guardar…';
+  // foto: vai para o armazém (WebP leve); na base de dados fica só o endereço curto
+  try{ if(window.spapFotos && spapFotos.ehBase64(dados.imagem)) dados.imagem=await spapFotos.paraUrl(dados.imagem, sessao.lojaId, nome); }catch(e){}
   try{
     const { error }=await supabaseClient.from('produtos').update(dados).eq('id',_gp.id);
     if(error) throw error;
@@ -793,19 +801,38 @@ async function desenharCalendario(){
   }
 }
 rotuloData();
+// Resumo em memória por período: depois da 1.ª carga só se pedem as vendas/descontos NOVOS
+// (as vendas não mudam depois de gravadas). De 10 em 10 min faz uma carga completa para confirmar.
+const _resumoMem = {};
 async function carregarResumo(){
   const r=rangePeriodo(periodo);
   let vendas=[];
   try{
+    const _ck='vendas_bm_'+sessao.lojaId+'_'+periodo+(periodo==='dia'?('_'+(window._diaEscolhido||'')):'');
+    const _ini=r.ini.toISOString(), _fimISO=r.fim?r.fim.toISOString():'';
+    let mem=_resumoMem[_ck];
+    if(mem && (mem.ini!==_ini || mem.fim!==_fimISO || Date.now()-mem.tCompleto>10*60e3)) mem=null;
+    const desdeV = mem ? new Date(Math.max(r.ini.getTime(), new Date(mem.cursor||_ini).getTime()-120000)).toISOString() : _ini;
+    const desdeD = mem ? new Date(Math.max(r.ini.getTime(), new Date(mem.cursorD||_ini).getTime()-120000)).toISOString() : _ini;
     let q = supabaseClient.from('vendas')
       .select('id,numero_do_dia,total,metodo,criado_em,vendedor_codigo, venda_itens(produto_nome,qtd,preco_unitario)')
-      .eq('loja_id',sessao.lojaId).gte('criado_em',r.ini.toISOString());
+      .eq('loja_id',sessao.lojaId).gte('criado_em',desdeV);
     if(r.fim) q = q.lt('criado_em', r.fim.toISOString());
-    let qd = supabaseClient.from('descontos').select('produto_nome,preco_original,preco_novo,quantidade,criado_em').eq('loja_id',sessao.lojaId).gte('criado_em',r.ini.toISOString());
+    let qd = supabaseClient.from('descontos').select('produto_nome,preco_original,preco_novo,quantidade,criado_em').eq('loja_id',sessao.lojaId).gte('criado_em',desdeD);
     if(r.fim) qd = qd.lt('criado_em', r.fim.toISOString());
     const [rv, rd] = await Promise.all([ q.order('criado_em',{ascending:false}).limit(500).then(x=>x,e=>({error:e})), qd.limit(2000).then(x=>x,()=>({})) ]);
-    const _ck='vendas_bm_'+sessao.lojaId+'_'+periodo+(periodo==='dia'?('_'+(window._diaEscolhido||'')):'');
     let data=rv.data, desc=(rd&&rd.data)||null;
+    if(!rv.error && data){
+      if(mem){
+        // junta as novas às que já estavam (por id); descontos por (hora+produto+preço)
+        const porId=new Map(mem.vendas.map(v=>[v.id,v])); data.forEach(v=>porId.set(v.id,v));
+        data=Array.from(porId.values()).sort((a,b)=>new Date(b.criado_em)-new Date(a.criado_em)).slice(0,500);
+        if(desc){ const kD=d=>d.criado_em+'|'+d.produto_nome+'|'+d.preco_novo+'|'+d.quantidade; const md=new Map(mem.desc.map(d=>[kD(d),d])); desc.forEach(d=>md.set(kD(d),d)); desc=Array.from(md.values()); }
+        else desc=mem.desc;
+      }
+      const mx=l=>{ let m=null; (l||[]).forEach(x=>{ if(x&&x.criado_em&&(!m||new Date(x.criado_em)>new Date(m))) m=x.criado_em; }); return m; };
+      _resumoMem[_ck]={ ini:_ini, fim:_fimISO, vendas:data, desc:desc||[], cursor:mx(data)||(mem&&mem.cursor)||null, cursorD:mx(desc)||(mem&&mem.cursorD)||null, tCompleto: mem?mem.tCompleto:Date.now() };
+    }
     if(rv.error || !data){ const c=spapLerLocal(_ck); data=c?c.v.vendas:[]; desc=c?c.v.desc:[]; if(c){ window._offlineDesde=c.t; mostrarAvisoOffline(c.t); } }
     else { spapGuardarLocal(_ck, { vendas:data, desc:desc||[] }); mostrarAvisoOffline(null); }
     vendas=normVendas(data||[]);
@@ -1198,7 +1225,7 @@ function _trAtualizar(comProdutos){
     const p=_trProd; _trProd=false;
     try{ if(p) await carregarProdutos(); await Promise.all([carregarResumo(), carregarDescontos()]); }catch(e){}
     try{ const ti=document.getElementById('tela-inventario'); if(ti && ti.classList.contains('ativa') && !Object.keys(_invCont||{}).length) renderInventario(); }catch(e){}
-  }, 200);
+  }, 1200);   // uma venda mexe em vendas + itens + stock: junta tudo numa só atualização
 }
 function ligarTempoRealBanca(){
   if(!sessao || !sessao.lojaId) return;
@@ -1211,13 +1238,15 @@ function ligarTempoRealBanca(){
         c=c.on('postgres_changes',{event:'*',schema:'public',table:t,filter:'loja_id=eq.'+loja}, ()=>_trAtualizar(t!=='vendas' && t!=='descontos' && t!=='entregas'));
       });
       c=c.on('postgres_changes',{event:'INSERT',schema:'public',table:'atividade_log',filter:'loja_id=eq.'+loja}, ()=>{ try{ spapAvisosVerificar(); }catch(e){} });
-      _trCanal=c.subscribe();
+      _trCanal=c.subscribe(st=>{ window._trRtOk=(st==='SUBSCRIBED'); });
     }
   }catch(e){}
   // reserva (se o Realtime não estiver ligado no Supabase): 1 verificação por segundo, só com a app à vista
   if(!_trTimer){
     _trTimer=setInterval(async ()=>{
       if(document.hidden || _trAVer || !sessao || !sessao.lojaId || navigator.onLine===false) return;
+      // com o tempo real ligado, a verificação de reserva corre só de 30 em 30 s; sem ele, de 3 em 3 s (poupa tráfego)
+      const _agora=Date.now(); if(_agora-(window._trUltVer||0) < (window._trRtOk?30000:3000)) return; window._trUltVer=_agora;
       _trAVer=true;
       try{
         const id=sessao.lojaId;
@@ -1282,6 +1311,7 @@ async function guardarAddProduto(){
   const btn=document.getElementById('ap-guardar');
   if(dados.codbarras){ btn.disabled=true; const ex=await bancaDupProcurar(dados.codbarras,null); btn.disabled=false; if(ex){ apDup(true); bancaDupJanela(ex,dados.codbarras,apAbrirExistente); return; } }
   btn.disabled=true; btn.textContent='A guardar…';
+  try{ if(window.spapFotos && spapFotos.ehBase64(dados.imagem)) dados.imagem=await spapFotos.paraUrl(dados.imagem, sessao.lojaId, nome); }catch(e){}
   try{
     let { error }=await supabaseClient.from('produtos').insert(dados);
     if(error && dados.imagem){ const r=await supabaseClient.from('produtos').insert(Object.assign({}, dados, { imagem:null })); if(r.error) throw r.error; }

@@ -114,9 +114,9 @@
 </style>
 <link rel="apple-touch-icon" href="ios-banca-180.png">
 <meta name="apple-mobile-web-app-title" content="Banca e Vendas">
-<link rel="stylesheet" href="banca-tema.css?v=3.7.72">
-<script src="banca-tema.js?v=3.7.72" defer></script>
-<script src="app-android.js?v=3.7.72" defer></script>
+<link rel="stylesheet" href="banca-tema.css?v=3.7.73">
+<script src="banca-tema.js?v=3.7.73" defer></script>
+<script src="app-android.js?v=3.7.73" defer></script>
 </head>
 <body>
 
@@ -405,6 +405,7 @@
 <script src="spap-pc.js?v=1" defer></script>
 <script src="spap-avisos.js?v=6"></script>
 <script src="spap-imagem.js?v=1"></script>
+<script src="spap-fotos.js?v=1"></script>
 <script src="banca-offline.js?v=5"></script>
 <script>
 // ===================== ESTADO =====================
@@ -474,6 +475,7 @@ document.addEventListener('visibilitychange', function(){ if (!document.hidden) 
     await carregarProdutos();
     try { aplicarIdioma(idiomaAtual()); } catch(e){}
     pedirCodigoBalconista();
+    try { if (window.spapFotos) spapFotos.migrarDepois(sessao.lojaId); } catch(e){}
   } catch(e) {
     toast('Erro ao abrir: ' + (e.message || e), 'erro');
   }
@@ -527,8 +529,13 @@ async function confirmarCodigoBalconista(){
 }
 
 async function carregarProdutos(){
-  let todos = [], pag = 0, falhou = false;
-  while (true) {
+  let todos = [], pag = 0, falhou = false, _vindos = null;
+  // Tráfego mínimo (SQL v2.9.296): só texto + URL da foto, e depois só o que mudou. Sem o SQL: modo antigo.
+  let _leve = null;
+  try { if (window.spapFotos && navigator.onLine !== false) _leve = await spapFotos.sincronizarProdutos({ lojaId: sessao.lojaId, cols: 'id,nome,preco,preco_compra,stock,codigo,codbarras,criado_em', base: bancaProdutosGuardados(sessao.lojaId) || [], chave: 'banca_cursor_' + sessao.lojaId, ordem: 'nome' }); } catch(e){ _leve = { erro: e }; }
+  if (_leve && _leve.erro) falhou = true;
+  else if (_leve) { todos = _leve.lista; _vindos = new Set(_leve.vindos || []); }
+  else while (true) {
     let r;
     try { r = await supabaseClient.from('produtos')
       .select('id,nome,preco,preco_compra,stock,imagem,codigo,codbarras')
@@ -552,7 +559,8 @@ async function carregarProdutos(){
   } else {
     // o stock das vendas ainda por enviar já está descontado localmente
     const pend = {}; bancaFila().forEach(op => (op.passos||[]).forEach(p => { if (!p.feito && p.t==='rpc' && p.args && p.args.p_id) pend[p.args.p_id] = (pend[p.args.p_id]||0) + (p.fn==='baixar_stock' ? -1 : 1) * (p.args.p_qtd||0); }));
-    todos.forEach(p => { if (pend[p.id]) p.stock = (parseInt(p.stock)||0) + pend[p.id]; });
+    // (só nos produtos que vieram agora do servidor: os da cópia do aparelho já têm o desconto)
+    todos.forEach(p => { if (pend[p.id] && (!_vindos || _vindos.has(p.id))) p.stock = (parseInt(p.stock)||0) + pend[p.id]; });
     bancaGuardarProdutos(sessao.lojaId, todos);
   }
   // tipos sempre certos (um código de barras em número, um nome vazio ou um preço em texto nunca partem a lista)
@@ -1016,6 +1024,8 @@ async function guardarProduto(){
   const btn=document.getElementById('fp-guardar');
   if(dados.codbarras){ btn.disabled=true; const ex=await bancaDupProcurar(dados.codbarras,fpId); btn.disabled=false; if(ex){ fpDup(true); bancaDupJanela(ex,dados.codbarras,fpAbrirExistente); return; } }
   btn.disabled=true; btn.textContent='A guardar…';
+  // foto: vai para o armazém (WebP leve); na base de dados fica só o endereço curto
+  try{ if(window.spapFotos && spapFotos.ehBase64(dados.imagem)) dados.imagem = await spapFotos.paraUrl(dados.imagem, sessao.lojaId, nome); }catch(e){}
   try{
     if(fpId){
       let { error } = await supabaseClient.from('produtos').update(dados).eq('id', fpId);

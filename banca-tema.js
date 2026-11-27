@@ -115,7 +115,7 @@
       location.replace(location.pathname + '?' + q.toString() + location.hash);
     };
     try {
-      if ('caches' in window) caches.keys().then(function (k) { return Promise.all(k.map(function (n) { return caches.delete(n); })); }).then(feito, feito);
+      if ('caches' in window) caches.keys().then(function (k) { return Promise.all(k.filter(function (n) { return n !== 'spap-fotos' && n !== 'spap-dados'; }).map(function (n) { return caches.delete(n); })); }).then(feito, feito);
       else feito();
     } catch (e) { feito(); }
   }
@@ -159,7 +159,7 @@
   // ===== Sincronização em tempo real (≈1 segundo) =====
   // Vendas da Banca → Monitor da Banca; produtos do Monitor → Banca. Canal em tempo real + verificação rápida de reserva.
   var _sync = { ligado: false, t: {} };
-  function atrasar(nome, fn, ms) { clearTimeout(_sync.t[nome]); _sync.t[nome] = setTimeout(fn, ms || 150); }
+  function atrasar(nome, fn, ms) { clearTimeout(_sync.t[nome]); _sync.t[nome] = setTimeout(fn, ms || 1000); }
   function recarregarVendas() {
     if (typeof carregarResumo === 'function') atrasar('vendas', function () { try { carregarResumo(); } catch (e) {} if (typeof carregarDescontos === 'function') try { carregarDescontos(); } catch (e) {} });
   }
@@ -188,12 +188,16 @@
         ch.on('postgres_changes', { event: '*', schema: 'public', table: 'descontos', filter: filtro }, recarregarVendas);
       }
       ch.on('postgres_changes', { event: '*', schema: 'public', table: 'produtos', filter: filtro }, recarregarProdutos);
-      ch.subscribe();
+      ch.subscribe(function (st) { _sync.rt = (st === 'SUBSCRIBED'); });
     } catch (e) {}
     // Reserva: se o canal falhar, uma consulta leve de 2 em 2 segundos apanha as mudanças
     var ultVenda = null, ultProd = null;
+    var _ultVer = 0;
     setInterval(function () {
       if (document.hidden) return;
+      // com o tempo real ligado, a verificação de reserva só corre de 30 em 30 s (poupa tráfego)
+      if (_sync.rt && Date.now() - _ultVer < 30000) return;
+      _ultVer = Date.now();
       if (mon) {
         supabaseClient.from('vendas').select('id,criado_em').eq('loja_id', loja).order('criado_em', { ascending: false }).limit(1)
           .then(function (r) { var id = r && r.data && r.data[0] ? r.data[0].id : ''; if (ultVenda !== null && id !== ultVenda) recarregarVendas(); ultVenda = id; });

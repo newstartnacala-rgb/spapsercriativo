@@ -1,4 +1,7 @@
-const CACHE_NAME = 'spap-pdv-v372';
+const CACHE_NAME = 'spap-pdv-v373';
+// Fotos dos produtos (armazém Supabase): guardadas no aparelho para sempre — cada foto é descarregada UMA vez.
+// Um URL de foto nunca muda de conteúdo (foto nova = URL novo), por isso a cópia guardada está sempre certa.
+const CACHE_FOTOS = 'spap-fotos';
 const FICHEIROS = [
   './',
   './index.html',
@@ -29,6 +32,7 @@ const FICHEIROS = [
   './icons3d/personalizar.svg',
   './icons3d/cart.png',
   './spap-pc.js',
+  './spap-fotos.js',
   './spap-alertas.js',
   './spap-personalizar.js',
   './spap-leitor.js',
@@ -80,7 +84,7 @@ self.addEventListener('activate', e => {
   e.waitUntil((async () => {
     try {
       const nova = await caches.open(CACHE_NAME);
-      const velhas = (await caches.keys()).filter(k => k !== CACHE_NAME);
+      const velhas = (await caches.keys()).filter(k => k !== CACHE_NAME && k !== CACHE_FOTOS && k !== 'spap-dados');   // as fotos ficam sempre
       for (const k of velhas) {
         try {
           const c = await caches.open(k);
@@ -98,6 +102,24 @@ self.addEventListener('activate', e => {
 function daCache(req) {
   return caches.match(req).then(r => r || caches.match(req, { ignoreSearch: true }));
 }
+const _fotosAPedir = new Map();   // várias imagens iguais no ecrã → um só download
+async function fotoDoAparelho(req) {
+  const chave = req.url;
+  const cache = await caches.open(CACHE_FOTOS);
+  const guardada = await cache.match(chave);
+  if (guardada) return guardada;
+  if (_fotosAPedir.has(chave)) { try { const r = await _fotosAPedir.get(chave); if (r) return r.clone(); } catch (e) {} }
+  const p = (async () => {
+    // pedido «cors» (não opaco): a cópia guardada ocupa o tamanho real e pode ser lida sem internet
+    const r = await fetch(chave, { mode: 'cors', credentials: 'omit' });
+    if (r && r.ok) { try { await cache.put(chave, r.clone()); } catch (e) {} }
+    return r;
+  })();
+  _fotosAPedir.set(chave, p);
+  try { const r = await p; return r.clone(); }
+  catch (e) { return new Response('', { status: 504 }); }
+  finally { setTimeout(() => _fotosAPedir.delete(chave), 2000); }
+}
 function vazio(req) {
   const ehJS = /\.js(\?|$)/.test(req.url) || req.destination === 'script';
   return new Response(ehJS ? '/* sem internet */' : '', { status: 200, headers: { 'Content-Type': ehJS ? 'application/javascript' : 'text/plain' } });
@@ -107,6 +129,11 @@ function vazio(req) {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
+  // Fotos no armazém Supabase — do APARELHO primeiro; só vai à internet a primeira vez (zero tráfego depois)
+  if (url.hostname.includes('supabase.co') && url.pathname.indexOf('/storage/v1/object/public/') === 0 && e.request.method === 'GET') {
+    e.respondWith(fotoDoAparelho(e.request));
+    return;
+  }
   // Supabase API — vai sempre direto à rede. Sem internet, o pedido falha de verdade
   // (assim a app sabe que não foi gravado e guarda na fila do telemóvel).
   if (url.hostname.includes('supabase.co')) { return; }

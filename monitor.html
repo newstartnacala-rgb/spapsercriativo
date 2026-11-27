@@ -23,7 +23,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 <script src="supabase-js-2.84.0.js"></script>
 <script>if (typeof supabase === "undefined") document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.84.0/dist/umd/supabase.js"><\/script>');</script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.295"></script>
+<script src="spap-leitor.js?v=2.9.296"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -1127,7 +1127,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.295" defer></script>
+<script src="app-android.js?v=2.9.296" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -1794,6 +1794,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
 
 <script src="spap-erros.js?v=2"></script>
 <script src="supabase-config.js?v=7"></script>
+<script src="spap-fotos.js?v=1"></script>
 <script src="spap-avisos.js?v=6"></script>
 <script src="spap-backup.js?v=7"></script>
 <script src="spap-imagem.js?v=1"></script>
@@ -2067,6 +2068,8 @@ async function iniciarMonitor() {
   intervalo = setInterval(() => { if (!window._saCodAberto) carregarTudo(); }, 30000);
   verificarNotifStatus();
   ligarVendasTempoReal();
+  // fotos antigas (base64) → armazém, em segundo plano (só depois de o SQL v2.9.296 ser corrido)
+  try { if (window.spapFotos && lojaId && !(isSuperAdmin && modoGeral)) spapFotos.migrarDepois(lojaId, 20000); } catch (e) {}
 }
 
 // ===== VENDAS EM TEMPO REAL =====
@@ -2090,6 +2093,9 @@ async function _recarregarVendasJa(novaVenda) {
 async function _vigiarVendasNovas() {
   if (window._saCodAberto) return;   // não mexe no ecrã enquanto escreves o código
   if (document.hidden || !supabaseClient) return;
+  // com o tempo real ligado, esta vigia de reserva só corre de 30 em 30 s (poupa tráfego)
+  if (window._rtVendasOk && Date.now() - (window._vigiaUlt || 0) < 30000) return;
+  window._vigiaUlt = Date.now();
   try {
     let q = supabaseClient.from('vendas').select('id').order('criado_em', { ascending: false }).limit(1);
     if (!(isSuperAdmin && modoGeral)) q = q.eq('loja_id', lojaId);
@@ -2120,7 +2126,7 @@ function ligarVendasTempoReal() {
     _canalVendas = supabaseClient.channel('monitor-vendas-' + Date.now())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'vendas' }, aoMudar)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'venda_itens' }, aoMudar)
-      .subscribe();
+      .subscribe(st => { window._rtVendasOk = (st === 'SUBSCRIBED'); });
   } catch (e) {}
 }
 
@@ -2443,7 +2449,7 @@ async function _carregarImagensProdutos(chave, daLoja, meu) {
   _aplicarImagens(chave);
   if (_imgEmCurso.has(chave)) return;
   const tentados = m.__tentados || (m.__tentados = new Set());
-  const ids = (todosProdutos || []).filter(p => p && p.id && !m[p.id] && !tentados.has(p.id)).map(p => p.id);
+  const ids = (todosProdutos || []).filter(p => p && p.id && !m[p.id] && !tentados.has(p.id) && (!window._monLeves || p._b64)).map(p => p.id);
   if (!ids.length) return;
   _imgEmCurso.add(chave);
   let pendenteRender = null;
@@ -2513,6 +2519,67 @@ function mostrarLojaEmCache() {
 }
 // só registos das lojas normais (no modo «Todas as Lojas» do Super Admin)
 function _soLojas(lista) { const ok = new Set((todasLojas || []).map(l => String(l.id))); return (lista || []).filter(x => ok.has(String(x.loja_id))); }
+// ===== TRÁFEGO MÍNIMO (v2.9.296) =====
+// Vendas: o histórico fica guardado no aparelho e, de cada vez, só se pedem as vendas NOVAS (as vendas nunca
+// mudam depois de gravadas). De 5 em 5 min uma verificação leve (só uma contagem) confirma que nada falta.
+// Produtos: só texto + URL da foto e, depois da 1.ª vez, só o que mudou (com o SQL v2.9.296; sem ele, como antes).
+const _fase2 = new Set();
+const _vendasInc = new Map();      // chave → { lista, cursor, completo, tRecon }
+const _VENDAS_MAX = 6000;
+function _maxData(lista) { let m = null; for (const v of lista) { if (v && v.criado_em && (!m || new Date(v.criado_em) > new Date(m))) m = v.criado_em; } return m; }
+function _ordenarVendas(l) { return l.sort((a, b) => new Date(b.criado_em) - new Date(a.criado_em)); }
+function _juntarVendas(est, novas) {
+  if (!novas || !novas.length) return false;
+  const pos = new Map(est.lista.map((v, i) => [v.id, i])); let mudou = false;
+  novas.forEach(v => {
+    if (!v || !v.id) return;
+    if (pos.has(v.id)) { const i = pos.get(v.id), a = est.lista[i]; if (JSON.stringify(a) !== JSON.stringify(v)) { est.lista[i] = v; mudou = true; } }
+    else { est.lista.push(v); pos.set(v.id, est.lista.length - 1); mudou = true; }
+  });
+  if (mudou) { _ordenarVendas(est.lista); if (est.lista.length > _VENDAS_MAX) est.lista.length = _VENDAS_MAX; }
+  const m = _maxData(novas); if (m && (!est.cursor || new Date(m) > new Date(est.cursor))) est.cursor = m;
+  return mudou;
+}
+let _guardarVendasT = {};
+function _guardarVendasDepois(chave) {
+  clearTimeout(_guardarVendasT[chave]);
+  _guardarVendasT[chave] = setTimeout(() => { const e = _vendasInc.get(chave); if (e && e.completo && window.spapFotos) spapFotos.dadosGuardar('mon_vendas_' + chave, { lista: e.lista, cursor: e.cursor, t: Date.now() }); }, 3000);
+}
+async function _estadoVendas(chave) {
+  let e = _vendasInc.get(chave); if (e) return e;
+  try {
+    const g = window.spapFotos ? await spapFotos.dadosLer('mon_vendas_' + chave) : null;
+    // cópia com menos de 30 dias: continua a partir dela (senão, começa de novo)
+    if (g && Array.isArray(g.lista) && g.cursor && Date.now() - (g.t || 0) < 30 * 864e5) { e = { lista: g.lista, cursor: g.cursor, completo: true, tRecon: 0 }; _vendasInc.set(chave, e); return e; }
+  } catch (x) {}
+  return null;
+}
+window._monEsquecerVendas = function () { try { _vendasInc.clear(); Object.keys(localStorage).forEach(k => { if (k.indexOf('mon_cursor_') === 0) localStorage.removeItem(k); }); } catch (e) {} try { caches.delete('spap-dados'); } catch (e) {} };
+// Verificação leve (5 em 5 min): conta as vendas dos últimos 3 dias; se não bater certo (ex.: vendas offline que
+// chegaram mais tarde com hora antiga), vai buscar só as que faltam.
+async function _reconciliarVendas(chave, loja, est) {
+  est.tRecon = Date.now();
+  const desde3 = new Date(Date.now() - 3 * 864e5).toISOString();
+  const { count, error } = await supabaseClient.from('vendas').select('id', { count: 'exact', head: true }).eq('loja_id', loja).gte('criado_em', desde3);
+  if (error || count == null) return false;
+  const locais = est.lista.filter(v => v.criado_em >= desde3 || new Date(v.criado_em) >= new Date(desde3));
+  const semItens = locais.filter(v => !(v.venda_itens || []).length && Date.now() - new Date(v.criado_em).getTime() > 120000).map(v => v.id);
+  if (count === locais.length && !semItens.length) return false;
+  const { data: ids, error: e2 } = await supabaseClient.from('vendas').select('id').eq('loja_id', loja).gte('criado_em', desde3);
+  if (e2 || !ids) return false;
+  const noServidor = new Set(ids.map(x => x.id)), aqui = new Set(locais.map(v => v.id));
+  const faltam = ids.map(x => x.id).filter(id => !aqui.has(id)).concat(semItens.filter(id => noServidor.has(id)));
+  let mudou = false;
+  // vendas que já não existem no servidor (ex.: cópia de segurança reposta)
+  const fora = locais.filter(v => !noServidor.has(v.id)).map(v => v.id);
+  if (fora.length) { const f = new Set(fora); est.lista = est.lista.filter(v => !f.has(v.id)); mudou = true; }
+  for (let i = 0; i < faltam.length; i += 100) {
+    const { data } = await supabaseClient.from('vendas').select('*, venda_itens(*)').in('id', faltam.slice(i, i + 100));
+    if (data && _juntarVendas(est, data)) mudou = true;
+  }
+  return mudou;
+}
+
 async function carregarTudo() {
   const meu = ++_pedidoCarga;
   const chave = _chaveLojaAtual();
@@ -2525,11 +2592,22 @@ async function carregarTudo() {
   const COLS_P = 'id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em,unidade';   // sem «imagem» (pesada) — chega depois
   const cache = _cacheLojas.get(chave);
 
-  const [r1, r2, r3] = await Promise.all([
-    daLoja(supabaseClient.from('vendas').select('*, venda_itens(*)')).gte('criado_em', desde).order('criado_em', {ascending:false}),
-    daLoja(supabaseClient.from('produtos').select(COLS_P)).order('nome'),
-    geral ? supabaseClient.from('membros_loja').select('*, lojas(nome)') : supabaseClient.from('membros_loja').select('*, lojas(nome)').eq('loja_id', lojaDoPedido)
-  ]);
+  // Loja escolhida (não «Todas as Lojas»): vendas incrementais + produtos leves
+  const est = geral ? null : await _estadoVendas(chave);
+  if (meu !== _pedidoCarga) return;
+  const pVendas = (est && est.cursor)
+    ? supabaseClient.from('vendas').select('*, venda_itens(*)').eq('loja_id', lojaDoPedido).gte('criado_em', new Date(new Date(est.cursor).getTime() - 120000).toISOString()).order('criado_em', {ascending:false})
+    : daLoja(supabaseClient.from('vendas').select('*, venda_itens(*)')).gte('criado_em', desde).order('criado_em', {ascending:false});
+  const prodAntigo = () => daLoja(supabaseClient.from('produtos').select(COLS_P)).order('nome');
+  const pProd = (!geral && window.spapFotos)
+    ? spapFotos.sincronizarProdutos({ lojaId: lojaDoPedido, cols: COLS_P, base: (cache && cache.produtos) || ((spapLerLocal('mon_' + chave) || {}).v || {}).produtos || [], chave: 'mon_cursor_' + chave, ordem: 'nome', semFotosAntigas: true })
+        .then(x => x === null ? prodAntigo() : (x.erro ? { error: x.erro } : { data: x.lista, _leve: true }), () => prodAntigo())
+    : prodAntigo();
+  // membros: de 5 em 5 minutos chega (mudam raramente)
+  const pMemb = (cache && cache.memb && Date.now() - (cache.tMemb || 0) < 5 * 60e3) ? Promise.resolve({ data: cache.memb, _guardado: true })
+    : (geral ? supabaseClient.from('membros_loja').select('*, lojas(nome)') : supabaseClient.from('membros_loja').select('*, lojas(nome)').eq('loja_id', lojaDoPedido));
+  const [r1, r2, r3] = await Promise.all([pVendas, pProd, pMemb]);
+  window._monLeves = !!(r2 && r2._leve);
   if (meu !== _pedidoCarga) return;            // entretanto escolheu-se outra loja → ignora
   // Sem internet: mostra os últimos dados guardados neste aparelho (nunca fica vazio nem parado)
   if (r1.error && r2.error && !(cache && cache.vendas && cache.vendas.length)) {
@@ -2541,10 +2619,17 @@ async function carregarTudo() {
       return;
     }
   }
-  const recentes = r1.data || [];
-  // junta as vendas recentes com o histórico mais antigo já conhecido desta loja
-  const antigas = (cache && cache.completo) ? cache.vendas.filter(v => v.criado_em < desde) : [];
-  todasVendas = recentes.concat(antigas);
+  let recentes = r1.data || [];
+  if (est && est.cursor) {
+    // só chegaram as vendas novas: junta-as ao histórico guardado no aparelho
+    if (!r1.error && _juntarVendas(est, recentes)) _guardarVendasDepois(chave);
+    todasVendas = est.lista.slice();
+    recentes = est.lista.filter(v => v.criado_em >= desde || new Date(v.criado_em) >= new Date(desde));
+  } else {
+    // junta as vendas recentes com o histórico mais antigo já conhecido desta loja
+    const antigas = (cache && cache.completo) ? cache.vendas.filter(v => v.criado_em < desde) : [];
+    todasVendas = recentes.concat(antigas);
+  }
   todosProdutos = r2.data || [];
   todosMemb = r3.data || [];
   // «Todas as Lojas»: só as lojas normais (as vendas das bancas não entram)
@@ -2552,7 +2637,7 @@ async function carregarTudo() {
 
   // O Supabase devolve no máx. 1000 produtos por pedido. Se bateu no limite,
   // vai buscar as páginas seguintes (senão lojas com muitos produtos perdiam os mais recentes).
-  if (todosProdutos.length >= 1000) {
+  if (todosProdutos.length >= 1000 && !(r2 && r2._leve)) {
     try {
       const cols = 'id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em,unidade';
       let pagina = 1;
@@ -2571,9 +2656,9 @@ async function carregarTudo() {
 
   if (meu !== _pedidoCarga) return;
   if (geral) todosProdutos = _soLojas(todosProdutos);
-  _cacheLojas.set(chave, { vendas: todasVendas.slice(), produtos: todosProdutos, memb: todosMemb, completo: !!(cache && cache.completo), t: Date.now() });
-  // guarda no aparelho para abrir sem internet (só as vendas de ontem e hoje; produtos sem imagens)
-  if (!r1.error) spapGuardarLocal('mon_' + chave, { vendas: recentes, produtos: todosProdutos, memb: todosMemb });
+  _cacheLojas.set(chave, { vendas: todasVendas.slice(), produtos: todosProdutos, memb: todosMemb, completo: !!((cache && cache.completo) || (est && est.completo)), tCompleto: (cache && cache.tCompleto) || 0, t: Date.now(), tMemb: (r3 && r3._guardado && cache) ? (cache.tMemb || 0) : Date.now() });
+  // guarda no aparelho para abrir sem internet (só as vendas de ontem e hoje; produtos sem fotos em base64 — só o URL curto)
+  if (!r1.error) spapGuardarLocal('mon_' + chave, { vendas: recentes, produtos: todosProdutos.map(p => (p && p.imagem && !/^https?:/i.test(p.imagem)) ? Object.assign({}, p, { imagem: null }) : p), memb: todosMemb });
   aplicarDiaHome();
   renderVendasHistorico(filtroVendasAtivo);
   const vendasHojeReal = todasVendas.filter(v => v.criado_em >= inicioHoje);
@@ -2585,9 +2670,26 @@ async function carregarTudo() {
   // Imagens dos produtos: em segundo plano, guardadas por loja (não atrasam o ecrã)
   _carregarImagensProdutos(chave, daLoja, meu);
 
-  // Fase 2: histórico completo (em segundo plano; 1 vez por loja, e de novo a cada 5 minutos)
+  // Loja com histórico guardado: em vez de descarregar tudo de novo, só a verificação leve de 5 em 5 min
+  if (est && est.completo) {
+    if (Date.now() - (est.tRecon || 0) > 5 * 60 * 1000) {
+      (async () => {
+        try {
+          if (await _reconciliarVendas(chave, lojaDoPedido, est)) {
+            _guardarVendasDepois(chave);
+            if (meu !== _pedidoCarga || _chaveLojaAtual() !== chave) return;
+            todasVendas = est.lista.slice(); const c3 = _cacheLojas.get(chave); if (c3) c3.vendas = todasVendas.slice();
+            aplicarDiaHome(); renderVendasHistorico(filtroVendasAtivo);
+          }
+        } catch (e) {}
+      })();
+    }
+    return;
+  }
+  // Fase 2: histórico completo (em segundo plano; 1 vez por loja — depois só chegam as vendas novas)
   const c2 = _cacheLojas.get(chave);
-  if (!c2.completo || (Date.now() - (c2.tCompleto || 0)) > 5 * 60 * 1000) {
+  if ((!c2.completo || (geral && (Date.now() - (c2.tCompleto || 0)) > 30 * 60 * 1000) || (!geral && !est)) && !_fase2.has(chave)) {
+    _fase2.add(chave);
     (async () => {
       try {
         let { data, error } = await daLoja(supabaseClient.from('vendas').select('*, venda_itens(*)')).order('criado_em', {ascending:false});
@@ -2595,11 +2697,18 @@ async function carregarTudo() {
         if (geral) data = _soLojas(data);
         const atual = _cacheLojas.get(chave);
         if (atual) { atual.vendas = data; atual.completo = true; atual.tCompleto = Date.now(); }
+        if (!geral && !_vendasInc.has(chave)) {
+          // a partir de agora este aparelho guarda o histórico e só pede as vendas novas
+          const e = { lista: _ordenarVendas(data.slice()), cursor: _maxData(data), completo: true, tRecon: Date.now() };
+          // inclui as que chegaram entretanto (pedido rápido)
+          _juntarVendas(e, todasVendas.filter(v => v.criado_em >= desde || new Date(v.criado_em) >= new Date(desde)));
+          _vendasInc.set(chave, e); _guardarVendasDepois(chave);
+        }
         if (meu !== _pedidoCarga || _chaveLojaAtual() !== chave) return;   // já se mudou de loja
         todasVendas = data.slice();
         aplicarDiaHome();
         renderVendasHistorico(filtroVendasAtivo);
-      } catch (e) {}
+      } catch (e) {} finally { _fase2.delete(chave); }
     })();
   }
 }
@@ -3358,6 +3467,8 @@ async function salvarEdicaoProduto(id, tinhaImg) {
   };
   if (editImagemBase64) dados.imagem = editImagemBase64;
   if (!dados.nome) { mostrarNotif('❌ O nome é obrigatório.', true); return; }
+  // foto: vai para o armazém (WebP leve); na base de dados fica só o endereço curto
+  try { if (window.spapFotos && spapFotos.ehBase64(dados.imagem)) dados.imagem = await spapFotos.paraUrl(dados.imagem, lojaId, dados.nome); } catch (e) {}
   for (const c of [dados.codigo, dados.codbarras]) {
     if (!c) continue;
     const ex = await dupProcurar(c, id);
@@ -3917,8 +4028,10 @@ async function salvarNovoProduto() {
 
   const _unEl = document.getElementById('np-unidade');
   const unidade = (_unEl && _unEl.value) || 'un';
-  const dados = { loja_id: lojaId, nome, preco, preco_compra: precoCompra || null, stock, codigo, categoria, subcategoria, imagem, unidade };
   btn.disabled = true; btn.textContent = 'A guardar...';
+  let imagemFinal = imagem;
+  try { if (window.spapFotos && spapFotos.ehBase64(imagemFinal)) imagemFinal = await spapFotos.paraUrl(imagemFinal, lojaId, nome); } catch (e) {}
+  const dados = { loja_id: lojaId, nome, preco, preco_compra: precoCompra || null, stock, codigo, categoria, subcategoria, imagem: imagemFinal, unidade };
   msg.textContent = '⏳ A guardar "'+nome+'"...'; msg.style.color='#d97706';
 
   try {
@@ -6334,7 +6447,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.295';
+const MONITOR_VERSAO = '2.9.296';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });
@@ -6355,7 +6468,7 @@ async function atualizarAgoraMonitor() {
   } catch (e) {}
   try {
     if ('caches' in window) {
-      const keys = await caches.keys();
+      const keys = (await caches.keys()).filter(k => k !== 'spap-fotos' && k !== 'spap-dados');   // as fotos ficam (não se descarregam de novo)
       await Promise.all(keys.map(k => caches.delete(k)));
     }
   } catch (e) {}
@@ -6586,7 +6699,7 @@ setTimeout(() => aplicarTraducaoMonitor(linguaMonitor), 2000);
 async function abrirBackup() {
   if (modoGeral) { mostrarNotif('Escolhe uma loja específica no seletor do topo para fazer backup.', true); return; }
   // Backup novo (mostra o que vai, recupera de ficheiro e migra Loja ↔ Banca)
-  if (window.spapBackupAbrir) { spapBackupAbrir({ lojaId: lojaId, nomeLoja: nomeLoja, tipo: 'comercial', cor: 'linear-gradient(135deg,#1d4ed8,#4338ca)', corTexto: '#1d4ed8', depois: function(){ try { carregarTudo(); } catch(e){} } }); return; }
+  if (window.spapBackupAbrir) { spapBackupAbrir({ lojaId: lojaId, nomeLoja: nomeLoja, tipo: 'comercial', cor: 'linear-gradient(135deg,#1d4ed8,#4338ca)', corTexto: '#1d4ed8', depois: function(){ try { window._monEsquecerVendas(); carregarTudo(); } catch(e){} } }); return; }
   document.getElementById('painel-backup').classList.add('aberto'); try{history.pushState({subpainel:'painel-backup'},'');}catch(e){}
   const info = document.getElementById('backup-info');
   info.innerHTML = '<div style="color:#64748b;">A contar os dados...</div>';
@@ -6821,6 +6934,7 @@ async function carregarBannerPerfil() {
   } catch(e) {}
 }
 async function _gravarBanner(valor) {
+  try { if (window.spapFotos && spapFotos.ehBase64(valor)) valor = await spapFotos.paraUrl(valor, lojaId, 'banner', 1200); } catch (e) {}
   const { data, error } = await supabaseClient.from('lojas').update({ banner: valor || null }).eq('id', lojaId).select('id');
   if (error) {
     if (/column|coluna|schema cache/i.test(error.message || '')) { _pintarBannerPerfil('', 'Falta um passo: corre uma vez no Supabase o SQL <b>' + _SQL_BANNER + '</b> e escolhe o banner de novo.', true); mostrarNotif('❌ Falta correr o SQL do banner.', true); }
@@ -6886,7 +7000,9 @@ function perfilCarregarLogo(input) {
 async function guardarLogo() {
   if (_perfilLogoBase64 === null) { mostrarNotif('Escolhe um logótipo primeiro (ou carrega em Remover).', true); return; }
   try {
-    const { error } = await supabaseClient.from('lojas').update({ logo: _perfilLogoBase64 || null }).eq('id', lojaId);
+    let logoFinal = _perfilLogoBase64 || null;
+    try { if (window.spapFotos && spapFotos.ehBase64(logoFinal)) logoFinal = await spapFotos.paraUrl(logoFinal, lojaId, 'logo', 480); } catch (e) {}
+    const { error } = await supabaseClient.from('lojas').update({ logo: logoFinal }).eq('id', lojaId);
     if (error) throw error;
     mostrarNotif('✅ Logótipo guardado!');
     _perfilLogoBase64 = null;

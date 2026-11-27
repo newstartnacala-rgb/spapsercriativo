@@ -357,7 +357,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 /* Carrinho 3D (imagem) no lugar do emoji 🛒 — do MESMO tamanho do emoji (1,2 em), igual em Windows, Android, iPhone e tablets */
 .spap-carro{display:inline-block;width:1.2em;height:1.2em;object-fit:contain;vertical-align:-.2em;margin:0;pointer-events:none;user-select:none;-webkit-user-drag:none}
 </style>
-<script src="app-android.js?v=2.9.295" defer></script>
+<script src="app-android.js?v=2.9.296" defer></script>
 <style>/* a interface antiga nunca aparece: o ecrã antigo fica invisível até o novo abrir (sem piscar) */ body:not(.modo2) #tela-pdv { visibility:hidden !important; }</style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
@@ -1384,6 +1384,7 @@ body.spap-leve #m2-grid .m2-card { animation: none !important; transition: none 
 </script>
 <script src="spap-erros.js?v=2"></script>
 <script src="supabase-config.js?v=7"></script>
+<script src="spap-fotos.js?v=1"></script>
 <script src="spap-avisos.js?v=6"></script>
 <script src="spap-expirou.js?v=2"></script>
 <script src="spap-suporte.js?v=6"></script>
@@ -1695,6 +1696,29 @@ body.spap-leve #m2-grid .m2-card { animation: none !important; transition: none 
     sincronizarFila();
   }
 
+  // ===== TRÁFEGO MÍNIMO (SQL v2.9.296) =====
+  // As listas trazem só texto + o URL curto da foto (nunca o base64 pesado) e, depois da 1.ª vez, só o que mudou.
+  // Sem o SQL corrido, tudo funciona como antes.
+  const _COLS_BASE = 'id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em,unidade';
+  let _lojaLeves = false;
+  let _cursorProd = null;
+  async function _verLeves() { try { _lojaLeves = !!(window.spapFotos && await spapFotos.colunasLeves()); } catch (e) { _lojaLeves = false; } return _lojaLeves; }
+  function _colsProd(comUnidade) { const b = comUnidade ? _COLS_BASE : _COLS_BASE.replace(',unidade', ''); return _lojaLeves ? b + ',imagem_url,tem_b64,atualizado_em' : b; }
+  function _linhaLeve(r) { if (r && ('imagem_url' in r || 'tem_b64' in r)) { r.imagem = r.imagem_url || null; r._b64 = !!r.tem_b64; delete r.imagem_url; delete r.tem_b64; } return r; }
+  function spapFotosB64(v) { return typeof v === 'string' && v.slice(0, 5) === 'data:'; }
+  function _avancarCursor(t) { if (t && (!_cursorProd || new Date(t) > new Date(_cursorProd))) _cursorProd = t; }
+  function _guardarCursor() { try { if (_lojaLeves && _cursorProd && sessaoAtual) localStorage.setItem('pdv_cursor_prod_' + sessaoAtual.lojaId, _cursorProd); } catch (e) {} }
+  function _lerCursor() { try { return localStorage.getItem('pdv_cursor_prod_' + sessaoAtual.lojaId); } catch (e) { return null; } }
+  async function _mudancasProdutos(desde) {
+    const d = new Date(new Date(desde).getTime() - 15000).toISOString();   // 15 s de margem (transações em curso)
+    const r = await supabaseClient.from('produtos').select(_colsProd(true)).eq('loja_id', sessaoAtual.lojaId)
+      .gte('atualizado_em', d).order('atualizado_em', { ascending: true }).limit(1000);
+    if (r.error) return { error: r.error };
+    let apagados = [];
+    try { const a = await supabaseClient.from('produtos_apagados').select('id,apagado_em').eq('loja_id', sessaoAtual.lojaId).gte('apagado_em', d); if (!a.error) apagados = a.data || []; } catch (e) {}
+    return { mudados: (r.data || []).map(_linhaLeve), apagados: apagados, cheio: (r.data || []).length >= 1000 };
+  }
+
   // Carrega produtos e vendas da loja atual a partir do Supabase.
   // Se a loja ainda não tiver nenhum produto, semeia-a com os produtos de exemplo.
   function carregarDoCacheLocal() {
@@ -1745,9 +1769,7 @@ body.spap-leve #m2-grid .m2-card { animation: none !important; transition: none 
     // Carrega TODOS os produtos por PÁGINAS (o Supabase devolve no máx. 1000 por pedido).
     // Sem isto, lojas com muitos produtos perdiam os mais recentes (ex: os cadastrados a kg).
     async function _carregarTodosProdutos(comUnidade) {
-      const cols = comUnidade
-        ? 'id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em,unidade'
-        : 'id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em';
+      const cols = _colsProd(comUnidade);
       const TAM = 1000;
       let pagina = 0, todos = [];
       while (true) {
@@ -1757,6 +1779,7 @@ body.spap-leve #m2-grid .m2-card { animation: none !important; transition: none 
           .order('criado_em', { ascending: true })
           .range(pagina * TAM, pagina * TAM + TAM - 1);
         if (error) return { data: null, error };
+        (data || []).forEach(r => { _linhaLeve(r); _avancarCursor(r.atualizado_em); });
         todos = todos.concat(data || []);
         if (!data || data.length < TAM) break;   // última página
         pagina++;
@@ -1765,7 +1788,35 @@ body.spap-leve #m2-grid .m2-card { animation: none !important; transition: none 
       return { data: todos, error: null };
     }
 
-    let { data: produtosData, error: produtosError } = await _carregarTodosProdutos(true);
+    await _verLeves();
+    let produtosData = null, produtosError = null;
+    // Aparelho já sincronizado: parte da cópia guardada e descarrega SÓ o que mudou (abrir quase sem tráfego)
+    try {
+      const cur0 = _lojaLeves ? _lerCursor() : null;
+      if (cur0 && Date.now() - new Date(cur0).getTime() < 60 * 864e5) {
+        const base = JSON.parse(localStorage.getItem('pdv_cache_produtos_' + sessaoAtual.lojaId) || 'null');
+        if (Array.isArray(base) && base.length) {
+          const m = await _mudancasProdutos(cur0);
+          if (!m.error && !m.cheio) {
+            const mapa = new Map(base.filter(Boolean).map(p => [p.id, p]));
+            _cursorProd = cur0;
+            m.mudados.forEach(r => { mapa.set(r.id, Object.assign({}, mapa.get(r.id) || {}, r)); _avancarCursor(r.atualizado_em); });
+            m.apagados.forEach(a => { mapa.delete(a.id); _avancarCursor(a.apagado_em); });
+            produtosData = Array.from(mapa.values());
+            window._spapAberturaIncremental = { mudados: m.mudados.length, apagados: m.apagados.length };
+          }
+        }
+      }
+    } catch (e) { produtosData = null; }
+    if (!produtosData) {
+      const r0 = await _carregarTodosProdutos(true);
+      produtosData = r0.data; produtosError = r0.error;
+      // as colunas leves ainda não existem (ou foram removidas): volta ao modo antigo
+      if (produtosError && _lojaLeves && /imagem_url|tem_b64|atualizado_em|column|42703/i.test(String(produtosError.message || produtosError.code || ''))) {
+        try { spapFotos.esquecerEsquema(); } catch (e) {} _lojaLeves = false; _cursorProd = null;
+        const r1 = await _carregarTodosProdutos(true); produtosData = r1.data; produtosError = r1.error;
+      }
+    }
     // Se falhou (ex: coluna 'unidade' ainda não existe), tenta sem essa coluna.
     if (produtosError) {
       const _r = await _carregarTodosProdutos(false);
@@ -1811,14 +1862,22 @@ body.spap-leve #m2-grid .m2-card { animation: none !important; transition: none 
     let vendasData = null, vendasError = null;
     try {
       const desde = new Date(Date.now() - 60 * 864e5).toISOString();
-      const rv = await supabaseClient
-        .from('vendas')
-        .select('*, venda_itens(*)')
-        .eq('loja_id', sessaoAtual.lojaId)
-        .gte('criado_em', desde)
-        .order('criado_em', { ascending: false })
-        .limit(1500);
-      vendasData = rv.data || []; vendasError = rv.error;
+      // Só as colunas que a Loja mostra, e depois da 1.ª vez só as vendas dos últimos 2 dias (as vendas nunca mudam depois de gravadas)
+      const COLS_V = 'id,numero_do_dia,criado_em,metodo,total,recebido,troco,venda_itens(produto_nome,qtd,preco_unitario)';
+      const kV = 'pdv_vendas_srv_' + sessaoAtual.lojaId;
+      let base = null; try { base = JSON.parse(localStorage.getItem(kV) || 'null'); } catch (e) {}
+      const curV = (base && base.cursor && Array.isArray(base.vendas)) ? base.cursor : null;
+      const desdeQ = curV ? new Date(Math.max(new Date(desde).getTime(), new Date(curV).getTime() - 2 * 864e5)).toISOString() : desde;
+      const rv = await supabaseClient.from('vendas').select(COLS_V).eq('loja_id', sessaoAtual.lojaId)
+        .gte('criado_em', desdeQ).order('criado_em', { ascending: false }).limit(1500);
+      vendasError = rv.error;
+      if (!rv.error) {
+        let junto = rv.data || [];
+        if (curV) { const ids = new Set(junto.map(v => v.id)); junto = junto.concat(base.vendas.filter(v => !ids.has(v.id) && v.criado_em >= desde)); junto.sort((x, y) => (x.criado_em < y.criado_em ? 1 : -1)); junto = junto.slice(0, 1500); }
+        vendasData = junto;
+        let cur = curV; junto.forEach(v => { if (!cur || v.criado_em > cur) cur = v.criado_em; });
+        try { localStorage.setItem(kV, JSON.stringify({ cursor: cur, vendas: junto })); } catch (e) { try { localStorage.removeItem(kV); } catch (e2) {} }
+      }
     } catch(e) { vendasError = e; }
 
     if (vendasError) { try { const c = localStorage.getItem('pdv_cache_vendas_' + sessaoAtual.lojaId); vendas = c ? JSON.parse(c) : []; } catch(e) { vendas = []; } }
@@ -1862,6 +1921,8 @@ body.spap-leve #m2-grid .m2-card { animation: none !important; transition: none 
     // Carrega as imagens em 2º plano, só se houver rede (não bloqueia nada)
     carregarImagensEmSegundoPlano();
     if (!window._produtosAoVivoLigado) { window._produtosAoVivoLigado = true; ligarProdutosAoVivo(); }
+    // Fotos antigas (base64) → armazém, aos poucos e em segundo plano (só depois de o SQL v2.9.296 ser corrido)
+    try { if (window.spapFotos && !window._spapMigLigada) { window._spapMigLigada = true; spapFotos.migrarDepois(sessaoAtual.lojaId); setInterval(function(){ try { spapFotos.migrarDepois(sessaoAtual.lojaId, 1000); } catch(e){} }, 30 * 60000); } } catch(e) {}
   }
 
   // ===== PRODUTOS AO VIVO: o que o dono cadastra/altera no Monitor aparece logo na Venda =====
@@ -1884,36 +1945,71 @@ body.spap-leve #m2-grid .m2-card { animation: none !important; transition: none 
     if (!navigator.onLine || !sessaoAtual || _aAtualizarProd || _lojaSemSessao) return;
     _aAtualizarProd = true; _ultProdAtual = Date.now();
     try {
-      const cols = 'id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em,unidade';
+      // vendas ainda por enviar: o servidor ainda não as descontou, por isso descontamos aqui (o balconista vê o stock certo)
+      const _pend = () => { const ps = {}; (filaVendas || []).forEach(v => { if (v && !v.sincStock) (v.baixas || []).forEach(b => { if (!b.feito) ps[b.produto_id] = (ps[b.produto_id] || 0) + (Number(b.qtd) || 0); }); }); return ps; };
+      // ---- só o que mudou (SQL v2.9.296): poucos bytes em vez da lista inteira ----
+      if (_lojaLeves && _cursorProd) {
+        const m = await _mudancasProdutos(_cursorProd);
+        if (m.error) return;
+        if (!m.cheio) {
+          if (!m.mudados.length && !m.apagados.length) return;
+          const pendStock = _pend(), porId = new Map((produtos || []).map(p => [p.id, p]));
+          const assinP = p => [p.nome, p.preco, p.stock, p.imagem, p.codigo, p.codbarras, p.categoria, p.subcategoria, p.unidade, p._b64].join('|');
+          let mudou = false;
+          m.mudados.forEach(r => {
+            _avancarCursor(r.atualizado_em);
+            const n = mapearProdutoDoSupabase(r), v = porId.get(n.id);
+            if (pendStock[n.id]) n.stock = Math.round(((Number(n.stock) || 0) - pendStock[n.id]) * 1000) / 1000;
+            if (v) { const antes = assinP(v), img = v.imagem; Object.assign(v, n); if (!v.imagem && img && v._b64) v.imagem = img; if (assinP(v) !== antes) mudou = true; }
+            else { produtos.push(n); porId.set(n.id, n); mudou = true; }
+          });
+          if (m.apagados.length) {
+            const fora = new Set(m.apagados.map(a => { _avancarCursor(a.apagado_em); return a.id; }));
+            const n0 = produtos.length; produtos = produtos.filter(p => !fora.has(p.id)); if (produtos.length !== n0) mudou = true;
+          }
+          _guardarCursor();
+          if (!mudou) return;
+          _assinProdutos = null;
+          guardarCacheLeveDepois();
+          try { renderCategorias(); } catch(e) {}
+          try { renderProdutos(); } catch(e) {}
+          try { if (document.body.classList.contains('modo2')) renderM2Grid(); } catch(e) {}
+          try { if (produtos.some(p => !p.imagem && p._b64 && !_imgTentadas.has(p.id))) carregarImagensEmSegundoPlano(); } catch(e) {}
+          return;
+        }
+      }
+      // ---- modo antigo (sem o SQL) ou muitas mudanças de uma vez: lista inteira (só texto) ----
+      const cols = _colsProd(true);
       let todos = [], pg = 0;
       while (true) {
         const { data, error } = await supabaseClient.from('produtos').select(cols).eq('loja_id', sessaoAtual.lojaId)
           .order('criado_em', { ascending: true }).range(pg * 1000, pg * 1000 + 999);
         if (error) return;
+        (data || []).forEach(r => { _linhaLeve(r); _avancarCursor(r.atualizado_em); });
         todos = todos.concat(data || []);
         if (!data || data.length < 1000) break;
         if (++pg > 50) break;
       }
       // Lista vazia vinda do servidor: só se aceita se houver conta válida (senão é a sessão que terminou)
       if (!todos.length && (produtos || []).length && !(await _podeAceitarListaVazia())) { _avisarSessaoTerminou(); return; }
-      const assin = todos.map(p => [p.id, p.nome, p.preco, p.preco_compra, p.stock, p.codigo, p.codbarras, p.categoria, p.subcategoria, p.unidade].join('|')).join('\n');
+      const assin = todos.map(p => [p.id, p.nome, p.preco, p.preco_compra, p.stock, p.codigo, p.codbarras, p.categoria, p.subcategoria, p.unidade, p.imagem, p._b64].join('|')).join('\n');
       if (assin === _assinProdutos) return;
       _assinProdutos = assin;
       const velhos = new Map((produtos || []).map(p => [p.id, p]));
       // vendas ainda por enviar: o servidor ainda não as descontou, por isso descontamos aqui (o balconista vê o stock certo)
-      const pendStock = {};
-      (filaVendas || []).forEach(v => { if (v && !v.sincStock) (v.baixas || []).forEach(b => { if (!b.feito) pendStock[b.produto_id] = (pendStock[b.produto_id] || 0) + (Number(b.qtd) || 0); }); });
+      const pendStock = _pend();
       produtos = todos.map(r => {
         const n = mapearProdutoDoSupabase(r), v = velhos.get(n.id);
         if (pendStock[n.id]) n.stock = Math.round(((Number(n.stock) || 0) - pendStock[n.id]) * 1000) / 1000;
-        if (v) { const img = v.imagem; Object.assign(v, n); if (!v.imagem && img) v.imagem = img; return v; }
+        if (v) { const img = v.imagem; Object.assign(v, n); if (!v.imagem && img && (!_lojaLeves || v._b64)) v.imagem = img; return v; }
         return n;
       });
+      _guardarCursor();
       guardarCacheLeveDepois();
       try { renderCategorias(); } catch(e) {}
       try { renderProdutos(); } catch(e) {}
       try { if (document.body.classList.contains('modo2')) renderM2Grid(); } catch(e) {}
-      try { const sem = produtos.some(p => !p.imagem && !_imgTentadas.has(p.id)); if (sem) carregarImagensEmSegundoPlano(); } catch(e) {}
+      try { const sem = produtos.some(p => !p.imagem && !_imgTentadas.has(p.id) && (!_lojaLeves || p._b64)); if (sem) carregarImagensEmSegundoPlano(); } catch(e) {}
     } catch(e) {} finally { _aAtualizarProd = false; }
   }
   function ligarProdutosAoVivo() {
@@ -1935,9 +2031,10 @@ body.spap-leve #m2-grid .m2-card { animation: none !important; transition: none 
   function guardarCacheLeveDepois() { clearTimeout(_cacheLeveT); _cacheLeveT = setTimeout(guardarCacheLeve, 2500); }
   function guardarCacheLeve() {
     try {
-      const produtosLeves = produtos.map(p => (Object.assign({}, p, { imagem: null })));
+      const produtosLeves = produtos.map(p => (Object.assign({}, p, { imagem: (p.imagem && /^https?:/i.test(p.imagem)) ? p.imagem : null })));
       localStorage.setItem('pdv_cache_produtos_' + sessaoAtual.lojaId, JSON.stringify(produtosLeves));
       localStorage.setItem('pdv_cache_vendas_' + sessaoAtual.lojaId, JSON.stringify(vendas.slice(0, 200)));
+      try { _guardarCursor(); } catch(e) {}
     } catch(e) {}
   }
 
@@ -1959,7 +2056,7 @@ body.spap-leve #m2-grid .m2-card { animation: none !important; transition: none 
   }
   async function carregarImagensDe(lista) {
     if (!navigator.onLine) return;
-    const faltam = (lista || []).filter(p => p && p.id && !p.imagem && !_imgTentadas.has(p.id));
+    const faltam = (lista || []).filter(p => p && p.id && !p.imagem && !_imgTentadas.has(p.id) && (!_lojaLeves || p._b64));
     if (!faltam.length) return;
     faltam.forEach(p => _imgTentadas.add(p.id));
     const ids = faltam.map(p => p.id);
@@ -2012,7 +2109,7 @@ body.spap-leve #m2-grid .m2-card { animation: none !important; transition: none 
   window.normalizarProduto = normalizarProduto;
   function mapearProdutoDoSupabase(p) {
     const n = normalizarProduto(p);
-    return { id: n.id, nome: n.nome, codigo: n.codigo, codbarras: n.codbarras, categoria: n.categoria, subcategoria: n.subcategoria, preco: n.preco, stock: n.stock, imagem: n.imagem, unidade: n.unidade };
+    return { id: n.id, nome: n.nome, codigo: n.codigo, codbarras: n.codbarras, categoria: n.categoria, subcategoria: n.subcategoria, preco: n.preco, stock: n.stock, imagem: n.imagem, unidade: n.unidade, _b64: !!p._b64 };
   }
 
   async function fazerLogout() {
@@ -2805,9 +2902,12 @@ async function scannerFechar() {
     const btnSalvar = document.querySelector('#form-produto .btn-modal-salvar');
     if (btnSalvar) { btnSalvar.disabled = true; btnSalvar.textContent = 'A guardar...'; }
 
+    // Foto: comprimida (WebP leve) e guardada no armazém; na base de dados fica só o endereço curto
+    let imgFinal = imagemTemp;
+    try { if (window.spapFotos && spapFotos.ehBase64(imgFinal)) imgFinal = await spapFotos.paraUrl(imgFinal, sessaoAtual.lojaId, nome); } catch (e) {}
     const { data, error } = await supabaseClient
       .from('produtos')
-      .insert({ loja_id: sessaoAtual.lojaId, nome, codigo, codbarras, categoria, preco, stock, imagem: imagemTemp })
+      .insert({ loja_id: sessaoAtual.lojaId, nome, codigo, codbarras, categoria, preco, stock, imagem: imgFinal })
       .select()
       .single();
 
@@ -2815,7 +2915,7 @@ async function scannerFechar() {
 
     if (error) { mostrarNotif('❌ Erro ao guardar: ' + error.message, true); return; }
 
-    produtos.push(mapearProdutoDoSupabase(data));
+    produtos.push(mapearProdutoDoSupabase(Object.assign({}, data, { _b64: !!(data && spapFotosB64(data.imagem)) })));
     fecharModalProduto(); renderProdutos();
     mostrarNotif('✅ Produto "' + nome + '" adicionado!');
   }
@@ -3568,9 +3668,10 @@ async function scannerFechar() {
   function guardarCacheLocal() {
     if (!sessaoAtual || !sessaoAtual.lojaId) return;
     try {
-      const produtosLeves = produtos.map(p => (Object.assign({}, p, { imagem: null })));
+      const produtosLeves = produtos.map(p => (Object.assign({}, p, { imagem: (p.imagem && /^https?:/i.test(p.imagem)) ? p.imagem : null })));
       localStorage.setItem('pdv_cache_produtos_' + sessaoAtual.lojaId, JSON.stringify(produtosLeves));
       localStorage.setItem('pdv_cache_vendas_' + sessaoAtual.lojaId, JSON.stringify(vendas.slice(0, 200)));
+      try { _guardarCursor(); } catch(e) {}
     } catch(e) {}
   }
 
@@ -4078,6 +4179,7 @@ async function scannerFechar() {
   function _logoParaPB(dataUrl, cb) {
     try {
       const img = new Image();
+      if (/^https?:/i.test(String(dataUrl || ''))) img.crossOrigin = 'anonymous';   // logótipo no armazém: canvas sem bloqueio
       img.onload = () => {
         try {
           const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
@@ -4438,7 +4540,7 @@ async function scannerFechar() {
   async function limparCacheRecarregar() {
     if (!(await spapConfirmar('Limpar e recarregar?', 'Limpar a cache e recarregar esta máquina?\n\nResolve produtos (ex: por kg) ou novidades que não aparecem. Não perde dados — só recarrega.'))) return;
     try { Object.keys(localStorage).forEach(k => { if (k.indexOf('pdv_cache_') === 0) localStorage.removeItem(k); }); } catch(e){}
-    try { if ('caches' in window) caches.keys().then(ks => ks.forEach(k => caches.delete(k))); } catch(e){}
+    try { if ('caches' in window) caches.keys().then(ks => ks.forEach(k => { if (k !== 'spap-fotos' && k !== 'spap-dados') caches.delete(k); })); } catch(e){}
     mostrarNotif('🔄 A recarregar...');
     setTimeout(() => { location.reload(true); }, 500);
   }
@@ -6279,7 +6381,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.295';
+  const VERSAO_ATUAL = '2.9.296';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -6345,7 +6447,7 @@ async function scannerFechar() {
     } catch (e) {}
     try {
       if ('caches' in window) {
-        const keys = await caches.keys();
+        const keys = (await caches.keys()).filter(k => k !== 'spap-fotos' && k !== 'spap-dados');   // as fotos ficam (não se descarregam de novo)
         await Promise.all(keys.map(k => caches.delete(k)));
       }
     } catch (e) {}
@@ -7418,7 +7520,7 @@ document.addEventListener('click', function(e){
       }, function(){});
     }
   }
-  setInterval(function(){ _m2BannerLoja = null; try { if (document.body.classList.contains('modo2')) m2PintarBanner(); } catch(e){} }, 300000);
+  setInterval(function(){ _m2BannerLoja = null; try { if (document.body.classList.contains('modo2')) m2PintarBanner(); } catch(e){} }, 900000);
 
   // Relógio do topo (data + hora)
   function m2Relogio(){
@@ -8165,7 +8267,7 @@ if ('serviceWorker' in navigator) {
       console.log('SW registado:', reg.scope);
 
       // Verifica actualizações a cada 60 segundos
-      setInterval(() => reg.update(), 60000);
+      setInterval(() => { if (navigator.onLine !== false) reg.update().catch(() => {}); }, 60000);
 
       // Nova versão disponível
       reg.addEventListener('updatefound', () => {
