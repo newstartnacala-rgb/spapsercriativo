@@ -150,7 +150,9 @@
         var chave = 'banca_att_' + v.versao, ja = false;
         try { ja = sessionStorage.getItem(chave) === '1'; sessionStorage.setItem(chave, '1'); } catch (e) {}
         if (ja) return;
-        if (!ocupado()) { if (window.toast) toast('🔄 A atualizar a Banca para a versão ' + v.versao + '…', 'ok'); setTimeout(function () { aplicarAtualizacao(v.versao); }, 1800); }
+        // sem perguntas: só «A atualizar…»; com venda a decorrer, espera que acabe
+        if (window.spapAtualizando) spapAtualizando.quandoLivre(function () { aplicarAtualizacao(v.versao); }, ocupado);
+        else if (!ocupado()) setTimeout(function () { aplicarAtualizacao(v.versao); }, 1800);
         else folhaAtualizacao(v, true);
       }).catch(function () { if (manual && window.toast) toast('Sem internet para verificar', 'erro'); });
   }

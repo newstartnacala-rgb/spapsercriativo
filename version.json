@@ -1,9 +1,8 @@
 {
-  "versao": "2.9.296",
-  "data": "2026-11-27",
+  "versao": "2.9.297",
+  "data": "2026-11-28",
   "novidades": [
-    "Fotos dos produtos muito mais leves: ficam guardadas no aparelho e só se descarregam uma vez (a app abre mais rápido e gasta muito menos internet)",
-    "Sincronização inteligente: a Loja e o Monitor só descarregam o que mudou (produtos e vendas novas), não tudo outra vez"
+    "Atualização automática sem perguntas: a Loja, o Monitor e as apps atualizam sozinhos e só mostram «A atualizar…» (se houver uma venda a decorrer, esperam que termine)"
   ],
   "melhorias": [
     "Definições do Monitor: nova opção «Visitar o website»",

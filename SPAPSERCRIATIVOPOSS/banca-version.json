@@ -1,9 +1,8 @@
 {
-  "versao": "3.7.73",
-  "data": "2026-11-27",
+  "versao": "3.7.74",
+  "data": "2026-11-28",
   "novidades": [
-    "Fotos dos produtos muito mais leves e guardadas no telemóvel: abre mais rápido e gasta muito menos internet",
-    "A Banca e o Monitor da Banca só descarregam o que mudou"
+    "Atualização automática sem perguntas: a Banca e o Monitor da Banca atualizam sozinhos e só mostram «A atualizar…»"
   ],
   "melhorias": [
     "Definições do Monitor da Banca: nova opção «Visitar o website»",

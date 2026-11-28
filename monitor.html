@@ -23,7 +23,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 <script src="supabase-js-2.84.0.js"></script>
 <script>if (typeof supabase === "undefined") document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.84.0/dist/umd/supabase.js"><\/script>');</script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="spap-leitor.js?v=2.9.296"></script>
+<script src="spap-leitor.js?v=2.9.297"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <style>
   :root {
@@ -1127,7 +1127,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
   }
   try{ if(localStorage.getItem('monitor_escuro')==='1') document.documentElement.classList.add('escuro'); }catch(e){}
 </script>
-<script src="app-android.js?v=2.9.296" defer></script>
+<script src="app-android.js?v=2.9.297" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700;800&family=Cinzel:wght@700;800;900&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -1795,6 +1795,7 @@ html.escuro #gc-modal{filter:invert(1) hue-rotate(180deg);}
 <script src="spap-erros.js?v=2"></script>
 <script src="supabase-config.js?v=7"></script>
 <script src="spap-fotos.js?v=1"></script>
+<script src="spap-atualizando.js?v=1"></script>
 <script src="spap-avisos.js?v=6"></script>
 <script src="spap-backup.js?v=7"></script>
 <script src="spap-imagem.js?v=1"></script>
@@ -2068,7 +2069,7 @@ async function iniciarMonitor() {
   intervalo = setInterval(() => { if (!window._saCodAberto) carregarTudo(); }, 30000);
   verificarNotifStatus();
   ligarVendasTempoReal();
-  // fotos antigas (base64) → armazém, em segundo plano (só depois de o SQL v2.9.296 ser corrido)
+  // fotos antigas (base64) → armazém, em segundo plano (só depois de o SQL v2.9.297 ser corrido)
   try { if (window.spapFotos && lojaId && !(isSuperAdmin && modoGeral)) spapFotos.migrarDepois(lojaId, 20000); } catch (e) {}
 }
 
@@ -2519,10 +2520,10 @@ function mostrarLojaEmCache() {
 }
 // só registos das lojas normais (no modo «Todas as Lojas» do Super Admin)
 function _soLojas(lista) { const ok = new Set((todasLojas || []).map(l => String(l.id))); return (lista || []).filter(x => ok.has(String(x.loja_id))); }
-// ===== TRÁFEGO MÍNIMO (v2.9.296) =====
+// ===== TRÁFEGO MÍNIMO (v2.9.297) =====
 // Vendas: o histórico fica guardado no aparelho e, de cada vez, só se pedem as vendas NOVAS (as vendas nunca
 // mudam depois de gravadas). De 5 em 5 min uma verificação leve (só uma contagem) confirma que nada falta.
-// Produtos: só texto + URL da foto e, depois da 1.ª vez, só o que mudou (com o SQL v2.9.296; sem ele, como antes).
+// Produtos: só texto + URL da foto e, depois da 1.ª vez, só o que mudou (com o SQL v2.9.297; sem ele, como antes).
 const _fase2 = new Set();
 const _vendasInc = new Map();      // chave → { lista, cursor, completo, tRecon }
 const _VENDAS_MAX = 6000;
@@ -6426,6 +6427,20 @@ window.__spapAppProgresso = function (pct, estado) {
 
 // ===== POP-UP DE ATUALIZAÇÃO (aparece sozinho quando há versão nova) =====
 function _popupAtualizacao(chave, titulo, texto) {
+  // Atualização automática: sem janela nem botões — só «A atualizar…»
+  if (window.spapAtualizando) {
+    if (/^web/.test(chave)) {
+      if (!_attTentativa(chave)) return;
+      spapAtualizando.quandoLivre(() => atualizarAgoraMonitor());
+      return;
+    }
+    if (/^app/.test(chave)) {
+      try { if (sessionStorage.getItem('att_auto_' + chave)) return; sessionStorage.setItem('att_auto_' + chave, '1'); } catch (e) {}
+      const url = new URL((_infoApp && _infoApp.monitor) || 'apps/Monitor.apk', location.href).href;
+      if (window.SPAPNative && typeof SPAPNative.instalarApp === 'function') { spapAtualizando.mostrar('A atualizar… 0%'); try { SPAPNative.instalarApp(url); } catch (e) { spapAtualizando.esconder(); } }
+      return;
+    }
+  }
   if (document.getElementById('pop-att')) return;
   try { if (sessionStorage.getItem('pop_att_' + chave)) return; } catch (e) {}
   const el = document.createElement('div'); el.id = 'pop-att';
@@ -6435,6 +6450,11 @@ function _popupAtualizacao(chave, titulo, texto) {
   el.querySelector('.pa-sim').onclick = () => { fechar(); try { fecharDefinicoes(); } catch (e) {} abrirAtualizacoes(); };
   el.querySelector('.pa-nao').onclick = fechar;
   document.body.appendChild(el);
+}
+// no máximo 2 tentativas por versão (evita ficar a recarregar se o servidor ainda tiver a página antiga)
+function _attTentativa(chave) {
+  try { const k = 'att_tent_' + chave, n = +(sessionStorage.getItem(k) || 0); if (n >= 2) return false; sessionStorage.setItem(k, String(n + 1)); } catch (e) {}
+  return true;
 }
 async function verificarAppAuto() {
   if (!_EH_APP) return;
@@ -6447,7 +6467,7 @@ async function verificarAppAuto() {
   } catch (e) {}
 }
 // ===== AUTO-ATUALIZACAO (deteta nova versao no deploy) =====
-const MONITOR_VERSAO = '2.9.296';
+const MONITOR_VERSAO = '2.9.297';
 async function verificarAtualizacaoMonitor() {
   try {
     const res = await fetch('version.json?nocache=' + Date.now(), { cache: 'no-store' });

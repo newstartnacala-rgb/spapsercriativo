@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spap-pdv-v373';
+const CACHE_NAME = 'spap-pdv-v374';
 // Fotos dos produtos (armazém Supabase): guardadas no aparelho para sempre — cada foto é descarregada UMA vez.
 // Um URL de foto nunca muda de conteúdo (foto nova = URL novo), por isso a cópia guardada está sempre certa.
 const CACHE_FOTOS = 'spap-fotos';
@@ -33,6 +33,7 @@ const FICHEIROS = [
   './icons3d/cart.png',
   './spap-pc.js',
   './spap-fotos.js',
+  './spap-atualizando.js',
   './spap-alertas.js',
   './spap-personalizar.js',
   './spap-leitor.js',

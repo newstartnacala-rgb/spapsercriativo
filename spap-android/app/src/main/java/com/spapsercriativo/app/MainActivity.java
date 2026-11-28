@@ -107,6 +107,7 @@ public class MainActivity extends Activity {
     private ConnectivityManager.NetworkCallback redeCallback;
     private String instalacaoPendente;
     private boolean aBaixarApp = false;
+    private String versaoABaixar = null;   // versão do APK que está a ser descarregado (para não baixar duas vezes)
     private boolean avisoAppMostrado = false;
 
     // ------------------------------------------------------------------ ciclo de vida
@@ -160,7 +161,7 @@ public class MainActivity extends Activity {
             String u = instalacaoPendente; instalacaoPendente = null;
             instalarApp(u);
         }
-        if (!BuildConfig.IS_MONITOR || "bancamonitor".equals(BuildConfig.APP_TIPO)) ui.postDelayed(this::verificarAppLoja, 4000);
+        ui.postDelayed(this::verificarAppLoja, 4000);   // todas as apps: atualizam sozinhas (só mostra «A atualizar…»)
     }
 
     @Override
@@ -759,7 +760,14 @@ public class MainActivity extends Activity {
     }
 
     private void progressoJs(int pct, String estado) {
-        ui.post(() -> web.evaluateJavascript("window.__spapAppProgresso && window.__spapAppProgresso(" + pct + ",'" + estado + "')", null));
+        String js = "(function(p,e){try{if(window.__spapAppProgresso)window.__spapAppProgresso(p,e);}catch(x){}"
+            + "if(window.spapAtualizando)return;"   // páginas novas já mostram o aviso pelo spap-atualizando.js
+            + "var d=document.getElementById('spap-att-nativo');"
+            + "if(!d){d=document.createElement('div');d.id='spap-att-nativo';d.style.cssText='position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top));transform:translateX(-50%);z-index:2147483646;background:rgba(15,23,42,.92);color:#fff;font:600 14px/1.2 system-ui,sans-serif;padding:10px 16px;border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.25);pointer-events:none';(document.body||document.documentElement).appendChild(d);}"
+            + "if(e==='erro'){d.remove();return;}"
+            + "d.textContent=e==='permissao'?'Permita instalar para atualizar':(e==='instalar'?'A atualizar…':'A atualizar… '+p+'%');"
+            + "})(" + pct + ",'" + estado + "')";
+        ui.post(() -> web.evaluateJavascript(js, null));
     }
 
     /** Baixa o APK e abre o instalador do Android. */
@@ -797,6 +805,7 @@ public class MainActivity extends Activity {
                     }
                 }
                 progressoJs(100, "instalar");
+                if (versaoABaixar != null) getSharedPreferences("spap", MODE_PRIVATE).edit().putString("apk_baixado_v", versaoABaixar).apply();
                 Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".ficheiros", f);
                 Intent i = new Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/vnd.android.package-archive")
                         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -805,7 +814,8 @@ public class MainActivity extends Activity {
                 });
             } catch (Exception e) {
                 progressoJs(0, "erro");
-                ui.post(() -> Toast.makeText(this, "Falhou a baixar a atualização. Verifique a internet.", Toast.LENGTH_LONG).show());
+                final boolean auto = versaoABaixar != null;   // atualização automática: falha em silêncio (tenta de novo na próxima abertura)
+                if (!auto) ui.post(() -> Toast.makeText(this, "Falhou a baixar a atualização. Verifique a internet.", Toast.LENGTH_LONG).show());
             } finally {
                 if (c != null) c.disconnect();
                 aBaixarApp = false;
@@ -835,18 +845,24 @@ public class MainActivity extends Activity {
                 if (caminho.isEmpty()) return;
                 if (v.isEmpty() || compararVersoes(v, BuildConfig.VERSION_NAME) <= 0) return;
                 final String url = caminho.startsWith("http") ? caminho : base + "/" + caminho.replaceFirst("^/", "");
+                // Sem perguntas: baixa sozinha (só aparece «A atualizar…») e abre o instalador do Android no fim.
                 ui.post(() -> {
                     if (avisoAppMostrado || isFinishing()) return;
                     avisoAppMostrado = true;
-                    new android.app.AlertDialog.Builder(this)
-                            .setTitle("Nova versão da app")
-                            .setMessage("A app " + getString(R.string.app_name) + " " + v + " já está disponível.\n\nQuer baixar e instalar agora?")
-                            .setPositiveButton("Atualizar", (d, w) -> {
-                                Toast.makeText(this, "A baixar a atualização…", Toast.LENGTH_SHORT).show();
-                                instalarApp(url);
-                            })
-                            .setNegativeButton("Mais tarde", null)
-                            .show();
+                    File f = new File(new File(getCacheDir(), "apk"), "SPAP-atualizacao.apk");
+                    if (v.equals(getSharedPreferences("spap", MODE_PRIVATE).getString("apk_baixado_v", "")) && f.length() > 100000 && podeInstalar()) {
+                        // já descarregado antes (o instalador foi fechado): não baixa outra vez
+                        progressoJs(100, "instalar");
+                        try {
+                            Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".ficheiros", f);
+                            startActivity(new Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/vnd.android.package-archive")
+                                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK));
+                            return;
+                        } catch (Exception ignored) { }
+                    }
+                    versaoABaixar = v;
+                    progressoJs(0, "baixar");
+                    instalarApp(url);
                 });
             } catch (Exception ignored) {
             } finally { if (c != null) c.disconnect(); }

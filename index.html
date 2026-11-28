@@ -357,7 +357,7 @@ if (!Element.prototype.matches) { Element.prototype.matches = Element.prototype.
 /* Carrinho 3D (imagem) no lugar do emoji 🛒 — do MESMO tamanho do emoji (1,2 em), igual em Windows, Android, iPhone e tablets */
 .spap-carro{display:inline-block;width:1.2em;height:1.2em;object-fit:contain;vertical-align:-.2em;margin:0;pointer-events:none;user-select:none;-webkit-user-drag:none}
 </style>
-<script src="app-android.js?v=2.9.296" defer></script>
+<script src="app-android.js?v=2.9.297" defer></script>
 <style>/* a interface antiga nunca aparece: o ecrã antigo fica invisível até o novo abrir (sem piscar) */ body:not(.modo2) #tela-pdv { visibility:hidden !important; }</style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
@@ -1385,6 +1385,7 @@ body.spap-leve #m2-grid .m2-card { animation: none !important; transition: none 
 <script src="spap-erros.js?v=2"></script>
 <script src="supabase-config.js?v=7"></script>
 <script src="spap-fotos.js?v=1"></script>
+<script src="spap-atualizando.js?v=1"></script>
 <script src="spap-avisos.js?v=6"></script>
 <script src="spap-expirou.js?v=2"></script>
 <script src="spap-suporte.js?v=6"></script>
@@ -1696,7 +1697,7 @@ body.spap-leve #m2-grid .m2-card { animation: none !important; transition: none 
     sincronizarFila();
   }
 
-  // ===== TRÁFEGO MÍNIMO (SQL v2.9.296) =====
+  // ===== TRÁFEGO MÍNIMO (SQL v2.9.297) =====
   // As listas trazem só texto + o URL curto da foto (nunca o base64 pesado) e, depois da 1.ª vez, só o que mudou.
   // Sem o SQL corrido, tudo funciona como antes.
   const _COLS_BASE = 'id,loja_id,nome,codigo,codbarras,categoria,subcategoria,preco,preco_compra,stock,criado_em,unidade';
@@ -1921,7 +1922,7 @@ body.spap-leve #m2-grid .m2-card { animation: none !important; transition: none 
     // Carrega as imagens em 2º plano, só se houver rede (não bloqueia nada)
     carregarImagensEmSegundoPlano();
     if (!window._produtosAoVivoLigado) { window._produtosAoVivoLigado = true; ligarProdutosAoVivo(); }
-    // Fotos antigas (base64) → armazém, aos poucos e em segundo plano (só depois de o SQL v2.9.296 ser corrido)
+    // Fotos antigas (base64) → armazém, aos poucos e em segundo plano (só depois de o SQL v2.9.297 ser corrido)
     try { if (window.spapFotos && !window._spapMigLigada) { window._spapMigLigada = true; spapFotos.migrarDepois(sessaoAtual.lojaId); setInterval(function(){ try { spapFotos.migrarDepois(sessaoAtual.lojaId, 1000); } catch(e){} }, 30 * 60000); } } catch(e) {}
   }
 
@@ -1947,7 +1948,7 @@ body.spap-leve #m2-grid .m2-card { animation: none !important; transition: none 
     try {
       // vendas ainda por enviar: o servidor ainda não as descontou, por isso descontamos aqui (o balconista vê o stock certo)
       const _pend = () => { const ps = {}; (filaVendas || []).forEach(v => { if (v && !v.sincStock) (v.baixas || []).forEach(b => { if (!b.feito) ps[b.produto_id] = (ps[b.produto_id] || 0) + (Number(b.qtd) || 0); }); }); return ps; };
-      // ---- só o que mudou (SQL v2.9.296): poucos bytes em vez da lista inteira ----
+      // ---- só o que mudou (SQL v2.9.297): poucos bytes em vez da lista inteira ----
       if (_lojaLeves && _cursorProd) {
         const m = await _mudancasProdutos(_cursorProd);
         if (m.error) return;
@@ -6381,7 +6382,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.296';
+  const VERSAO_ATUAL = '2.9.297';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -6399,9 +6400,12 @@ async function scannerFechar() {
       if (_cmpV(dados.versao, VERSAO_ATUAL) > 0) {
         const semVenda = (typeof carrinho === 'undefined') || carrinho.length === 0;
         const semJanela = !document.querySelector('.modal-fundo.ativo') && !((document.getElementById('menu-overlay') || { classList: { contains: function(){ return false; } } }).classList.contains('ativo'));
-        if (semVenda && semJanela) {
-          try { mostrarNotif('🔄 Nova versão. A atualizar automaticamente...'); } catch(e){}
-          setTimeout(() => atualizarAgora(dados.versao), 2500);
+        // Atualiza sozinha, sem perguntas: só mostra «A atualizar…» (se houver venda a decorrer, espera que acabe)
+        if (window.spapAtualizando) {
+          let ok = true; try { const k = 'att_tent_' + dados.versao, n = +(sessionStorage.getItem(k) || 0); if (n >= 2) ok = false; else sessionStorage.setItem(k, String(n + 1)); } catch (e) {}
+          if (ok) spapAtualizando.quandoLivre(() => atualizarAgora(dados.versao), () => !((typeof carrinho === 'undefined') || carrinho.length === 0) || !!document.querySelector('.modal-fundo.ativo') || ((document.getElementById('menu-overlay') || { classList: { contains: function(){ return false; } } }).classList.contains('ativo')));
+        } else if (semVenda && semJanela) {
+          setTimeout(() => atualizarAgora(dados.versao), 1500);
         } else {
           mostrarBannerAtualizacao(dados);
         }
@@ -6410,6 +6414,8 @@ async function scannerFechar() {
   }
 
   function mostrarBannerAtualizacao(dados) {
+    // versão nova do serviço offline: confirma no version.json e atualiza sozinha (sem banner)
+    if (window.spapAtualizando) { try { verificarAtualizacao(); } catch (e) {} return; }
     const existente = document.getElementById('banner-atualizacao');
     if (existente) existente.remove();
     if (!document.getElementById('estilo-banner-att')) {
