@@ -49,7 +49,7 @@
       var o = true; try { o = ocupado(); } catch (e) { o = false; }
       if (o) return false;
       clearInterval(_espera);
-      mostrar('A atualizar…', true);
+      mostrar('Nova atualização · a processar…', true);
       setTimeout(function () { try { acao(); } catch (e) { location.reload(); } }, 600);
       return true;
     };
@@ -62,8 +62,8 @@
     try { if (typeof antes === 'function') antes(pct, estado); } catch (e) {}
     if (estado === 'erro') { esconder(); return; }
     if (estado === 'permissao') { mostrar('Permita instalar para atualizar'); return; }
-    if (estado === 'instalar') { mostrar('A atualizar…'); setTimeout(esconder, 8000); return; }
-    mostrar('A atualizar… ' + Math.max(0, Math.min(100, Math.round(pct))) + '%');
+    if (estado === 'instalar') { mostrar('A instalar a atualização…'); setTimeout(esconder, 8000); return; }
+    mostrar('Nova atualização · a processar… ' + Math.max(0, Math.min(100, Math.round(pct))) + '%');
   };
   // páginas que redefinem __spapAppProgresso depois deste script: voltam a passar por aqui
   try {
@@ -76,10 +76,47 @@
     var _proprio = function (pct, estado) {
       if (estado === 'erro') { esconder(); return; }
       if (estado === 'permissao') { mostrar('Permita instalar para atualizar'); return; }
-      if (estado === 'instalar') { mostrar('A atualizar…'); setTimeout(esconder, 8000); return; }
-      mostrar('A atualizar… ' + Math.max(0, Math.min(100, Math.round(pct))) + '%');
+      if (estado === 'instalar') { mostrar('A instalar a atualização…'); setTimeout(esconder, 8000); return; }
+      mostrar('Nova atualização · a processar… ' + Math.max(0, Math.min(100, Math.round(pct))) + '%');
     };
   } catch (e) {}
+
+  // ===== App Android: versão nova → notificação «Nova atualização» e atualiza sozinha (sem janela «Mais tarde/Atualizar») =====
+  // Funciona também nas apps já instaladas (usam SPAPNative.instalarApp, que já existia).
+  function cmpV(a, b) { var x = String(a || '').split('.'), y = String(b || '').split('.'); for (var i = 0; i < Math.max(x.length, y.length); i++) { var d = (parseInt(x[i], 10) || 0) - (parseInt(y[i], 10) || 0); if (d) return d; } return 0; }
+  function tipoDaApp() {
+    try { if (window.SPAPNative && typeof SPAPNative.tipoApp === 'function') { var t = SPAPNative.tipoApp(); if (t) return t; } } catch (e) {}
+    var p = location.pathname;
+    if (/mobile-monitor/.test(p)) return 'bancamonitor';
+    if (/mobile\.html|banca/.test(p)) return 'banca';
+    if (/monitor/.test(p)) return 'monitor';
+    return 'loja';
+  }
+  var _appVerificada = false;
+  function verificarApp() {
+    var N = window.SPAPNative;
+    if (_appVerificada || !N || typeof N.instalarApp !== 'function' || typeof N.versaoApp !== 'function') return;
+    if (navigator.onLine === false) return;
+    _appVerificada = true;
+    var tipo = tipoDaApp(), inst = ''; try { inst = N.versaoApp(); } catch (e) {}
+    if (!inst) return;
+    fetch('apps/' + (tipo.indexOf('banca') === 0 ? 'app-banca-version.json' : 'app-version.json') + '?t=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        var v = d && (d.versao_app || d.versao), cam = d && d[tipo];
+        if (!v || !cam || cmpV(v, inst) <= 0) return;
+        // uma tentativa automática por versão em cada abertura da app
+        try { var k = 'spap_app_auto_' + v; if (sessionStorage.getItem(k)) return; sessionStorage.setItem(k, '1'); } catch (e) {}
+        var url = new URL(cam, location.href).href;
+        try { if (typeof N.notificar === 'function') N.notificar('Nova atualização', 'A processar a versão ' + v + '… a app atualiza-se sozinha.', 'spap-atualizacao', false); } catch (e) {}
+        mostrar('Nova atualização · a processar…');
+        setTimeout(function () { try { N.instalarApp(url); } catch (e) { esconder(); } }, 1200);
+      }).catch(function () { _appVerificada = false; });
+  }
+  function iniciarApp() { setTimeout(verificarApp, 3500); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciarApp); else iniciarApp();
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) setTimeout(verificarApp, 1500); });
+  window.addEventListener('online', function () { setTimeout(verificarApp, 1500); });
 
   window.spapAtualizando = { mostrar: mostrar, esconder: esconder, quandoLivre: quandoLivre, ocupado: ocupadoPadrao };
 })();

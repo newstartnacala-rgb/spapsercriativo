@@ -20,13 +20,13 @@ jobs:
             VS=$(grep -oE '"versao" *: *"[^"]*"' /tmp/v.json 2>/dev/null | head -1)
             M=$(curl -s -m 20 "https://$d/monitor.html?t=$(date +%s)" | grep -oE "MONITOR_VERSAO = '[^']*'|agua-mar|topbar-titulo" | sort -u | tr '\n' ' ')
             I=$(curl -s -m 20 "https://$d/index.html?t=$(date +%s)" | grep -oE "VERSAO_ATUAL = '[^']*'|pdv_modo_moderno_lancado" | sort -u | tr '\n' ' ')
-            A=$(curl -s -m 20 "https://$d/apps/app-version.json?t=$(date +%s)" | grep -oE '"versao" *: *"[^"]*"' | head -1)
+            A=$(curl -s -m 20 "https://$d/apps/app-version.json?t=$(date +%s)" | grep -oE '"versao(_app)?" *: *"[^"]*"' | head -1)
             K=$(curl -s -m 30 -o /dev/null -w '%{http_code} %{size_download} %{content_type}' "https://$d/apps/SPAP-Monitor.apk")
             P=$(curl -s -m 20 -o /dev/null -w '%{http_code} %{content_type}' "https://$d/apps/SPAP-Loja.mobileconfig")
             B=$(curl -s -m 30 -o /dev/null -w '%{http_code} %{size_download}' "https://$d/apps/SPAP-Banca.apk")
             BT=$(curl -s -m 20 "https://$d/mobile.html?t=$(date +%s)" | grep -oE 'banca-tema' | head -1)
-            BV=$(curl -s -m 20 "https://$d/banca-version.json?t=$(date +%s)" | grep -oE '"versao" *: *"[^"]*"' | head -1)
-            BA=$(curl -s -m 20 "https://$d/apps/app-banca-version.json?t=$(date +%s)" | grep -oE '"versao" *: *"[^"]*"' | head -1)
+            BV=$(curl -s -m 20 "https://$d/banca-version.json?t=$(date +%s)" | grep -oE '"versao(_app)?" *: *"[^"]*"' | head -1)
+            BA=$(curl -s -m 20 "https://$d/apps/app-banca-version.json?t=$(date +%s)" | grep -oE '"versao(_app)?" *: *"[^"]*"' | head -1)
             echo "$d | http=$V | $VS | monitor: $M | loja: $I | app: $A apk=$K | iphone=$P | banca: apk=$B tema=$BT site=$BV app=$BA" | tee -a out/resultado.txt
           done
           VS=$(curl -s -m 20 -o /tmp/vs.html -w '%{http_code}' "https://newstartnacala-rgb.github.io/spapsercriativo/vendassteam/?t=$(date +%s)")

@@ -161,7 +161,7 @@ public class MainActivity extends Activity {
             String u = instalacaoPendente; instalacaoPendente = null;
             instalarApp(u);
         }
-        ui.postDelayed(this::verificarAppLoja, 4000);   // todas as apps: atualizam sozinhas (só mostra «A atualizar…»)
+        // A verificação de app nova é feita pela página (spap-atualizando.js): notificação «Nova atualização» e atualiza sozinha.
     }
 
     @Override
@@ -765,7 +765,7 @@ public class MainActivity extends Activity {
             + "var d=document.getElementById('spap-att-nativo');"
             + "if(!d){d=document.createElement('div');d.id='spap-att-nativo';d.style.cssText='position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top));transform:translateX(-50%);z-index:2147483646;background:rgba(15,23,42,.92);color:#fff;font:600 14px/1.2 system-ui,sans-serif;padding:10px 16px;border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.25);pointer-events:none';(document.body||document.documentElement).appendChild(d);}"
             + "if(e==='erro'){d.remove();return;}"
-            + "d.textContent=e==='permissao'?'Permita instalar para atualizar':(e==='instalar'?'A atualizar…':'A atualizar… '+p+'%');"
+            + "d.textContent=e==='permissao'?'Permita instalar para atualizar':(e==='instalar'?'A instalar a atualização…':'Nova atualização · a processar… '+p+'%');"
             + "})(" + pct + ",'" + estado + "')";
         ui.post(() -> web.evaluateJavascript(js, null));
     }

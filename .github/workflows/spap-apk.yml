@@ -93,8 +93,8 @@ jobs:
           # (banca/bancamonitor aqui só para as apps da Banca antigas, ≤2.9.202, passarem para a linha 3.x)
           REL="https://github.com/${{ github.repository }}/releases/download"
           # links absolutos para os lançamentos do GitHub: funcionam no GitHub Pages e na Vercel
-          printf '{"versao":"%s","data":"%s","monitor":"%s/loja-latest/Monitor.apk","loja":"%s/loja-latest/Loja.apk","banca":"%s/banca-latest/Banca-e-Vendas.apk","bancamonitor":"%s/banca-latest/Monitor-e-Banca.apk"}\n' "$VN" "$(date -u +%Y-%m-%d)" "$REL" "$REL" "$REL" "$REL" > SPAPSERCRIATIVOPOSS/apps/app-version.json
-          printf '{"versao":"%s","data":"%s","banca":"%s/banca-latest/Banca-e-Vendas.apk","bancamonitor":"%s/banca-latest/Monitor-e-Banca.apk"}\n' "$VB" "$(date -u +%Y-%m-%d)" "$REL" "$REL" > SPAPSERCRIATIVOPOSS/apps/app-banca-version.json
+          printf '{"versao_app":"%s","data":"%s","monitor":"%s/loja-latest/Monitor.apk","loja":"%s/loja-latest/Loja.apk","banca":"%s/banca-latest/Banca-e-Vendas.apk","bancamonitor":"%s/banca-latest/Monitor-e-Banca.apk"}\n' "$VN" "$(date -u +%Y-%m-%d)" "$REL" "$REL" "$REL" "$REL" > SPAPSERCRIATIVOPOSS/apps/app-version.json
+          printf '{"versao_app":"%s","data":"%s","banca":"%s/banca-latest/Banca-e-Vendas.apk","bancamonitor":"%s/banca-latest/Monitor-e-Banca.apk"}\n' "$VB" "$(date -u +%Y-%m-%d)" "$REL" "$REL" > SPAPSERCRIATIVOPOSS/apps/app-banca-version.json
           # o GitHub Pages publica a raiz do repositório: copiar também os ficheiros de versão
           mkdir -p apps && cp SPAPSERCRIATIVOPOSS/apps/app-version.json SPAPSERCRIATIVOPOSS/apps/app-banca-version.json apps/
           cat SPAPSERCRIATIVOPOSS/apps/app-version.json SPAPSERCRIATIVOPOSS/apps/app-banca-version.json

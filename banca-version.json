@@ -1,8 +1,8 @@
 {
-  "versao": "3.7.74",
+  "versao": "3.7.75",
   "data": "2026-11-28",
   "novidades": [
-    "Atualização automática sem perguntas: a Banca e o Monitor da Banca atualizam sozinhos e só mostram «A atualizar…»"
+    "Atualizações 100% automáticas: aparece a notificação «Nova atualização» e a Banca atualiza-se sozinha — sem a janela «Mais tarde / Atualizar»"
   ],
   "melhorias": [
     "Definições do Monitor da Banca: nova opção «Visitar o website»",

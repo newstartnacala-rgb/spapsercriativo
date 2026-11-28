@@ -1,8 +1,8 @@
 {
-  "versao": "2.9.297",
+  "versao": "2.9.298",
   "data": "2026-11-28",
   "novidades": [
-    "Atualização automática sem perguntas: a Loja, o Monitor e as apps atualizam sozinhos e só mostram «A atualizar…» (se houver uma venda a decorrer, esperam que termine)"
+    "Atualizações 100% automáticas: quando sai uma versão nova aparece a notificação «Nova atualização» e a app atualiza-se sozinha — sem a janela «Mais tarde / Atualizar»"
   ],
   "melhorias": [
     "Definições do Monitor: nova opção «Visitar o website»",
